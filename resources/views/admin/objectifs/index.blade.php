@@ -92,7 +92,6 @@
                                     <td><p class="ent-identity">{{ $cibleLabel }}</p></td>
                                     <td>
                                         <div class="min-w-[180px] space-y-2">
-                                            <progress max="100" value="{{ $objectif->avancement_percentage }}" class="h-2.5 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-slate-200 [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:rounded-full {{ $progressBarClasses }}"></progress>
                                             <div class="flex items-center gap-2">
                                                 @if (! $isEvaluationLocked)
                                                     <form method="POST" action="{{ route('admin.objectifs.progress', $objectif) }}">
@@ -102,6 +101,9 @@
                                                     </form>
                                                 @endif
                                                 <p class="min-w-14 rounded-full border px-2 py-1 text-center text-sm font-semibold {{ $progressTextClasses }}">{{ $objectif->avancement_percentage }}%</p>
+                                                @if ($isEvaluationLocked)
+                                                    <p class="inline-flex w-fit rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">Verrouillee</p>
+                                                @endif
                                                 @if (! $isEvaluationLocked)
                                                     <form method="POST" action="{{ route('admin.objectifs.progress', $objectif) }}">
                                                         @csrf
@@ -110,9 +112,7 @@
                                                     </form>
                                                 @endif
                                             </div>
-                                            @if ($isEvaluationLocked)
-                                                <p class="text-xs font-medium text-amber-700">Evolution verrouillee: cible evaluee sur la periode de l'echeance</p>
-                                            @elseif ($isExpired)
+                                            @if ($isExpired && ! $isEvaluationLocked)
                                                 <p class="text-xs font-medium text-rose-600">Evolution verrouillee apres echeance</p>
                                             @endif
                                         </div>

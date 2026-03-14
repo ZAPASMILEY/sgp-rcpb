@@ -61,20 +61,31 @@
                             @forelse ($evaluations as $evaluation)
                                 @php
                                     $evaluable = $evaluation->evaluable;
-                                    $typeMap = [
-                                        \App\Models\Entite::class    => 'Entite',
-                                        \App\Models\Direction::class => 'Direction',
-                                        \App\Models\Service::class   => 'Service',
-                                        \App\Models\Agent::class     => 'Agent',
-                                    ];
-                                    $typeLabel = $typeMap[$evaluation->evaluable_type] ?? '-';
+                                    $role = $evaluation->evaluable_role ?? 'entity';
+                                    if ($evaluation->evaluable_type === \App\Models\Direction::class && $role === 'manager') {
+                                        $typeLabel = 'Directeur';
+                                    } elseif ($evaluation->evaluable_type === \App\Models\Service::class && $role === 'manager') {
+                                        $typeLabel = 'Chef de service';
+                                    } else {
+                                        $typeMap = [
+                                            \App\Models\Entite::class    => 'Entite',
+                                            \App\Models\Direction::class => 'Direction',
+                                            \App\Models\Service::class   => 'Service',
+                                            \App\Models\Agent::class     => 'Agent',
+                                        ];
+                                        $typeLabel = $typeMap[$evaluation->evaluable_type] ?? '-';
+                                    }
                                     if ($evaluable instanceof \App\Models\Agent) {
                                         $cibleLabel = trim($evaluable->prenom.' '.$evaluable->nom);
                                     } elseif ($evaluable instanceof \App\Models\Direction) {
-                                        $cibleLabel = $evaluable->nom.($evaluable->directeur_nom ? ' ('.$evaluable->directeur_nom.')' : '');
+                                        $cibleLabel = $role === 'manager'
+                                            ? ($evaluable->directeur_nom ?: 'Directeur non renseigne')
+                                            : $evaluable->nom;
                                     } elseif ($evaluable instanceof \App\Models\Service) {
                                         $chef = trim(($evaluable->chef_prenom ?? '').' '.($evaluable->chef_nom ?? ''));
-                                        $cibleLabel = $evaluable->nom.($chef !== '' ? ' ('.$chef.')' : '');
+                                        $cibleLabel = $role === 'manager'
+                                            ? ($chef !== '' ? $chef : 'Chef non renseigne')
+                                            : $evaluable->nom;
                                     } else {
                                         $cibleLabel = $evaluable?->nom ?? '-';
                                     }
@@ -113,11 +124,16 @@
                                         <div class="ent-actions justify-end gap-2">
                                             @if ($evaluation->statut === 'brouillon')
                                                 <a href="{{ route('admin.evaluations.edit', $evaluation) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Modifier l'evaluation" aria-label="Modifier l'evaluation">
-                                                    <span aria-hidden="true">~</span>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 3.487 3.651 3.651M4.5 19.5l3.981-.884a2.25 2.25 0 0 0 1.068-.574L20.513 7.078a1.875 1.875 0 0 0 0-2.652l-.939-.939a1.875 1.875 0 0 0-2.652 0L5.958 14.451a2.25 2.25 0 0 0-.574 1.068L4.5 19.5Z" />
+                                                    </svg>
                                                 </a>
                                             @endif
                                             <a href="{{ route('admin.evaluations.show', $evaluation) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Voir l'evaluation" aria-label="Voir l'evaluation">
-                                                <span aria-hidden="true">+</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12s-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z" />
+                                                    <circle cx="12" cy="12" r="3" />
+                                                </svg>
                                             </a>
                                             <a href="{{ route('admin.evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Exporter en PDF" aria-label="Exporter en PDF">
                                                 <span aria-hidden="true">PDF</span>
@@ -127,7 +143,9 @@
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="ent-btn ent-btn-danger inline-flex h-7 w-7 items-center justify-center p-0" title="Supprimer l'evaluation" aria-label="Supprimer l'evaluation">
-                                                        <span aria-hidden="true">x</span>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 6.75h18M9.75 6.75V5.625A1.875 1.875 0 0 1 11.625 3.75h.75A1.875 1.875 0 0 1 14.25 5.625V6.75m3.75 0V18A2.25 2.25 0 0 1 15.75 20.25h-7.5A2.25 2.25 0 0 1 6 18V6.75h12Zm-8.25 4.5v5.25m4.5-5.25v5.25" />
+                                                        </svg>
                                                     </button>
                                                 </form>
                                             @endif

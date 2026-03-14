@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('evaluable_type');
             $table->unsignedBigInteger('evaluable_id');
+            $table->string('evaluable_role')->default('entity');
             $table->index(['evaluable_type', 'evaluable_id']);
             $table->foreignId('evaluateur_id')->constrained('users')->cascadeOnDelete();
             $table->date('date_debut');

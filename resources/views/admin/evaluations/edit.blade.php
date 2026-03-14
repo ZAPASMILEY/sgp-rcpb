@@ -18,15 +18,6 @@
                     </div>
                 @endif
 
-                @php
-                    $currentTypeKey = collect([
-                        'entite'    => \App\Models\Entite::class,
-                        'direction' => \App\Models\Direction::class,
-                        'service'   => \App\Models\Service::class,
-                        'agent'     => \App\Models\Agent::class,
-                    ])->flip()->get($evaluation->evaluable_type, '');
-                @endphp
-
                 <form method="POST" action="{{ route('admin.evaluations.update', $evaluation) }}" class="space-y-6">
                     @csrf
                     @method('PUT')
@@ -36,10 +27,12 @@
                             <label for="evaluable_type" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Type de cible</label>
                             <select id="evaluable_type" name="evaluable_type" class="ent-select" required>
                                 <option value="">Selectionner un type</option>
-                                <option value="entite"    @selected(old('evaluable_type', $currentTypeKey) === 'entite')>Entite</option>
-                                <option value="direction" @selected(old('evaluable_type', $currentTypeKey) === 'direction')>Direction (directeur)</option>
-                                <option value="service"   @selected(old('evaluable_type', $currentTypeKey) === 'service')>Service (chef de service)</option>
-                                <option value="agent"     @selected(old('evaluable_type', $currentTypeKey) === 'agent')>Agent</option>
+                                <option value="entite"    @selected(old('evaluable_type', $selectedTargetKey) === 'entite')>Entite</option>
+                                <option value="direction" @selected(old('evaluable_type', $selectedTargetKey) === 'direction')>Direction</option>
+                                <option value="directeur" @selected(old('evaluable_type', $selectedTargetKey) === 'directeur')>Directeur</option>
+                                <option value="service"   @selected(old('evaluable_type', $selectedTargetKey) === 'service')>Service</option>
+                                <option value="chef_service" @selected(old('evaluable_type', $selectedTargetKey) === 'chef_service')>Chef de service</option>
+                                <option value="agent"     @selected(old('evaluable_type', $selectedTargetKey) === 'agent')>Agent</option>
                             </select>
                             @error('evaluable_type')<p class="text-sm text-rose-600">{{ $message }}</p>@enderror
                         </div>

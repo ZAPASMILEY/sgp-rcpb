@@ -17,12 +17,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EvaluationController extends Controller
 {
-    /** @var array<string, class-string> */
-    private const TYPE_MAP = [
-        'entite' => Entite::class,
-        'direction' => Direction::class,
-        'service' => Service::class,
-        'agent' => Agent::class,
+    /** @var array<string, array{class: class-string, role: string}> */
+    private const TARGET_MAP = [
+        'entite' => ['class' => Entite::class, 'role' => 'entity'],
+        'direction' => ['class' => Direction::class, 'role' => 'entity'],
+        'directeur' => ['class' => Direction::class, 'role' => 'manager'],
+        'service' => ['class' => Service::class, 'role' => 'entity'],
+        'chef_service' => ['class' => Service::class, 'role' => 'manager'],
+        'agent' => ['class' => Agent::class, 'role' => 'entity'],
     ];
 
     public function index(Request $request): View
@@ -35,8 +37,8 @@ class EvaluationController extends Controller
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($subQuery) use ($search): void {
                     $subQuery->whereHasMorph('evaluable', [Entite::class], fn ($entiteQuery) => $entiteQuery->where('nom', 'like', "%{$search}%"))
-                        ->orWhereHasMorph('evaluable', [Direction::class], fn ($directionQuery) => $directionQuery->where('nom', 'like', "%{$search}%"))
-                        ->orWhereHasMorph('evaluable', [Service::class], fn ($serviceQuery) => $serviceQuery->where('nom', 'like', "%{$search}%"))
+                        ->orWhereHasMorph('evaluable', [Direction::class], fn ($directionQuery) => $directionQuery->where('nom', 'like', "%{$search}%")->orWhere('directeur_nom', 'like', "%{$search}%"))
+                        ->orWhereHasMorph('evaluable', [Service::class], fn ($serviceQuery) => $serviceQuery->where('nom', 'like', "%{$search}%")->orWhere('chef_nom', 'like', "%{$search}%")->orWhere('chef_prenom', 'like', "%{$search}%"))
                         ->orWhereHasMorph('evaluable', [Agent::class], fn ($agentQuery) => $agentQuery->where('nom', 'like', "%{$search}%")->orWhere('prenom', 'like', "%{$search}%"));
                 });
             })
@@ -66,13 +68,14 @@ class EvaluationController extends Controller
         return view('admin.evaluations.edit', [
             'evaluation' => $evaluation,
             'assignmentOptions' => $this->buildAssignmentOptions(),
+            'selectedTargetKey' => $this->targetKeyFromEvaluation($evaluation),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'evaluable_type' => ['required', 'string', 'in:entite,direction,service,agent'],
+            'evaluable_type' => ['required', 'string', 'in:entite,direction,directeur,service,chef_service,agent'],
             'evaluable_id' => ['required', 'integer', 'min:1'],
             'date_debut' => ['required', 'date'],
             'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
@@ -80,7 +83,9 @@ class EvaluationController extends Controller
             'commentaire' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $evaluableClass = self::TYPE_MAP[$validated['evaluable_type']];
+        $targetConfig = self::TARGET_MAP[$validated['evaluable_type']];
+        $evaluableClass = $targetConfig['class'];
+        $evaluableRole = $targetConfig['role'];
         $evaluableId = (int) $validated['evaluable_id'];
 
         $scores = $this->computeScores(
@@ -94,6 +99,7 @@ class EvaluationController extends Controller
         $evaluation = Evaluation::create([
             'evaluable_type' => $evaluableClass,
             'evaluable_id' => $evaluableId,
+            'evaluable_role' => $evaluableRole,
             'evaluateur_id' => $request->user()->id,
             'date_debut' => $validated['date_debut'],
             'date_fin' => $validated['date_fin'],
@@ -116,7 +122,7 @@ class EvaluationController extends Controller
         }
 
         $validated = $request->validate([
-            'evaluable_type' => ['required', 'string', 'in:entite,direction,service,agent'],
+            'evaluable_type' => ['required', 'string', 'in:entite,direction,directeur,service,chef_service,agent'],
             'evaluable_id' => ['required', 'integer', 'min:1'],
             'date_debut' => ['required', 'date'],
             'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
@@ -124,7 +130,9 @@ class EvaluationController extends Controller
             'commentaire' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $evaluableClass = self::TYPE_MAP[$validated['evaluable_type']];
+        $targetConfig = self::TARGET_MAP[$validated['evaluable_type']];
+        $evaluableClass = $targetConfig['class'];
+        $evaluableRole = $targetConfig['role'];
         $evaluableId = (int) $validated['evaluable_id'];
 
         $scores = $this->computeScores(
@@ -138,6 +146,7 @@ class EvaluationController extends Controller
         $evaluation->update([
             'evaluable_type' => $evaluableClass,
             'evaluable_id' => $evaluableId,
+            'evaluable_role' => $evaluableRole,
             'date_debut' => $validated['date_debut'],
             'date_fin' => $validated['date_fin'],
             'note_objectifs' => $scores['note_objectifs'],
@@ -162,8 +171,8 @@ class EvaluationController extends Controller
             ->get();
 
         $mention = $this->mentionFromScore((int) $evaluation->note_finale);
-        $cibleLabel = $this->evaluableLabel($evaluation->evaluable);
-        $cibleType = $this->evaluableTypeLabel($evaluation->evaluable_type);
+        $cibleLabel = $this->evaluableLabel($evaluation->evaluable, $evaluation->evaluable_role ?? 'entity');
+        $cibleType = $this->evaluableTypeLabel($evaluation->evaluable_type, $evaluation->evaluable_role ?? 'entity');
 
         return view('admin.evaluations.show', compact('evaluation', 'objectifs', 'mention', 'cibleLabel', 'cibleType'));
     }
@@ -180,8 +189,8 @@ class EvaluationController extends Controller
             ->get();
 
         $mention = $this->mentionFromScore((int) $evaluation->note_finale);
-        $cibleLabel = $this->evaluableLabel($evaluation->evaluable);
-        $cibleType = $this->evaluableTypeLabel($evaluation->evaluable_type);
+        $cibleLabel = $this->evaluableLabel($evaluation->evaluable, $evaluation->evaluable_role ?? 'entity');
+        $cibleType = $this->evaluableTypeLabel($evaluation->evaluable_type, $evaluation->evaluable_role ?? 'entity');
 
         $pdf = Pdf::loadView('admin.evaluations.pdf', compact('evaluation', 'objectifs', 'mention', 'cibleLabel', 'cibleType'));
 
@@ -270,17 +279,27 @@ class EvaluationController extends Controller
         return 'Excellent';
     }
 
-    private function evaluableLabel(mixed $evaluable): string
+    private function evaluableLabel(mixed $evaluable, string $role): string
     {
         if ($evaluable instanceof Agent) {
             return trim($evaluable->prenom.' '.$evaluable->nom);
         }
 
         if ($evaluable instanceof Direction) {
-            return $evaluable->nom.($evaluable->directeur_nom ? ' ('.$evaluable->directeur_nom.')' : '');
+            if ($role === 'manager') {
+                return $evaluable->directeur_nom ?: 'Directeur non renseigne';
+            }
+
+            return $evaluable->nom;
         }
 
         if ($evaluable instanceof Service) {
+            if ($role === 'manager') {
+                $chef = trim(($evaluable->chef_prenom ?? '').' '.($evaluable->chef_nom ?? ''));
+
+                return $chef !== '' ? $chef : 'Chef non renseigne';
+            }
+
             $chef = trim(($evaluable->chef_prenom ?? '').' '.($evaluable->chef_nom ?? ''));
 
             return $evaluable->nom.($chef !== '' ? ' ('.$chef.')' : '');
@@ -293,8 +312,16 @@ class EvaluationController extends Controller
         return '-';
     }
 
-    private function evaluableTypeLabel(string $evaluableType): string
+    private function evaluableTypeLabel(string $evaluableType, string $role): string
     {
+        if ($evaluableType === Direction::class && $role === 'manager') {
+            return 'Directeur';
+        }
+
+        if ($evaluableType === Service::class && $role === 'manager') {
+            return 'Chef de service';
+        }
+
         return match ($evaluableType) {
             Agent::class => 'Agent',
             Direction::class => 'Direction',
@@ -315,14 +342,24 @@ class EvaluationController extends Controller
                 ->values()
                 ->all(),
             'direction' => Direction::query()->orderBy('nom')->get()
-                ->map(fn ($direction) => ['id' => $direction->id, 'label' => $direction->nom.($direction->directeur_nom ? ' ('.$direction->directeur_nom.')' : '')])
+                ->map(fn ($direction) => ['id' => $direction->id, 'label' => $direction->nom])
+                ->values()
+                ->all(),
+            'directeur' => Direction::query()->orderBy('directeur_nom')->get()
+                ->map(fn ($direction) => ['id' => $direction->id, 'label' => ($direction->directeur_nom ?: 'Directeur non renseigne').' - '.$direction->nom])
                 ->values()
                 ->all(),
             'service' => Service::query()->orderBy('nom')->get()
                 ->map(function ($service) {
+                    return ['id' => $service->id, 'label' => $service->nom];
+                })
+                ->values()
+                ->all(),
+            'chef_service' => Service::query()->orderBy('chef_nom')->orderBy('chef_prenom')->get()
+                ->map(function ($service) {
                     $chef = trim(($service->chef_prenom ?? '').' '.($service->chef_nom ?? ''));
 
-                    return ['id' => $service->id, 'label' => $service->nom.($chef !== '' ? ' ('.$chef.')' : '')];
+                    return ['id' => $service->id, 'label' => ($chef !== '' ? $chef : 'Chef non renseigne').' - '.$service->nom];
                 })
                 ->values()
                 ->all(),
@@ -331,6 +368,25 @@ class EvaluationController extends Controller
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function targetKeyFromEvaluation(Evaluation $evaluation): string
+    {
+        if ($evaluation->evaluable_type === Direction::class && ($evaluation->evaluable_role ?? 'entity') === 'manager') {
+            return 'directeur';
+        }
+
+        if ($evaluation->evaluable_type === Service::class && ($evaluation->evaluable_role ?? 'entity') === 'manager') {
+            return 'chef_service';
+        }
+
+        return match ($evaluation->evaluable_type) {
+            Entite::class => 'entite',
+            Direction::class => 'direction',
+            Service::class => 'service',
+            Agent::class => 'agent',
+            default => 'entite',
+        };
     }
 
     private function closeAssignableObjectifs(Evaluation $evaluation): int

@@ -18,10 +18,12 @@
     <body>
         @php
             $showAdminSidebar = request()->routeIs('admin.*') && !request()->routeIs('login');
+            $themePreference = auth()->check() ? (auth()->user()->theme_preference ?? 'reference') : 'reference';
+            $adminThemeClass = $themePreference === 'reference' ? 'admin-layout--reference' : '';
         @endphp
 
         @if ($showAdminSidebar)
-            <div id="admin-layout" class="admin-layout min-h-screen">
+            <div id="admin-layout" class="admin-layout min-h-screen {{ $adminThemeClass }}">
                 <aside id="admin-sidebar" class="admin-sidebar">
                     <div class="admin-sidebar__brand">
                         <div class="admin-sidebar__brand-row">
@@ -58,6 +60,9 @@
                         </a>
                         <a href="{{ route('admin.evaluations.index') }}" class="admin-tab {{ request()->routeIs('admin.evaluations.*') ? 'is-active' : '' }}">
                             Evaluations
+                        </a>
+                        <a href="{{ route('admin.settings.edit') }}" class="admin-tab {{ request()->routeIs('admin.settings.*') ? 'is-active' : '' }}">
+                            Parametres
                         </a>
                     </nav>
 

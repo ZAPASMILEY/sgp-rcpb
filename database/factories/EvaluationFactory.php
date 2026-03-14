@@ -20,6 +20,7 @@ class EvaluationFactory extends Factory
         return [
             'evaluable_type' => Agent::class,
             'evaluable_id' => Agent::factory(),
+            'evaluable_role' => 'entity',
             'evaluateur_id' => User::factory(),
             'date_debut' => now()->subMonth()->startOfMonth()->toDateString(),
             'date_fin' => now()->subMonth()->endOfMonth()->toDateString(),

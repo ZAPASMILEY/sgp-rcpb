@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DirectionController;
 use App\Http\Controllers\Admin\EntiteController;
 use App\Http\Controllers\Admin\EvaluationController;
 use App\Http\Controllers\Admin\ObjectifController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use Illuminate\Support\Facades\Route;
@@ -72,4 +73,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/admin/evaluations/{evaluation}/valider', [EvaluationController::class, 'approve'])->name('admin.evaluations.approve');
     Route::get('/admin/evaluations/{evaluation}/pdf', [EvaluationController::class, 'exportPdf'])->name('admin.evaluations.pdf');
     Route::delete('/admin/evaluations/{evaluation}', [EvaluationController::class, 'destroy'])->name('admin.evaluations.destroy');
+
+    Route::get('/admin/parametres', [SettingsController::class, 'edit'])->name('admin.settings.edit');
+    Route::put('/admin/parametres/theme', [SettingsController::class, 'updateTheme'])->name('admin.settings.theme.update');
+    Route::put('/admin/parametres/mot-de-passe', [SettingsController::class, 'updatePassword'])->name('admin.settings.password.update');
 });

@@ -10,7 +10,7 @@
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Referentiel</p>
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Directions</h1>
-                        <p class="mt-2 text-sm text-slate-600">Liste des directions.</p>
+                        <p class="mt-2 text-sm text-slate-600">Directions.</p>
                     </div>
                     <a href="{{ route('admin.directions.index') }}" class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
                         Reinitialiser
@@ -58,7 +58,7 @@
                     <table class="ent-table text-left text-sm text-slate-700">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th>N</th>
                                 <th>Direction</th>
                                 <th>Entite</th>
                                 <th>Directeur</th>

@@ -8,7 +8,7 @@
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Pilotage</p>
                 <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Nouvelle evaluation</h1>
-                <p class="mt-2 text-sm text-slate-600">Evaluez une entite, une direction, un service ou un agent sur une periode donnee.</p>
+                <p class="mt-2 text-sm text-slate-600">Evaluez une entite, une direction, un directeur, un service, un chef de service ou un agent sur une periode donnee.</p>
             </header>
 
             <section class="admin-panel px-6 py-6 lg:px-8">
@@ -27,8 +27,10 @@
                             <select id="evaluable_type" name="evaluable_type" class="ent-select" required>
                                 <option value="">Selectionner un type</option>
                                 <option value="entite"    @selected(old('evaluable_type') === 'entite')>Entite</option>
-                                <option value="direction" @selected(old('evaluable_type') === 'direction')>Direction (directeur)</option>
-                                <option value="service"   @selected(old('evaluable_type') === 'service')>Service (chef de service)</option>
+                                <option value="direction" @selected(old('evaluable_type') === 'direction')>Direction</option>
+                                <option value="directeur" @selected(old('evaluable_type') === 'directeur')>Directeur</option>
+                                <option value="service"   @selected(old('evaluable_type') === 'service')>Service</option>
+                                <option value="chef_service" @selected(old('evaluable_type') === 'chef_service')>Chef de service</option>
                                 <option value="agent"     @selected(old('evaluable_type') === 'agent')>Agent</option>
                             </select>
                             @error('evaluable_type')<p class="text-sm text-rose-600">{{ $message }}</p>@enderror
