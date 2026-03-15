@@ -1,16 +1,16 @@
-@extends('layouts.app')
+@extends('layouts.pca')
 
-@section('title', 'Parametres | '.config('app.name', 'SGP-RCPB'))
+@section('title', 'Parametres PCA | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-5 sm:px-6 lg:px-10">
         <div class="mx-auto flex max-w-5xl flex-col gap-5">
             <header class="admin-panel px-6 py-5 lg:px-8">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Administration / Parametres</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Espace PCA / Parametres</p>
                 <div class="mt-2 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h1 class="text-3xl font-semibold tracking-tight text-slate-950">Parametres</h1>
-                        <p class="mt-1 text-sm text-slate-600">Theme et securite du compte.</p>
+                        <p class="mt-1 text-sm text-slate-600">Theme et securite du compte PCA.</p>
                     </div>
                 </div>
             </header>
@@ -26,7 +26,7 @@
                     <h2 class="text-lg font-semibold text-slate-900">Theme</h2>
                     <p class="mt-1 text-sm text-slate-600">Choisissez le style visuel de l'interface.</p>
 
-                    <form method="POST" action="{{ route('admin.settings.theme.update') }}" class="mt-4 space-y-3">
+                    <form method="POST" action="{{ route('pca.settings.theme.update') }}" class="mt-4 space-y-3">
                         @csrf
                         @method('PUT')
 
@@ -47,9 +47,9 @@
 
                 <section class="admin-panel px-6 py-5 lg:px-7">
                     <h2 class="text-lg font-semibold text-slate-900">Mot de passe</h2>
-                    <p class="mt-1 text-sm text-slate-600">Mettez a jour l'acces administrateur.</p>
+                    <p class="mt-1 text-sm text-slate-600">Mettez a jour l'acces de votre compte PCA.</p>
 
-                    <form method="POST" action="{{ route('admin.settings.password.update') }}" class="mt-4 space-y-3">
+                    <form method="POST" action="{{ route('pca.settings.password.update') }}" class="mt-4 space-y-3">
                         @csrf
                         @method('PUT')
 

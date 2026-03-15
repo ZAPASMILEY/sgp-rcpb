@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Models\User;
 
 class Agent extends Model
 {
@@ -15,6 +16,7 @@ class Agent extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'service_id',
         'nom',
         'prenom',
@@ -23,6 +25,11 @@ class Agent extends Model
         'email',
         'photo_path',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function service(): BelongsTo
     {

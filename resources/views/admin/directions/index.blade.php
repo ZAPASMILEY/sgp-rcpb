@@ -8,9 +8,15 @@
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Referentiel</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration / Referentiel</p>
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Directions</h1>
                         <p class="mt-2 text-sm text-slate-600">Directions.</p>
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <span class="status-pill">Total {{ $directions->total() }}</span>
+                            @if ($filters['search'] || $filters['entite_id'])
+                                <span class="status-pill">Filtres actifs</span>
+                            @endif
+                        </div>
                     </div>
                     <a href="{{ route('admin.directions.index') }}" class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
                         Reinitialiser

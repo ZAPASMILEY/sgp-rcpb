@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ class Service extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'nom',
         'direction_id',
         'chef_prenom',
@@ -23,6 +25,11 @@ class Service extends Model
         'chef_email',
         'chef_telephone',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function direction(): BelongsTo
     {

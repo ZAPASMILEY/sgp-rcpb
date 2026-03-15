@@ -5,11 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\Service;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class AgentController extends Controller
 {
@@ -67,8 +71,18 @@ class AgentController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateAgent($request);
+        $this->validateCredentials($request);
+
         $validated['photo_path'] = $this->storeSelectedPhoto($request);
 
+        $user = User::create([
+            'name'     => $validated['prenom'].' '.$validated['nom'],
+            'email'    => $validated['email'],
+            'password' => Hash::make((string) $request->input('password')),
+            'role'     => 'agent',
+        ]);
+
+        $validated['user_id'] = $user->id;
         Agent::query()->create($validated);
 
         return redirect()
@@ -78,7 +92,9 @@ class AgentController extends Controller
 
     public function update(Request $request, Agent $agent): RedirectResponse
     {
-        $validated = $this->validateAgent($request);
+        $validated = $this->validateAgent($request, $agent);
+        $this->validatePasswordUpdate($request);
+
         $photo = $this->storeSelectedPhoto($request);
 
         if ($photo !== null) {
@@ -87,6 +103,17 @@ class AgentController extends Controller
         } elseif ($request->boolean('remove_photo')) {
             $this->deletePhoto($agent->photo_path);
             $validated['photo_path'] = null;
+        }
+
+        if ($agent->user) {
+            $userData = [
+                'name'  => $validated['prenom'].' '.$validated['nom'],
+                'email' => $validated['email'],
+            ];
+            if ($request->filled('password')) {
+                $userData['password'] = Hash::make((string) $request->input('password'));
+            }
+            $agent->user->update($userData);
         }
 
         $agent->update($validated);
@@ -99,6 +126,7 @@ class AgentController extends Controller
     public function destroy(Agent $agent): RedirectResponse
     {
         $this->deletePhoto($agent->photo_path);
+        $agent->user?->delete();
         $agent->delete();
 
         return redirect()
@@ -109,18 +137,39 @@ class AgentController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validateAgent(Request $request): array
+    private function validateAgent(Request $request, ?Agent $agent = null): array
     {
+        $emailRule = ['required', 'email', 'max:255'];
+        if ($agent === null) {
+            $emailRule[] = Rule::unique('users', 'email');
+        } else {
+            $emailRule[] = Rule::unique('users', 'email')->ignore($agent->user_id);
+        }
+
         return $request->validate([
-            'service_id' => ['required', 'integer', 'exists:services,id'],
-            'nom' => ['required', 'string', 'max:255'],
-            'prenom' => ['required', 'string', 'max:255'],
-            'fonction' => ['required', 'string', 'max:255'],
+            'service_id'       => ['required', 'integer', 'exists:services,id'],
+            'nom'              => ['required', 'string', 'max:255'],
+            'prenom'           => ['required', 'string', 'max:255'],
+            'fonction'         => ['required', 'string', 'max:255'],
             'numero_telephone' => ['required', 'string', 'max:30'],
-            'email' => ['required', 'email', 'max:255'],
-            'photo_import' => ['nullable', 'image', 'max:3072'],
-            'photo_camera' => ['nullable', 'image', 'max:3072'],
-            'remove_photo' => ['nullable', 'boolean'],
+            'email'            => $emailRule,
+            'photo_import'     => ['nullable', 'image', 'max:3072'],
+            'photo_camera'     => ['nullable', 'image', 'max:3072'],
+            'remove_photo'     => ['nullable', 'boolean'],
+        ]);
+    }
+
+    private function validateCredentials(Request $request): void
+    {
+        $request->validate([
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+    }
+
+    private function validatePasswordUpdate(Request $request): void
+    {
+        $request->validate([
+            'password' => ['nullable', 'confirmed', Password::min(8)],
         ]);
     }
 

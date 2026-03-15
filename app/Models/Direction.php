@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,12 +17,18 @@ class Direction extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'nom',
         'entite_id',
         'directeur_nom',
         'directeur_email',
         'secretariat_telephone',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function entite(): BelongsTo
     {

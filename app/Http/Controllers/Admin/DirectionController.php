@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Direction;
 use App\Models\Entite;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class DirectionController extends Controller
 {
@@ -69,7 +73,21 @@ class DirectionController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Direction::query()->create($this->validateDirection($request));
+        $validated = $this->validateDirection($request);
+
+        $request->validate([
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        $user = User::create([
+            'name'     => $validated['directeur_nom'],
+            'email'    => $validated['directeur_email'],
+            'password' => Hash::make((string) $request->input('password')),
+            'role'     => 'directeur',
+        ]);
+
+        $validated['user_id'] = $user->id;
+        Direction::query()->create($validated);
 
         return redirect()
             ->route('admin.directions.index')
@@ -78,7 +96,24 @@ class DirectionController extends Controller
 
     public function update(Request $request, Direction $direction): RedirectResponse
     {
-        $direction->update($this->validateDirection($request));
+        $validated = $this->validateDirection($request, $direction);
+
+        $request->validate([
+            'password' => ['nullable', 'confirmed', Password::min(8)],
+        ]);
+
+        if ($direction->user) {
+            $userData = [
+                'name'  => $validated['directeur_nom'],
+                'email' => $validated['directeur_email'],
+            ];
+            if ($request->filled('password')) {
+                $userData['password'] = Hash::make((string) $request->input('password'));
+            }
+            $direction->user->update($userData);
+        }
+
+        $direction->update($validated);
 
         return redirect()
             ->route('admin.directions.show', $direction)
@@ -87,6 +122,7 @@ class DirectionController extends Controller
 
     public function destroy(Direction $direction): RedirectResponse
     {
+        $direction->user?->delete();
         $direction->delete();
 
         return redirect()
@@ -97,14 +133,21 @@ class DirectionController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validateDirection(Request $request): array
+    private function validateDirection(Request $request, ?Direction $direction = null): array
     {
+        $emailRule = ['required', 'email', 'max:255'];
+        if ($direction === null) {
+            $emailRule[] = Rule::unique('users', 'email');
+        } else {
+            $emailRule[] = Rule::unique('users', 'email')->ignore($direction->user_id);
+        }
+
         return $request->validate([
-            'nom' => ['required', 'string', 'max:255'],
-            'entite_id' => ['required', 'integer', 'exists:entites,id'],
-            'directeur_nom' => ['required', 'string', 'max:255'],
-            'directeur_email' => ['required', 'email', 'max:255'],
-            'secretariat_telephone' => ['required', 'string', 'max:30'],
+            'nom'                    => ['required', 'string', 'max:255'],
+            'entite_id'              => ['required', 'integer', 'exists:entites,id'],
+            'directeur_nom'          => ['required', 'string', 'max:255'],
+            'directeur_email'        => $emailRule,
+            'secretariat_telephone'  => ['required', 'string', 'max:30'],
         ]);
     }
 }

@@ -82,6 +82,23 @@
                         </div>
                     </div>
 
+                    <div class="ent-card space-y-4">
+                        <div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Compte de connexion</p>
+                            <p class="mt-1 text-xs text-slate-500">L'adresse email ci-dessus servira d'identifiant de connexion.</p>
+                        </div>
+                        <div class="ent-form-grid">
+                            <div class="space-y-2">
+                                <label for="password" class="text-sm font-semibold text-slate-700">Mot de passe</label>
+                                <input id="password" name="password" type="password" required class="ent-input" placeholder="Min. 8 caracteres" autocomplete="new-password">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirmer le mot de passe</label>
+                                <input id="password_confirmation" name="password_confirmation" type="password" required class="ent-input" placeholder="Retaper le mot de passe" autocomplete="new-password">
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">
                         Creer l'agent
                     </button>

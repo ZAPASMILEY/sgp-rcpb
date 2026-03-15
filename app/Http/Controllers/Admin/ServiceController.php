@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Direction;
 use App\Models\Service;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class ServiceController extends Controller
 {
@@ -74,7 +78,21 @@ class ServiceController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Service::query()->create($this->validateService($request));
+        $validated = $this->validateService($request);
+
+        $request->validate([
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        $user = User::create([
+            'name'     => $validated['chef_prenom'].' '.$validated['chef_nom'],
+            'email'    => $validated['chef_email'],
+            'password' => Hash::make((string) $request->input('password')),
+            'role'     => 'chef',
+        ]);
+
+        $validated['user_id'] = $user->id;
+        Service::query()->create($validated);
 
         return redirect()
             ->route('admin.services.index')
@@ -83,7 +101,24 @@ class ServiceController extends Controller
 
     public function update(Request $request, Service $service): RedirectResponse
     {
-        $service->update($this->validateService($request));
+        $validated = $this->validateService($request, $service);
+
+        $request->validate([
+            'password' => ['nullable', 'confirmed', Password::min(8)],
+        ]);
+
+        if ($service->user) {
+            $userData = [
+                'name'  => $validated['chef_prenom'].' '.$validated['chef_nom'],
+                'email' => $validated['chef_email'],
+            ];
+            if ($request->filled('password')) {
+                $userData['password'] = Hash::make((string) $request->input('password'));
+            }
+            $service->user->update($userData);
+        }
+
+        $service->update($validated);
 
         return redirect()
             ->route('admin.services.show', $service)
@@ -92,6 +127,7 @@ class ServiceController extends Controller
 
     public function destroy(Service $service): RedirectResponse
     {
+        $service->user?->delete();
         $service->delete();
 
         return redirect()
@@ -102,15 +138,22 @@ class ServiceController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validateService(Request $request): array
+    private function validateService(Request $request, ?Service $service = null): array
     {
+        $emailRule = ['required', 'email', 'max:255'];
+        if ($service === null) {
+            $emailRule[] = Rule::unique('users', 'email');
+        } else {
+            $emailRule[] = Rule::unique('users', 'email')->ignore($service->user_id);
+        }
+
         return $request->validate([
-            'nom' => ['required', 'string', 'max:255'],
-            'direction_id' => ['required', 'integer', 'exists:directions,id'],
-            'chef_prenom' => ['required', 'string', 'max:255'],
-            'chef_nom' => ['required', 'string', 'max:255'],
-            'chef_email' => ['required', 'email', 'max:255'],
-            'chef_telephone' => ['required', 'string', 'max:30'],
+            'nom'              => ['required', 'string', 'max:255'],
+            'direction_id'     => ['required', 'integer', 'exists:directions,id'],
+            'chef_prenom'      => ['required', 'string', 'max:255'],
+            'chef_nom'         => ['required', 'string', 'max:255'],
+            'chef_email'       => $emailRule,
+            'chef_telephone'   => ['required', 'string', 'max:30'],
         ]);
     }
 }

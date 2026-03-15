@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Entite;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class EntiteController extends Controller
 {
@@ -69,7 +73,21 @@ class EntiteController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        Entite::query()->create($this->validateEntite($request));
+        $validated = $this->validateEntite($request);
+
+        $request->validate([
+            'pca_password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        $entite = Entite::query()->create($validated);
+
+        User::create([
+            'name'          => $validated['pca_prenom'].' '.$validated['pca_nom'],
+            'email'         => $validated['pca_email'],
+            'password'      => Hash::make((string) $request->input('pca_password')),
+            'role'          => 'pca',
+            'pca_entite_id' => $entite->id,
+        ]);
 
         return redirect()
             ->route('admin.entites.index')
@@ -78,7 +96,25 @@ class EntiteController extends Controller
 
     public function update(Request $request, Entite $entite): RedirectResponse
     {
-        $entite->update($this->validateEntite($request));
+        $validated = $this->validateEntite($request, $entite);
+
+        $request->validate([
+            'pca_password' => ['nullable', 'confirmed', Password::min(8)],
+        ]);
+
+        $pcaUser = User::where('pca_entite_id', $entite->id)->where('role', 'pca')->first();
+        if ($pcaUser) {
+            $userData = [
+                'name'  => $validated['pca_prenom'].' '.$validated['pca_nom'],
+                'email' => $validated['pca_email'],
+            ];
+            if ($request->filled('pca_password')) {
+                $userData['password'] = Hash::make((string) $request->input('pca_password'));
+            }
+            $pcaUser->update($userData);
+        }
+
+        $entite->update($validated);
 
         return redirect()
             ->route('admin.entites.show', $entite)
@@ -87,6 +123,7 @@ class EntiteController extends Controller
 
     public function destroy(Entite $entite): RedirectResponse
     {
+        User::where('pca_entite_id', $entite->id)->where('role', 'pca')->delete();
         $entite->delete();
 
         return redirect()
@@ -97,18 +134,26 @@ class EntiteController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validateEntite(Request $request): array
+    private function validateEntite(Request $request, ?Entite $entite = null): array
     {
+        $pcaEmailRule = ['required', 'email', 'max:255'];
+        if ($entite === null) {
+            $pcaEmailRule[] = Rule::unique('users', 'email');
+        } else {
+            $pcaUser = User::where('pca_entite_id', $entite->id)->where('role', 'pca')->first();
+            $pcaEmailRule[] = Rule::unique('users', 'email')->ignore($pcaUser?->id);
+        }
+
         return $request->validate([
-            'nom' => ['required', 'string', 'max:255'],
-            'ville' => ['required', 'string', 'max:255'],
-            'directrice_generale_prenom' => ['required', 'string', 'max:255'],
-            'directrice_generale_nom' => ['required', 'string', 'max:255'],
-            'directrice_generale_email' => ['required', 'email', 'max:255'],
-            'pca_prenom' => ['required', 'string', 'max:255'],
-            'pca_nom' => ['required', 'string', 'max:255'],
-            'pca_email' => ['required', 'email', 'max:255'],
-            'secretariat_telephone' => ['required', 'string', 'max:30'],
+            'nom'                          => ['required', 'string', 'max:255'],
+            'ville'                        => ['required', 'string', 'max:255'],
+            'directrice_generale_prenom'   => ['required', 'string', 'max:255'],
+            'directrice_generale_nom'      => ['required', 'string', 'max:255'],
+            'directrice_generale_email'    => ['required', 'email', 'max:255'],
+            'pca_prenom'                   => ['required', 'string', 'max:255'],
+            'pca_nom'                      => ['required', 'string', 'max:255'],
+            'pca_email'                    => $pcaEmailRule,
+            'secretariat_telephone'        => ['required', 'string', 'max:30'],
         ]);
     }
 }

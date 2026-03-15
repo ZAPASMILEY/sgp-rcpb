@@ -94,6 +94,23 @@
                         </div>
                     </div>
 
+                    <div class="ent-card space-y-4">
+                        <div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Compte de connexion</p>
+                            <p class="mt-1 text-xs text-slate-500">Laissez vide pour ne pas modifier le mot de passe. L'email sert d'identifiant de connexion.</p>
+                        </div>
+                        <div class="ent-form-grid">
+                            <div class="space-y-2">
+                                <label for="password" class="text-sm font-semibold text-slate-700">Nouveau mot de passe</label>
+                                <input id="password" name="password" type="password" class="ent-input" placeholder="Laisser vide pour ne pas changer" autocomplete="new-password">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirmer le mot de passe</label>
+                                <input id="password_confirmation" name="password_confirmation" type="password" class="ent-input" placeholder="Retaper le nouveau mot de passe" autocomplete="new-password">
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">
                         Enregistrer les modifications
                     </button>

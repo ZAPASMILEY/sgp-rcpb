@@ -78,6 +78,23 @@
                             <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone', $entite->secretariat_telephone) }}" required class="ent-input">
                         </div>
 
+                        <div class="ent-card space-y-4">
+                            <div>
+                                <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Compte de connexion du PCA</p>
+                                <p class="mt-1 text-xs text-slate-500">Laissez vide pour ne pas modifier le mot de passe. L'email PCA sert d'identifiant.</p>
+                            </div>
+                            <div class="ent-form-grid">
+                                <div class="space-y-2">
+                                    <label for="pca_password" class="text-sm font-semibold text-slate-700">Nouveau mot de passe</label>
+                                    <input id="pca_password" name="pca_password" type="password" class="ent-input" placeholder="Laisser vide pour ne pas changer" autocomplete="new-password">
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="pca_password_confirmation" class="text-sm font-semibold text-slate-700">Confirmer le mot de passe</label>
+                                    <input id="pca_password_confirmation" name="pca_password_confirmation" type="password" class="ent-input" placeholder="Retaper le nouveau mot de passe" autocomplete="new-password">
+                                </div>
+                            </div>
+                        </div>
+
                         <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">
                             Enregistrer les modifications
                         </button>

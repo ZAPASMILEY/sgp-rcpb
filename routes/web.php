@@ -1,14 +1,19 @@
 <?php
 
-use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\AgentController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DirectionController;
 use App\Http\Controllers\Admin\EntiteController;
 use App\Http\Controllers\Admin\EvaluationController;
 use App\Http\Controllers\Admin\ObjectifController;
-use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Personnel\PersonnelDashboardController;
+use App\Http\Controllers\Pca\PcaDashboardController;
+use App\Http\Controllers\Pca\PcaEvaluationController;
+use App\Http\Controllers\Pca\PcaObjectifController;
+use App\Http\Controllers\Pca\PcaSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin');
@@ -18,7 +23,7 @@ Route::middleware('guest')->group(function (): void {
     Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
 });
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::post('/admin/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     Route::get('/admin', DashboardController::class)->name('admin.dashboard');
 
@@ -77,4 +82,34 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/admin/parametres', [SettingsController::class, 'edit'])->name('admin.settings.edit');
     Route::put('/admin/parametres/theme', [SettingsController::class, 'updateTheme'])->name('admin.settings.theme.update');
     Route::put('/admin/parametres/mot-de-passe', [SettingsController::class, 'updatePassword'])->name('admin.settings.password.update');
+});
+
+Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function (): void {
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/', PcaDashboardController::class)->name('dashboard');
+
+    Route::get('/objectifs', [PcaObjectifController::class, 'index'])->name('objectifs.index');
+    Route::get('/objectifs/creer', [PcaObjectifController::class, 'create'])->name('objectifs.create');
+    Route::post('/objectifs', [PcaObjectifController::class, 'store'])->name('objectifs.store');
+    Route::get('/objectifs/{objectif}', [PcaObjectifController::class, 'show'])->name('objectifs.show');
+    Route::post('/objectifs/{objectif}/progression', [PcaObjectifController::class, 'adjustProgress'])->name('objectifs.progress');
+    Route::delete('/objectifs/{objectif}', [PcaObjectifController::class, 'destroy'])->name('objectifs.destroy');
+
+    Route::get('/evaluations', [PcaEvaluationController::class, 'index'])->name('evaluations.index');
+    Route::get('/evaluations/creer', [PcaEvaluationController::class, 'create'])->name('evaluations.create');
+    Route::post('/evaluations', [PcaEvaluationController::class, 'store'])->name('evaluations.store');
+    Route::get('/evaluations/{evaluation}', [PcaEvaluationController::class, 'show'])->name('evaluations.show');
+    Route::post('/evaluations/{evaluation}/soumettre', [PcaEvaluationController::class, 'submit'])->name('evaluations.submit');
+    Route::post('/evaluations/{evaluation}/valider', [PcaEvaluationController::class, 'approve'])->name('evaluations.approve');
+    Route::get('/evaluations/{evaluation}/pdf', [PcaEvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
+    Route::delete('/evaluations/{evaluation}', [PcaEvaluationController::class, 'destroy'])->name('evaluations.destroy');
+
+    Route::get('/parametres', [PcaSettingsController::class, 'edit'])->name('settings.edit');
+    Route::put('/parametres/theme', [PcaSettingsController::class, 'updateTheme'])->name('settings.theme.update');
+    Route::put('/parametres/mot-de-passe', [PcaSettingsController::class, 'updatePassword'])->name('settings.password.update');
+});
+
+Route::middleware(['auth', 'personnel'])->group(function (): void {
+    Route::post('/personnel/logout', [AuthenticatedSessionController::class, 'destroy'])->name('personnel.logout');
+    Route::get('/personnel', PersonnelDashboardController::class)->name('personnel.dashboard');
 });

@@ -14,7 +14,9 @@ class AuthenticatedSessionController extends Controller
     public function create(Request $request): View|RedirectResponse
     {
         if ($request->user()) {
-            return redirect()->route('admin.dashboard');
+            return $request->user()->isPca()
+                ? redirect()->route('pca.dashboard')
+                : redirect()->route('admin.dashboard');
         }
 
         return view('admin.auth.login');
@@ -36,6 +38,14 @@ class AuthenticatedSessionController extends Controller
         }
 
         $request->session()->regenerate();
+
+        if ($request->user()?->isPca()) {
+            return redirect()->intended(route('pca.dashboard'));
+        }
+
+        if ($request->user()?->isPersonnel()) {
+            return redirect()->intended(route('personnel.dashboard'));
+        }
 
         return redirect()->intended(route('admin.dashboard'));
     }
