@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\WelcomeMail;
 use App\Models\Entite;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -81,13 +83,22 @@ class EntiteController extends Controller
 
         $entite = Entite::query()->create($validated);
 
-        User::create([
+        $plainPassword = (string) $request->input('pca_password');
+        $pcaUser = User::create([
             'name'          => $validated['pca_prenom'].' '.$validated['pca_nom'],
             'email'         => $validated['pca_email'],
-            'password'      => Hash::make((string) $request->input('pca_password')),
+            'password'      => Hash::make($plainPassword),
             'role'          => 'pca',
             'pca_entite_id' => $entite->id,
         ]);
+
+        Mail::to($pcaUser->email)->send(new WelcomeMail(
+            recipientName:  $pcaUser->name,
+            recipientEmail: $pcaUser->email,
+            plainPassword:  $plainPassword,
+            role:           'pca',
+            loginUrl:       rtrim((string) config('app.url'), '/').'/login',
+        ));
 
         return redirect()
             ->route('admin.entites.index')

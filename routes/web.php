@@ -7,16 +7,19 @@ use App\Http\Controllers\Admin\EntiteController;
 use App\Http\Controllers\Admin\EvaluationController;
 use App\Http\Controllers\Admin\ObjectifController;
 use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\StatistiqueController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Personnel\PersonnelDashboardController;
 use App\Http\Controllers\Pca\PcaDashboardController;
 use App\Http\Controllers\Pca\PcaEvaluationController;
 use App\Http\Controllers\Pca\PcaObjectifController;
+use App\Http\Controllers\Pca\PcaStatistiqueController;
 use App\Http\Controllers\Pca\PcaSettingsController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/admin');
+Route::view('/', 'welcome')->name('welcome');
+Route::redirect('/login', '/admin/login')->name('legacy.login');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/admin/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -26,6 +29,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::post('/admin/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     Route::get('/admin', DashboardController::class)->name('admin.dashboard');
+    Route::get('/admin/statistiques', StatistiqueController::class)->name('admin.statistiques.index');
 
     Route::get('/admin/entites', [EntiteController::class, 'index'])->name('admin.entites.index');
     Route::get('/admin/entites/creer', [EntiteController::class, 'create'])->name('admin.entites.create');
@@ -87,6 +91,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
 Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/', PcaDashboardController::class)->name('dashboard');
+    Route::get('/statistiques', PcaStatistiqueController::class)->name('statistiques.index');
 
     Route::get('/objectifs', [PcaObjectifController::class, 'index'])->name('objectifs.index');
     Route::get('/objectifs/creer', [PcaObjectifController::class, 'create'])->name('objectifs.create');

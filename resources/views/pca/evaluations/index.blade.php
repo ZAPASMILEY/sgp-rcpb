@@ -50,7 +50,7 @@
                 </form>
 
                 <div class="ent-table-wrap overflow-x-auto">
-                    <table class="ent-table text-left text-sm text-slate-700">
+                    <table class="ent-table ent-table--stack text-left text-sm text-slate-700">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -90,22 +90,22 @@
                                             : 'text-slate-700 bg-slate-100 border-slate-200');
                                 @endphp
                                 <tr>
-                                    <td>{{ $evaluation->id }}</td>
-                                    <td>{{ $typeLabel }}</td>
-                                    <td>{{ $cibleLabel }}</td>
-                                    <td class="whitespace-nowrap">{{ $evaluation->date_debut->format('d/m/Y') }} – {{ $evaluation->date_fin->format('d/m/Y') }}</td>
-                                    <td>{{ $evaluation->note_finale }}%</td>
-                                    <td>
+                                    <td data-label="#">{{ $evaluation->id }}</td>
+                                    <td data-label="Type">{{ $typeLabel }}</td>
+                                    <td data-label="Cible">{{ $cibleLabel }}</td>
+                                    <td data-label="Periode" class="whitespace-nowrap">{{ $evaluation->date_debut->format('d/m/Y') }} – {{ $evaluation->date_fin->format('d/m/Y') }}</td>
+                                    <td data-label="Note finale">{{ $evaluation->note_finale }}%</td>
+                                    <td data-label="Mention">
                                         <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $mentionClass }}">
                                             {{ $mention }}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-label="Statut">
                                         <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $statusClass }}">
                                             {{ ucfirst($evaluation->statut) }}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-label="Actions">
                                         <div class="ent-actions justify-end gap-2">
                                             <a href="{{ route('pca.evaluations.show', $evaluation) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Voir" aria-label="Voir l'evaluation">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12s-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z"/><circle cx="12" cy="12" r="3"/></svg>

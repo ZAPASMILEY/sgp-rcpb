@@ -3,18 +3,33 @@
 @section('title', 'Tableau de bord PCA | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-    <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-6xl flex-col gap-6">
+    @php
+        $pcaTotal = $objectifsEntiteCount + $objectifsDirecteursCount + $evaluationsEntiteCount + $evaluationsDirecteursCount;
+        $objectifTotal = max(1, $objectifsEntiteCount + $objectifsDirecteursCount);
+        $evaluationTotal = $evaluationsEntiteCount + $evaluationsDirecteursCount;
+        $progressRate = min(100, (int) round(($evaluationTotal / $objectifTotal) * 100));
+        $maxPca = max(1, $objectifsEntiteCount, $objectifsDirecteursCount, $evaluationsEntiteCount, $evaluationsDirecteursCount);
+        $pcaBars = [
+            'Obj entite' => max(16, (int) round(($objectifsEntiteCount / $maxPca) * 100)),
+            'Obj directeurs' => max(16, (int) round(($objectifsDirecteursCount / $maxPca) * 100)),
+            'Eval entite' => max(16, (int) round(($evaluationsEntiteCount / $maxPca) * 100)),
+            'Eval directeurs' => max(16, (int) round(($evaluationsDirecteursCount / $maxPca) * 100)),
+        ];
+    @endphp
 
-            <header class="admin-panel px-6 py-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Espace PCA</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Tableau de bord</h1>
-                        <p class="mt-2 text-sm text-slate-600">Entite : <strong>{{ $entite->nom }}</strong> &mdash; {{ $entite->ville }}</p>
-                    </div>
+    <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
+        <div class="mx-auto max-w-6xl clone-wrap">
+
+            <section class="clone-hero">
+                <div>
+                    <p class="clone-eyebrow">Bonjour PCA</p>
+                    <h1 class="clone-title">Tableau de bord de {{ $entite->nom }}</h1>
                 </div>
-            </header>
+                <div class="clone-top-actions">
+                    <input type="search" class="clone-search" placeholder="Rechercher une direction">
+                    <span class="clone-avatar">P</span>
+                </div>
+            </section>
 
             @if (session('status'))
                 <div data-auto-dismiss="4000" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -22,50 +37,77 @@
                 </div>
             @endif
 
-            {{-- Stats cards --}}
-            <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Objectifs entite</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $objectifsEntiteCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Assignes a votre entite.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('pca.objectifs.index') }}" class="ent-btn ent-btn-primary">Voir</a>
-                        <a href="{{ route('pca.objectifs.create') }}" class="ent-btn ent-btn-soft">Ajouter</a>
-                    </div>
+            <section class="clone-cards">
+                <article class="clone-card">
+                    <p class="clone-card__label">Obj entite</p>
+                    <p class="clone-card__value">{{ $objectifsEntiteCount }}</p>
+                    <p class="clone-card__sub">Objectifs de l'entité</p>
+                </article>
+                <article class="clone-card">
+                    <p class="clone-card__label">Obj directeurs</p>
+                    <p class="clone-card__value">{{ $objectifsDirecteursCount }}</p>
+                    <p class="clone-card__sub">Objectifs des directeurs</p>
+                </article>
+                <article class="clone-card">
+                    <p class="clone-card__label">Eval entite</p>
+                    <p class="clone-card__value">{{ $evaluationsEntiteCount }}</p>
+                    <p class="clone-card__sub">Évaluations de l'entité</p>
+                </article>
+                <article class="clone-card">
+                    <p class="clone-card__label">Eval directeurs</p>
+                    <p class="clone-card__value">{{ $evaluationsDirecteursCount }}</p>
+                    <p class="clone-card__sub">Évaluations des directeurs</p>
+                </article>
+            </section>
+
+            <section class="clone-grid">
+                <article class="clone-spot" style="--neo-progress: {{ $progressRate }};">
+                    <p class="clone-spot__title">Taux de suivi</p>
+                    <div class="clone-spot__gauge">{{ $progressRate }}%</div>
+                    <p class="clone-spot__value">{{ number_format($pcaTotal, 0, ',', ' ') }}</p>
+                    <p class="clone-spot__sub">Elements suivis</p>
                 </article>
 
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Objectifs directeurs</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $objectifsDirecteursCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Assignes aux directeurs de votre entite.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('pca.objectifs.index') }}" class="ent-btn ent-btn-primary">Voir</a>
+                <article class="clone-panel">
+                    <div class="clone-panel__head">
+                        <div>
+                            <p class="clone-card__label">Indicateurs</p>
+                            <h2 class="clone-panel__title">Aperçu d'activité PCA</h2>
+                        </div>
+                        <a href="{{ route('pca.objectifs.index') }}" class="ent-btn ent-btn-soft">Voir</a>
                     </div>
-                </article>
-
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Evaluations entite</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $evaluationsEntiteCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Evaluations de votre entite.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('pca.evaluations.index') }}" class="ent-btn ent-btn-primary">Voir</a>
-                        <a href="{{ route('pca.evaluations.create') }}" class="ent-btn ent-btn-soft">Ajouter</a>
+                    <div class="clone-bars">
+                        @foreach ($pcaBars as $label => $height)
+                            @php($bucket = max(10, min(100, (int) (ceil($height / 10) * 10))))
+                            <span class="neo-bar--{{ $bucket }}" title="{{ $label }}"></span>
+                        @endforeach
                     </div>
-                </article>
-
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Evaluations directeurs</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $evaluationsDirecteursCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Evaluations des directeurs de votre entite.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('pca.evaluations.index') }}" class="ent-btn ent-btn-primary">Voir</a>
+                    <div class="clone-legend">
+                        @foreach ($pcaBars as $label => $height)
+                            <span>{{ $label }}</span>
+                        @endforeach
                     </div>
                 </article>
             </section>
 
-            {{-- Entite info --}}
+            <section class="clone-history">
+                <p class="clone-card__label">Historique</p>
+                <div class="clone-history__row">
+                    <span>Objectifs</span>
+                    <span>{{ $objectifTotal }}</span>
+                    <span>Évaluations</span>
+                    <span>{{ $evaluationTotal }}</span>
+                    <span class="clone-badge">Validé</span>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <a href="{{ route('pca.objectifs.create') }}" class="ent-btn ent-btn-primary">Nouvel objectif</a>
+                    <a href="{{ route('pca.evaluations.create') }}" class="ent-btn ent-btn-soft">Nouvelle évaluation</a>
+                    <a href="{{ route('pca.settings.edit') }}" class="ent-btn ent-btn-soft">Paramètres</a>
+                </div>
+            </section>
+
             <section class="admin-panel px-6 py-6 lg:px-8">
-                <h2 class="text-base font-semibold text-slate-800 mb-4">Informations de l'entite</h2>
+                <h2 class="text-base font-semibold text-slate-800 mb-4">Informations de l'entité</h2>
                 <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Nom</dt>
@@ -112,15 +154,13 @@
                 @endif
             </section>
 
-            {{-- Objectifs en cours --}}
             @if ($objectifsPendingCount > 0)
                 <div class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
-                    <strong>{{ $objectifsPendingCount }}</strong> objectif(s) en cours de realisation pour votre entite ou ses directeurs.
+                    <strong>{{ $objectifsPendingCount }}</strong> objectif(s) en cours de réalisation pour votre entité ou ses directeurs.
                     <a href="{{ route('pca.objectifs.index') }}" class="ml-2 underline">Voir les objectifs</a>
                 </div>
             @endif
 
-            {{-- Recent evals --}}
             @if ($recentEvaluations->isNotEmpty())
                 <section class="admin-panel px-6 py-6 lg:px-8">
                     <h2 class="text-base font-semibold text-slate-800 mb-4">Evaluations recentes</h2>

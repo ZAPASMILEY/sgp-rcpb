@@ -6,7 +6,14 @@
 
         <title>@yield('title', config('app.name', 'SGP-RCPB'))</title>
 
-        @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @php
+            $hasViteBuild = file_exists(public_path('build/manifest.json'));
+            $hasViteHot = file_exists(public_path('hot'));
+            $requestHost = request()->getHost();
+            $isLocalHost = in_array($requestHost, ['127.0.0.1', 'localhost'], true);
+        @endphp
+
+        @if ($hasViteBuild || ($hasViteHot && $isLocalHost))
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @else
             <script src="https://cdn.tailwindcss.com"></script>
@@ -21,9 +28,10 @@
             $adminThemeClass = $themePreference === 'reference' ? 'admin-layout--reference' : '';
             $pcaTopbarLabel = match (true) {
                 request()->routeIs('pca.dashboard') => 'Tableau de bord',
+                request()->routeIs('pca.statistiques.*') => 'Pilotage / Statistiques',
                 request()->routeIs('pca.objectifs.*') => 'Pilotage / Objectifs',
-                request()->routeIs('pca.evaluations.*') => 'Pilotage / Evaluations',
-                request()->routeIs('pca.settings.*') => 'Administration / Parametres',
+                request()->routeIs('pca.evaluations.*') => 'Pilotage / Évaluations',
+                request()->routeIs('pca.settings.*') => 'Administration / Paramètres',
                 default => 'PCA',
             };
             $userInitial = auth()->check() && filled(auth()->user()->name)
@@ -37,7 +45,7 @@
                     <div class="admin-sidebar__logo-mark">R</div>
                     <div>
                         <p class="admin-sidebar__logo-title">RCPB</p>
-                        <p class="admin-sidebar__logo-subtitle">Reseau des Caisses</p>
+                        <p class="admin-sidebar__logo-subtitle">Réseau des Caisses</p>
                     </div>
                 </div>
 
@@ -68,23 +76,29 @@
                         </span>
                         <span class="admin-tab__label">Objectifs</span>
                     </a>
+                    <a href="{{ route('pca.statistiques.index') }}" class="admin-tab {{ request()->routeIs('pca.statistiques.*') ? 'is-active' : '' }}">
+                        <span class="admin-tab__icon" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5V10.5m5.25 9V6.75m5.25 12.75v-6m5.25 6V4.5"/></svg>
+                        </span>
+                        <span class="admin-tab__label">Statistiques</span>
+                    </a>
                     <a href="{{ route('pca.evaluations.index') }}" class="admin-tab {{ request()->routeIs('pca.evaluations.*') ? 'is-active' : '' }}">
                         <span class="admin-tab__icon" aria-hidden="true">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m7.5 12 3 3 6-6M4.5 5.25h15v13.5h-15z"/></svg>
                         </span>
-                        <span class="admin-tab__label">Evaluations</span>
+                        <span class="admin-tab__label">Évaluations</span>
                     </a>
                     <a href="{{ route('pca.settings.edit') }}" class="admin-tab {{ request()->routeIs('pca.settings.*') ? 'is-active' : '' }}">
                         <span class="admin-tab__icon" aria-hidden="true">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3l.6 2.07a7.6 7.6 0 0 1 1.77.72l1.95-1.05 2.12 2.12-1.05 1.95c.29.56.53 1.15.72 1.77l2.07.6v3l-2.07.6a7.6 7.6 0 0 1-.72 1.77l1.05 1.95-2.12 2.12-1.95-1.05a7.6 7.6 0 0 1-1.77.72l-.6 2.07h-3l-.6-2.07a7.6 7.6 0 0 1-1.77-.72l-1.95 1.05-2.12-2.12 1.05-1.95a7.6 7.6 0 0 1-.72-1.77l-2.07-.6v-3l2.07-.6c.19-.62.43-1.21.72-1.77L3.4 7.6 5.52 5.48l1.95 1.05c.56-.29 1.15-.53 1.77-.72l.6-2.06Z"/><circle cx="12" cy="12" r="2.5"/></svg>
                         </span>
-                        <span class="admin-tab__label">Parametres</span>
+                        <span class="admin-tab__label">Paramètres</span>
                     </a>
                 </nav>
 
                 <form method="POST" action="{{ route('pca.logout') }}" class="admin-sidebar__logout">
                     @csrf
-                    <button type="submit" class="ent-btn ent-btn-soft w-full">Deconnexion</button>
+                    <button type="submit" class="ent-btn ent-btn-soft w-full">Déconnexion</button>
                 </form>
             </aside>
 
@@ -104,17 +118,17 @@
 
                         <div id="topbar-quick-panel" class="admin-topbar__panel admin-topbar__panel--quick hidden" role="menu" aria-label="Actions rapides">
                             <p class="admin-topbar__panel-caption">Actions rapides</p>
-                            <a href="{{ route('pca.evaluations.create') }}" class="admin-topbar__quick-link">Nouvelle evaluation</a>
+                            <a href="{{ route('pca.evaluations.create') }}" class="admin-topbar__quick-link">Nouvelle évaluation</a>
                             <a href="{{ route('pca.objectifs.create') }}" class="admin-topbar__quick-link">Nouvel objectif</a>
-                            <a href="{{ route('pca.settings.edit') }}" class="admin-topbar__quick-link">Ouvrir parametres</a>
+                            <a href="{{ route('pca.settings.edit') }}" class="admin-topbar__quick-link">Ouvrir paramètres</a>
                         </div>
 
                         <div id="topbar-profile-panel" class="admin-topbar__panel admin-topbar__panel--profile hidden" role="menu" aria-label="Profil">
                             <p class="admin-topbar__panel-caption">Compte PCA</p>
-                            <a href="{{ route('pca.settings.edit') }}" class="admin-topbar__quick-link">Mon profil et securite</a>
+                            <a href="{{ route('pca.settings.edit') }}" class="admin-topbar__quick-link">Mon profil et sécurité</a>
                             <form method="POST" action="{{ route('pca.logout') }}">
                                 @csrf
-                                <button type="submit" class="admin-topbar__quick-link admin-topbar__quick-link--danger">Se deconnecter</button>
+                                <button type="submit" class="admin-topbar__quick-link admin-topbar__quick-link--danger">Se déconnecter</button>
                             </form>
                         </div>
                     </div>
@@ -143,7 +157,13 @@
                 }
 
                 if (layout) {
-                    var savedState = window.localStorage.getItem(storageKey) || 'open';
+                    var savedState = window.localStorage.getItem(storageKey);
+                    var isMobileViewport = window.matchMedia('(max-width: 1024px)').matches;
+
+                    if (!savedState) {
+                        savedState = isMobileViewport ? 'closed' : 'open';
+                    }
+
                     if (savedState === 'collapsed') {
                         layout.classList.add(collapsedClass);
                         layout.classList.remove(closedClass);

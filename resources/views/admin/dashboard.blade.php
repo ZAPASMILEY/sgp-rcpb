@@ -3,79 +3,100 @@
 @section('title', 'Administration | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
+    @php
+        $modulesTotal = $entitesCount + $directionsCount + $servicesCount + $agentsCount + $objectifsCount + $evaluationsCount;
+        $progressRate = $objectifsCount > 0 ? min(100, (int) round(($evaluationsCount / $objectifsCount) * 100)) : 0;
+        $maxModule = max(1, $entitesCount, $directionsCount, $servicesCount, $agentsCount, $objectifsCount, $evaluationsCount);
+        $bars = [
+            'Entites' => max(14, (int) round(($entitesCount / $maxModule) * 100)),
+            'Directions' => max(14, (int) round(($directionsCount / $maxModule) * 100)),
+            'Services' => max(14, (int) round(($servicesCount / $maxModule) * 100)),
+            'Agents' => max(14, (int) round(($agentsCount / $maxModule) * 100)),
+            'Objectifs' => max(14, (int) round(($objectifsCount / $maxModule) * 100)),
+            'Evaluations' => max(14, (int) round(($evaluationsCount / $maxModule) * 100)),
+        ];
+    @endphp
+
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-6xl flex-col gap-6">
-            <header class="admin-panel px-6 py-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Tableau de bord administrateur</h1>
-                        <p class="mt-2 text-sm text-slate-600">Acces rapide aux modules Entites, Directions, Services, Agents et Objectifs.</p>
-                    </div>
+        <div class="mx-auto max-w-6xl clone-wrap">
+            <section class="clone-hero">
+                <div>
+                    <p class="clone-eyebrow">Bonjour Administrateur</p>
+                    <h1 class="clone-title">Mise à jour hebdomadaire de pilotage</h1>
                 </div>
-            </header>
+                <div class="clone-top-actions">
+                    <input type="search" class="clone-search" placeholder="Rechercher un module">
+                    <span class="clone-avatar">A</span>
+                </div>
+            </section>
 
-            <section class="dashboard-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Entites</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $entitesCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Nombre total d'entites enregistrees.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('admin.entites.index') }}" class="ent-btn ent-btn-primary">Ouvrir</a>
-                        <a href="{{ route('admin.entites.create') }}" class="ent-btn ent-btn-soft">Ajouter</a>
-                    </div>
+            <section class="clone-cards">
+                <article class="clone-card">
+                    <p class="clone-card__label">Entites</p>
+                    <p class="clone-card__value">{{ $entitesCount }}</p>
+                    <p class="clone-card__sub">Entités configurées</p>
+                </article>
+                <article class="clone-card">
+                    <p class="clone-card__label">Directions</p>
+                    <p class="clone-card__value">{{ $directionsCount }}</p>
+                    <p class="clone-card__sub">Directions actives</p>
+                </article>
+                <article class="clone-card">
+                    <p class="clone-card__label">Services</p>
+                    <p class="clone-card__value">{{ $servicesCount }}</p>
+                    <p class="clone-card__sub">Services opérationnels</p>
+                </article>
+                <article class="clone-card">
+                    <p class="clone-card__label">Agents</p>
+                    <p class="clone-card__value">{{ $agentsCount }}</p>
+                    <p class="clone-card__sub">Agents enregistrés</p>
+                </article>
+            </section>
+
+            <section class="clone-grid">
+                <article class="clone-spot" style="--neo-progress: {{ $progressRate }};">
+                    <p class="clone-spot__title">Taux de suivi</p>
+                    <div class="clone-spot__gauge">{{ $progressRate }}%</div>
+                    <p class="clone-spot__value">{{ number_format($modulesTotal, 0, ',', ' ') }}</p>
+                    <p class="clone-spot__sub">Elements suivis</p>
                 </article>
 
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Directions</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $directionsCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Nombre total de directions enregistrees.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('admin.directions.index') }}" class="ent-btn ent-btn-primary">Ouvrir</a>
-                        <a href="{{ route('admin.directions.create') }}" class="ent-btn ent-btn-soft">Ajouter</a>
+                <article class="clone-panel">
+                    <div class="clone-panel__head">
+                        <div>
+                            <p class="clone-card__label">Indicateurs</p>
+                            <h2 class="clone-panel__title">Aperçu des performances</h2>
+                        </div>
+                        <a href="{{ route('admin.objectifs.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                    </div>
+                    <div class="clone-bars">
+                        @foreach ($bars as $label => $height)
+                            @php($bucket = max(10, min(100, (int) (ceil($height / 10) * 10))))
+                            <span class="neo-bar--{{ $bucket }}" title="{{ $label }}"></span>
+                        @endforeach
+                    </div>
+                    <div class="clone-legend">
+                        @foreach ($bars as $label => $height)
+                            <span>{{ $label }}</span>
+                        @endforeach
                     </div>
                 </article>
+            </section>
 
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Services</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $servicesCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Nombre total de services enregistres.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('admin.services.index') }}" class="ent-btn ent-btn-primary">Ouvrir</a>
-                        <a href="{{ route('admin.services.create') }}" class="ent-btn ent-btn-soft">Ajouter</a>
-                    </div>
-                </article>
-
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Agents</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $agentsCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Nombre total d'agents enregistres.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-primary">Ouvrir</a>
-                        <a href="{{ route('admin.agents.create') }}" class="ent-btn ent-btn-soft">Ajouter</a>
-                    </div>
-                </article>
-
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Objectifs</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $objectifsCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Nombre total d'objectifs enregistres.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('admin.objectifs.index') }}" class="ent-btn ent-btn-primary">Ouvrir</a>
-                        <a href="{{ route('admin.objectifs.create') }}" class="ent-btn ent-btn-soft">Ajouter</a>
-                    </div>
-                </article>
-
-                <article class="admin-panel dashboard-card p-4">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Evaluations</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-950">{{ $evaluationsCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Nombre total d'evaluations enregistrees.</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <a href="{{ route('admin.evaluations.index') }}" class="ent-btn ent-btn-primary">Ouvrir</a>
-                        <a href="{{ route('admin.evaluations.create') }}" class="ent-btn ent-btn-soft">Ajouter</a>
-                    </div>
-                </article>
-
+            <section class="clone-history">
+                <p class="clone-card__label">Historique</p>
+                <div class="clone-history__row">
+                    <span>Objectifs</span>
+                    <span>{{ $objectifsCount }}</span>
+                    <span>Evaluations</span>
+                    <span>{{ $evaluationsCount }}</span>
+                    <span class="clone-badge">Valide</span>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <a href="{{ route('admin.entites.create') }}" class="ent-btn ent-btn-primary">Nouvelle entite</a>
+                    <a href="{{ route('admin.objectifs.create') }}" class="ent-btn ent-btn-soft">Nouvel objectif</a>
+                    <a href="{{ route('admin.evaluations.create') }}" class="ent-btn ent-btn-soft">Nouvelle evaluation</a>
+                </div>
             </section>
         </div>
     </div>

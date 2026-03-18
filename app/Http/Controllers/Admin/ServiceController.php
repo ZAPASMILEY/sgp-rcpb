@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\WelcomeMail;
 use App\Models\Direction;
 use App\Models\Service;
 use App\Models\User;
@@ -10,6 +11,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -93,6 +95,15 @@ class ServiceController extends Controller
 
         $validated['user_id'] = $user->id;
         Service::query()->create($validated);
+
+        $plainPassword = (string) $request->input('password');
+        Mail::to($user->email)->send(new WelcomeMail(
+            recipientName:  $user->name,
+            recipientEmail: $user->email,
+            plainPassword:  $plainPassword,
+            role:           'chef',
+            loginUrl:       rtrim((string) config('app.url'), '/').'/login',
+        ));
 
         return redirect()
             ->route('admin.services.index')

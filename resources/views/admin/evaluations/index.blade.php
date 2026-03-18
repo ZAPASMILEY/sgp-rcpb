@@ -44,7 +44,7 @@
                 </form>
 
                 <div class="ent-table-wrap overflow-x-auto">
-                    <table class="ent-table text-left text-sm text-slate-700">
+                    <table class="ent-table ent-table--stack text-left text-sm text-slate-700">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -105,22 +105,22 @@
                                             : 'text-slate-700 bg-slate-100 border-slate-200');
                                 @endphp
                                 <tr>
-                                    <td>{{ $evaluation->id }}</td>
-                                    <td>{{ $typeLabel }}</td>
-                                    <td>{{ $cibleLabel }}</td>
-                                    <td class="whitespace-nowrap">{{ $evaluation->date_debut->format('d/m/Y') }} - {{ $evaluation->date_fin->format('d/m/Y') }}</td>
-                                    <td>{{ $evaluation->note_finale }}%</td>
-                                    <td>
+                                    <td data-label="#">{{ $evaluation->id }}</td>
+                                    <td data-label="Type">{{ $typeLabel }}</td>
+                                    <td data-label="Cible">{{ $cibleLabel }}</td>
+                                    <td data-label="Periode" class="whitespace-nowrap">{{ $evaluation->date_debut->format('d/m/Y') }} - {{ $evaluation->date_fin->format('d/m/Y') }}</td>
+                                    <td data-label="Note finale">{{ $evaluation->note_finale }}%</td>
+                                    <td data-label="Mention">
                                         <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $mentionClass }}">
                                             {{ $mention }}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-label="Statut">
                                         <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $statusClass }}">
                                             {{ ucfirst($evaluation->statut) }}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-label="Actions">
                                         <div class="ent-actions justify-end gap-2">
                                             @if ($evaluation->statut === 'brouillon')
                                                 <a href="{{ route('admin.evaluations.edit', $evaluation) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Modifier l'evaluation" aria-label="Modifier l'evaluation">

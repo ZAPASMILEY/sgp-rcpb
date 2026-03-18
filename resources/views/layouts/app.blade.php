@@ -6,7 +6,14 @@
 
         <title>@yield('title', config('app.name', 'SGP-RCPB'))</title>
 
-        @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @php
+            $hasViteBuild = file_exists(public_path('build/manifest.json'));
+            $hasViteHot = file_exists(public_path('hot'));
+            $requestHost = request()->getHost();
+            $isLocalHost = in_array($requestHost, ['127.0.0.1', 'localhost'], true);
+        @endphp
+
+        @if ($hasViteBuild || ($hasViteHot && $isLocalHost))
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @else
             <script src="https://cdn.tailwindcss.com"></script>
@@ -22,13 +29,14 @@
             $adminThemeClass = $themePreference === 'reference' ? 'admin-layout--reference' : '';
             $adminTopbarLabel = match (true) {
                 request()->routeIs('admin.dashboard') => 'Tableau de bord',
-                request()->routeIs('admin.entites.*') => 'Referentiel / Entites',
-                request()->routeIs('admin.directions.*') => 'Referentiel / Directions',
-                request()->routeIs('admin.services.*') => 'Referentiel / Services',
-                request()->routeIs('admin.agents.*') => 'Referentiel / Agents',
+                request()->routeIs('admin.statistiques.*') => 'Pilotage / Statistiques',
+                request()->routeIs('admin.entites.*') => 'Référentiel / Entités',
+                request()->routeIs('admin.directions.*') => 'Référentiel / Directions',
+                request()->routeIs('admin.services.*') => 'Référentiel / Services',
+                request()->routeIs('admin.agents.*') => 'Référentiel / Agents',
                 request()->routeIs('admin.objectifs.*') => 'Pilotage / Objectifs',
-                request()->routeIs('admin.evaluations.*') => 'Pilotage / Evaluations',
-                request()->routeIs('admin.settings.*') => 'Administration / Parametres',
+                request()->routeIs('admin.evaluations.*') => 'Pilotage / Évaluations',
+                request()->routeIs('admin.settings.*') => 'Administration / Paramètres',
                 default => 'Administration',
             };
             $adminUserInitial = auth()->check() && filled(auth()->user()->name)
@@ -43,7 +51,7 @@
                         <div class="admin-sidebar__logo-mark">R</div>
                         <div>
                             <p class="admin-sidebar__logo-title">RCPB</p>
-                            <p class="admin-sidebar__logo-subtitle">Reseau des Caisses</p>
+                            <p class="admin-sidebar__logo-subtitle">Réseau des Caisses</p>
                         </div>
                     </div>
 
@@ -66,13 +74,19 @@
                             <span class="admin-tab__icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 1 18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6Z"/></svg>
                             </span>
-                            <span class="admin-tab__label">Dashboard</span>
+                            <span class="admin-tab__label">Tableau de bord</span>
+                        </a>
+                        <a href="{{ route('admin.statistiques.index') }}" class="admin-tab {{ request()->routeIs('admin.statistiques.*') ? 'is-active' : '' }}">
+                            <span class="admin-tab__icon" aria-hidden="true">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5V10.5m5.25 9V6.75m5.25 12.75v-6m5.25 6V4.5"/></svg>
+                            </span>
+                            <span class="admin-tab__label">Statistiques</span>
                         </a>
                         <a href="{{ route('admin.entites.index') }}" class="admin-tab {{ request()->routeIs('admin.entites.*') ? 'is-active' : '' }}">
                             <span class="admin-tab__icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 21V7.5l7.5-4.5 7.5 4.5V21M9 21v-6h6v6"/></svg>
                             </span>
-                            <span class="admin-tab__label">Entites</span>
+                            <span class="admin-tab__label">Entités</span>
                         </a>
                         <a href="{{ route('admin.directions.index') }}" class="admin-tab {{ request()->routeIs('admin.directions.*') ? 'is-active' : '' }}">
                             <span class="admin-tab__icon" aria-hidden="true">
@@ -102,19 +116,19 @@
                             <span class="admin-tab__icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m7.5 12 3 3 6-6M4.5 5.25h15v13.5h-15z"/></svg>
                             </span>
-                            <span class="admin-tab__label">Evaluations</span>
+                            <span class="admin-tab__label">Évaluations</span>
                         </a>
                         <a href="{{ route('admin.settings.edit') }}" class="admin-tab {{ request()->routeIs('admin.settings.*') ? 'is-active' : '' }}">
                             <span class="admin-tab__icon" aria-hidden="true">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3l.6 2.07a7.6 7.6 0 0 1 1.77.72l1.95-1.05 2.12 2.12-1.05 1.95c.29.56.53 1.15.72 1.77l2.07.6v3l-2.07.6a7.6 7.6 0 0 1-.72 1.77l1.05 1.95-2.12 2.12-1.95-1.05a7.6 7.6 0 0 1-1.77.72l-.6 2.07h-3l-.6-2.07a7.6 7.6 0 0 1-1.77-.72l-1.95 1.05-2.12-2.12 1.05-1.95a7.6 7.6 0 0 1-.72-1.77l-2.07-.6v-3l2.07-.6c.19-.62.43-1.21.72-1.77L3.4 7.6 5.52 5.48l1.95 1.05c.56-.29 1.15-.53 1.77-.72l.6-2.06Z"/><circle cx="12" cy="12" r="2.5"/></svg>
                             </span>
-                            <span class="admin-tab__label">Parametres</span>
+                            <span class="admin-tab__label">Paramètres</span>
                         </a>
                     </nav>
 
                     <form method="POST" action="{{ route('admin.logout') }}" class="admin-sidebar__logout">
                         @csrf
-                        <button type="submit" class="ent-btn ent-btn-soft w-full">Deconnexion</button>
+                        <button type="submit" class="ent-btn ent-btn-soft w-full">Déconnexion</button>
                     </form>
                 </aside>
 
@@ -131,7 +145,7 @@
                                 <span class="admin-topbar__badge" aria-hidden="true"></span>
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 18.75h-4.5m8.25-1.5-1.06-1.77a3 3 0 0 1-.44-1.54V10.5a4.5 4.5 0 1 0-9 0v3.44c0 .55-.15 1.1-.44 1.54L6 17.25h12Z"/></svg>
                             </button>
-                            <button id="topbar-quick-toggle" type="button" class="admin-topbar__icon" aria-label="Reglages rapides" aria-expanded="false" aria-controls="topbar-quick-panel">
+                            <button id="topbar-quick-toggle" type="button" class="admin-topbar__icon" aria-label="Réglages rapides" aria-expanded="false" aria-controls="topbar-quick-panel">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Zm8.25 3.75-.94-.27a7.9 7.9 0 0 0-.67-1.6l.53-.82-1.76-1.76-.82.53c-.51-.28-1.04-.5-1.6-.67l-.27-.94h-2.5l-.27.94c-.56.17-1.09.39-1.6.67l-.82-.53-1.76 1.76.53.82c-.28.51-.5 1.04-.67 1.6l-.94.27v2.5l.94.27c.17.56.39 1.09.67 1.6l-.53.82 1.76 1.76.82-.53c.51.28 1.04.5 1.6.67l.27.94h2.5l.27-.94c.56-.17 1.09-.39 1.6-.67l.82.53 1.76-1.76-.53-.82c.28-.51.5-1.04.67-1.6l.94-.27v-2.5Z"/></svg>
                             </button>
                             <button id="topbar-profile-toggle" type="button" class="admin-topbar__avatar admin-topbar__avatar--button" aria-label="Profil" aria-expanded="false" aria-controls="topbar-profile-panel">{{ $adminUserInitial }}</button>
@@ -142,26 +156,26 @@
                                     <button type="button" id="topbar-mark-read" class="admin-topbar__panel-action">Tout marquer lu</button>
                                 </div>
                                 <div class="admin-topbar__panel-list">
-                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>3 objectifs arrivent a echeance cette semaine.</p>
-                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>2 evaluations sont en attente de validation.</p>
-                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>Nouveau compte agent cree aujourd'hui.</p>
+                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>3 objectifs arrivent à échéance cette semaine.</p>
+                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>2 évaluations sont en attente de validation.</p>
+                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>Nouveau compte agent créé aujourd'hui.</p>
                                 </div>
                             </div>
 
                             <div id="topbar-quick-panel" class="admin-topbar__panel admin-topbar__panel--quick hidden" role="menu" aria-label="Actions rapides">
                                 <p class="admin-topbar__panel-caption">Actions rapides</p>
-                                <a href="{{ route('admin.evaluations.create') }}" class="admin-topbar__quick-link">Nouvelle evaluation</a>
+                                <a href="{{ route('admin.evaluations.create') }}" class="admin-topbar__quick-link">Nouvelle évaluation</a>
                                 <a href="{{ route('admin.objectifs.create') }}" class="admin-topbar__quick-link">Nouvel objectif</a>
                                 <a href="{{ route('admin.agents.create') }}" class="admin-topbar__quick-link">Nouvel agent</a>
-                                <a href="{{ route('admin.settings.edit') }}" class="admin-topbar__quick-link">Ouvrir parametres</a>
+                                <a href="{{ route('admin.settings.edit') }}" class="admin-topbar__quick-link">Ouvrir paramètres</a>
                             </div>
 
                             <div id="topbar-profile-panel" class="admin-topbar__panel admin-topbar__panel--profile hidden" role="menu" aria-label="Profil">
                                 <p class="admin-topbar__panel-caption">Compte</p>
-                                <a href="{{ route('admin.settings.edit') }}" class="admin-topbar__quick-link">Mon profil et securite</a>
+                                <a href="{{ route('admin.settings.edit') }}" class="admin-topbar__quick-link">Mon profil et sécurité</a>
                                 <form method="POST" action="{{ route('admin.logout') }}">
                                     @csrf
-                                    <button type="submit" class="admin-topbar__quick-link admin-topbar__quick-link--danger">Se deconnecter</button>
+                                    <button type="submit" class="admin-topbar__quick-link admin-topbar__quick-link--danger">Se déconnecter</button>
                                 </form>
                             </div>
                         </div>
@@ -195,7 +209,13 @@
                 }
 
                 if (layout) {
-                    var savedState = window.localStorage.getItem(storageKey) || 'open';
+                    var savedState = window.localStorage.getItem(storageKey);
+                    var isMobileViewport = window.matchMedia('(max-width: 1024px)').matches;
+
+                    if (!savedState) {
+                        savedState = isMobileViewport ? 'closed' : 'open';
+                    }
+
                     if (savedState === 'collapsed') {
                         layout.classList.add(collapsedClass);
                         layout.classList.remove(closedClass);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\WelcomeMail;
 use App\Models\Agent;
 use App\Models\Service;
 use App\Models\User;
@@ -11,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -84,6 +86,15 @@ class AgentController extends Controller
 
         $validated['user_id'] = $user->id;
         Agent::query()->create($validated);
+
+        $plainPassword = (string) $request->input('password');
+        Mail::to($user->email)->send(new WelcomeMail(
+            recipientName:  $user->name,
+            recipientEmail: $user->email,
+            plainPassword:  $plainPassword,
+            role:           'agent',
+            loginUrl:       rtrim((string) config('app.url'), '/').'/login',
+        ));
 
         return redirect()
             ->route('admin.agents.index')

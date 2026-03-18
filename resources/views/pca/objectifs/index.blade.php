@@ -41,7 +41,7 @@
                 </form>
 
                 <div class="ent-table-wrap overflow-x-auto">
-                    <table class="ent-table text-left text-sm text-slate-700">
+                    <table class="ent-table ent-table--stack text-left text-sm text-slate-700">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -68,17 +68,17 @@
                                         : 'text-rose-700 bg-rose-50 border-rose-200';
                                 @endphp
                                 <tr>
-                                    <td><p class="ent-identity">{{ ($objectifs->firstItem() ?? 1) + $loop->index }}</p></td>
-                                    <td><p class="ent-identity">{{ $objectif->date }}</p></td>
-                                    <td>
+                                    <td data-label="#"><p class="ent-identity">{{ ($objectifs->firstItem() ?? 1) + $loop->index }}</p></td>
+                                    <td data-label="Date"><p class="ent-identity">{{ $objectif->date }}</p></td>
+                                    <td data-label="Echeance">
                                         <p class="ent-identity">{{ $objectif->date_echeance }}</p>
                                         @if ($isExpired)
                                             <p class="ent-subtext text-rose-600">Echeance depassee</p>
                                         @endif
                                     </td>
-                                    <td><p class="ent-subtext">{{ $typeLabel }}</p></td>
-                                    <td><p class="ent-identity">{{ $cibleLabel }}</p></td>
-                                    <td>
+                                    <td data-label="Type"><p class="ent-subtext">{{ $typeLabel }}</p></td>
+                                    <td data-label="Cible"><p class="ent-identity">{{ $cibleLabel }}</p></td>
+                                    <td data-label="Avancement">
                                         <div class="min-w-[180px] space-y-2">
                                             <div class="flex items-center gap-2">
                                                 @if (! $isEvaluationLocked)
@@ -105,8 +105,8 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td><p class="ent-subtext">{{ \Illuminate\Support\Str::limit($objectif->commentaire, 90) }}</p></td>
-                                    <td class="whitespace-nowrap">
+                                    <td data-label="Commentaire"><p class="ent-subtext">{{ \Illuminate\Support\Str::limit($objectif->commentaire, 90) }}</p></td>
+                                    <td data-label="Actions" class="whitespace-nowrap">
                                         <div class="ent-actions flex-nowrap">
                                             <a href="{{ route('pca.objectifs.show', $objectif) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Voir" aria-label="Voir l'objectif">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12s-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z"/><circle cx="12" cy="12" r="3"/></svg>
