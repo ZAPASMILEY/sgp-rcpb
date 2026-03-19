@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\AgentController;
+use App\Http\Controllers\Admin\AgenceController;
+use App\Http\Controllers\Admin\CaisseController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DirectionController;
 use App\Http\Controllers\Admin\EntiteController;
@@ -32,6 +34,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/statistiques', StatistiqueController::class)->name('admin.statistiques.index');
 
     Route::get('/admin/entites', [EntiteController::class, 'index'])->name('admin.entites.index');
+    Route::post('/admin/entites/reinitialiser', [EntiteController::class, 'reset'])->name('admin.entites.reset');
     Route::get('/admin/entites/creer', [EntiteController::class, 'create'])->name('admin.entites.create');
     Route::post('/admin/entites', [EntiteController::class, 'store'])->name('admin.entites.store');
     Route::get('/admin/entites/{entite}', [EntiteController::class, 'show'])->name('admin.entites.show');
@@ -40,6 +43,11 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::delete('/admin/entites/{entite}', [EntiteController::class, 'destroy'])->name('admin.entites.destroy');
 
     Route::get('/admin/directions', [DirectionController::class, 'index'])->name('admin.directions.index');
+    Route::get('/admin/delegations-techniques/directeurs', [DirectionController::class, 'directeursIndex'])->name('admin.delegations-techniques.directeurs.index');
+    Route::get('/admin/delegations-techniques/services', [DirectionController::class, 'servicesIndex'])->name('admin.delegations-techniques.services.index');
+    Route::get('/admin/delegations-techniques/secretaires', [DirectionController::class, 'secretairesIndex'])->name('admin.delegations-techniques.secretaires.index');
+    Route::get('/admin/delegations-techniques/agents', [DirectionController::class, 'agentsIndex'])->name('admin.delegations-techniques.agents.index');
+    Route::post('/admin/delegations-techniques', [DirectionController::class, 'storeDelegation'])->name('admin.delegations-techniques.store');
     Route::get('/admin/directions/creer', [DirectionController::class, 'create'])->name('admin.directions.create');
     Route::post('/admin/directions', [DirectionController::class, 'store'])->name('admin.directions.store');
     Route::get('/admin/directions/{direction}', [DirectionController::class, 'show'])->name('admin.directions.show');
@@ -62,6 +70,17 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/agents/{agent}/modifier', [AgentController::class, 'edit'])->name('admin.agents.edit');
     Route::put('/admin/agents/{agent}', [AgentController::class, 'update'])->name('admin.agents.update');
     Route::delete('/admin/agents/{agent}', [AgentController::class, 'destroy'])->name('admin.agents.destroy');
+
+    Route::get('/admin/caisses', [CaisseController::class, 'index'])->name('admin.caisses.index');
+    Route::get('/admin/caisses/creer', [CaisseController::class, 'create'])->name('admin.caisses.create');
+    Route::post('/admin/caisses', [CaisseController::class, 'store'])->name('admin.caisses.store');
+
+    Route::get('/admin/agences', [AgenceController::class, 'index'])->name('admin.agences.index');
+    Route::get('/admin/agences/creer', [AgenceController::class, 'create'])->name('admin.agences.create');
+    Route::post('/admin/agences', [AgenceController::class, 'store'])->name('admin.agences.store');
+    Route::get('/admin/agences/{agence}/agents', [AgenceController::class, 'agentsIndex'])->name('admin.agences.agents.index');
+    Route::get('/admin/agences/{agence}/agents/creer', [AgenceController::class, 'createAgent'])->name('admin.agences.agents.create');
+    Route::post('/admin/agences/{agence}/agents', [AgenceController::class, 'storeAgent'])->name('admin.agences.agents.store');
 
     Route::get('/admin/objectifs', [ObjectifController::class, 'index'])->name('admin.objectifs.index');
     Route::get('/admin/objectifs/creer', [ObjectifController::class, 'create'])->name('admin.objectifs.create');
@@ -86,6 +105,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/parametres', [SettingsController::class, 'edit'])->name('admin.settings.edit');
     Route::put('/admin/parametres/theme', [SettingsController::class, 'updateTheme'])->name('admin.settings.theme.update');
     Route::put('/admin/parametres/mot-de-passe', [SettingsController::class, 'updatePassword'])->name('admin.settings.password.update');
+    Route::delete('/admin/parametres/compte', [SettingsController::class, 'destroyAccount'])->name('admin.settings.account.destroy');
 });
 
 Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function (): void {
@@ -112,6 +132,7 @@ Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function 
     Route::get('/parametres', [PcaSettingsController::class, 'edit'])->name('settings.edit');
     Route::put('/parametres/theme', [PcaSettingsController::class, 'updateTheme'])->name('settings.theme.update');
     Route::put('/parametres/mot-de-passe', [PcaSettingsController::class, 'updatePassword'])->name('settings.password.update');
+    Route::delete('/parametres/compte', [PcaSettingsController::class, 'destroyAccount'])->name('settings.account.destroy');
 });
 
 Route::middleware(['auth', 'personnel'])->group(function (): void {

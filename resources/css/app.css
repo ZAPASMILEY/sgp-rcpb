@@ -368,6 +368,48 @@ h3 {
     box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
 }
 
+.ent-window {
+    overflow: hidden;
+}
+
+.ent-window__bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: -1.5rem -1.5rem 1.2rem;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 250, 226, 0.88));
+}
+
+.ent-window__dot {
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.ent-window__dot--danger {
+    background: #f87171;
+}
+
+.ent-window__dot--warn {
+    background: #facc15;
+}
+
+.ent-window__dot--ok {
+    background: #4ade80;
+}
+
+.ent-window__label {
+    margin-left: 0.5rem;
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #556077;
+}
+
 /* Recolor common Tailwind utility classes used in admin Blade templates */
 .admin-shell .bg-slate-950 {
     background-color: var(--admin-accent) !important;
@@ -1169,6 +1211,15 @@ body {
 
 .admin-layout--reference .ent-subtext {
     color: #7a879c;
+}
+
+.admin-layout--reference .ent-window__bar {
+    border-bottom-color: rgba(198, 206, 220, 0.88);
+    background: linear-gradient(180deg, #ffffff 0%, #f3f6fb 100%);
+}
+
+.admin-layout--reference .ent-window__label {
+    color: #67738c;
 }
 
 @media (max-width: 1024px) {

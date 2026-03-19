@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -53,5 +54,30 @@ class PcaSettingsController extends Controller
         return redirect()
             ->route('pca.settings.edit')
             ->with('status', 'Mot de passe mis a jour avec succes.');
+    }
+
+    public function destroyAccount(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'delete_password' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($validated['delete_password'], (string) $user->password)) {
+            return back()->withErrors([
+                'delete_password' => 'Le mot de passe de confirmation est incorrect.',
+            ]);
+        }
+
+        Auth::logout();
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()
+            ->route('login')
+            ->with('status', 'Compte supprime avec succes.');
     }
 }

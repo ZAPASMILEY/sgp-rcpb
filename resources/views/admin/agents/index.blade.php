@@ -2,25 +2,85 @@
 
 @section('title', 'Agents | '.config('app.name', 'SGP-RCPB'))
 
+@push('head')
+    <style>
+        .agents-page .agents-hero {
+            border-radius: 28px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background:
+                radial-gradient(circle at 12% 8%, rgba(16, 185, 129, 0.16), transparent 40%),
+                radial-gradient(circle at 92% 0%, rgba(59, 130, 246, 0.14), transparent 36%),
+                linear-gradient(180deg, rgba(22, 189, 55, 0.96), rgba(212, 205, 4, 0.95));
+            box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12);
+        }
+
+        .agents-page .agents-kpi {
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(255, 255, 255, 0.88);
+            padding: 0.75rem 0.9rem;
+        }
+
+        .agents-page .agents-kpi-label {
+            font-size: 0.66rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .agents-page .agents-kpi-value {
+            margin-top: 0.2rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .agents-page .agents-filters {
+            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 248, 255, 0.94));
+            border-color: rgba(186, 198, 216, 0.72);
+        }
+
+        .agents-page .agents-table {
+            border-radius: 20px;
+            border-color: rgba(186, 198, 216, 0.72);
+            box-shadow: 0 10px 30px rgba(30, 41, 59, 0.08) inset;
+        }
+
+        .agents-page .agents-table .ent-table thead th {
+            background: linear-gradient(180deg, #f6f8fd 0%, #eef3fb 100%);
+            border-bottom-color: rgba(190, 201, 220, 0.85);
+        }
+    </style>
+@endpush
+
 @section('content')
-    <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
+    <div class="agents-page admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto flex max-w-6xl flex-col gap-6">
-            <header class="admin-panel px-6 py-6 lg:px-8">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration / Referentiel</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Agents</h1>
-                        <p class="mt-2 text-sm text-slate-600">Liste des agents.</p>
-                        <div class="mt-3 flex flex-wrap items-center gap-2">
-                            <span class="status-pill">Total {{ $agents->total() }}</span>
-                            @if ($filters['search'])
-                                <span class="status-pill">Filtres actifs</span>
-                            @endif
+            <header class="agents-hero admin-panel px-6 py-6 lg:px-8">
+                <div class="flex flex-col gap-5">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration / Referentiel</p>
+                            <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Agents</h1>
+                            <p class="mt-2 text-sm text-slate-600">Gestion centralisee des agents, services et contacts.</p>
                         </div>
+                        <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
+                            Reinitialiser
+                        </a>
                     </div>
-                    <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
-                        Reinitialiser
-                    </a>
+
+                    <div class="grid gap-3 sm:grid-cols-2 lg:max-w-md">
+                        <article class="agents-kpi">
+                            <p class="agents-kpi-label">Total agents</p>
+                            <p class="agents-kpi-value">{{ $agents->total() }}</p>
+                        </article>
+                        <article class="agents-kpi">
+                            <p class="agents-kpi-label">Etat recherche</p>
+                            <p class="agents-kpi-value">{{ $filters['search'] ? 'Filtres actifs' : 'Tous les agents' }}</p>
+                        </article>
+                    </div>
                 </div>
             </header>
 
@@ -30,8 +90,45 @@
                 </div>
             @endif
 
+            <section class="admin-panel px-6 py-5 lg:px-8">
+                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onglet</p>
+                        <p class="mt-2 font-semibold text-slate-900">Delegation Technique</p>
+                        <div class="mt-3 flex gap-2">
+                            <a href="{{ route('admin.directions.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                            <a href="{{ route('admin.directions.create') }}" data-open-create-modal data-modal-title="Ajouter un Directeur Technique" class="ent-btn ent-btn-primary">Ajouter</a>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onglet</p>
+                        <p class="mt-2 font-semibold text-slate-900">Services</p>
+                        <div class="mt-3 flex gap-2">
+                            <a href="{{ route('admin.services.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                            <a href="{{ route('admin.services.create') }}" data-open-create-modal data-modal-title="Ajouter un service" class="ent-btn ent-btn-primary">Ajouter</a>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onglet</p>
+                        <p class="mt-2 font-semibold text-slate-900">Secretaires</p>
+                        <div class="mt-3 flex gap-2">
+                            <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                            <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="ent-btn ent-btn-primary">Ajouter</a>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onglet</p>
+                        <p class="mt-2 font-semibold text-slate-900">Agents</p>
+                        <div class="mt-3 flex gap-2">
+                            <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                            <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="ent-btn ent-btn-primary">Ajouter</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section class="admin-panel px-6 py-6 lg:px-8">
-                <form id="agent-filters-form" method="GET" action="{{ route('admin.agents.index') }}" class="ent-filters mb-6 grid gap-3 lg:grid-cols-[1.2fr_auto_auto] lg:items-end">
+                <form id="agent-filters-form" method="GET" action="{{ route('admin.agents.index') }}" class="agents-filters ent-filters mb-6 grid gap-3 lg:grid-cols-[1.2fr_auto_auto] lg:items-end">
                     <div class="relative space-y-2">
                         <label for="search" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Recherche</label>
                         <input
@@ -48,11 +145,11 @@
                         <div id="agent-search-suggestions" class="absolute left-0 right-0 top-full z-20 mt-1 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"></div>
                     </div>
                     <button type="submit" class="ent-btn ent-btn-primary">Filtrer</button>
-                    <a href="{{ route('admin.agents.create') }}" class="ent-btn ent-btn-primary text-center">Ajouter</a>
+                    <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="ent-btn ent-btn-primary text-center">Ajouter</a>
                 </form>
 
-                <div class="ent-table-wrap overflow-x-auto">
-                    <table class="ent-table text-left text-sm text-slate-700">
+                <div class="agents-table ent-table-wrap overflow-x-auto">
+                    <table class="ent-table ent-table--stack text-left text-sm text-slate-700">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -69,8 +166,8 @@
                         <tbody>
                             @forelse ($agents as $agent)
                                 <tr data-search-content="{{ strtolower(trim($agent->nom.' '.$agent->prenom.' '.($agent->service?->nom ?? '').' '.$agent->fonction.' '.$agent->numero_telephone.' '.$agent->email)) }}">
-                                    <td><p class="ent-identity">{{ ($agents->firstItem() ?? 1) + $loop->index }}</p></td>
-                                    <td>
+                                    <td data-label="#"><p class="ent-identity">{{ ($agents->firstItem() ?? 1) + $loop->index }}</p></td>
+                                    <td data-label="Photo">
                                         @if ($agent->photo_path)
                                             <img src="{{ Storage::url($agent->photo_path) }}" alt="Photo de {{ $agent->prenom }} {{ $agent->nom }}" class="h-11 w-11 rounded-xl object-cover ring-1 ring-slate-200">
                                         @else
@@ -79,13 +176,13 @@
                                             </div>
                                         @endif
                                     </td>
-                                    <td><p class="ent-identity">{{ $agent->nom }}</p></td>
-                                    <td><p class="ent-identity">{{ $agent->prenom }}</p></td>
-                                    <td><p class="ent-identity">{{ $agent->service?->nom ?? '-' }}</p></td>
-                                    <td><p class="ent-identity">{{ $agent->fonction }}</p></td>
-                                    <td><p class="ent-identity">{{ $agent->numero_telephone }}</p></td>
-                                    <td><p class="ent-subtext">{{ $agent->email }}</p></td>
-                                    <td class="whitespace-nowrap">
+                                    <td data-label="Nom"><p class="ent-identity">{{ $agent->nom }}</p></td>
+                                    <td data-label="Prenom"><p class="ent-identity">{{ $agent->prenom }}</p></td>
+                                    <td data-label="Service"><p class="ent-identity">{{ $agent->service?->nom ?? '-' }}</p></td>
+                                    <td data-label="Fonction"><p class="ent-identity">{{ $agent->fonction }}</p></td>
+                                    <td data-label="Numero"><p class="ent-identity">{{ $agent->numero_telephone }}</p></td>
+                                    <td data-label="Mail"><p class="ent-subtext">{{ $agent->email }}</p></td>
+                                    <td data-label="Actions" class="whitespace-nowrap">
                                         <div class="ent-actions flex-nowrap">
                                             <a href="{{ route('admin.agents.show', $agent) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Voir l'agent" aria-label="Voir l'agent">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true">

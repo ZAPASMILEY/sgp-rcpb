@@ -63,7 +63,10 @@
                         @php
                             $roleLabels = [
                                 'agent'     => 'Agent',
-                                'directeur' => 'Directeur',
+                                'directeur' => 'Directeur Technique',
+                                'directeur_adjoint' => 'Directeur General Adjoint',
+                                'assistant' => 'Assistante du DG',
+                                'secretaire' => 'Secretaire de Direction',
                                 'chef'      => 'Chef de Service',
                                 'pca'       => 'PCA',
                                 'admin'     => 'Administrateur',

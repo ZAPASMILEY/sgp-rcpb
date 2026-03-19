@@ -20,6 +20,74 @@
             <link rel="stylesheet" href="{{ asset('css/admin-fallback.css') }}">
         @endif
 
+        <style>
+            .create-form-modal {
+                position: fixed;
+                inset: 0;
+                z-index: 2200;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                padding: 1rem;
+                background: rgba(15, 23, 42, 0.55);
+                backdrop-filter: blur(2px);
+            }
+
+            .create-form-modal.is-open {
+                display: flex;
+            }
+
+            .create-form-modal__panel {
+                width: min(980px, 96vw);
+                height: min(86vh, 860px);
+                border-radius: 18px;
+                border: 1px solid rgba(148, 163, 184, 0.45);
+                background: #ffffff;
+                overflow: hidden;
+                box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+                display: grid;
+                grid-template-rows: auto 1fr;
+            }
+
+            .create-form-modal__header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.75rem;
+                padding: 0.75rem 1rem;
+                border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+                background: #f8fafc;
+            }
+
+            .create-form-modal__title {
+                margin: 0;
+                font-size: 0.85rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                font-weight: 700;
+                color: #475569;
+            }
+
+            .create-form-modal__close {
+                border: 0;
+                background: #e2e8f0;
+                color: #334155;
+                width: 2rem;
+                height: 2rem;
+                border-radius: 999px;
+                font-size: 1.2rem;
+                line-height: 1;
+                cursor: pointer;
+            }
+
+            .create-form-modal__frame {
+                width: 100%;
+                height: 100%;
+                border: 0;
+                background: #ffffff;
+            }
+        </style>
+
         @stack('head')
     </head>
     <body>
@@ -118,8 +186,8 @@
 
                         <div id="topbar-quick-panel" class="admin-topbar__panel admin-topbar__panel--quick hidden" role="menu" aria-label="Actions rapides">
                             <p class="admin-topbar__panel-caption">Actions rapides</p>
-                            <a href="{{ route('pca.evaluations.create') }}" class="admin-topbar__quick-link">Nouvelle évaluation</a>
-                            <a href="{{ route('pca.objectifs.create') }}" class="admin-topbar__quick-link">Nouvel objectif</a>
+                            <a href="{{ route('pca.evaluations.create') }}" data-open-create-modal data-modal-title="Nouvelle évaluation" class="admin-topbar__quick-link">Nouvelle évaluation</a>
+                            <a href="{{ route('pca.objectifs.create') }}" data-open-create-modal data-modal-title="Nouvel objectif" class="admin-topbar__quick-link">Nouvel objectif</a>
                             <a href="{{ route('pca.settings.edit') }}" class="admin-topbar__quick-link">Ouvrir paramètres</a>
                         </div>
 
@@ -136,6 +204,16 @@
 
                 @yield('content')
             </main>
+        </div>
+
+        <div id="create-form-modal" class="create-form-modal" aria-hidden="true">
+            <div class="create-form-modal__panel" role="dialog" aria-modal="true" aria-labelledby="create-form-modal-title">
+                <div class="create-form-modal__header">
+                    <p id="create-form-modal-title" class="create-form-modal__title">Formulaire d'ajout</p>
+                    <button id="create-form-modal-close" type="button" class="create-form-modal__close" aria-label="Fermer">&times;</button>
+                </div>
+                <iframe id="create-form-modal-frame" class="create-form-modal__frame" loading="lazy"></iframe>
+            </div>
         </div>
 
         <script>
@@ -248,6 +326,64 @@
                         window.setTimeout(function () { element.remove(); }, 240);
                     }, delay);
                 });
+
+                var createModal = document.getElementById('create-form-modal');
+                var createFrame = document.getElementById('create-form-modal-frame');
+                var createCloseButton = document.getElementById('create-form-modal-close');
+                var createTitle = document.getElementById('create-form-modal-title');
+
+                if (createModal && createFrame && createCloseButton && createTitle) {
+                    function closeCreateModal() {
+                        createModal.classList.remove('is-open');
+                        createModal.setAttribute('aria-hidden', 'true');
+                        createFrame.removeAttribute('src');
+                    }
+
+                    function openCreateModal(url, label) {
+                        createFrame.src = url;
+                        createTitle.textContent = label || "Formulaire d'ajout";
+                        createModal.classList.add('is-open');
+                        createModal.setAttribute('aria-hidden', 'false');
+                    }
+
+                    document.addEventListener('click', function (event) {
+                        var trigger = event.target.closest('[data-open-create-modal]');
+
+                        if (trigger) {
+                            event.preventDefault();
+                            openCreateModal(trigger.getAttribute('href'), trigger.getAttribute('data-modal-title'));
+                            return;
+                        }
+
+                        if (event.target === createModal || event.target === createCloseButton) {
+                            closeCreateModal();
+                        }
+                    });
+
+                    document.addEventListener('keydown', function (event) {
+                        if (event.key === 'Escape' && createModal.classList.contains('is-open')) {
+                            closeCreateModal();
+                        }
+                    });
+
+                    createFrame.addEventListener('load', function () {
+                        if (!createModal.classList.contains('is-open')) {
+                            return;
+                        }
+
+                        try {
+                            var currentPath = createFrame.contentWindow.location.pathname || '';
+                            var isCreatePage = currentPath.indexOf('/creer') !== -1 || currentPath.indexOf('/create') !== -1;
+
+                            if (!isCreatePage) {
+                                closeCreateModal();
+                                window.location.reload();
+                            }
+                        } catch (error) {
+                            // Keep modal open if frame location cannot be inspected.
+                        }
+                    });
+                }
             });
         </script>
 

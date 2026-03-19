@@ -1,347 +1,335 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@yield('title', config('app.name', 'SGP-RCPB'))</title>
 
-        <title>@yield('title', config('app.name', 'SGP-RCPB'))</title>
+    @php
+        $hasViteBuild = file_exists(public_path('build/manifest.json'));
+        $hasViteHot = file_exists(public_path('hot'));
+        $requestHost = request()->getHost();
+        $isLocalHost = in_array($requestHost, ['127.0.0.1', 'localhost'], true);
+    @endphp
 
-        @php
-            $hasViteBuild = file_exists(public_path('build/manifest.json'));
-            $hasViteHot = file_exists(public_path('hot'));
-            $requestHost = request()->getHost();
-            $isLocalHost = in_array($requestHost, ['127.0.0.1', 'localhost'], true);
-        @endphp
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('adminlte/css/adminlte.min.css') }}">
 
-        @if ($hasViteBuild || ($hasViteHot && $isLocalHost))
-            @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @else
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link rel="stylesheet" href="{{ asset('css/admin-fallback.css') }}">
-        @endif
+    @if ($hasViteBuild || ($hasViteHot && $isLocalHost))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @else
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="{{ asset('css/admin-fallback.css') }}">
+    @endif
 
-        @stack('head')
-    </head>
-    <body>
-        @php
-            $showAdminSidebar = request()->routeIs('admin.*') && !request()->routeIs('login');
-            $themePreference = auth()->check() ? (auth()->user()->theme_preference ?? 'reference') : 'reference';
-            $adminThemeClass = $themePreference === 'reference' ? 'admin-layout--reference' : '';
-            $adminTopbarLabel = match (true) {
-                request()->routeIs('admin.dashboard') => 'Tableau de bord',
-                request()->routeIs('admin.statistiques.*') => 'Pilotage / Statistiques',
-                request()->routeIs('admin.entites.*') => 'Référentiel / Entités',
-                request()->routeIs('admin.directions.*') => 'Référentiel / Directions',
-                request()->routeIs('admin.services.*') => 'Référentiel / Services',
-                request()->routeIs('admin.agents.*') => 'Référentiel / Agents',
-                request()->routeIs('admin.objectifs.*') => 'Pilotage / Objectifs',
-                request()->routeIs('admin.evaluations.*') => 'Pilotage / Évaluations',
-                request()->routeIs('admin.settings.*') => 'Administration / Paramètres',
-                default => 'Administration',
-            };
-            $adminUserInitial = auth()->check() && filled(auth()->user()->name)
-                ? strtoupper(substr(auth()->user()->name, 0, 1))
-                : 'A';
-        @endphp
+    <style>
+        .create-form-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 2200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(2px);
+        }
 
+        .create-form-modal.is-open {
+            display: flex;
+        }
+
+        .create-form-modal__panel {
+            width: min(980px, 96vw);
+            height: min(86vh, 860px);
+            border-radius: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            background: #ffffff;
+            overflow: hidden;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+
+        .create-form-modal__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+            background: #f8fafc;
+        }
+
+        .create-form-modal__title {
+            margin: 0;
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #475569;
+        }
+
+        .create-form-modal__close {
+            border: 0;
+            background: #e2e8f0;
+            color: #334155;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 999px;
+            font-size: 1.2rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .create-form-modal__frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: #ffffff;
+        }
+    </style>
+    
+    @stack('head')
+</head>
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+    @php
+        $showAdminSidebar = request()->routeIs('admin.*') && !request()->routeIs('login');
+        $adminUserInitial = auth()->check() ? strtoupper(substr(auth()->user()->name, 0, 1)) : 'A';
+    @endphp
+
+    <div class="app-wrapper">
         @if ($showAdminSidebar)
-            <div id="admin-layout" class="admin-layout min-h-screen {{ $adminThemeClass }}">
-                <aside id="admin-sidebar" class="admin-sidebar">
-                    <div class="admin-sidebar__logo-card">
-                        <div class="admin-sidebar__logo-mark">R</div>
-                        <div>
-                            <p class="admin-sidebar__logo-title">RCPB</p>
-                            <p class="admin-sidebar__logo-subtitle">Réseau des Caisses</p>
-                        </div>
-                    </div>
+            <nav class="app-header navbar navbar-expand bg-body shadow-sm">
+                <div class="container-fluid">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+                                <i class="fas fa-bars"></i>
+                            </a>
+                        </li>
+                    </ul>
 
-                    <div class="admin-sidebar__brand">
-                        <div class="admin-sidebar__brand-row">
-                            <div>
-                                <p class="admin-sidebar__subtitle">Administration</p>
-                                <p class="admin-sidebar__title">SGP RCPB</p>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link" data-bs-toggle="dropdown" href="#">
+                                <i class="far fa-bell"></i>
+                                <span class="badge badge-warning navbar-badge">3</span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                                <span class="dropdown-item dropdown-header">Statut SGP</span>
+                                <div class="dropdown-divider"></div>
+                                <a href="#" class="dropdown-item">
+                                    <i class="fas fa-file me-2"></i> 3 objectifs en cours
+                                </a>
                             </div>
-                            <button id="sidebar-toggle" type="button" class="admin-sidebar__toggle" aria-label="Replier le menu" title="Replier le menu">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <nav class="admin-sidebar__nav" aria-label="Navigation principale">
-                        <a href="{{ route('admin.dashboard') }}" class="admin-tab {{ request()->routeIs('admin.dashboard') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 1 18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6Z"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Tableau de bord</span>
-                        </a>
-                        <a href="{{ route('admin.statistiques.index') }}" class="admin-tab {{ request()->routeIs('admin.statistiques.*') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5V10.5m5.25 9V6.75m5.25 12.75v-6m5.25 6V4.5"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Statistiques</span>
-                        </a>
-                        <a href="{{ route('admin.entites.index') }}" class="admin-tab {{ request()->routeIs('admin.entites.*') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 21V7.5l7.5-4.5 7.5 4.5V21M9 21v-6h6v6"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Entités</span>
-                        </a>
-                        <a href="{{ route('admin.directions.index') }}" class="admin-tab {{ request()->routeIs('admin.directions.*') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m12 3 9 4.5-9 4.5-9-4.5L12 3Zm0 9v9m-6-6 6 3 6-3"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Directions</span>
-                        </a>
-                        <a href="{{ route('admin.services.index') }}" class="admin-tab {{ request()->routeIs('admin.services.*') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 6.75h15M4.5 12h15M4.5 17.25h15"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Services</span>
-                        </a>
-                        <a href="{{ route('admin.agents.index') }}" class="admin-tab {{ request()->routeIs('admin.agents.*') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Zm-7.5 7.5a7.5 7.5 0 1 1 15 0"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Agents</span>
-                        </a>
-                        <a href="{{ route('admin.objectifs.index') }}" class="admin-tab {{ request()->routeIs('admin.objectifs.*') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 4.5h10.5A2.25 2.25 0 0 1 19.5 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 17.25V6.75A2.25 2.25 0 0 1 6.75 4.5Zm2.25 4.5h6m-6 3h6m-6 3h3"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Objectifs</span>
-                        </a>
-                        <a href="{{ route('admin.evaluations.index') }}" class="admin-tab {{ request()->routeIs('admin.evaluations.*') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="m7.5 12 3 3 6-6M4.5 5.25h15v13.5h-15z"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Évaluations</span>
-                        </a>
-                        <a href="{{ route('admin.settings.edit') }}" class="admin-tab {{ request()->routeIs('admin.settings.*') ? 'is-active' : '' }}">
-                            <span class="admin-tab__icon" aria-hidden="true">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 3.75h3l.6 2.07a7.6 7.6 0 0 1 1.77.72l1.95-1.05 2.12 2.12-1.05 1.95c.29.56.53 1.15.72 1.77l2.07.6v3l-2.07.6a7.6 7.6 0 0 1-.72 1.77l1.05 1.95-2.12 2.12-1.95-1.05a7.6 7.6 0 0 1-1.77.72l-.6 2.07h-3l-.6-2.07a7.6 7.6 0 0 1-1.77-.72l-1.95 1.05-2.12-2.12 1.05-1.95a7.6 7.6 0 0 1-.72-1.77l-2.07-.6v-3l2.07-.6c.19-.62.43-1.21.72-1.77L3.4 7.6 5.52 5.48l1.95 1.05c.56-.29 1.15-.53 1.77-.72l.6-2.06Z"/><circle cx="12" cy="12" r="2.5"/></svg>
-                            </span>
-                            <span class="admin-tab__label">Paramètres</span>
-                        </a>
-                    </nav>
-
-                    <form method="POST" action="{{ route('admin.logout') }}" class="admin-sidebar__logout">
-                        @csrf
-                        <button type="submit" class="ent-btn ent-btn-soft w-full">Déconnexion</button>
-                    </form>
-                </aside>
-
-                <main class="admin-content">
-                    <button id="sidebar-expand" type="button" class="admin-sidebar__expand hidden" aria-label="Ouvrir le menu" title="Ouvrir le menu">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                        </svg>
-                    </button>
-                    <header class="admin-topbar">
-                        <p class="admin-topbar__title">{{ $adminTopbarLabel }}</p>
-                        <div class="admin-topbar__actions" id="admin-topbar-actions">
-                            <button id="topbar-notifications-toggle" type="button" class="admin-topbar__icon" aria-label="Notifications" aria-expanded="false" aria-controls="topbar-notifications-panel">
-                                <span class="admin-topbar__badge" aria-hidden="true"></span>
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 18.75h-4.5m8.25-1.5-1.06-1.77a3 3 0 0 1-.44-1.54V10.5a4.5 4.5 0 1 0-9 0v3.44c0 .55-.15 1.1-.44 1.54L6 17.25h12Z"/></svg>
-                            </button>
-                            <button id="topbar-quick-toggle" type="button" class="admin-topbar__icon" aria-label="Réglages rapides" aria-expanded="false" aria-controls="topbar-quick-panel">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Zm8.25 3.75-.94-.27a7.9 7.9 0 0 0-.67-1.6l.53-.82-1.76-1.76-.82.53c-.51-.28-1.04-.5-1.6-.67l-.27-.94h-2.5l-.27.94c-.56.17-1.09.39-1.6.67l-.82-.53-1.76 1.76.53.82c-.28.51-.5 1.04-.67 1.6l-.94.27v2.5l.94.27c.17.56.39 1.09.67 1.6l-.53.82 1.76 1.76.82-.53c.51.28 1.04.5 1.6.67l.27.94h2.5l.27-.94c.56-.17 1.09-.39 1.6-.67l.82.53 1.76-1.76-.53-.82c.28-.51.5-1.04.67-1.6l.94-.27v-2.5Z"/></svg>
-                            </button>
-                            <button id="topbar-profile-toggle" type="button" class="admin-topbar__avatar admin-topbar__avatar--button" aria-label="Profil" aria-expanded="false" aria-controls="topbar-profile-panel">{{ $adminUserInitial }}</button>
-
-                            <div id="topbar-notifications-panel" class="admin-topbar__panel hidden" role="dialog" aria-label="Notifications">
-                                <div class="admin-topbar__panel-head">
-                                    <p>Notifications</p>
-                                    <button type="button" id="topbar-mark-read" class="admin-topbar__panel-action">Tout marquer lu</button>
+                        </li>
+                        
+                        <li class="nav-item dropdown user-menu">
+                            <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                                <div class="rounded-circle bg-primary text-white d-inline-block text-center" style="width: 30px; height: 30px; line-height: 30px;">
+                                    {{ $adminUserInitial }}
                                 </div>
-                                <div class="admin-topbar__panel-list">
-                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>3 objectifs arrivent à échéance cette semaine.</p>
-                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>2 évaluations sont en attente de validation.</p>
-                                    <p class="admin-topbar__item"><span class="admin-topbar__dot"></span>Nouveau compte agent créé aujourd'hui.</p>
-                                </div>
-                            </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li class="user-header bg-primary text-white p-3 text-center">
+                                    <p>{{ auth()->user()->name ?? 'Administrateur' }}</p>
+                                </li>
+                                <li class="user-footer border-top p-2">
+                                    <a href="{{ route('admin.settings.edit') }}" class="btn btn-default btn-flat float-start">Profil</a>
+                                    <a href="{{ route('admin.logout') }}" 
+                                       class="btn btn-default btn-flat float-end text-danger"
+                                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                        Déconnexion
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
 
-                            <div id="topbar-quick-panel" class="admin-topbar__panel admin-topbar__panel--quick hidden" role="menu" aria-label="Actions rapides">
-                                <p class="admin-topbar__panel-caption">Actions rapides</p>
-                                <a href="{{ route('admin.evaluations.create') }}" class="admin-topbar__quick-link">Nouvelle évaluation</a>
-                                <a href="{{ route('admin.objectifs.create') }}" class="admin-topbar__quick-link">Nouvel objectif</a>
-                                <a href="{{ route('admin.agents.create') }}" class="admin-topbar__quick-link">Nouvel agent</a>
-                                <a href="{{ route('admin.settings.edit') }}" class="admin-topbar__quick-link">Ouvrir paramètres</a>
-                            </div>
+            <aside class="app-sidebar bg-dark shadow" data-bs-theme="dark">
+                <div class="sidebar-brand">
+                    <a href="{{ route('admin.dashboard') }}" class="brand-link text-center w-100">
+                        <span class="brand-text fw-bold">SGP RCPB</span>
+                    </a>
+                </div>
+                
+                <div class="sidebar-wrapper">
+                    <nav class="mt-3">
+                        <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
+                            <li class="nav-item">
+                                <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-chart-pie"></i>
+                                    <p>Tableau de bord</p>
+                                </a>
+                            </li>
 
-                            <div id="topbar-profile-panel" class="admin-topbar__panel admin-topbar__panel--profile hidden" role="menu" aria-label="Profil">
-                                <p class="admin-topbar__panel-caption">Compte</p>
-                                <a href="{{ route('admin.settings.edit') }}" class="admin-topbar__quick-link">Mon profil et sécurité</a>
-                                <form method="POST" action="{{ route('admin.logout') }}">
+                            <li class="nav-header">RÉFÉRENTIEL</li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.entites.index') }}" class="nav-link {{ request()->routeIs('admin.entites.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-university"></i>
+                                    <p>Faitiere</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.directions.index') }}" class="nav-link {{ request()->routeIs('admin.directions.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-sitemap"></i>
+                                    <p>Delegation Technique</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.caisses.index') }}" class="nav-link {{ request()->routeIs('admin.caisses.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-cash-register"></i>
+                                    <p>Agents par caisse</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.agences.index') }}" class="nav-link {{ request()->routeIs('admin.agences.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-building"></i>
+                                    <p>Agences</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-header">PILOTAGE</li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.statistiques.index') }}" class="nav-link {{ request()->routeIs('admin.statistiques.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-chart-line"></i>
+                                    <p>Statistiques</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.evaluations.index') }}" class="nav-link {{ request()->routeIs('admin.evaluations.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-clipboard-check"></i>
+                                    <p>Évaluations</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-header">ADMINISTRATION</li>
+                            <li class="nav-item">
+                                <a href="{{ route('admin.settings.edit') }}" class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+                                    <i class="nav-icon fas fa-cog"></i>
+                                    <p>Paramètres</p>
+                                </a>
+                            </li>
+
+                            <li class="nav-item mt-4">
+                                <form id="logout-form-sidebar" action="{{ route('admin.logout') }}" method="POST" class="px-3">
                                     @csrf
-                                    <button type="submit" class="admin-topbar__quick-link admin-topbar__quick-link--danger">Se déconnecter</button>
+                                    <button type="submit" class="btn btn-danger w-100 shadow-sm">
+                                        <i class="fas fa-power-off"></i> Quitter
+                                    </button>
                                 </form>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </aside>
+
+            <main class="app-main">
+                <div class="app-content-header shadow-sm bg-white mb-4 py-3">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <h3 class="mb-0">@yield('title')</h3>
                             </div>
                         </div>
-                    </header>
-                    @yield('content')
-                </main>
-            </div>
+                    </div>
+                </div>
+                
+                <div class="app-content">
+                    <div class="container-fluid">
+                        @yield('content')
+                    </div>
+                </div>
+            </main>
         @else
             @yield('content')
         @endif
+    </div>
 
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                var layout = document.getElementById('admin-layout');
-                var collapseButton = document.getElementById('sidebar-toggle');
-                var expandButton = document.getElementById('sidebar-expand');
-                var collapsedClass = 'admin-layout--collapsed';
-                var closedClass = 'admin-layout--closed';
-                var storageKey = 'admin-sidebar-state';
+    <div id="create-form-modal" class="create-form-modal" aria-hidden="true">
+        <div class="create-form-modal__panel" role="dialog" aria-modal="true" aria-labelledby="create-form-modal-title">
+            <div class="create-form-modal__header">
+                <p id="create-form-modal-title" class="create-form-modal__title">Formulaire d'ajout</p>
+                <button id="create-form-modal-close" type="button" class="create-form-modal__close" aria-label="Fermer">&times;</button>
+            </div>
+            <iframe id="create-form-modal-frame" class="create-form-modal__frame" loading="lazy"></iframe>
+        </div>
+    </div>
 
-                function syncExpandButton() {
-                    if (!layout || !expandButton) {
-                        return;
-                    }
+    <form id="logout-form" action="{{ route('admin.logout') }}" method="POST" class="d-none">
+        @csrf
+    </form>
 
-                    if (layout.classList.contains(collapsedClass) || layout.classList.contains(closedClass)) {
-                        expandButton.classList.remove('hidden');
-                    } else {
-                        expandButton.classList.add('hidden');
-                    }
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('adminlte/js/adminlte.min.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var modal = document.getElementById('create-form-modal');
+            var frame = document.getElementById('create-form-modal-frame');
+            var closeButton = document.getElementById('create-form-modal-close');
+            var title = document.getElementById('create-form-modal-title');
+
+            if (!modal || !frame || !closeButton) {
+                return;
+            }
+
+            function closeModal() {
+                modal.classList.remove('is-open');
+                modal.setAttribute('aria-hidden', 'true');
+                frame.removeAttribute('src');
+            }
+
+            function openModal(url, label) {
+                frame.src = url;
+                title.textContent = label || "Formulaire d'ajout";
+                modal.classList.add('is-open');
+                modal.setAttribute('aria-hidden', 'false');
+            }
+
+            document.addEventListener('click', function (event) {
+                var trigger = event.target.closest('[data-open-create-modal]');
+
+                if (trigger) {
+                    event.preventDefault();
+                    openModal(trigger.getAttribute('href'), trigger.getAttribute('data-modal-title'));
+                    return;
                 }
 
-                if (layout) {
-                    var savedState = window.localStorage.getItem(storageKey);
-                    var isMobileViewport = window.matchMedia('(max-width: 1024px)').matches;
-
-                    if (!savedState) {
-                        savedState = isMobileViewport ? 'closed' : 'open';
-                    }
-
-                    if (savedState === 'collapsed') {
-                        layout.classList.add(collapsedClass);
-                        layout.classList.remove(closedClass);
-                    } else if (savedState === 'closed') {
-                        layout.classList.add(closedClass);
-                        layout.classList.remove(collapsedClass);
-                    } else {
-                        layout.classList.remove(collapsedClass);
-                        layout.classList.remove(closedClass);
-                    }
-                    syncExpandButton();
+                if (event.target === modal || event.target === closeButton) {
+                    closeModal();
                 }
-
-                if (collapseButton && layout) {
-                    collapseButton.addEventListener('click', function () {
-                        layout.classList.add(closedClass);
-                        layout.classList.remove(collapsedClass);
-                        window.localStorage.setItem(storageKey, 'closed');
-                        syncExpandButton();
-                    });
-                }
-
-                if (expandButton && layout) {
-                    expandButton.addEventListener('click', function () {
-                        layout.classList.remove(closedClass);
-                        layout.classList.remove(collapsedClass);
-                        window.localStorage.setItem(storageKey, 'open');
-
-                        syncExpandButton();
-                    });
-                }
-
-                var topbarContainer = document.getElementById('admin-topbar-actions');
-                var notificationsToggle = document.getElementById('topbar-notifications-toggle');
-                var quickToggle = document.getElementById('topbar-quick-toggle');
-                var profileToggle = document.getElementById('topbar-profile-toggle');
-                var notificationsPanel = document.getElementById('topbar-notifications-panel');
-                var quickPanel = document.getElementById('topbar-quick-panel');
-                var profilePanel = document.getElementById('topbar-profile-panel');
-                var markReadButton = document.getElementById('topbar-mark-read');
-
-                function closeAllTopbarPanels() {
-                    [notificationsPanel, quickPanel, profilePanel].forEach(function (panel) {
-                        if (panel) {
-                            panel.classList.add('hidden');
-                        }
-                    });
-
-                    [notificationsToggle, quickToggle, profileToggle].forEach(function (toggle) {
-                        if (toggle) {
-                            toggle.setAttribute('aria-expanded', 'false');
-                        }
-                    });
-                }
-
-                function toggleTopbarPanel(toggle, panel) {
-                    if (!toggle || !panel) {
-                        return;
-                    }
-
-                    var isClosed = panel.classList.contains('hidden');
-                    closeAllTopbarPanels();
-
-                    if (isClosed) {
-                        panel.classList.remove('hidden');
-                        toggle.setAttribute('aria-expanded', 'true');
-                    }
-                }
-
-                if (topbarContainer) {
-                    if (notificationsToggle && notificationsPanel) {
-                        notificationsToggle.addEventListener('click', function () {
-                            toggleTopbarPanel(notificationsToggle, notificationsPanel);
-                        });
-                    }
-
-                    if (quickToggle && quickPanel) {
-                        quickToggle.addEventListener('click', function () {
-                            toggleTopbarPanel(quickToggle, quickPanel);
-                        });
-                    }
-
-                    if (profileToggle && profilePanel) {
-                        profileToggle.addEventListener('click', function () {
-                            toggleTopbarPanel(profileToggle, profilePanel);
-                        });
-                    }
-
-                    if (markReadButton && notificationsToggle) {
-                        markReadButton.addEventListener('click', function () {
-                            var badge = notificationsToggle.querySelector('.admin-topbar__badge');
-                            if (badge) {
-                                badge.style.display = 'none';
-                            }
-                        });
-                    }
-
-                    document.addEventListener('click', function (event) {
-                        if (!topbarContainer.contains(event.target)) {
-                            closeAllTopbarPanels();
-                        }
-                    });
-
-                    document.addEventListener('keydown', function (event) {
-                        if (event.key === 'Escape') {
-                            closeAllTopbarPanels();
-                        }
-                    });
-                }
-
-                document.querySelectorAll('[data-auto-dismiss]').forEach(function (element) {
-                    var delay = Number(element.getAttribute('data-auto-dismiss')) || 4000;
-
-                    window.setTimeout(function () {
-                        element.style.transition = 'opacity 220ms ease, transform 220ms ease';
-                        element.style.opacity = '0';
-                        element.style.transform = 'translateY(-6px)';
-
-                        window.setTimeout(function () {
-                            element.remove();
-                        }, 240);
-                    }, delay);
-                });
             });
-        </script>
 
-        @stack('scripts')
-    </body>
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+                    closeModal();
+                }
+            });
+
+            frame.addEventListener('load', function () {
+                if (!modal.classList.contains('is-open')) {
+                    return;
+                }
+
+                try {
+                    var currentPath = frame.contentWindow.location.pathname || '';
+                    var isCreatePage = currentPath.indexOf('/creer') !== -1 || currentPath.indexOf('/create') !== -1;
+
+                    if (!isCreatePage) {
+                        closeModal();
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    // Keep modal open if the frame location cannot be inspected.
+                }
+            });
+        });
+    </script>
+    
+    @stack('scripts')
+</body>
 </html>

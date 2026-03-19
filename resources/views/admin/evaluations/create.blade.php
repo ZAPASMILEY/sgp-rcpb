@@ -5,7 +5,13 @@
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto flex max-w-4xl flex-col gap-6">
-            <header class="admin-panel px-6 py-6 lg:px-8">
+            <header class="admin-panel ent-window px-6 py-6 lg:px-8">
+                <div class="ent-window__bar" aria-hidden="true">
+                    <span class="ent-window__dot ent-window__dot--danger"></span>
+                    <span class="ent-window__dot ent-window__dot--warn"></span>
+                    <span class="ent-window__dot ent-window__dot--ok"></span>
+                    <span class="ent-window__label">Fenetre d'ajout</span>
+                </div>
                 <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Pilotage</p>
                 <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Nouvelle evaluation</h1>
                 <p class="mt-2 text-sm text-slate-600">Evaluez une entite, une direction, un directeur, un service, un chef de service ou un agent sur une periode donnee.</p>

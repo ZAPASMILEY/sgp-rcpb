@@ -14,9 +14,15 @@ class AuthenticatedSessionController extends Controller
     public function create(Request $request): View|RedirectResponse
     {
         if ($request->user()) {
-            return $request->user()->isPca()
-                ? redirect()->route('pca.dashboard')
-                : redirect()->route('admin.dashboard');
+            if ($request->user()->isPca()) {
+                return redirect()->route('pca.dashboard');
+            }
+
+            if ($request->user()->isPersonnel()) {
+                return redirect()->route('personnel.dashboard');
+            }
+
+            return redirect()->route('admin.dashboard');
         }
 
         return view('admin.auth.login');

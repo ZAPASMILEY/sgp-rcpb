@@ -5,7 +5,13 @@
 @section('content')
     <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto max-w-3xl">
-            <section class="admin-panel p-6 sm:p-8">
+            <section class="admin-panel ent-window p-6 sm:p-8">
+                <div class="ent-window__bar" aria-hidden="true">
+                    <span class="ent-window__dot ent-window__dot--danger"></span>
+                    <span class="ent-window__dot ent-window__dot--warn"></span>
+                    <span class="ent-window__dot ent-window__dot--ok"></span>
+                    <span class="ent-window__label">Fenetre d'ajout</span>
+                </div>
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Creation</p>

@@ -44,7 +44,7 @@
                         >
                     </div>
                     <button type="submit" class="ent-btn ent-btn-primary">Filtrer</button>
-                    <a href="{{ route('admin.objectifs.create') }}" class="ent-btn ent-btn-primary text-center">Ajouter</a>
+                    <a href="{{ route('admin.objectifs.create') }}" data-open-create-modal data-modal-title="Ajouter un objectif" class="ent-btn ent-btn-primary text-center">Ajouter</a>
                 </form>
 
                 <div class="ent-table-wrap overflow-x-auto">

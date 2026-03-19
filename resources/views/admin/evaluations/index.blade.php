@@ -40,7 +40,7 @@
                         </select>
                     </div>
                     <button type="submit" class="ent-btn ent-btn-primary">Filtrer</button>
-                    <a href="{{ route('admin.evaluations.create') }}" class="ent-btn ent-btn-primary text-center">Ajouter</a>
+                    <a href="{{ route('admin.evaluations.create') }}" data-open-create-modal data-modal-title="Ajouter une evaluation" class="ent-btn ent-btn-primary text-center">Ajouter</a>
                 </form>
 
                 <div class="ent-table-wrap overflow-x-auto">

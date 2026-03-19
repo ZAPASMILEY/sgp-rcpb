@@ -30,6 +30,43 @@
                 </div>
             @endif
 
+            <section class="admin-panel px-6 py-5 lg:px-8">
+                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onglet</p>
+                        <p class="mt-2 font-semibold text-slate-900">Delegation Technique</p>
+                        <div class="mt-3 flex gap-2">
+                            <a href="{{ route('admin.directions.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                            <a href="{{ route('admin.directions.create') }}" data-open-create-modal data-modal-title="Ajouter un Directeur Technique" class="ent-btn ent-btn-primary">Ajouter</a>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onglet</p>
+                        <p class="mt-2 font-semibold text-slate-900">Services</p>
+                        <div class="mt-3 flex gap-2">
+                            <a href="{{ route('admin.services.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                            <a href="{{ route('admin.services.create') }}" data-open-create-modal data-modal-title="Ajouter un service" class="ent-btn ent-btn-primary">Ajouter</a>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onglet</p>
+                        <p class="mt-2 font-semibold text-slate-900">Secretaires</p>
+                        <div class="mt-3 flex gap-2">
+                            <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                            <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="ent-btn ent-btn-primary">Ajouter</a>
+                        </div>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Onglet</p>
+                        <p class="mt-2 font-semibold text-slate-900">Agents</p>
+                        <div class="mt-3 flex gap-2">
+                            <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-soft">Voir</a>
+                            <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="ent-btn ent-btn-primary">Ajouter</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section class="admin-panel px-6 py-6 lg:px-8">
                 <form id="service-filters-form" method="GET" action="{{ route('admin.services.index') }}" class="ent-filters mb-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr_auto_auto] lg:items-end">
                     <div class="relative space-y-2">
@@ -59,7 +96,7 @@
                         </select>
                     </div>
                     <button type="submit" class="ent-btn ent-btn-primary">Filtrer</button>
-                    <a href="{{ route('admin.services.create') }}" class="ent-btn ent-btn-primary text-center">Ajouter</a>
+                    <a href="{{ route('admin.services.create') }}" data-open-create-modal data-modal-title="Ajouter un service" class="ent-btn ent-btn-primary text-center">Ajouter</a>
                 </form>
 
                 <div class="ent-table-wrap overflow-x-auto">

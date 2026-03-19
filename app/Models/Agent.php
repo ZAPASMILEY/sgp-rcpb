@@ -18,6 +18,7 @@ class Agent extends Model
     protected $fillable = [
         'user_id',
         'service_id',
+        'agence_id',
         'nom',
         'prenom',
         'fonction',
@@ -34,6 +35,11 @@ class Agent extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    public function agence(): BelongsTo
+    {
+        return $this->belongsTo(Agence::class);
     }
 
     public function objectifs(): MorphMany

@@ -8,7 +8,7 @@
         $progressRate = $objectifsCount > 0 ? min(100, (int) round(($evaluationsCount / $objectifsCount) * 100)) : 0;
         $maxModule = max(1, $entitesCount, $directionsCount, $servicesCount, $agentsCount, $objectifsCount, $evaluationsCount);
         $bars = [
-            'Entites' => max(14, (int) round(($entitesCount / $maxModule) * 100)),
+            'Faitiere' => max(14, (int) round(($entitesCount / $maxModule) * 100)),
             'Directions' => max(14, (int) round(($directionsCount / $maxModule) * 100)),
             'Services' => max(14, (int) round(($servicesCount / $maxModule) * 100)),
             'Agents' => max(14, (int) round(($agentsCount / $maxModule) * 100)),
@@ -32,9 +32,9 @@
 
             <section class="clone-cards">
                 <article class="clone-card">
-                    <p class="clone-card__label">Entites</p>
+                    <p class="clone-card__label">Faitiere</p>
                     <p class="clone-card__value">{{ $entitesCount }}</p>
-                    <p class="clone-card__sub">Entités configurées</p>
+                    <p class="clone-card__sub">Siege configure</p>
                 </article>
                 <article class="clone-card">
                     <p class="clone-card__label">Directions</p>
@@ -93,7 +93,7 @@
                     <span class="clone-badge">Valide</span>
                 </div>
                 <div class="mt-4 flex flex-wrap gap-2">
-                    <a href="{{ route('admin.entites.create') }}" class="ent-btn ent-btn-primary">Nouvelle entite</a>
+                    <a href="{{ route('admin.entites.index') }}" class="ent-btn ent-btn-primary">Voir la faitiere</a>
                     <a href="{{ route('admin.objectifs.create') }}" class="ent-btn ent-btn-soft">Nouvel objectif</a>
                     <a href="{{ route('admin.evaluations.create') }}" class="ent-btn ent-btn-soft">Nouvelle evaluation</a>
                 </div>

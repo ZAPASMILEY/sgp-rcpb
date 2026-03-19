@@ -5,7 +5,13 @@
 @section('content')
     <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto max-w-3xl">
-            <section class="admin-panel p-6 sm:p-8">
+            <section class="admin-panel ent-window p-6 sm:p-8">
+                <div class="ent-window__bar" aria-hidden="true">
+                    <span class="ent-window__dot ent-window__dot--danger"></span>
+                    <span class="ent-window__dot ent-window__dot--warn"></span>
+                    <span class="ent-window__dot ent-window__dot--ok"></span>
+                    <span class="ent-window__label">Fenetre d'ajout</span>
+                </div>
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Creation</p>
@@ -85,17 +91,7 @@
                     <div class="ent-card space-y-4">
                         <div>
                             <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Compte de connexion</p>
-                            <p class="mt-1 text-xs text-slate-500">L'adresse email ci-dessus servira d'identifiant de connexion.</p>
-                        </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="password" class="text-sm font-semibold text-slate-700">Mot de passe</label>
-                                <input id="password" name="password" type="password" required class="ent-input" placeholder="Min. 8 caracteres" autocomplete="new-password">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirmer le mot de passe</label>
-                                <input id="password_confirmation" name="password_confirmation" type="password" required class="ent-input" placeholder="Retaper le mot de passe" autocomplete="new-password">
-                            </div>
+                            <p class="mt-1 text-xs text-slate-500">L'adresse email ci-dessus servira d'identifiant. Le mot de passe sera genere automatiquement et envoye par e-mail.</p>
                         </div>
                     </div>
 

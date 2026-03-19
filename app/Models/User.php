@@ -29,7 +29,7 @@ class User extends Authenticatable
         'pca_entite_id',
     ];
 
-    // Roles valides: admin, pca, agent, directeur, chef
+    // Roles valides: admin, pca, agent, directeur, directeur_adjoint, assistant, chef, secretaire
 
     /**
      * The attributes that should be hidden for serialization.
@@ -76,6 +76,6 @@ class User extends Authenticatable
 
     public function isPersonnel(): bool
     {
-        return in_array($this->role, ['agent', 'directeur', 'chef'], true);
+        return in_array($this->role, ['agent', 'directeur', 'directeur_adjoint', 'assistant', 'chef', 'secretaire'], true);
     }
 }

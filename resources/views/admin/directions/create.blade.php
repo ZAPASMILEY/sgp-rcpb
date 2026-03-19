@@ -1,18 +1,27 @@
 @extends('layouts.app')
 
-@section('title', 'Nouvelle direction | '.config('app.name', 'SGP-RCPB'))
+@section('title', 'Nouveau Directeur Technique | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
     <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto max-w-3xl">
-            <section class="admin-panel p-6 sm:p-8">
-                <div class="flex items-start justify-between gap-4">
+        <div class="w-full">
+            <section class="admin-panel ent-window h-full w-full p-6 sm:p-8">
+                <div class="ent-window__bar" aria-hidden="true">
+                    <span class="ent-window__dot ent-window__dot--danger"></span>
+                    <span class="ent-window__dot ent-window__dot--warn"></span>
+                    <span class="ent-window__dot ent-window__dot--ok"></span>
+                    <span class="ent-window__label">Fenetre d'ajout</span>
+                </div>
+                <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Creation</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Nouvelle direction</h1>
+                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Nouveau Directeur Technique</h1>
                         <p class="mt-2 text-sm text-slate-600">Renseignez les informations demandees.</p>
                     </div>
-                    <a href="{{ route('admin.directions.index') }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <a href="{{ route('admin.delegations-techniques.directeurs.index') }}" target="_top" class="ent-btn ent-btn-soft">Index Directeurs</a>
+                        <a href="{{ route('admin.directions.index') }}" target="_top" class="ent-btn ent-btn-soft">Index Delegations</a>
+                    </div>
                 </div>
 
                 @if ($errors->any())
@@ -21,58 +30,88 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('admin.directions.store') }}" class="mt-6 grid gap-5">
+                @if ($delegations->isEmpty())
+                    <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                        Configurez d'abord au moins une delegation technique (region, ville, secretariat) depuis le tableau de bord.
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('admin.directions.store') }}" target="_top" class="mt-6 grid gap-6">
                     @csrf
 
                     <div class="space-y-2">
-                        <label for="nom" class="text-sm font-semibold text-slate-700">Nom de la direction</label>
-                        <input id="nom" name="nom" type="text" value="{{ old('nom') }}" required class="ent-input" placeholder="Ex: Direction Financiere">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="entite_id" class="text-sm font-semibold text-slate-700">Entite</label>
-                        <select id="entite_id" name="entite_id" required class="ent-select">
-                            <option value="">Selectionner une entite</option>
-                            @foreach ($entites as $entite)
-                                <option value="{{ $entite->id }}" @selected((string) old('entite_id') === (string) $entite->id)>{{ $entite->nom }}</option>
+                        <label for="delegation_technique_id" class="text-sm font-semibold text-slate-700">Delegation Technique (Region / Ville)</label>
+                        <select id="delegation_technique_id" name="delegation_technique_id" required class="ent-select">
+                            <option value="">Selectionner une delegation</option>
+                            @foreach ($delegations as $delegation)
+                                <option value="{{ $delegation->id }}" @selected((string) old('delegation_technique_id') === (string) $delegation->id)>
+                                    {{ $delegation->region }} / {{ $delegation->ville }}
+                                </option>
                             @endforeach
                         </select>
+                        <p class="text-xs text-slate-500">Le numero du secretariat est recupere automatiquement depuis la delegation configuree.</p>
                     </div>
 
-                    <div class="space-y-2">
-                        <label for="directeur_nom" class="text-sm font-semibold text-slate-700">Nom du directeur</label>
-                        <input id="directeur_nom" name="directeur_nom" type="text" value="{{ old('directeur_nom') }}" required class="ent-input" placeholder="Nom complet">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="directeur_email" class="text-sm font-semibold text-slate-700">Email du directeur</label>
-                        <input id="directeur_email" name="directeur_email" type="email" value="{{ old('directeur_email') }}" required class="ent-input" placeholder="directeur@entreprise.com">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Numero du secretariat</label>
-                        <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone') }}" required class="ent-input" placeholder="Ex: +226 70 00 00 00">
-                    </div>
-
+                    {{-- Directeur Technique --}}
                     <div class="ent-card space-y-4">
-                        <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Compte de connexion du directeur</p>
-                            <p class="mt-1 text-xs text-slate-500">L'email du directeur servira d'identifiant de connexion.</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Directeur Technique</p>
+                        <div class="ent-form-grid">
+                            <div class="space-y-2">
+                                <label for="directeur_prenom" class="text-sm font-semibold text-slate-700">Prenom</label>
+                                <input id="directeur_prenom" name="directeur_prenom" type="text" value="{{ old('directeur_prenom') }}" required class="ent-input" placeholder="Prenom">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="directeur_nom" class="text-sm font-semibold text-slate-700">Nom</label>
+                                <input id="directeur_nom" name="directeur_nom" type="text" value="{{ old('directeur_nom') }}" required class="ent-input" placeholder="Nom">
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="directeur_email" class="text-sm font-semibold text-slate-700">Email</label>
+                            <input id="directeur_email" name="directeur_email" type="email" value="{{ old('directeur_email') }}" required class="ent-input" placeholder="directeur@rcpb.org">
                         </div>
                         <div class="ent-form-grid">
                             <div class="space-y-2">
-                                <label for="password" class="text-sm font-semibold text-slate-700">Mot de passe</label>
-                                <input id="password" name="password" type="password" required class="ent-input" placeholder="Min. 8 caracteres" autocomplete="new-password">
+                                <label for="directeur_numero" class="text-sm font-semibold text-slate-700">Numero de telephone</label>
+                                <input id="directeur_numero" name="directeur_numero" type="text" value="{{ old('directeur_numero') }}" required class="ent-input" placeholder="+226 70 00 00 00">
                             </div>
                             <div class="space-y-2">
-                                <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirmer le mot de passe</label>
-                                <input id="password_confirmation" name="password_confirmation" type="password" required class="ent-input" placeholder="Retaper le mot de passe" autocomplete="new-password">
+                                <label class="text-sm font-semibold text-slate-700">Region</label>
+                                <div class="ent-input bg-slate-50 text-slate-500">Choisie depuis la delegation</div>
                             </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">
-                        Creer la direction
+                    {{-- Secretaire --}}
+                    <div class="ent-card space-y-4">
+                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Secretaire de direction</p>
+                        <div class="ent-form-grid">
+                            <div class="space-y-2">
+                                <label for="secretaire_prenom" class="text-sm font-semibold text-slate-700">Prenom</label>
+                                <input id="secretaire_prenom" name="secretaire_prenom" type="text" value="{{ old('secretaire_prenom') }}" required class="ent-input" placeholder="Prenom">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="secretaire_nom" class="text-sm font-semibold text-slate-700">Nom</label>
+                                <input id="secretaire_nom" name="secretaire_nom" type="text" value="{{ old('secretaire_nom') }}" required class="ent-input" placeholder="Nom">
+                            </div>
+                        </div>
+                        <div class="ent-form-grid">
+                            <div class="space-y-2">
+                                <label for="secretaire_email" class="text-sm font-semibold text-slate-700">Email</label>
+                                <input id="secretaire_email" name="secretaire_email" type="email" value="{{ old('secretaire_email') }}" required class="ent-input" placeholder="secretaire@rcpb.org">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="secretaire_telephone" class="text-sm font-semibold text-slate-700">Telephone</label>
+                                <input id="secretaire_telephone" name="secretaire_telephone" type="text" value="{{ old('secretaire_telephone') }}" required class="ent-input" placeholder="+226 70 00 00 00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                        Les mots de passe du directeur technique et de sa secretaire seront generes automatiquement et envoyes par e-mail.
+                    </div>
+
+                    <button type="submit" @disabled($delegations->isEmpty()) class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                        Enregistrer
                     </button>
                 </form>
             </section>

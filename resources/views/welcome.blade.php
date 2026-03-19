@@ -90,6 +90,8 @@
             cursor: pointer;
             text-decoration: none;
             display: inline-block;
+            position: relative;
+            z-index: 30;
         }
         .btn-login:hover {
             background: linear-gradient(135deg, #047857, #059669);
@@ -155,7 +157,7 @@
                 <span style="font-size:1.05rem;font-weight:700;color:#f0fdf4;letter-spacing:-0.01em;">SGP <span style="color:#34d399;">RCPB</span></span>
             </div>
 
-            <a href="{{ route('login') }}" class="btn-login">
+            <a href="{{ url('/admin/login') }}" class="btn-login" onclick="window.location.assign('{{ url('/admin/login') }}')">
                 Se connecter
             </a>
         </nav>
@@ -165,20 +167,20 @@
 
             <span class="badge mb-6">
                 <span style="width:6px;height:6px;background:#34d399;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
-                SystÃ¨me de Gestion de la Performance
+                Systeme de gestion de la performance
             </span>
 
             <h1 style="font-size:clamp(2.2rem,5vw,3.8rem);font-weight:800;line-height:1.1;letter-spacing:-0.03em;color:#f0fdf4;max-width:820px;margin-bottom:1.5rem;">
                 Pilotez la performance<br>
-                <span class="gradient-text">du RÃ©seau RCPB</span>
+                <span class="gradient-text">du reseau RCPB</span>
             </h1>
 
             <p style="font-size:1.05rem;color:#6b7280;max-width:560px;line-height:1.7;margin-bottom:2.5rem;">
-                Suivez les objectifs, gÃ©rez les Ã©valuations et coordonnez les entitÃ©s du rÃ©seau en toute simplicitÃ© depuis un tableau de bord centralisÃ©.
+                Suivez les objectifs, gerez les evaluations et coordonnez les entites du reseau en toute simplicite depuis un tableau de bord centralise.
             </p>
 
-            <a href="{{ route('login') }}" class="btn-login" style="padding:0.85rem 2.5rem;font-size:1rem;">
-                AccÃ©der Ã  mon espace â†’
+            <a href="{{ url('/admin/login') }}" class="btn-login" style="padding:0.85rem 2.5rem;font-size:1rem;" onclick="window.location.assign('{{ url('/admin/login') }}')">
+                Acceder a mon espace ->
             </a>
 
         </main>
@@ -201,7 +203,7 @@
                         </svg>
                     </div>
                     <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Suivi des Objectifs</h3>
-                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">DÃ©finissez et suivez l'avancement des objectifs par entitÃ©, direction et service.</p>
+                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Definissez et suivez l'avancement des objectifs par entite, direction et service.</p>
                 </div>
 
                 <!-- Card 2 -->
@@ -212,8 +214,8 @@
                             <path d="M8 12l2.5 2.5L16 9" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
-                    <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Gestion des Ã‰valuations</h3>
-                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">CrÃ©ez, soumettez et validez les Ã©valuations du personnel avec export PDF intÃ©grÃ©.</p>
+                    <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Gestion des Evaluations</h3>
+                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Creez, soumettez et validez les evaluations du personnel avec export PDF integre.</p>
                 </div>
 
                 <!-- Card 3 -->
@@ -226,7 +228,7 @@
                         </svg>
                     </div>
                     <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Gestion du Personnel</h3>
-                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">GÃ©rez agents, directeurs et chefs de service de toutes les entitÃ©s du rÃ©seau.</p>
+                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Gerez agents, directeurs et chefs de service de toutes les entites du reseau.</p>
                 </div>
 
                 <!-- Card 4 -->
@@ -238,7 +240,7 @@
                         </svg>
                     </div>
                     <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Tableau de Bord PCA</h3>
-                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Espace dÃ©diÃ© aux PCA pour visualiser et piloter la performance de leur entitÃ©.</p>
+                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Espace dedie aux PCA pour visualiser et piloter la performance de leur entite.</p>
                 </div>
 
             </div>
@@ -247,7 +249,7 @@
         <!-- FOOTER -->
         <footer class="relative z-10 px-6 py-5 sm:px-10 text-center">
             <p style="font-size:0.78rem;color:#374151;">
-                &copy; {{ date('Y') }} SGP RCPB &mdash; RÃ©seau des Caisses Populaires du Burkina
+                &copy; {{ date('Y') }} SGP RCPB &mdash; Reseau des Caisses Populaires du Burkina
             </p>
         </footer>
 

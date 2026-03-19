@@ -2,64 +2,120 @@
 
 @section('title', 'Connexion admin | '.config('app.name', 'SGP-RCPB'))
 
+@push('head')
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('adminlte/css/adminlte.min.css') }}">
+    <style>
+        body {
+            min-height: 100vh;
+        }
+
+        .login-page-fcpb {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background-image: url('{{ asset("img/logo-fcpb.png") }}');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: min(70vw, 680px);
+            background-color: #0f172a;
+        }
+
+        .login-page-fcpb::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.78));
+        }
+
+        .login-box {
+            position: relative;
+            z-index: 1;
+            width: min(100%, 400px);
+        }
+
+        .login-card-body .input-group-text {
+            background-color: #f8fafc;
+        }
+    </style>
+@endpush
+
 @section('content')
-        <main class="admin-shell flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
-            <section class="admin-panel w-full max-w-md p-6 sm:p-8">
-                <div class="space-y-2">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration</p>
-                    <h1 class="text-3xl font-semibold tracking-tight text-slate-950">Connexion</h1>
-                    <p class="text-sm text-slate-600">
-                        Connectez-vous pour acceder au tableau de bord de pilotage des evaluations.
-                    </p>
+    <main class="login-page-fcpb">
+        <div class="login-box">
+            <div class="card card-outline card-primary shadow-lg">
+                <div class="card-header text-center border-0 pt-4">
+                    <a href="#" class="h4 mb-0 text-dark"><b>SGP</b>-RCPB</a>
+                    <p class="text-muted small mb-0 mt-1">Administration</p>
                 </div>
+                <div class="card-body login-card-body px-4 pb-4">
+                    <p class="login-box-msg">Connectez-vous pour continuer</p>
 
-                @if ($errors->any())
-                    <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {{ $errors->first() }}
-                    </div>
-                @endif
+                    @if ($errors->any())
+                        <div class="alert alert-danger py-2 px-3" role="alert">
+                            {{ $errors->first() }}
+                        </div>
+                    @endif
 
-                <form method="POST" action="{{ route('admin.login.store') }}" class="mt-6 space-y-5">
-                    @csrf
+                    <form method="POST" action="{{ route('admin.login.store') }}">
+                        @csrf
 
-                    <div class="space-y-2">
-                        <label for="email" class="text-sm font-semibold text-slate-700">Adresse email</label>
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value="{{ old('email') }}"
-                            required
-                            autofocus
-                            class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-950"
-                            placeholder="admin@sgp-rcpb.local"
-                        >
-                    </div>
+                        <div class="input-group mb-3">
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value="{{ old('email') }}"
+                                required
+                                autofocus
+                                class="form-control"
+                                placeholder="Adresse email"
+                            >
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="fas fa-envelope"></span>
+                                </div>
+                            </div>
+                        </div>
 
-                    <div class="space-y-2">
-                        <label for="password" class="text-sm font-semibold text-slate-700">Mot de passe</label>
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            required
-                            class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-slate-950"
-                            placeholder="Votre mot de passe"
-                        >
-                    </div>
+                        <div class="input-group mb-3">
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                required
+                                class="form-control"
+                                placeholder="Mot de passe"
+                            >
+                            <div class="input-group-append">
+                                <div class="input-group-text">
+                                    <span class="fas fa-lock"></span>
+                                </div>
+                            </div>
+                        </div>
 
-                    <label class="flex items-center gap-2 text-sm text-slate-600">
-                        <input type="checkbox" name="remember" value="1" class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900">
-                        Se souvenir de moi
-                    </label>
-
-                    <button
-                        type="submit"
-                        class="inline-flex w-full items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    >
-                        Se connecter
-                    </button>
-                </form>
-            </section>
-        </main>
+                        <div class="row">
+                            <div class="col-7">
+                                <div class="icheck-primary">
+                                    <input type="checkbox" id="remember" name="remember" value="1">
+                                    <label for="remember">Se souvenir de moi</label>
+                                </div>
+                            </div>
+                            <div class="col-5">
+                                <button type="submit" class="btn btn-primary btn-block">Connexion</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('adminlte/js/adminlte.min.js') }}"></script>
+@endpush

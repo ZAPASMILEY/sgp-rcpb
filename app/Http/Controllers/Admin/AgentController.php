@@ -14,6 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -73,21 +74,20 @@ class AgentController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateAgent($request);
-        $this->validateCredentials($request);
+        $plainPassword = Str::random(12);
 
         $validated['photo_path'] = $this->storeSelectedPhoto($request);
 
         $user = User::create([
             'name'     => $validated['prenom'].' '.$validated['nom'],
             'email'    => $validated['email'],
-            'password' => Hash::make((string) $request->input('password')),
+            'password' => Hash::make($plainPassword),
             'role'     => 'agent',
         ]);
 
         $validated['user_id'] = $user->id;
         Agent::query()->create($validated);
 
-        $plainPassword = (string) $request->input('password');
         Mail::to($user->email)->send(new WelcomeMail(
             recipientName:  $user->name,
             recipientEmail: $user->email,
@@ -134,11 +134,18 @@ class AgentController extends Controller
             ->with('status', 'Agent mis a jour avec succes.');
     }
 
-    public function destroy(Agent $agent): RedirectResponse
+    public function destroy(Request $request, Agent $agent): RedirectResponse
     {
         $this->deletePhoto($agent->photo_path);
         $agent->user?->delete();
         $agent->delete();
+
+        $redirectTo = (string) $request->input('redirect_to', '');
+        if ($redirectTo !== '' && str_starts_with($redirectTo, (string) url('/'))) {
+            return redirect()
+                ->to($redirectTo)
+                ->with('status', 'Agent supprime avec succes.');
+        }
 
         return redirect()
             ->route('admin.agents.index')
@@ -167,13 +174,6 @@ class AgentController extends Controller
             'photo_import'     => ['nullable', 'image', 'max:3072'],
             'photo_camera'     => ['nullable', 'image', 'max:3072'],
             'remove_photo'     => ['nullable', 'boolean'],
-        ]);
-    }
-
-    private function validateCredentials(Request $request): void
-    {
-        $request->validate([
-            'password' => ['required', 'confirmed', Password::min(8)],
         ]);
     }
 
