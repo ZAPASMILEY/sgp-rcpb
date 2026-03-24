@@ -59,10 +59,10 @@ class AgenceController extends Controller
                 }),
             ],
             'chef_nom' => ['required', 'string', 'max:255'],
-            'chef_email' => ['required', 'email', 'max:255'],
+            'chef_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'chef_email'), 'different:secretaire_email'],
             'chef_telephone' => ['required', 'string', 'max:30'],
             'secretaire_nom' => ['required', 'string', 'max:255'],
-            'secretaire_email' => ['required', 'email', 'max:255'],
+            'secretaire_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'secretaire_email'), 'different:chef_email'],
             'secretaire_telephone' => ['required', 'string', 'max:30'],
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
             'superviseur_caisse_id' => [
@@ -78,6 +78,10 @@ class AgenceController extends Controller
             ],
         ], [
             'nom.unique' => 'Cette agence existe deja pour la delegation technique selectionnee.',
+            'chef_email.unique' => 'Cet email du chef est deja utilise.',
+            'secretaire_email.unique' => 'Cet email du secretaire est deja utilise.',
+            'chef_email.different' => 'Le mail du chef doit etre different de celui du secretaire.',
+            'secretaire_email.different' => 'Le mail du secretaire doit etre different de celui du chef.',
         ]);
 
         Agence::query()->create($validated);

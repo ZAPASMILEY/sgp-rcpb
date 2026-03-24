@@ -8,8 +8,11 @@ use App\Models\Agent;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
 use App\Models\Entite;
+use App\Models\Evaluation;
+use App\Models\Objectif;
 use App\Models\Service;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +28,7 @@ class DirectionController extends Controller
     {
         $delegationId = (int) $request->query('delegation_id', 0);
         $delegations = DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get();
+        ['selectedDelegation' => $selectedDelegation, 'delegationServices' => $delegationServices] = $this->delegationContext($delegationId);
 
         $directeurs = Direction::query()
             ->with('delegationTechnique')
@@ -35,23 +39,53 @@ class DirectionController extends Controller
             ->paginate(12)
             ->withQueryString();
 
+        $directeurNotes = Evaluation::query()
+            ->selectRaw('evaluable_id, MAX(note_finale) as best_note')
+            ->where('evaluable_type', Direction::class)
+            ->where('statut', 'valide')
+            ->whereIn('evaluable_id', $directeurs->pluck('id'))
+            ->groupBy('evaluable_id')
+            ->pluck('best_note', 'evaluable_id');
+
         return view('admin.delegations_techniques.directeurs_index', [
             'directeurs' => $directeurs,
+            'directeurNotes' => $directeurNotes,
             'delegations' => $delegations,
             'activeDelegationId' => $delegationId,
+            'selectedDelegation' => $selectedDelegation,
+            'delegationServices' => $delegationServices,
         ]);
     }
 
     public function servicesIndex(Request $request): View
     {
         $delegationId = (int) $request->query('delegation_id', 0);
+        $search = trim((string) $request->query('search', ''));
         $delegations = DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get();
+        ['selectedDelegation' => $selectedDelegation, 'delegationServices' => $delegationServices] = $this->delegationContext($delegationId);
 
         $services = Service::query()
             ->with('direction.delegationTechnique')
             ->when($delegationId > 0, function ($query) use ($delegationId): void {
                 $query->whereHas('direction', function ($subQuery) use ($delegationId): void {
                     $subQuery->where('delegation_technique_id', $delegationId);
+                });
+            })
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($subQuery) use ($search): void {
+                    $subQuery
+                        ->where('nom', 'like', "%{$search}%")
+                        ->orWhere('chef_prenom', 'like', "%{$search}%")
+                        ->orWhere('chef_nom', 'like', "%{$search}%")
+                        ->orWhereHas('direction', function ($directionQuery) use ($search): void {
+                            $directionQuery
+                                ->where('nom', 'like', "%{$search}%")
+                                ->orWhereHas('delegationTechnique', function ($delegationQuery) use ($search): void {
+                                    $delegationQuery
+                                        ->where('region', 'like', "%{$search}%")
+                                        ->orWhere('ville', 'like', "%{$search}%");
+                                });
+                        });
                 });
             })
             ->latest()
@@ -62,6 +96,9 @@ class DirectionController extends Controller
             'services' => $services,
             'delegations' => $delegations,
             'activeDelegationId' => $delegationId,
+            'selectedDelegation' => $selectedDelegation,
+            'delegationServices' => $delegationServices,
+            'search' => $search,
         ]);
     }
 
@@ -69,6 +106,7 @@ class DirectionController extends Controller
     {
         $delegationId = (int) $request->query('delegation_id', 0);
         $delegations = DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get();
+        ['selectedDelegation' => $selectedDelegation, 'delegationServices' => $delegationServices] = $this->delegationContext($delegationId);
 
         $secretaires = Direction::query()
             ->with('delegationTechnique')
@@ -84,6 +122,8 @@ class DirectionController extends Controller
             'secretaires' => $secretaires,
             'delegations' => $delegations,
             'activeDelegationId' => $delegationId,
+            'selectedDelegation' => $selectedDelegation,
+            'delegationServices' => $delegationServices,
         ]);
     }
 
@@ -91,6 +131,7 @@ class DirectionController extends Controller
     {
         $delegationId = (int) $request->query('delegation_id', 0);
         $delegations = DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get();
+        ['selectedDelegation' => $selectedDelegation, 'delegationServices' => $delegationServices] = $this->delegationContext($delegationId);
 
         $agents = Agent::query()
             ->with('service.direction.delegationTechnique')
@@ -107,6 +148,8 @@ class DirectionController extends Controller
             'agents' => $agents,
             'delegations' => $delegations,
             'activeDelegationId' => $delegationId,
+            'selectedDelegation' => $selectedDelegation,
+            'delegationServices' => $delegationServices,
         ]);
     }
 
@@ -192,6 +235,40 @@ class DirectionController extends Controller
             ->with('status', 'Delegation technique configuree avec succes.');
     }
 
+    public function editDelegation(DelegationTechnique $delegationTechnique): View
+    {
+        return view('admin.delegations_techniques.edit', [
+            'delegationTechnique' => $delegationTechnique,
+        ]);
+    }
+
+    public function updateDelegation(Request $request, DelegationTechnique $delegationTechnique): RedirectResponse
+    {
+        $validated = $this->validateDelegation($request, $delegationTechnique);
+
+        $delegationTechnique->update($validated);
+
+        Direction::query()
+            ->where('delegation_technique_id', $delegationTechnique->id)
+            ->update([
+                'directeur_region' => $delegationTechnique->region,
+                'secretariat_telephone' => $delegationTechnique->secretariat_telephone,
+            ]);
+
+        return redirect()
+            ->route('admin.directions.index')
+            ->with('status', 'Delegation technique mise a jour avec succes.');
+    }
+
+    public function destroyDelegation(DelegationTechnique $delegationTechnique): RedirectResponse
+    {
+        $delegationTechnique->delete();
+
+        return redirect()
+            ->route('admin.directions.index')
+            ->with('status', 'Delegation technique supprimee avec succes.');
+    }
+
     public function create(): View
     {
         return view('admin.directions.create', [
@@ -201,8 +278,28 @@ class DirectionController extends Controller
 
     public function show(Direction $direction): View
     {
+        // Charger les relations
+        $direction->load('delegationTechnique');
+
+        // Récupérer les évaluations validées et les dernières
+        $evaluations = Evaluation::query()
+            ->where('evaluable_type', Direction::class)
+            ->where('evaluable_id', $direction->id)
+            ->where('statut', 'valide')
+            ->latest()
+            ->get();
+
+        // Récupérer les objectifs assignés à cette direction
+        $objectifs = Objectif::query()
+            ->where('assignable_type', Direction::class)
+            ->where('assignable_id', $direction->id)
+            ->latest()
+            ->get();
+
         return view('admin.directions.show', [
-            'direction' => $direction->load('delegationTechnique'),
+            'direction'   => $direction,
+            'evaluations' => $evaluations,
+            'objectifs'   => $objectifs,
         ]);
     }
 
@@ -354,12 +451,57 @@ class DirectionController extends Controller
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
             'directeur_prenom'     => ['required', 'string', 'max:255'],
             'directeur_nom'        => ['required', 'string', 'max:255'],
-            'directeur_email'      => $dirEmailRule,
+            'directeur_email'      => [...$dirEmailRule, 'different:secretaire_email'],
             'directeur_numero'     => ['required', 'string', 'max:30'],
             'secretaire_prenom'    => ['required', 'string', 'max:255'],
             'secretaire_nom'       => ['required', 'string', 'max:255'],
-            'secretaire_email'     => $secEmailRule,
+            'secretaire_email'     => [...$secEmailRule, 'different:directeur_email'],
             'secretaire_telephone' => ['required', 'string', 'max:30'],
+        ], [
+            'directeur_email.different' => 'Le mail du directeur doit etre different de celui du secretaire.',
+            'secretaire_email.different' => 'Le mail du secretaire doit etre different de celui du directeur.',
+        ]);
+    }
+
+    /**
+     * @return array{selectedDelegation: ?DelegationTechnique, delegationServices: Collection<int, Service>}
+     */
+    private function delegationContext(int $delegationId): array
+    {
+        if ($delegationId <= 0) {
+            return [
+                'selectedDelegation' => null,
+                'delegationServices' => new Collection(),
+            ];
+        }
+
+        $selectedDelegation = DelegationTechnique::query()->find($delegationId);
+
+        if (! $selectedDelegation) {
+            return [
+                'selectedDelegation' => null,
+                'delegationServices' => new Collection(),
+            ];
+        }
+
+        return [
+            'selectedDelegation' => $selectedDelegation,
+            'delegationServices' => $selectedDelegation->services()
+                ->with('direction')
+                ->orderBy('nom')
+                ->get(),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function validateDelegation(Request $request, ?DelegationTechnique $delegationTechnique = null): array
+    {
+        return $request->validate([
+            'region' => ['required', 'string', 'max:255'],
+            'ville' => ['required', 'string', 'max:255'],
+            'secretariat_telephone' => ['required', 'string', 'max:30'],
         ]);
     }
 }

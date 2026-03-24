@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Annee;
 use App\Models\Agent;
 use App\Models\Direction;
 use App\Models\Entite;
@@ -10,28 +11,49 @@ use App\Models\Evaluation;
 use App\Models\Objectif;
 use App\Models\Service;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 
 class StatistiqueController extends Controller
 {
-    public function __invoke(): View
+    public function __invoke(Request $request): View
     {
-        $entitesCount = Entite::query()->count();
-        $directionsCount = Direction::query()->count();
-        $servicesCount = Service::query()->count();
-        $agentsCount = Agent::query()->count();
-        $objectifsCount = Objectif::query()->count();
-        $evaluationsCount = Evaluation::query()->count();
+        $availableYears = Annee::query()
+            ->orderByDesc('annee')
+            ->pluck('annee')
+            ->all();
+
+        $selectedYear = $availableYears[0] ?? (int) now()->year;
+        $requestedYear = (int) $request->query('annee', $selectedYear);
+
+        if (in_array($requestedYear, $availableYears, true)) {
+            $selectedYear = $requestedYear;
+        }
+
+        $selectedAnneeId = (int) (Annee::query()->where('annee', $selectedYear)->value('id') ?? 0);
+
+        $objectifQuery = fn () => Objectif::query()
+            ->when($selectedAnneeId > 0, fn ($query) => $query->where('annee_id', $selectedAnneeId), fn ($query) => $query->whereYear('date', $selectedYear));
+
+        $evaluationQuery = fn () => Evaluation::query()
+            ->when($selectedAnneeId > 0, fn ($query) => $query->where('annee_id', $selectedAnneeId), fn ($query) => $query->whereYear('date_debut', $selectedYear));
+
+        $entitesCount = Entite::query()->whereYear('created_at', $selectedYear)->count();
+        $directionsCount = Direction::query()->whereYear('created_at', $selectedYear)->count();
+        $servicesCount = Service::query()->whereYear('created_at', $selectedYear)->count();
+        $agentsCount = Agent::query()->whereYear('created_at', $selectedYear)->count();
+        $objectifsCount = $objectifQuery()->count();
+        $evaluationsCount = $evaluationQuery()->count();
 
         $evaluationsByStatut = [
-            'Brouillon' => Evaluation::query()->where('statut', 'brouillon')->count(),
-            'Soumis' => Evaluation::query()->where('statut', 'soumis')->count(),
-            'Valide' => Evaluation::query()->where('statut', 'valide')->count(),
+            'Brouillon' => $evaluationQuery()->where('statut', 'brouillon')->count(),
+            'Soumis' => $evaluationQuery()->where('statut', 'soumis')->count(),
+            'Valide' => $evaluationQuery()->where('statut', 'valide')->count(),
         ];
 
-        $objectifsTermines = Objectif::query()->where('avancement_percentage', '>=', 100)->count();
+        $objectifsTermines = $objectifQuery()->where('avancement_percentage', '>=', 100)->count();
         $objectifsEnCours = max(0, $objectifsCount - $objectifsTermines);
 
-        $avancementMoyen = (int) round((float) Objectif::query()->avg('avancement_percentage'));
+        $avancementMoyen = (int) round((float) ($objectifQuery()->avg('avancement_percentage') ?? 0));
 
         return view('admin.statistiques.index', compact(
             'entitesCount',
@@ -44,6 +66,8 @@ class StatistiqueController extends Controller
             'objectifsTermines',
             'objectifsEnCours',
             'avancementMoyen',
+            'availableYears',
+            'selectedYear',
         ));
     }
 }

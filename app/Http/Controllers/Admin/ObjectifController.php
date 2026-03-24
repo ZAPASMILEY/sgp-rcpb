@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Annee;
 use App\Models\Agent;
 use App\Models\Direction;
 use App\Models\Entite;
@@ -91,11 +92,13 @@ class ObjectifController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateObjectif($request);
+        $date = now()->toDateString();
 
         Objectif::query()->create([
             'assignable_type' => $validated['assignable_class'],
             'assignable_id' => $validated['assignable_id'],
-            'date' => now()->toDateString(),
+            'annee_id' => Annee::resolveIdForDate($date),
+            'date' => $date,
             'date_echeance' => $validated['date_echeance'],
             'commentaire' => $validated['commentaire'],
             'avancement_percentage' => 0,

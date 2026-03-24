@@ -40,4 +40,9 @@ class Agence extends Model
     {
         return $this->hasMany(Agent::class);
     }
+
+    public function guichets(): HasMany
+    {
+        return $this->hasMany(Guichet::class);
+    }
 }

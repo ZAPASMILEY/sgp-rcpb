@@ -18,9 +18,24 @@
     <div class="admin-shell stats-page min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto max-w-6xl space-y-6">
             <header class="admin-panel px-6 py-6 lg:px-8">
-                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Pilotage / Statistiques</p>
-                <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Statistiques globales</h1>
-                <p class="mt-2 text-sm text-slate-600">Vue consolidee des structures, objectifs et evaluations.</p>
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Pilotage / Statistiques</p>
+                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Statistiques globales</h1>
+                        <p class="mt-2 text-sm text-slate-600">Vue consolidee des structures, objectifs et evaluations pour {{ $selectedYear }}.</p>
+                    </div>
+                    <form method="GET" action="{{ route('admin.statistiques.index') }}" class="grid gap-2 sm:grid-cols-[minmax(0,180px)_auto] sm:items-end">
+                        <div>
+                            <label for="annee" class="text-sm font-semibold text-slate-700">Annee</label>
+                            <select id="annee" name="annee" class="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200">
+                                @foreach ($availableYears as $year)
+                                    <option value="{{ $year }}" @selected($year === $selectedYear)>{{ $year }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">Filtrer</button>
+                    </form>
+                </div>
             </header>
 
             <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

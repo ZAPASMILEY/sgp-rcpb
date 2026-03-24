@@ -21,9 +21,15 @@ class ServiceController extends Controller
     {
         $search = trim((string) $request->query('search', ''));
         $directionId = (string) $request->query('direction_id', '');
+        $source = (string) $request->query('source', '');
 
         $servicesQuery = Service::query()
             ->with(['direction.entite'])
+            ->when($source === 'faitiere', function ($query): void {
+                $query->whereHas('direction', function ($q): void {
+                    $q->whereNull('delegation_technique_id');
+                });
+            })
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($subQuery) use ($search): void {
                     $subQuery
@@ -51,8 +57,11 @@ class ServiceController extends Controller
             'filters' => [
                 'search' => $search,
                 'direction_id' => $directionId,
+                'source' => $source,
             ],
-            'directions' => Direction::query()->with('entite')->orderBy('nom')->get(['id', 'nom', 'entite_id']),
+            'directions' => Direction::query()->with('entite')
+                ->when($source === 'faitiere', fn ($q) => $q->whereNull('delegation_technique_id'))
+                ->orderBy('nom')->get(['id', 'nom', 'entite_id']),
         ]);
     }
 

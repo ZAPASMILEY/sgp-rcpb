@@ -26,6 +26,20 @@
                     @endforeach
                 </div>
 
+                @if ($selectedDelegation)
+                    <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Services de la delegation</p>
+                        <h2 class="mt-2 text-lg font-semibold text-slate-950">{{ $selectedDelegation->region }} / {{ $selectedDelegation->ville }}</h2>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            @forelse ($delegationServices as $service)
+                                <span class="ent-btn ent-btn-soft">{{ $service->nom }}</span>
+                            @empty
+                                <p class="text-sm text-slate-500">Aucun service rattache a cette delegation.</p>
+                            @endforelse
+                        </div>
+                    </div>
+                @endif
+
                 <div class="mt-6 overflow-x-auto">
                     <table class="ent-table text-left text-sm text-slate-700">
                         <thead>
@@ -33,6 +47,7 @@
                                 <th>#</th>
                                 <th>Delegation</th>
                                 <th>Directeur</th>
+                                <th>Note</th>
                                 <th>Email</th>
                                 <th>Numero</th>
                                 <th class="text-right">Actions</th>
@@ -44,6 +59,10 @@
                                     <td>{{ ($directeurs->firstItem() ?? 1) + $loop->index }}</td>
                                     <td>{{ $direction->delegationTechnique?->region }} / {{ $direction->delegationTechnique?->ville }}</td>
                                     <td>{{ $direction->directeur_prenom }} {{ $direction->directeur_nom }}</td>
+                                    <td>
+                                        @php($note = $directeurNotes[$direction->id] ?? null)
+                                        <span class="font-semibold text-emerald-700">{{ $note !== null ? $note.'/100' : '-' }}</span>
+                                    </td>
                                     <td>{{ $direction->directeur_email }}</td>
                                     <td>{{ $direction->directeur_numero }}</td>
                                     <td class="text-right">
@@ -52,7 +71,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="py-8 text-center text-slate-500">Aucun directeur technique trouve.</td>
+                                    <td colspan="7" class="py-8 text-center text-slate-500">Aucun directeur technique trouve.</td>
                                 </tr>
                             @endforelse
                         </tbody>

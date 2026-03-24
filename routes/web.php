@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DirectionController;
 use App\Http\Controllers\Admin\EntiteController;
 use App\Http\Controllers\Admin\EvaluationController;
+use App\Http\Controllers\Admin\GuichetController;
 use App\Http\Controllers\Admin\ObjectifController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\StatistiqueController;
@@ -36,6 +37,9 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/entites', [EntiteController::class, 'index'])->name('admin.entites.index');
     Route::post('/admin/entites/reinitialiser', [EntiteController::class, 'reset'])->name('admin.entites.reset');
     Route::get('/admin/entites/creer', [EntiteController::class, 'create'])->name('admin.entites.create');
+    Route::get('/admin/entites/directions', [EntiteController::class, 'indexDirections'])->name('admin.entites.directions.index');
+    Route::get('/admin/entites/directions/creer', [EntiteController::class, 'createDirection'])->name('admin.entites.directions.create');
+    Route::post('/admin/entites/directions', [EntiteController::class, 'storeDirection'])->name('admin.entites.directions.store');
     Route::post('/admin/entites', [EntiteController::class, 'store'])->name('admin.entites.store');
     Route::get('/admin/entites/{entite}', [EntiteController::class, 'show'])->name('admin.entites.show');
     Route::get('/admin/entites/{entite}/modifier', [EntiteController::class, 'edit'])->name('admin.entites.edit');
@@ -48,6 +52,9 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/delegations-techniques/secretaires', [DirectionController::class, 'secretairesIndex'])->name('admin.delegations-techniques.secretaires.index');
     Route::get('/admin/delegations-techniques/agents', [DirectionController::class, 'agentsIndex'])->name('admin.delegations-techniques.agents.index');
     Route::post('/admin/delegations-techniques', [DirectionController::class, 'storeDelegation'])->name('admin.delegations-techniques.store');
+    Route::get('/admin/delegations-techniques/{delegationTechnique}/modifier', [DirectionController::class, 'editDelegation'])->name('admin.delegations-techniques.edit');
+    Route::put('/admin/delegations-techniques/{delegationTechnique}', [DirectionController::class, 'updateDelegation'])->name('admin.delegations-techniques.update');
+    Route::delete('/admin/delegations-techniques/{delegationTechnique}', [DirectionController::class, 'destroyDelegation'])->name('admin.delegations-techniques.destroy');
     Route::get('/admin/directions/creer', [DirectionController::class, 'create'])->name('admin.directions.create');
     Route::post('/admin/directions', [DirectionController::class, 'store'])->name('admin.directions.store');
     Route::get('/admin/directions/{direction}', [DirectionController::class, 'show'])->name('admin.directions.show');
@@ -81,6 +88,9 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/agences/{agence}/agents', [AgenceController::class, 'agentsIndex'])->name('admin.agences.agents.index');
     Route::get('/admin/agences/{agence}/agents/creer', [AgenceController::class, 'createAgent'])->name('admin.agences.agents.create');
     Route::post('/admin/agences/{agence}/agents', [AgenceController::class, 'storeAgent'])->name('admin.agences.agents.store');
+    Route::get('/admin/guichets', [GuichetController::class, 'index'])->name('admin.guichets.index');
+    Route::get('/admin/guichets/creer', [GuichetController::class, 'create'])->name('admin.guichets.create');
+    Route::post('/admin/guichets', [GuichetController::class, 'store'])->name('admin.guichets.store');
 
     Route::get('/admin/objectifs', [ObjectifController::class, 'index'])->name('admin.objectifs.index');
     Route::get('/admin/objectifs/creer', [ObjectifController::class, 'create'])->name('admin.objectifs.create');

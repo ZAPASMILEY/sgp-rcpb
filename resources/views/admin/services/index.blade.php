@@ -8,18 +8,39 @@
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration / Referentiel</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Services</h1>
-                        <p class="mt-2 text-sm text-slate-600">Liste des services.</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
+                            Administration / Référentiel
+                            @if(($filters['source'] ?? '') === 'faitiere')
+                                / <span class="text-green-600">Faîtière</span>
+                            @endif
+                        </p>
+                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                            @if(($filters['source'] ?? '') === 'faitiere')
+                                Services de la Faîtière
+                            @else
+                                Services
+                            @endif
+                        </h1>
+                        <p class="mt-2 text-sm text-slate-600">
+                            @if(($filters['source'] ?? '') === 'faitiere')
+                                Services rattachés aux directions de la faîtière uniquement.
+                            @else
+                                Liste de tous les services.
+                            @endif
+                        </p>
                         <div class="mt-3 flex flex-wrap items-center gap-2">
                             <span class="status-pill">Total {{ $services->total() }}</span>
+                            @if(($filters['source'] ?? '') === 'faitiere')
+                                <span class="status-pill bg-green-100 text-green-700 border-green-200">Faîtière</span>
+                            @endif
                             @if ($filters['search'] || $filters['direction_id'])
                                 <span class="status-pill">Filtres actifs</span>
                             @endif
                         </div>
                     </div>
-                    <a href="{{ route('admin.services.index') }}" class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
-                        Reinitialiser
+                    <a href="{{ route('admin.services.index', ($filters['source'] ?? '') === 'faitiere' ? ['source' => 'faitiere'] : []) }}"
+                       class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
+                        Réinitialiser
                     </a>
                 </div>
             </header>

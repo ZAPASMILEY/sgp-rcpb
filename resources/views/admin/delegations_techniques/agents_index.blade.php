@@ -23,6 +23,20 @@
                     @endforeach
                 </div>
 
+                @if ($selectedDelegation)
+                    <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Services de la delegation</p>
+                        <h2 class="mt-2 text-lg font-semibold text-slate-950">{{ $selectedDelegation->region }} / {{ $selectedDelegation->ville }}</h2>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            @forelse ($delegationServices as $service)
+                                <span class="ent-btn ent-btn-soft">{{ $service->nom }}</span>
+                            @empty
+                                <p class="text-sm text-slate-500">Aucun service rattache a cette delegation.</p>
+                            @endforelse
+                        </div>
+                    </div>
+                @endif
+
                 <div class="mt-6 overflow-x-auto">
                     <table class="ent-table text-left text-sm text-slate-700">
                         <thead>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pca;
 
 use App\Http\Controllers\Controller;
+use App\Models\Annee;
 use App\Models\Direction;
 use App\Models\Entite;
 use App\Models\Evaluation;
@@ -99,6 +100,7 @@ class PcaEvaluationController extends Controller
             'evaluable_type' => $targetConfig['class'],
             'evaluable_id' => (int) $validated['evaluable_id'],
             'evaluable_role' => $targetConfig['role'],
+            'annee_id' => Annee::resolveIdForDate($validated['date_debut']),
             'evaluateur_id' => $request->user()->id,
             'date_debut' => $validated['date_debut'],
             'date_fin' => $validated['date_fin'],

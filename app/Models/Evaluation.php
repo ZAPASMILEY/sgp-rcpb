@@ -16,6 +16,7 @@ class Evaluation extends Model
         'evaluable_type',
         'evaluable_id',
         'evaluable_role',
+        'annee_id',
         'evaluateur_id',
         'date_debut',
         'date_fin',
@@ -43,5 +44,10 @@ class Evaluation extends Model
     public function evaluateur(): BelongsTo
     {
         return $this->belongsTo(User::class, 'evaluateur_id');
+    }
+
+    public function annee(): BelongsTo
+    {
+        return $this->belongsTo(Annee::class);
     }
 }

@@ -94,6 +94,7 @@
         @php
             $themePreference = auth()->check() ? (auth()->user()->theme_preference ?? 'reference') : 'reference';
             $adminThemeClass = $themePreference === 'reference' ? 'admin-layout--reference' : '';
+            $displayYear = (int) request()->query('annee', now()->year);
             $pcaTopbarLabel = match (true) {
                 request()->routeIs('pca.dashboard') => 'Tableau de bord',
                 request()->routeIs('pca.statistiques.*') => 'Pilotage / Statistiques',
@@ -179,6 +180,7 @@
                 <header class="admin-topbar">
                     <p class="admin-topbar__title">{{ $pcaTopbarLabel }}</p>
                     <div class="admin-topbar__actions" id="admin-topbar-actions">
+                        <span class="hidden rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 sm:inline-flex">Année {{ $displayYear }}</span>
                         <button id="topbar-quick-toggle" type="button" class="admin-topbar__icon" aria-label="Actions rapides" aria-expanded="false" aria-controls="topbar-quick-panel">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Zm8.25 3.75-.94-.27a7.9 7.9 0 0 0-.67-1.6l.53-.82-1.76-1.76-.82.53c-.51-.28-1.04-.5-1.6-.67l-.27-.94h-2.5l-.27.94c-.56.17-1.09.39-1.6.67l-.82-.53-1.76 1.76.53.82c-.28.51-.5 1.04-.67 1.6l-.94.27v2.5l.94.27c.17.56.39 1.09.67 1.6l-.53.82 1.76 1.76.82-.53c.51.28 1.04.5 1.6.67l.27.94h2.5l.27-.94c.56-.17 1.09-.39 1.6-.67l.82.53 1.76-1.76-.53-.82c.28-.51.5-1.04.67-1.6l.94-.27v-2.5Z"/></svg>
                         </button>

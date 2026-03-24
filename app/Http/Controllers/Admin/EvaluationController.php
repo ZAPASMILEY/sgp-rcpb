@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Annee;
 use App\Models\Agent;
 use App\Models\Direction;
 use App\Models\Entite;
@@ -100,6 +101,7 @@ class EvaluationController extends Controller
             'evaluable_type' => $evaluableClass,
             'evaluable_id' => $evaluableId,
             'evaluable_role' => $evaluableRole,
+            'annee_id' => Annee::resolveIdForDate($validated['date_debut']),
             'evaluateur_id' => $request->user()->id,
             'date_debut' => $validated['date_debut'],
             'date_fin' => $validated['date_fin'],
@@ -147,6 +149,7 @@ class EvaluationController extends Controller
             'evaluable_type' => $evaluableClass,
             'evaluable_id' => $evaluableId,
             'evaluable_role' => $evaluableRole,
+            'annee_id' => Annee::resolveIdForDate($validated['date_debut']),
             'date_debut' => $validated['date_debut'],
             'date_fin' => $validated['date_fin'],
             'note_objectifs' => $scores['note_objectifs'],

@@ -110,10 +110,20 @@
                         Les mots de passe du directeur technique et de sa secretaire seront generes automatiquement et envoyes par e-mail.
                     </div>
 
-                    <button type="submit" @disabled($delegations->isEmpty()) class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                    <button type="submit" id="submit-btn" @disabled($delegations->isEmpty()) class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed">
                         Enregistrer
                     </button>
                 </form>
+
+                @push('scripts')
+                <script>
+                    document.querySelector('form').addEventListener('submit', function () {
+                        var btn = document.getElementById('submit-btn');
+                        btn.disabled = true;
+                        btn.textContent = 'Enregistrement...';
+                    });
+                </script>
+                @endpush
             </section>
         </div>
     </main>

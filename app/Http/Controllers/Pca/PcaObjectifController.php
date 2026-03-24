@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pca;
 
 use App\Http\Controllers\Controller;
+use App\Models\Annee;
 use App\Models\Direction;
 use App\Models\Entite;
 use App\Models\Evaluation;
@@ -79,11 +80,13 @@ class PcaObjectifController extends Controller
     {
         $entiteId = $request->user()->pca_entite_id;
         $validated = $this->validateObjectif($request, $entiteId);
+        $date = now()->toDateString();
 
         Objectif::query()->create([
             'assignable_type' => $validated['assignable_class'],
             'assignable_id' => $validated['assignable_id'],
-            'date' => now()->toDateString(),
+            'annee_id' => Annee::resolveIdForDate($date),
+            'date' => $date,
             'date_echeance' => $validated['date_echeance'],
             'commentaire' => $validated['commentaire'],
             'avancement_percentage' => 0,

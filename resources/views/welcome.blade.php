@@ -6,131 +6,63 @@
     <title>{{ config('app.name', 'SGP RCPB') }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700,800" rel="stylesheet" />
+    
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @else
         <script src="https://cdn.tailwindcss.com"></script>
     @endif
+
     <style>
         * { font-family: 'Inter', sans-serif; }
+        body { background-color: #050e0a; min-height: 100vh; overflow-x: hidden; color: #f0fdf4; }
 
-        body {
-            background-color: #050e0a;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Glowing orb background */
+        /* Effets de fond */
         .hero-glow {
-            position: absolute;
-            top: -10%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 800px;
-            height: 500px;
+            position: absolute; top: -10%; left: 50%; transform: translateX(-50%);
+            width: 800px; height: 500px;
             background: radial-gradient(ellipse at center, rgba(16,185,129,0.18) 0%, rgba(5,150,105,0.08) 45%, transparent 70%);
             pointer-events: none;
         }
-
-        .hero-glow-2 {
-            position: absolute;
-            top: 30%;
-            left: 20%;
-            width: 500px;
-            height: 400px;
-            background: radial-gradient(ellipse at center, rgba(52,211,153,0.06) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
         .grid-bg {
-            position: absolute;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(16,185,129,0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(16,185,129,0.04) 1px, transparent 1px);
-            background-size: 60px 60px;
-            pointer-events: none;
+            position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(16,185,129,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.04) 1px, transparent 1px);
+            background-size: 60px 60px; pointer-events: none;
         }
 
-        /* Title gradient text */
         .gradient-text {
             background: linear-gradient(135deg, #34d399 0%, #10b981 40%, #6ee7b7 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
-        /* Card hover */
         .feature-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(52,211,153,0.12);
-            border-radius: 16px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(4px);
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(52,211,153,0.12);
+            border-radius: 24px; padding: 2rem; transition: all 0.3s ease; backdrop-filter: blur(4px);
         }
         .feature-card:hover {
-            background: rgba(16,185,129,0.06);
-            border-color: rgba(52,211,153,0.3);
-            transform: translateY(-2px);
+            background: rgba(16,185,129,0.06); border-color: rgba(52,211,153,0.3); transform: translateY(-5px);
         }
 
-        /* Login button */
-        .btn-login {
+        .btn-sgp {
             background: linear-gradient(135deg, #059669, #10b981);
-            color: #fff;
-            font-weight: 600;
-            border-radius: 50px;
-            padding: 0.65rem 1.75rem;
-            font-size: 0.875rem;
-            letter-spacing: 0.01em;
-            transition: all 0.25s;
-            box-shadow: 0 0 20px rgba(16,185,129,0.35);
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            position: relative;
-            z-index: 30;
+            color: white; font-weight: 800; border-radius: 50px;
+            padding: 1rem 2.5rem; transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+            display: inline-flex; align-items: center; justify-content: center;
         }
-        .btn-login:hover {
-            background: linear-gradient(135deg, #047857, #059669);
-            box-shadow: 0 0 30px rgba(16,185,129,0.5);
-            transform: translateY(-1px);
+        .btn-sgp:hover {
+            transform: scale(1.05); box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4);
+            filter: brightness(1.1);
         }
 
-        /* Badge */
         .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            background: rgba(16,185,129,0.1);
-            border: 1px solid rgba(52,211,153,0.25);
-            border-radius: 50px;
-            padding: 0.3rem 1rem;
-            font-size: 0.75rem;
-            color: #6ee7b7;
-            font-weight: 500;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+            background: rgba(16,185,129,0.1); border: 1px solid rgba(52,211,153,0.25);
+            border-radius: 50px; padding: 0.5rem 1.2rem; font-size: 0.75rem;
+            color: #6ee7b7; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
         }
 
-        /* Icon bg */
-        .icon-wrap {
-            width: 48px;
-            height: 48px;
-            background: rgba(16,185,129,0.1);
-            border: 1px solid rgba(52,211,153,0.2);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1rem;
-        }
-
-        /* Divider */
         .divider-glow {
-            height: 1px;
+            height: 1px; width: 100%;
             background: linear-gradient(90deg, transparent, rgba(52,211,153,0.3), transparent);
         }
     </style>
@@ -138,121 +70,88 @@
 <body>
 
     <div class="relative min-h-screen flex flex-col">
-
-        <!-- Background effects -->
         <div class="hero-glow"></div>
-        <div class="hero-glow-2"></div>
         <div class="grid-bg"></div>
 
-        <!-- NAVBAR -->
-        <nav class="relative z-10 flex items-center justify-between px-6 py-5 sm:px-10 lg:px-16">
+        <nav class="relative z-50 flex items-center justify-between px-6 py-8 sm:px-16">
             <div class="flex items-center gap-3">
-                <!-- Logo / icon -->
-                <div style="width:40px;height:40px;background:linear-gradient(135deg,#059669,#34d399);border-radius:10px;display:flex;align-items:center;justify-content:center;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="white" stroke-width="2" stroke-linejoin="round" fill="rgba(255,255,255,0.15)"/>
-                        <path d="M12 8V16M8 10.5V13.5M16 10.5V13.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+                <div class="w-10 h-10 bg-gradient-to-br from-[#059669] to-[#34d399] rounded-xl flex items-center justify-center shadow-lg">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                        <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" />
                     </svg>
                 </div>
-                <span style="font-size:1.05rem;font-weight:700;color:#f0fdf4;letter-spacing:-0.01em;">SGP <span style="color:#34d399;">RCPB</span></span>
+                <span class="text-xl font-black tracking-tighter">SGP <span class="text-[#34d399]">RCPB</span></span>
             </div>
 
-            <a href="{{ url('/admin/login') }}" class="btn-login" onclick="window.location.assign('{{ url('/admin/login') }}')">
-                Se connecter
-            </a>
+            <a href="{{ route('login') }}" class="hidden sm:flex font-bold text-sm hover:text-[#34d399] transition-colors mr-8">Se connecter</a>
+            <a href="{{ route('login') }}" class="btn-sgp text-sm py-3 px-8">Accès direct</a>
         </nav>
 
-        <!-- HERO -->
-        <main class="relative z-10 flex flex-col items-center justify-center flex-1 px-6 pt-16 pb-12 sm:px-10 text-center">
-
-            <span class="badge mb-6">
-                <span style="width:6px;height:6px;background:#34d399;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
-                Systeme de gestion de la performance
+        <main class="relative z-10 flex flex-col items-center justify-center flex-1 px-6 text-center py-20">
+            <span class="badge mb-8 flex items-center gap-2">
+                <span class="w-2 h-2 bg-[#34d399] rounded-full animate-pulse"></span>
+                Système de gestion de la performance
             </span>
 
-            <h1 style="font-size:clamp(2.2rem,5vw,3.8rem);font-weight:800;line-height:1.1;letter-spacing:-0.03em;color:#f0fdf4;max-width:820px;margin-bottom:1.5rem;">
+            <h1 class="text-5xl sm:text-7xl font-black leading-none tracking-tight mb-8">
                 Pilotez la performance<br>
-                <span class="gradient-text">du reseau RCPB</span>
+                <span class="gradient-text">du réseau RCPB</span>
             </h1>
 
-            <p style="font-size:1.05rem;color:#6b7280;max-width:560px;line-height:1.7;margin-bottom:2.5rem;">
-                Suivez les objectifs, gerez les evaluations et coordonnez les entites du reseau en toute simplicite depuis un tableau de bord centralise.
+            <p class="text-gray-400 text-lg max-w-2xl mb-12 leading-relaxed">
+                Suivez les objectifs, gérez les évaluations et coordonnez les entités du réseau en toute simplicité depuis un tableau de bord centralisé.
             </p>
 
-            <a href="{{ url('/admin/login') }}" class="btn-login" style="padding:0.85rem 2.5rem;font-size:1rem;" onclick="window.location.assign('{{ url('/admin/login') }}')">
-                Acceder a mon espace ->
+            <a href="{{ auth()->check() ? url('/admin/dashboard') : route('login') }}" class="btn-sgp text-lg">
+                Accéder à mon espace &nbsp; →
             </a>
-
         </main>
 
-        <!-- DIVIDER -->
-        <div class="relative z-10 px-6 sm:px-10 lg:px-16">
-            <div class="divider-glow"></div>
-        </div>
+        <div class="px-16"><div class="divider-glow"></div></div>
 
-        <!-- FEATURE CARDS -->
-        <section class="relative z-10 px-6 py-12 sm:px-10 lg:px-16">
-            <div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.25rem;">
-
-                <!-- Card 1 -->
+        <section class="relative z-10 px-6 py-24 sm:px-16 max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
                 <div class="feature-card">
-                    <div class="icon-wrap">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                            <path d="M3 3H21V21H3z" stroke="none"/>
-                            <path d="M9 17H3v-4h6v4zm6 0h-6V7h6v10zm6 0h-6v-7h6v7z" fill="#34d399"/>
-                        </svg>
+                    <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        📊
                     </div>
-                    <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Suivi des Objectifs</h3>
-                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Definissez et suivez l'avancement des objectifs par entite, direction et service.</p>
+                    <h3 class="font-bold mb-3">Suivi des Objectifs</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Définissez et suivez l'avancement des objectifs par entité, direction et service.</p>
                 </div>
 
-                <!-- Card 2 -->
                 <div class="feature-card">
-                    <div class="icon-wrap">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="3" width="18" height="18" rx="3" stroke="#34d399" stroke-width="1.8" fill="none"/>
-                            <path d="M8 12l2.5 2.5L16 9" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                    <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        ✅
                     </div>
-                    <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Gestion des Evaluations</h3>
-                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Creez, soumettez et validez les evaluations du personnel avec export PDF integre.</p>
+                    <h3 class="font-bold mb-3">Evaluations</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Créez, soumettez et validez les évaluations du personnel avec export PDF intégré.</p>
                 </div>
 
-                <!-- Card 3 -->
                 <div class="feature-card">
-                    <div class="icon-wrap">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                            <circle cx="9" cy="7" r="3" stroke="#34d399" stroke-width="1.8" fill="none"/>
-                            <circle cx="15" cy="7" r="3" stroke="#34d399" stroke-width="1.8" fill="none"/>
-                            <path d="M3 19c0-3.3 2.7-6 6-6h6c3.3 0 6 2.7 6 6" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-                        </svg>
+                    <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        👥
                     </div>
-                    <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Gestion du Personnel</h3>
-                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Gerez agents, directeurs et chefs de service de toutes les entites du reseau.</p>
+                    <h3 class="font-bold mb-3">Personnel</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Gérez agents, directeurs et chefs de service de toutes les entités du réseau.</p>
                 </div>
 
-                <!-- Card 4 -->
                 <div class="feature-card">
-                    <div class="icon-wrap">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" stroke="#34d399" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
-                            <path d="M12 8V16M8.5 10V14M15.5 10V14" stroke="#34d399" stroke-width="1.8" stroke-linecap="round"/>
-                        </svg>
+                    <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                        🏛️
                     </div>
-                    <h3 style="font-size:0.95rem;font-weight:600;color:#f0fdf4;margin-bottom:0.4rem;">Tableau de Bord PCA</h3>
-                    <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;">Espace dedie aux PCA pour visualiser et piloter la performance de leur entite.</p>
+                    <h3 class="font-bold mb-3">Tableau PCA</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Espace dédié aux PCA pour piloter la performance de leur entité en temps réel.</p>
                 </div>
 
             </div>
         </section>
 
-        <!-- FOOTER -->
-        <footer class="relative z-10 px-6 py-5 sm:px-10 text-center">
-            <p style="font-size:0.78rem;color:#374151;">
-                &copy; {{ date('Y') }} SGP RCPB &mdash; Reseau des Caisses Populaires du Burkina
+        <footer class="relative z-10 py-10 border-t border-white/5 text-center">
+            <p class="text-gray-600 text-xs font-medium">
+                © {{ date('Y') }} SGP RCPB — Réseau des Caisses Populaires du Burkina
             </p>
         </footer>
-
     </div>
 
 </body>

@@ -45,7 +45,7 @@ class CaisseController extends Controller
             'nom' => ['required', 'string', 'max:255'],
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
             'directeur_nom' => ['required', 'string', 'max:255'],
-            'directeur_email' => ['required', 'email', 'max:255'],
+            'directeur_email' => ['required', 'email', 'max:255', Rule::unique('caisses', 'directeur_email')],
             'directeur_telephone' => ['required', 'string', 'max:30'],
             'secretariat_telephone' => ['required', 'string', 'max:30'],
             'superviseur_direction_id' => [
