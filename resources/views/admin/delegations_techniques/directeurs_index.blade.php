@@ -47,7 +47,6 @@
                                 <th>#</th>
                                 <th>Delegation</th>
                                 <th>Directeur</th>
-                                <th>Note</th>
                                 <th>Email</th>
                                 <th>Numero</th>
                                 <th class="text-right">Actions</th>
@@ -59,19 +58,44 @@
                                     <td>{{ ($directeurs->firstItem() ?? 1) + $loop->index }}</td>
                                     <td>{{ $direction->delegationTechnique?->region }} / {{ $direction->delegationTechnique?->ville }}</td>
                                     <td>{{ $direction->directeur_prenom }} {{ $direction->directeur_nom }}</td>
-                                    <td>
-                                        @php($note = $directeurNotes[$direction->id] ?? null)
-                                        <span class="font-semibold text-emerald-700">{{ $note !== null ? $note.'/100' : '-' }}</span>
-                                    </td>
                                     <td>{{ $direction->directeur_email }}</td>
                                     <td>{{ $direction->directeur_numero }}</td>
                                     <td class="text-right">
-                                        <a href="{{ route('admin.directions.show', $direction) }}" class="ent-btn ent-btn-soft">Voir</a>
+                                        <div class="flex items-center justify-end gap-2">
+                                            <a
+                                                href="{{ route('admin.directions.show', $direction) }}"
+                                                class="ent-btn ent-btn-soft inline-flex h-10 w-10 items-center justify-center p-0"
+                                                title="Voir"
+                                                aria-label="Voir"
+                                            >
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a
+                                                href="{{ route('admin.directions.edit', $direction) }}"
+                                                class="ent-btn ent-btn-soft inline-flex h-10 w-10 items-center justify-center p-0"
+                                                title="Modifier"
+                                                aria-label="Modifier"
+                                            >
+                                                <i class="fas fa-pen"></i>
+                                            </a>
+                                            <form method="POST" action="{{ route('admin.directions.destroy', $direction) }}" onsubmit="return confirm('Supprimer ce directeur technique ?');" class="inline-flex">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button
+                                                    type="submit"
+                                                    class="ent-btn ent-btn-danger inline-flex h-10 w-10 items-center justify-center p-0"
+                                                    title="Supprimer"
+                                                    aria-label="Supprimer"
+                                                >
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="py-8 text-center text-slate-500">Aucun directeur technique trouve.</td>
+                                    <td colspan="6" class="py-8 text-center text-slate-500">Aucun directeur technique trouve.</td>
                                 </tr>
                             @endforelse
                         </tbody>

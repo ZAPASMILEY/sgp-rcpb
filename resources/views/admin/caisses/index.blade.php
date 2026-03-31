@@ -9,7 +9,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Referentiel / Caisses</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Index des caisses</h1>
+                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Les Caisses de la RCPB </h1>
                         <p class="mt-2 text-sm text-slate-600">Liste des caisses avec les coordonnees du directeur, le numero du secretariat et le superviseur technique.</p>
                     </div>
                     <a href="{{ route('admin.caisses.create') }}" data-open-create-modal data-modal-title="Ajouter une caisse" class="ent-btn ent-btn-primary">Ajouter une caisse</a>
@@ -27,7 +27,7 @@
                     <table class="ent-table text-left text-sm text-slate-700">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th>N</th>
                                 <th>Caisse</th>
                                 <th>Directeur de caisse</th>
                                 <th>Contact directeur</th>
@@ -43,7 +43,6 @@
                                     <td>{{ $caisse->directeur_nom }}</td>
                                     <td>
                                         <p>{{ $caisse->directeur_email }}</p>
-                                        <p class="text-xs text-slate-500">{{ $caisse->directeur_telephone }}</p>
                                     </td>
                                     <td>{{ $caisse->secretariat_telephone }}</td>
                                     <td>

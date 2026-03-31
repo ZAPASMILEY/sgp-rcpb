@@ -102,29 +102,10 @@
         <div class="header-card">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <p class="text-xs font-semibold uppercase text-slate-500 mb-2">Trier par :</p>
-                    <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('admin.entites.directions.index', array_merge(request()->query(), ['sort' => ''])) }}"
-                           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ $sort === '' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">
-                            Récent
-                        </a>
-                        <a href="{{ route('admin.entites.directions.index', array_merge(request()->query(), ['sort' => 'highest'])) }}"
-                           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ $sort === 'highest' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">
-                            <i class="fas fa-arrow-down"></i> Note plus forte
-                        </a>
-                        <a href="{{ route('admin.entites.directions.index', array_merge(request()->query(), ['sort' => 'lowest'])) }}"
-                           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ $sort === 'lowest' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">
-                            <i class="fas fa-arrow-up"></i> Note plus faible
-                        </a>
-                        <a href="{{ route('admin.entites.directions.index', array_merge(request()->query(), ['sort' => 'rated'])) }}"
-                           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ $sort === 'rated' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">
-                            <i class="fas fa-check-circle"></i> Déjà notés
-                        </a>
-                        <a href="{{ route('admin.entites.directions.index', array_merge(request()->query(), ['sort' => 'not_rated'])) }}"
-                           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ $sort === 'not_rated' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">
-                            <i class="fas fa-circle"></i> Pas encore notés
-                        </a>
-                    </div>
+                    <form method="GET" action="{{ route('admin.entites.directions.index') }}" class="flex items-center gap-2">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Rechercher une direction..." class="ent-input px-3 py-2 rounded-lg text-sm w-64" />
+                        <button type="submit" class="ent-btn ent-btn-primary px-4 py-2 text-sm">Rechercher</button>
+                    </form>
                 </div>
             </div>
         </div>

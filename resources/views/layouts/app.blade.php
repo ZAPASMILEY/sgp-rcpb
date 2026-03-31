@@ -22,6 +22,7 @@
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="{{ asset('css/admin-fallback.css') }}">
     @endif
+        @livewireStyles
 
     <style>
         .create-form-modal {
@@ -524,15 +525,276 @@
         body.admin-theme .create-form-modal__frame {
             background: #ffffff;
         }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        .admin-layout {
+            min-height: 100vh;
+        }
+
+        .admin-sidebar {
+            background:
+                radial-gradient(circle at top, rgba(52, 211, 153, 0.2), transparent 28%),
+                linear-gradient(180deg, #052e2b 0%, #064e3b 52%, #022c22 100%);
+        }
+
+        .admin-sidebar__brand {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+
+        .admin-sidebar__brand::after {
+            content: '';
+            position: absolute;
+            inset: auto -20% -55% auto;
+            width: 140px;
+            height: 140px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 68%);
+            pointer-events: none;
+        }
+
+        .admin-sidebar__link {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            border-radius: 1rem;
+            padding: 0.85rem 0.95rem;
+            color: rgba(255, 255, 255, 0.84);
+            font-size: 0.95rem;
+            font-weight: 600;
+            line-height: 1;
+            text-decoration: none;
+            transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+        }
+
+        .admin-sidebar__link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            transform: translateX(2px);
+        }
+
+        .admin-sidebar__link.is-active {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+            color: #ffffff;
+            box-shadow: 0 16px 30px rgba(6, 78, 59, 0.35);
+        }
+
+        .admin-sidebar__link--danger:hover {
+            background: rgba(239, 68, 68, 0.18);
+        }
+
+        .admin-sidebar__submenu {
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .admin-sidebar__submenu-link {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            border-radius: 0.85rem;
+            padding: 0.7rem 0.85rem;
+            color: rgba(255, 255, 255, 0.74);
+            font-size: 0.88rem;
+            text-decoration: none;
+            transition: background 0.18s ease, color 0.18s ease;
+        }
+
+        .admin-sidebar__submenu-link:hover,
+        .admin-sidebar__submenu-link.is-active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .admin-workspace {
+            min-height: 100vh;
+            padding: 1rem;
+            width: 100%;
+            max-width: none;
+        }
+
+        .admin-topbar-shell {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 1.35rem;
+            background: rgba(255, 255, 255, 0.82);
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .admin-topbar-shell::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.08), transparent 24%, transparent 76%, rgba(16, 185, 129, 0.06));
+            pointer-events: none;
+        }
+
+        .admin-topbar {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+        }
+
+        .admin-topbar__context {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            min-width: 0;
+        }
+
+        .admin-topbar__back {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.9rem;
+            height: 2.9rem;
+            border: 1px solid rgba(16, 185, 129, 0.18);
+            border-radius: 1rem;
+            background: linear-gradient(180deg, #ecfdf5, #d1fae5);
+            color: #047857;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .admin-topbar__eyebrow {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #6b7280;
+        }
+
+        .admin-topbar__page {
+            display: block;
+            margin-top: 0.2rem;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .admin-topbar__meta {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .admin-topbar__pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.72rem 0.95rem;
+            border: 1px solid rgba(15, 23, 42, 0.07);
+            border-radius: 999px;
+            background: rgba(248, 250, 252, 0.92);
+            color: #334155;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .admin-topbar__profile {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.42rem 0.5rem 0.42rem 0.42rem;
+            border: 1px solid rgba(15, 23, 42, 0.07);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        .admin-topbar__avatar {
+            width: 2.7rem;
+            height: 2.7rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #10b981, #047857);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 800;
+            box-shadow: 0 10px 22px rgba(16, 185, 129, 0.26);
+            overflow: hidden;
+        }
+
+        .admin-content {
+            padding: 0.25rem 0 1rem;
+            width: 100%;
+        }
+
+        .admin-content > .container-fluid {
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+        }
+
+        .app-wrapper,
+        .app-main {
+            width: 100%;
+            max-width: none;
+        }
+
+        @media (max-width: 1024px) {
+            .admin-workspace {
+                padding: 0.9rem;
+            }
+
+            .admin-topbar {
+                padding: 0.9rem 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .admin-topbar__meta {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .admin-topbar__page {
+                white-space: normal;
+            }
+        }
     </style>
     
     @stack('head')
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary {{ request()->routeIs('admin.*') && !request()->routeIs('login') ? 'admin-theme' : '' }}">
+    @livewireScripts
     @php
-        $showAdminSidebar = request()->routeIs('admin.*') && !request()->routeIs('login');
+        $isEmbeddedFrame = request()->header('Sec-Fetch-Dest') === 'iframe';
+        $showAdminSidebar = request()->routeIs('admin.*') && !request()->routeIs('login') && !$isEmbeddedFrame;
         $adminUserInitial = auth()->check() ? strtoupper(substr(auth()->user()->name, 0, 1)) : 'A';
         $displayYear = (int) request()->query('annee', now()->year);
+        $previousUrl = url()->previous();
+        $previousHost = parse_url($previousUrl, PHP_URL_HOST);
+        $currentHost = request()->getHost();
+        $safeBackUrl = $previousUrl && (!$previousHost || $previousHost === $currentHost)
+            ? $previousUrl
+            : route('admin.dashboard');
         $adminTopMenu = [
             ['route' => 'admin.dashboard', 'pattern' => 'admin.dashboard', 'label' => 'Tableau de bord', 'icon' => 'fas fa-chart-pie'],
             ['route' => 'admin.entites.index', 'pattern' => 'admin.entites.*', 'label' => 'Faitiere', 'icon' => 'fas fa-university'],
@@ -544,81 +806,188 @@
             ['route' => 'admin.evaluations.index', 'pattern' => 'admin.evaluations.*', 'label' => 'Evaluations', 'icon' => 'fas fa-clipboard-check'],
             ['route' => 'admin.settings.edit', 'pattern' => 'admin.settings.*', 'label' => 'Parametres', 'icon' => 'fas fa-cog'],
         ];
+        $currentAdminSection = collect($adminTopMenu)->first(fn ($item) => request()->routeIs($item['pattern']));
+        $currentAdminLabel = $currentAdminSection['label'] ?? 'Administration';
+        $opensCaisseMenu = request()->routeIs('admin.caisses.*') || request()->routeIs('admin.agences.*') || request()->routeIs('admin.guichets.*') || request()->routeIs('admin.agents.*');
     @endphp
 
-    <div class="app-wrapper">
+    <div class="app-wrapper admin-layout d-flex" @if($showAdminSidebar) x-data="{ sidebarOpen: true, mobileSidebarOpen: false, caisseMenuOpen: {{ $opensCaisseMenu ? 'true' : 'false' }} }" @endif>
         @if ($showAdminSidebar)
-            <nav class="app-header navbar navbar-expand admin-topbar shadow-sm">
-                <div class="container-fluid d-flex flex-column flex-xl-row gap-3 py-3 py-xl-2">
-                    <div class="d-flex align-items-center gap-3 w-100 w-xl-auto">
-                        <a href="{{ route('admin.dashboard') }}" class="admin-topbar__brand">
-                            <span class="admin-topbar__mark">S</span>
-                            <span class="admin-topbar__label">
-                                <span class="admin-topbar__title">SGP RCPB</span>
-                                <span class="admin-topbar__subtitle">Système de gestion centralisé</span>
-                            </span>
-                        </a>
-                    </div>
+            <button
+                @click="if (window.innerWidth < 768) { mobileSidebarOpen = true } else { sidebarOpen = !sidebarOpen }"
+                class="fixed left-4 top-4 z-50 rounded-xl border border-white/70 bg-white px-3 py-2 text-slate-700 shadow-lg shadow-slate-200/60 hover:bg-slate-50 focus:outline-none md:hidden"
+                type="button"
+            >
+                <i class="fas fa-bars"></i>
+            </button>
 
-                    <div class="admin-topbar__nav flex-grow-1">
-                        @foreach ($adminTopMenu as $item)
-                            <a href="{{ route($item['route']) }}" class="admin-topbar__link {{ request()->routeIs($item['pattern']) ? 'active' : '' }}">
-                                <i class="{{ $item['icon'] }}"></i>
-                                <span>{{ $item['label'] }}</span>
-                            </a>
-                        @endforeach
-                    </div>
+            <div
+                x-cloak
+                x-show="mobileSidebarOpen"
+                x-transition.opacity
+                @click="mobileSidebarOpen = false"
+                class="fixed inset-0 z-40 bg-slate-950/35 md:hidden"
+            ></div>
 
-                    <div class="admin-topbar__meta ms-xl-auto">
-                        <span class="admin-topbar__datetime" aria-live="polite">
-                            <i class="far fa-clock" aria-hidden="true"></i>
-                            <span class="admin-topbar__datetime-text">
-                                <span class="admin-topbar__year">Année {{ $displayYear }}</span>
-                                <span class="admin-topbar__clock" id="admin-current-time">--:--:--</span>
-                            </span>
+            <aside
+                id="admin-sidebar"
+                class="admin-sidebar fixed inset-y-0 left-0 z-50 flex w-72 min-h-screen flex-col px-4 py-5 shadow-2xl shadow-emerald-950/20 transition-transform duration-200 md:relative md:inset-auto md:z-auto md:flex-shrink-0"
+                x-cloak
+                x-transition:enter="transition-transform duration-200"
+                x-transition:enter-start="-translate-x-full md:translate-x-0"
+                x-transition:enter-end="translate-x-0"
+                x-transition:leave="transition-transform duration-200"
+                x-transition:leave-start="translate-x-0"
+                x-transition:leave-end="-translate-x-full"
+                :class="(window.innerWidth < 768 ? mobileSidebarOpen : sidebarOpen) ? 'translate-x-0 md:flex' : '-translate-x-full md:hidden'"
+            >
+                <button
+                    @click="sidebarOpen = !sidebarOpen"
+                    :class="sidebarOpen ? 'left-[16.75rem]' : 'left-4'"
+                    class="fixed top-4 z-[60] hidden rounded-xl border border-white/80 bg-white px-3 py-2 text-emerald-700 shadow-lg shadow-slate-200/70 hover:bg-emerald-50 focus:outline-none transition-all duration-200 md:block"
+                    type="button"
+                >
+                    <i :class="sidebarOpen ? 'fas fa-angle-left' : 'fas fa-angle-right'"></i>
+                </button>
+
+                <button
+                    @click="mobileSidebarOpen = false"
+                    class="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white md:hidden"
+                    type="button"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <div class="admin-sidebar__brand mb-8 rounded-[1.6rem] p-4">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-lg font-black text-emerald-700 shadow-lg shadow-emerald-950/10">
+                            SG
                         </span>
-                        <a href="{{ route('admin.settings.edit') }}" class="admin-topbar__icon" aria-label="Paramètres">
-                            <i class="fas fa-bell"></i>
-                            <span class="admin-topbar__dot"></span>
-                        </a>
-                        <div class="dropdown user-menu">
-                            <a href="#" class="admin-topbar__user" data-bs-toggle="dropdown" aria-expanded="false">
-                                {{ $adminUserInitial }}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow">
-                                <li class="user-header bg-primary text-white p-3 text-center">
-                                    <p class="mb-0">{{ auth()->user()->name ?? 'Administrateur' }}</p>
-                                </li>
-                                <li class="user-footer border-top p-2 d-flex justify-content-between align-items-center gap-2">
-                                    <a href="{{ route('admin.settings.edit') }}" class="btn btn-default btn-flat">Profil</a>
-                                    <form action="{{ route('admin.logout') }}" method="POST" class="m-0">
-                                        @csrf
-                                        <button type="submit" class="admin-topbar__logout">Déconnexion</button>
-                                    </form>
-                                </li>
-                            </ul>
+                        <div>
+                            <p class="text-[0.68rem] font-bold uppercase tracking-[0.28em] text-emerald-100/80">Portail Admin</p>
+                            <p class="mt-1 text-xl font-extrabold tracking-tight text-white">SGP-RCPB</p>
                         </div>
                     </div>
+                    <p class="mt-4 max-w-[15rem] text-sm leading-6 text-emerald-50/80">
+                        Gestion centrale des entites, directions, services et comptes utilisateurs.
+                    </p>
                 </div>
-            </nav>
+
+                <div class="mb-3 px-2">
+                    <p class="text-[0.68rem] font-bold uppercase tracking-[0.28em] text-emerald-100/65">Navigation</p>
+                </div>
+
+                <nav class="flex flex-col gap-1.5">
+                    <a href="{{ route('admin.dashboard') }}" class="admin-sidebar__link {{ request()->routeIs('admin.dashboard') ? 'is-active' : '' }}">
+                        <i class="fas fa-home text-base"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="{{ route('admin.entites.index') }}" class="admin-sidebar__link {{ request()->routeIs('admin.entites.*') ? 'is-active' : '' }}">
+                        <i class="fas fa-university text-base"></i>
+                        <span>Faitiere</span>
+                    </a>
+                    <a href="{{ route('admin.directions.index') }}" class="admin-sidebar__link {{ request()->routeIs('admin.directions.*') ? 'is-active' : '' }}">
+                        <i class="fas fa-sitemap text-base"></i>
+                        <span>Delegations</span>
+                    </a>
+
+                    <div class="pt-1">
+                        <button @click="caisseMenuOpen = !caisseMenuOpen" class="admin-sidebar__link w-full focus:outline-none">
+                            <i class="fas fa-cash-register text-base"></i>
+                            <span>Reseau caisses</span>
+                            <i :class="caisseMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'" class="fas ml-auto text-xs"></i>
+                        </button>
+                        <div x-show="caisseMenuOpen" x-transition class="admin-sidebar__submenu mt-2 flex flex-col gap-1.5">
+                            <a href="{{ route('admin.caisses.index') }}" class="admin-sidebar__submenu-link {{ request()->routeIs('admin.caisses.*') ? 'is-active' : '' }}">
+                                <i class="fas fa-wallet"></i><span>Caisses</span>
+                            </a>
+                            <a href="{{ route('admin.agences.index') }}" class="admin-sidebar__submenu-link {{ request()->routeIs('admin.agences.*') ? 'is-active' : '' }}">
+                                <i class="fas fa-building"></i><span>Agences</span>
+                            </a>
+                            <a href="{{ route('admin.guichets.index') }}" class="admin-sidebar__submenu-link {{ request()->routeIs('admin.guichets.*') ? 'is-active' : '' }}">
+                                <i class="fas fa-store"></i><span>Guichets</span>
+                            </a>
+                            <a href="{{ route('admin.agents.index') }}" class="admin-sidebar__submenu-link {{ request()->routeIs('admin.agents.*') ? 'is-active' : '' }}">
+                                <i class="fas fa-user"></i><span>Agents</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="my-4 h-px bg-white/10"></div>
+
+                    <a href="{{ route('admin.statistiques.index') }}" class="admin-sidebar__link {{ request()->routeIs('admin.statistiques.*') ? 'is-active' : '' }}">
+                        <i class="fas fa-chart-line text-base"></i>
+                        <span>Statistiques</span>
+                    </a>
+                    <a href="{{ route('admin.evaluations.index') }}" class="admin-sidebar__link {{ request()->routeIs('admin.evaluations.*') ? 'is-active' : '' }}">
+                        <i class="fas fa-clipboard-check text-base"></i>
+                        <span>Evaluations</span>
+                    </a>
+                    <a href="{{ route('admin.settings.edit') }}" class="admin-sidebar__link {{ request()->routeIs('admin.settings.*') ? 'is-active' : '' }}">
+                        <i class="fas fa-cog text-base"></i>
+                        <span>Parametres</span>
+                    </a>
+                    <a href="{{ route('admin.utilisateurs.index') }}" class="admin-sidebar__link {{ request()->routeIs('admin.utilisateurs.*') ? 'is-active' : '' }}">
+                        <i class="fas fa-users-cog text-base"></i>
+                        <span>Utilisateurs</span>
+                    </a>
+                    <form action="{{ route('admin.logout') }}" method="POST" class="mt-4">
+                        @csrf
+                        <button type="submit" class="admin-sidebar__link admin-sidebar__link--danger w-full">
+                            <i class="fas fa-sign-out-alt text-base"></i>
+                            <span>Deconnexion</span>
+                        </button>
+                    </form>
+                </nav>
+            </aside>
+
+            <div class="admin-workspace flex-1 transition-all duration-200">
 
             <main class="app-main">
-                <div class="app-content-header shadow-sm bg-white mb-4 py-3">
-                    <div class="container-fluid">
-                        <div class="row">
-                            <div class="col-sm-6">
-                                <h3 class="mb-0">@yield('title')</h3>
+                <!-- Header/Topbar modernisé -->
+                <div class="admin-topbar-shell">
+                    <!-- Flèche de retour universelle -->
+                    <div class="admin-topbar">
+                        <div class="admin-topbar__context">
+                            <a href="{{ $safeBackUrl }}" class="admin-topbar__back" title="Retour">
+                                <i class="fas fa-arrow-left"></i>
+                            </a>
+                            <div class="min-w-0">
+                                <span class="admin-topbar__eyebrow">Tableau administratif</span>
+                                <span class="admin-topbar__page">{{ $currentAdminLabel }}</span>
                             </div>
+                        </div>
+                        <div class="admin-topbar__meta">
+                            <div class="admin-topbar__pill">
+                                <i class="fas fa-calendar-alt text-emerald-600"></i>
+                                <span>{{ now()->format('d/m/Y') }}</span>
+                            </div>
+                        <!-- Profil utilisateur -->
+                        @php $user = auth()->user(); $initial = $user ? strtoupper(mb_substr($user->name, 0, 1)) : 'A'; @endphp
+                        <div class="admin-topbar__profile">
+                            <div class="admin-topbar__avatar">
+                                @if($user && $user->profile_photo_url)
+                                    <img src="{{ $user->profile_photo_url }}" alt="Photo de profil" class="h-full w-full object-cover" />
+                                @else
+                                    {{ $initial }}
+                                @endif
+                            </div>
+                            <div class="pr-2">
+                                <p class="text-sm font-semibold text-slate-800">{{ $user ? $user->name : 'Admin' }}</p>
+                                <p class="text-xs text-slate-500">{{ $user && $user->role ? $user->role : 'Administrateur' }}</p>
+                            </div>
+                        </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="app-content">
+                <!-- Fin Header/Topbar -->
+                <div class="app-content admin-content">
                     <div class="container-fluid">
                         @yield('content')
                     </div>
                 </div>
             </main>
+            </div>
         @else
             @yield('content')
         @endif

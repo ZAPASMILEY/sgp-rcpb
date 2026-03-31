@@ -13,12 +13,15 @@
             $isLocalHost = in_array($requestHost, ['127.0.0.1', 'localhost'], true);
         @endphp
 
+
         @if ($hasViteBuild || ($hasViteHot && $isLocalHost))
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @else
             <script src="https://cdn.tailwindcss.com"></script>
             <link rel="stylesheet" href="{{ asset('css/admin-fallback.css') }}">
         @endif
+
+        @livewireStyles
 
         <style>
             .create-form-modal {
@@ -91,6 +94,7 @@
         @stack('head')
     </head>
     <body>
+        @livewireScripts
         @php
             $themePreference = auth()->check() ? (auth()->user()->theme_preference ?? 'reference') : 'reference';
             $adminThemeClass = $themePreference === 'reference' ? 'admin-layout--reference' : '';

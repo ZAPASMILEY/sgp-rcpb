@@ -1,3 +1,4 @@
+// ...existing code...
 <?php
 
 use App\Http\Controllers\Admin\AgentController;
@@ -27,9 +28,16 @@ Route::redirect('/login', '/admin/login')->name('legacy.login');
 Route::middleware('guest')->group(function (): void {
     Route::get('/admin/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/admin/login', [AuthenticatedSessionController::class, 'store'])->name('admin.login.store');
+    // Livewire CRUD for admin users
+    \Livewire\Livewire::component('admin-user-crud', \App\Http\Livewire\Admin\AdminUserCrud::class);
+    Route::get('/admin/utilisateurs', function () {
+        return view('admin.utilisateurs');
+    })->name('admin.utilisateurs.index');
 });
 
 Route::middleware(['auth', 'admin'])->group(function (): void {
+    // Route pour enregistrer un secrétaire depuis la modale de la Faitière
+    Route::post('/admin/secretaires', [EntiteController::class, 'storeSecretaire'])->name('admin.secretaires.store');
     Route::post('/admin/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     Route::get('/admin', DashboardController::class)->name('admin.dashboard');
     Route::get('/admin/statistiques', StatistiqueController::class)->name('admin.statistiques.index');

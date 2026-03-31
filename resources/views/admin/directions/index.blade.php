@@ -19,10 +19,11 @@
     }
 
     .dt-stage {
-        width: min(1180px, calc(100% - 2rem));
-        margin: 0 auto;
+        width: 100%;
+        margin: 0;
         padding: 1.5rem 0 2rem;
         position: relative;
+        max-width: none;
     }
 
     .dt-panel {
@@ -240,7 +241,7 @@
 
     @media (max-width: 768px) {
         .dt-stage {
-            width: min(100% - 1rem, 1180px);
+            width: 100%;
         }
 
         .dt-list__item {
@@ -261,7 +262,7 @@
 
         <section class="dt-panel dt-hero p-6 lg:p-8">
             <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
-                <div class="max-w-4xl">
+                <div class="w-full max-w-none">
                     <div class="flex flex-wrap gap-2">
                         <span class="dt-badge">{{ $delegations->count() }} delegations configurees</span>
                         <span class="dt-badge">{{ $directionsCount }} Directeur(s) Technique(s)</span>
@@ -275,6 +276,9 @@
                 </div>
 
                 <div class="flex flex-wrap gap-3 xl:justify-end">
+                    <a href="{{ route('admin.delegations-techniques.directeurs.index') }}" class="dt-btn dt-btn-soft">
+                        Voir les D.T.
+                    </a>
                     <a href="{{ route('admin.directions.create') }}" data-open-create-modal data-modal-title="Ajouter un Directeur Technique" class="dt-btn dt-btn-primary">
                         Ajouter un D.T.
                     </a>
@@ -352,11 +356,11 @@
                     <div class="mt-2 flex items-end justify-between gap-3">
                         <div>
                             <p class="dt-stat">{{ $secretariatsCount }}</p>
-                            <p class="mt-2 text-sm text-slate-300">Points de secretariat suivis</p>
+                            <p class="mt-2 text-sm text-slate-300">Secretaires techniques rattaches</p>
                         </div>
                         <div class="flex gap-2 flex-wrap justify-end">
                             <a href="{{ route('admin.delegations-techniques.secretaires.index') }}" class="dt-btn dt-btn-soft">Index</a>
-                            <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="dt-btn dt-btn-primary">Ajouter</a>
+                            <a href="{{ route('admin.delegations-techniques.directeurs.index') }}" class="dt-btn dt-btn-soft">Directions</a>
                         </div>
                     </div>
                 </article>
@@ -389,6 +393,7 @@
                         </div>
                         <div class="text-right">
                             <div class="flex items-center justify-end gap-2 flex-wrap">
+                                <a href="{{ route('admin.delegations-techniques.directeurs.index', ['delegation_id' => $delegation->id]) }}" class="dt-btn dt-btn-soft">Directeurs</a>
                                 <a href="{{ route('admin.delegations-techniques.services.index', ['delegation_id' => $delegation->id]) }}" class="dt-btn dt-btn-soft">Services</a>
                                 <a href="{{ route('admin.delegations-techniques.edit', $delegation) }}" class="dt-btn dt-btn-soft">Modifier</a>
                                 <form method="POST" action="{{ route('admin.delegations-techniques.destroy', $delegation) }}" onsubmit="return confirm('Supprimer cette delegation technique ?');">
@@ -435,29 +440,14 @@
                 <div class="flex items-center justify-between gap-3 mb-4">
                     <div>
                         <p class="dt-muted">Equipe</p>
-                        <h2 class="text-xl font-bold text-white mt-1">Secretaires et agents recents</h2>
+                        <h2 class="text-xl font-bold text-white mt-1">Agents recents</h2>
                     </div>
                     <a href="{{ route('admin.delegations-techniques.agents.index') }}" class="dt-btn dt-btn-soft">Voir tout</a>
                 </div>
-                <div class="space-y-4">
-                    <div class="dt-list">
-                        @forelse ($secretaires as $secretaire)
-                            <div class="dt-panel-soft p-4 flex items-center justify-between gap-4">
-                                <div>
-                                    <p class="font-semibold text-white">{{ $secretaire->prenom }} {{ $secretaire->nom }}</p>
-                                    <p class="mt-1 text-sm text-slate-300">{{ $secretaire->service?->nom ?? 'Sans service' }}</p>
-                                </div>
-                                <span class="dt-badge">Secretaire</span>
-                            </div>
-                        @empty
-                            <p class="text-sm text-slate-400">Aucun secretaire recent.</p>
-                        @endforelse
-                    </div>
-
-                    <div class="dt-list">
-                        @forelse ($recentAgents as $agent)
-                            <div class="dt-panel-soft p-4 flex items-center justify-between gap-4">
-                                <div>
+                <div class="dt-list">
+                    @forelse ($recentAgents as $agent)
+                        <div class="dt-panel-soft p-4 flex items-center justify-between gap-4">
+                            <div>
                                     <p class="font-semibold text-white">{{ $agent->prenom }} {{ $agent->nom }}</p>
                                     <p class="mt-1 text-sm text-slate-300">{{ $agent->service?->nom ?? 'Sans service' }}</p>
                                 </div>

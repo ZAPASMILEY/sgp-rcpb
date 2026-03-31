@@ -22,6 +22,39 @@ use Illuminate\Validation\Rule;
 
 class EntiteController extends Controller
 {
+    /**
+     * Enregistre un secretaire depuis la modale de la Faitiere.
+     */
+    public function storeSecretaire(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'prenom' => 'required|string|max:255',
+            'nom' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'direction_id' => 'required|exists:directions,id',
+            'date_prise_fonction' => 'required|date',
+        ]);
+
+        $password = Str::random(10);
+        $user = User::create([
+            'name' => $validated['prenom'].' '.$validated['nom'],
+            'email' => $validated['email'],
+            'password' => Hash::make($password),
+            'role' => 'secretaire',
+        ]);
+
+        $direction = Direction::find($validated['direction_id']);
+        $direction->update([
+            'secretaire_user_id' => $user->id,
+            'secretaire_prenom' => $validated['prenom'],
+            'secretaire_nom' => $validated['nom'],
+            'secretaire_email' => $validated['email'],
+            'date_prise_fonction' => $validated['date_prise_fonction'],
+        ]);
+
+        return redirect()->route('admin.entites.index')->with('status', 'Secretaire ajoute avec succes.');
+    }
+
     public function index(): View
     {
         $entite = Entite::query()->latest()->first();
@@ -31,6 +64,7 @@ class EntiteController extends Controller
                 'entite' => null,
                 'stats' => ['directions' => 0, 'services' => 0, 'secretaires' => 0, 'agents' => 0],
                 'directions' => collect(),
+                'allDirections' => collect(),
                 'services' => collect(),
                 'secretaires' => collect(),
                 'agents' => collect(),
@@ -44,7 +78,6 @@ class EntiteController extends Controller
             ]);
         }
 
-        // Requêtes de base filtrées sur l'entité (Faitière)
         $directionsQuery = Direction::where('entite_id', $entite->id)
             ->whereNull('delegation_technique_id');
 
@@ -58,7 +91,6 @@ class EntiteController extends Controller
 
         $secretairesQuery = (clone $agentsQuery)->where('fonction', 'like', '%secretaire%');
 
-        // Récupération des IDs pour les meilleures notes
         $dirIds = (clone $directionsQuery)->pluck('id');
         $serIds = (clone $servicesQuery)->pluck('id');
         $ageIds = (clone $agentsQuery)->pluck('id');
@@ -72,7 +104,8 @@ class EntiteController extends Controller
                 'secretaires' => $secretairesQuery->count(),
                 'agents' => $agentsQuery->count(),
             ],
-            'directions' => (clone $directionsQuery)->withCount('services')->latest()->take(6)->get(),
+            'directions' => (clone $directionsQuery)->withCount('services')->latest()->get(),
+            'allDirections' => (clone $directionsQuery)->get(),
             'services' => (clone $servicesQuery)->with('direction')->latest()->take(6)->get(),
             'secretaires' => (clone $secretairesQuery)->latest()->take(6)->get(),
             'agents' => (clone $agentsQuery)->with('service')->latest()->take(8)->get(),
@@ -90,7 +123,65 @@ class EntiteController extends Controller
         ]);
     }
 
-    private function getBestEval($type, $ids, $nameField = null)
+    /**
+     * Affiche le formulaire d'edition d'une faitiere.
+     */
+    public function edit(Entite $entite): View
+    {
+        return view('admin.entites.edit', compact('entite'));
+    }
+
+    /**
+     * Met a jour une faitiere existante.
+     */
+    public function update(Request $request, Entite $entite): RedirectResponse
+    {
+        $validated = $this->validateEntite($request, $entite);
+
+        DB::transaction(function () use ($entite, $validated) {
+            $originalEmails = [
+                'directrice_generale_email' => $entite->directrice_generale_email,
+                'dga_email' => $entite->dga_email,
+                'assistante_dg_email' => $entite->assistante_dg_email,
+                'pca_email' => $entite->pca_email,
+            ];
+
+            $entite->update($validated);
+
+            $this->syncPersonnelAccount(
+                $originalEmails['directrice_generale_email'],
+                $validated['directrice_generale_email'],
+                $validated['directrice_generale_prenom'].' '.$validated['directrice_generale_nom'],
+                'directeur'
+            );
+
+            $this->syncPersonnelAccount(
+                $originalEmails['dga_email'],
+                $validated['dga_email'],
+                $validated['dga_prenom'].' '.$validated['dga_nom'],
+                'directeur_adjoint'
+            );
+
+            $this->syncPersonnelAccount(
+                $originalEmails['assistante_dg_email'],
+                $validated['assistante_dg_email'],
+                $validated['assistante_dg_prenom'].' '.$validated['assistante_dg_nom'],
+                'assistant'
+            );
+
+            $this->syncPersonnelAccount(
+                $originalEmails['pca_email'],
+                $validated['pca_email'],
+                $validated['pca_prenom'].' '.$validated['pca_nom'],
+                'pca',
+                ['pca_entite_id' => $entite->id]
+            );
+        });
+
+        return redirect()->route('admin.entites.index')->with('success', 'Faitiere modifiee avec succes.');
+    }
+
+    private function getBestEval($type, $ids, $nameField = null): array
     {
         $eval = Evaluation::where('evaluable_type', $type)
             ->whereIn('evaluable_id', $ids)
@@ -102,7 +193,9 @@ class EntiteController extends Controller
         $name = null;
 
         if ($model) {
-            $name = $nameField ? $model->$nameField : trim(($model->prenom ?? $model->directeur_prenom ?? '') . ' ' . ($model->nom ?? $model->directeur_nom ?? ''));
+            $name = $nameField
+                ? $model->$nameField
+                : trim(($model->prenom ?? $model->directeur_prenom ?? '').' '.($model->nom ?? $model->directeur_nom ?? ''));
         }
 
         return ['name' => $name, 'note' => $eval?->note_finale];
@@ -114,7 +207,6 @@ class EntiteController extends Controller
         $search = trim((string) $request->query('search', ''));
         $sort = trim((string) $request->query('sort', ''));
 
-        // Construction du query de base
         $directionsBuilder = Direction::query()
             ->whereNull('delegation_technique_id')
             ->when($entite, fn ($q) => $q->where('entite_id', $entite->id))
@@ -125,9 +217,7 @@ class EntiteController extends Controller
             }))
             ->withCount('services');
 
-        // Appliquer le tri selon le paramètre sort
         if ($sort === 'highest') {
-            // De la plus forte note à la plus faible
             $directionsBuilder->leftJoinSub(
                 Evaluation::selectRaw('evaluable_id, note_finale')
                     ->where('evaluable_type', Direction::class)
@@ -140,7 +230,6 @@ class EntiteController extends Controller
                 'latest_eval.evaluable_id'
             )->orderByDesc('latest_eval.note_finale');
         } elseif ($sort === 'lowest') {
-            // De la plus faible note à la plus forte
             $directionsBuilder->leftJoinSub(
                 Evaluation::selectRaw('evaluable_id, note_finale')
                     ->where('evaluable_type', Direction::class)
@@ -153,7 +242,6 @@ class EntiteController extends Controller
                 'latest_eval.evaluable_id'
             )->orderBy('latest_eval.note_finale');
         } elseif ($sort === 'not_rated') {
-            // Ceux qui ne sont pas encore notés
             $directionsBuilder->leftJoinSub(
                 Evaluation::selectRaw('evaluable_id, note_finale')
                     ->where('evaluable_type', Direction::class)
@@ -165,9 +253,8 @@ class EntiteController extends Controller
                 '=',
                 'latest_eval.evaluable_id'
             )->whereNull('latest_eval.note_finale')
-            ->latest('directions.id');
+                ->latest('directions.id');
         } elseif ($sort === 'rated') {
-            // Ceux qui sont déjà notés
             $directionsBuilder->leftJoinSub(
                 Evaluation::selectRaw('evaluable_id, note_finale')
                     ->where('evaluable_type', Direction::class)
@@ -179,9 +266,8 @@ class EntiteController extends Controller
                 '=',
                 'latest_eval.evaluable_id'
             )->whereNotNull('latest_eval.note_finale')
-            ->orderByDesc('latest_eval.note_finale');
+                ->orderByDesc('latest_eval.note_finale');
         } else {
-            // Défaut : tri par date de création (latest)
             $directionsBuilder->latest('directions.id');
         }
 
@@ -189,7 +275,6 @@ class EntiteController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        // Récupérer les dernières notes pour chaque direction
         $notes = Evaluation::query()
             ->where('evaluable_type', Direction::class)
             ->whereIn('evaluable_id', $directions->pluck('id'))
@@ -198,11 +283,11 @@ class EntiteController extends Controller
             ->pluck('note_finale', 'evaluable_id');
 
         return view('admin.entites.directions.index', [
-            'entite'     => $entite,
+            'entite' => $entite,
             'directions' => $directions,
-            'notes'      => $notes,
-            'search'     => $search,
-            'sort'       => $sort,
+            'notes' => $notes,
+            'search' => $search,
+            'sort' => $sort,
         ]);
     }
 
@@ -219,7 +304,9 @@ class EntiteController extends Controller
     public function storeDirection(Request $request): RedirectResponse
     {
         $entite = Entite::latest()->first();
-        if (!$entite) return redirect()->route('admin.entites.index')->with('error', 'Configurez la Faitière.');
+        if (!$entite) {
+            return redirect()->route('admin.entites.index')->with('error', 'Configurez la Faitiere.');
+        }
 
         $validated = $request->validate([
             'nom' => ['required', 'string', 'max:255', Rule::unique('directions')->where('entite_id', $entite->id)],
@@ -227,10 +314,11 @@ class EntiteController extends Controller
             'directeur_nom' => 'required|string|max:255',
             'directeur_email' => 'required|email|unique:users,email',
             'directeur_numero' => 'nullable|string',
+            'date_prise_fonction' => 'required|date',
         ]);
 
         $password = Str::random(12);
-        $name = $validated['directeur_prenom'] . ' ' . $validated['directeur_nom'];
+        $name = $validated['directeur_prenom'].' '.$validated['directeur_nom'];
 
         DB::transaction(function () use ($validated, $entite, $name, $password) {
             $user = User::create([
@@ -238,28 +326,32 @@ class EntiteController extends Controller
                 'email' => $validated['directeur_email'],
                 'password' => Hash::make($password),
                 'role' => 'directeur',
+                'date_prise_fonction' => $validated['date_prise_fonction'],
             ]);
 
             Direction::create(array_merge($validated, [
                 'user_id' => $user->id,
                 'entite_id' => $entite->id,
+                'date_prise_fonction' => $validated['date_prise_fonction'],
             ]));
         });
 
         Mail::to($validated['directeur_email'])->send(new WelcomeMail($name, $validated['directeur_email'], $password, 'directeur', url('/login')));
 
-        return redirect()->route('admin.entites.index')->with('status', 'Direction créée.');
+        return redirect()->route('admin.entites.index')->with('status', 'Direction creee.');
     }
 
     public function store(Request $request): RedirectResponse
     {
-        if (Entite::exists()) return redirect()->route('admin.entites.index');
+        if (Entite::exists()) {
+            return redirect()->route('admin.entites.index');
+        }
 
         $validated = $this->validateEntite($request);
-        
+
         DB::transaction(function () use ($validated) {
             $entite = Entite::create($validated);
-            
+
             $personnels = [
                 ['prenom' => 'directrice_generale_prenom', 'nom' => 'directrice_generale_nom', 'email' => 'directrice_generale_email', 'role' => 'directeur'],
                 ['prenom' => 'dga_prenom', 'nom' => 'dga_nom', 'email' => 'dga_email', 'role' => 'directeur_adjoint'],
@@ -269,35 +361,42 @@ class EntiteController extends Controller
 
             foreach ($personnels as $p) {
                 $acc = $this->createPersonnelAccount(
-                    $validated[$p['prenom']] . ' ' . $validated[$p['nom']],
+                    $validated[$p['prenom']].' '.$validated[$p['nom']],
                     $validated[$p['email']],
                     $p['role'],
                     $p['role'] === 'pca' ? ['pca_entite_id' => $entite->id] : []
                 );
+
                 Mail::to($acc['email'])->send(new WelcomeMail($acc['name'], $acc['email'], $acc['plain_password'], $acc['role'], url('/login')));
             }
         });
 
-        return redirect()->route('admin.entites.index')->with('status', 'Faitière configurée.');
+        return redirect()->route('admin.entites.index')->with('status', 'Faitiere configuree.');
     }
 
     public function reset(): RedirectResponse
     {
         DB::transaction(function () {
             $entites = Entite::all();
+
             foreach ($entites as $entite) {
-                $emails = array_filter([$entite->directrice_generale_email, $entite->dga_email, $entite->assistante_dg_email, $entite->pca_email]);
+                $emails = array_filter([
+                    $entite->directrice_generale_email,
+                    $entite->dga_email,
+                    $entite->assistante_dg_email,
+                    $entite->pca_email,
+                ]);
+
                 User::whereIn('email', $emails)->delete();
-                
-                // Suppression en cascade (Objectifs/Evaluations)
+
                 Objectif::where('assignable_type', Entite::class)->where('assignable_id', $entite->id)->delete();
                 Evaluation::where('evaluable_type', Entite::class)->where('evaluable_id', $entite->id)->delete();
-                
+
                 $entite->delete();
             }
         });
 
-        return redirect()->route('admin.entites.index')->with('status', 'Système réinitialisé.');
+        return redirect()->route('admin.entites.index')->with('status', 'Systeme reinitialise.');
     }
 
     private function validateEntite(Request $request, ?Entite $entite = null): array
@@ -321,13 +420,60 @@ class EntiteController extends Controller
         ]) + ['nom' => 'Faitiere'];
     }
 
-    private function uniqueUserEmailRule($email) {
+    private function uniqueUserEmailRule(?string $email)
+    {
         return Rule::unique('users', 'email')->ignore(User::where('email', $email)->value('id'));
     }
 
-    private function createPersonnelAccount($name, $email, $role, $extra = []) {
-        $pw = Str::random(12);
-        User::create(array_merge(['name' => $name, 'email' => $email, 'password' => Hash::make($pw), 'role' => $role], $extra));
-        return ['name' => $name, 'email' => $email, 'plain_password' => $pw, 'role' => $role];
+    private function createPersonnelAccount(string $name, string $email, string $role, array $extra = []): array
+    {
+        $password = Str::random(12);
+
+        User::create(array_merge([
+            'name' => $name,
+            'email' => $email,
+            'password' => Hash::make($password),
+            'role' => $role,
+        ], $extra));
+
+        return [
+            'name' => $name,
+            'email' => $email,
+            'plain_password' => $password,
+            'role' => $role,
+        ];
+    }
+
+    private function syncPersonnelAccount(string $currentEmail, string $newEmail, string $name, string $role, array $extra = []): void
+    {
+        $user = User::where('email', $currentEmail)->first();
+
+        if (!$user) {
+            return;
+        }
+
+        $user->update(array_merge([
+            'name' => $name,
+            'email' => $newEmail,
+            'role' => $role,
+        ], $extra));
+    }
+
+    /**
+     * Affiche le formulaire de creation d'une direction pour la faitiere.
+     */
+    public function createDirection(): View
+    {
+        $entite = Entite::latest()->first();
+
+        if (!$entite) {
+            return redirect()->route('admin.entites.index')->with('error', 'Configurez la Faitiere.');
+        }
+
+        return view('admin.directions.create', [
+            'entite' => $entite,
+            'delegations' => collect(),
+            'faitiere' => true,
+        ]);
     }
 }

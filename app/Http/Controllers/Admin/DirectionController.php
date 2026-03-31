@@ -39,17 +39,8 @@ class DirectionController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $directeurNotes = Evaluation::query()
-            ->selectRaw('evaluable_id, MAX(note_finale) as best_note')
-            ->where('evaluable_type', Direction::class)
-            ->where('statut', 'valide')
-            ->whereIn('evaluable_id', $directeurs->pluck('id'))
-            ->groupBy('evaluable_id')
-            ->pluck('best_note', 'evaluable_id');
-
         return view('admin.delegations_techniques.directeurs_index', [
             'directeurs' => $directeurs,
-            'directeurNotes' => $directeurNotes,
             'delegations' => $delegations,
             'activeDelegationId' => $delegationId,
             'selectedDelegation' => $selectedDelegation,
@@ -167,8 +158,10 @@ class DirectionController extends Controller
             ->latest()
             ->get();
 
-        $servicesCount     = Service::query()->count();
-        $secretariatsCount = $delegations->count();
+        $servicesCount = Service::query()->count();
+        $secretariatsCount = Direction::query()
+            ->whereNotNull('secretaire_nom')
+            ->count();
         $agentsCount = Agent::query()->count();
 
         $recentServices = Service::query()
@@ -427,7 +420,7 @@ class DirectionController extends Controller
         $direction->delete();
 
         return redirect()
-            ->route('admin.directions.index')
+            ->back()
             ->with('status', 'Direction supprimee avec succes.');
     }
 
