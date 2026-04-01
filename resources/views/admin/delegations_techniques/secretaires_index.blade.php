@@ -40,7 +40,7 @@
                                 <th>Delegation</th>
                                 <th>Secretaire</th>
                                 <th>Email</th>
-                                <th>Telephone</th>
+                                <th class="w-24 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -50,7 +50,14 @@
                                     <td>{{ $direction->delegationTechnique?->region }} / {{ $direction->delegationTechnique?->ville }}</td>
                                     <td>{{ $direction->secretaire_prenom }} {{ $direction->secretaire_nom }}</td>
                                     <td>{{ $direction->secretaire_email }}</td>
-                                    <td>{{ $direction->secretaire_telephone }}</td>
+                                    <td class="text-center">
+                                        <a href="{{ route('admin.secretaires.show', $direction->id) }}" class="text-cyan-500 hover:text-cyan-700 mr-2" title="Voir">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ route('admin.secretaires.edit', $direction->id) }}" class="text-amber-500 hover:text-amber-700" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr><td colspan="5" class="py-8 text-center text-slate-500">Aucun secretaire trouve.</td></tr>

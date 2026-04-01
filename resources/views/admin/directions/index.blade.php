@@ -1,465 +1,193 @@
 @extends('layouts.app')
 
-@section('title', 'Delegation Technique | '.config('app.name', 'SGP-RCPB'))
-
-@push('head')
-<style>
-    .app-content-header { display: none !important; }
-    .app-content { background: #ffffff !important; padding: 0 !important; }
-    .app-content > .container-fluid { padding: 0 !important; max-width: 100% !important; }
-    .app-main { background: #ffffff !important; }
-
-    .dt-page {
-        min-height: 100vh;
-        background:
-            radial-gradient(circle at 18% 14%, rgba(34, 197, 94, 0.08), transparent 24%),
-            radial-gradient(circle at 82% 16%, rgba(34, 197, 94, 0.06), transparent 18%),
-            linear-gradient(180deg, #ffffff 0%, #f0f9f4 48%, #f8fcfa 100%);
-        color: #374151;
-    }
-
-    .dt-stage {
-        width: 100%;
-        margin: 0;
-        padding: 1.5rem 0 2rem;
-        position: relative;
-        max-width: none;
-    }
-
-    .dt-panel {
-        background: linear-gradient(180deg, rgba(240, 253, 250, 0.88), rgba(229, 250, 245, 0.86));
-        border: 1px solid rgba(34, 197, 94, 0.20);
-        border-radius: 1.1rem;
-        box-shadow:
-            inset 0 1px 0 rgba(34, 197, 94, 0.04),
-            0 24px 40px rgba(34, 197, 94, 0.08);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-    }
-
-    .dt-panel-soft {
-        background: linear-gradient(180deg, rgba(240, 253, 250, 0.80), rgba(229, 250, 245, 0.78));
-        border: 1px solid rgba(34, 197, 94, 0.16);
-        border-radius: 0.95rem;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-    }
-
-    .dt-muted {
-        color: #6b7280;
-        font-size: 0.7rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        font-weight: 700;
-    }
-
-    .dt-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        padding: 0.48rem 0.8rem;
-        border-radius: 999px;
-        background: rgba(34, 197, 94, 0.12);
-        border: 1px solid rgba(34, 197, 94, 0.20);
-        color: #16a34a;
-        font-size: 0.72rem;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-    }
-
-    .dt-heading {
-        font-size: clamp(2rem, 3vw, 3rem);
-        line-height: 1;
-        font-weight: 900;
-        color: #1f2937;
-        text-shadow: 0 8px 24px rgba(34, 197, 94, 0.08);
-    }
-
-    .dt-copy {
-        max-width: 43rem;
-        color: #4b5563;
-        line-height: 1.65;
-    }
-
-    .dt-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.45rem;
-        border: 0;
-        border-radius: 0.8rem;
-        padding: 0.75rem 1rem;
-        text-decoration: none;
-        font-size: 0.8rem;
-        font-weight: 700;
-        transition: 0.15s ease;
-        cursor: pointer;
-    }
-
-    .dt-btn-primary {
-        background: linear-gradient(180deg, #22c55e, #16a34a);
-        color: #ffffff;
-        box-shadow: 0 10px 24px rgba(34, 197, 94, 0.30);
-    }
-
-    .dt-btn-soft {
-        background: rgba(34, 197, 94, 0.10);
-        color: #16a34a;
-        border: 1px solid rgba(34, 197, 94, 0.20);
-    }
-
-    .dt-btn-danger {
-        background: rgba(239, 68, 68, 0.10);
-        color: #dc2626;
-        border: 1px solid rgba(239, 68, 68, 0.20);
-    }
-
-    .dt-stat {
-        font-size: 2.4rem;
-        line-height: 1;
-        font-weight: 900;
-        color: #1f2937;
-    }
-
-    .dt-note {
-        color: #22c55e;
-        font-size: 0.78rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-    }
-
-    .dt-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.45rem;
-        color: #16a34a;
-        font-size: 0.78rem;
-        font-weight: 700;
-    }
-
-    .dt-status::before {
-        content: '';
-        width: 0.5rem;
-        height: 0.5rem;
-        border-radius: 999px;
-        background: #22c55e;
-    }
-
-    .dt-hero {
-        min-height: 220px;
-    }
-
-    .dt-grid {
-        display: grid;
-        grid-template-columns: 1.35fr 1fr 1fr;
-        gap: 0.85rem;
-        align-items: stretch;
-    }
-
-    .dt-stack {
-        display: grid;
-        gap: 0.85rem;
-    }
-
-    .dt-list {
-        display: grid;
-        gap: 0.85rem;
-    }
-
-    .dt-list__item {
-        display: flex;
-        justify-content: space-between;
-        gap: 1rem;
-        border-radius: 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.05);
-        padding: 1rem;
-    }
-
-    .dt-list__meta {
-        color: #cbd5e1;
-        font-size: 0.9rem;
-    }
-
-    .dt-inline-form summary {
-        list-style: none;
-        display: inline-flex;
-    }
-
-    .dt-inline-form summary::-webkit-details-marker {
-        display: none;
-    }
-
-    .dt-table-wrap {
-        overflow: hidden;
-        border-radius: 1rem;
-        border: 1px solid rgba(255,255,255,0.08);
-        background: rgba(15, 23, 42, 0.18);
-    }
-
-    .dt-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-
-    .dt-table thead th {
-        background: rgba(255,255,255,0.07);
-        color: #94a3b8;
-        font-size: 0.68rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        font-weight: 700;
-        padding: 0.85rem 1rem;
-    }
-
-    .dt-table tbody td {
-        padding: 0.95rem 1rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        color: #e2e8f0;
-        font-size: 0.92rem;
-        background: rgba(2, 6, 23, 0.10);
-    }
-
-    .dt-table tbody tr:hover td {
-        background: rgba(255,255,255,0.04);
-    }
-
-    .dt-icon-btn {
-        width: 2.1rem;
-        height: 2.1rem;
-        padding: 0;
-    }
-
-    @media (max-width: 1100px) {
-        .dt-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .dt-stage {
-            width: 100%;
-        }
-
-        .dt-list__item {
-            flex-direction: column;
-        }
-    }
-</style>
-@endpush
+@section('title', 'Délégation Technique | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="dt-page">
-    <div class="dt-stage space-y-5">
-        @if (session('status'))
-            <div data-auto-dismiss="4000" class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                {{ session('status') }}
-            </div>
-        @endif
+<div class="min-h-screen bg-[#f8fafc] p-4 lg:p-8 font-sans">
+    <div class="max-w-[1600px] mx-auto space-y-8">
 
-        <section class="dt-panel dt-hero p-6 lg:p-8">
-            <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
-                <div class="w-full max-w-none">
-                    <div class="flex flex-wrap gap-2">
-                        <span class="dt-badge">{{ $delegations->count() }} delegations configurees</span>
-                        <span class="dt-badge">{{ $directionsCount }} Directeur(s) Technique(s)</span>
-                        <span class="dt-badge">{{ $servicesCount }} Services</span>
-                    </div>
-                    <p class="dt-muted mt-4">Administration / Referentiel</p>
-                    <h1 class="dt-heading mt-3">Delegation Technique</h1>
-                    <p class="dt-copy mt-3 text-sm">
-                        La delegation technique regroupe les directeurs techniques, les services, les secretaires et les agents de terrain. Cette page sert de cockpit central pour configurer les delegations et piloter la structure technique.
-                    </p>
-                </div>
-
-                <div class="flex flex-wrap gap-3 xl:justify-end">
-                    <a href="{{ route('admin.delegations-techniques.directeurs.index') }}" class="dt-btn dt-btn-soft">
-                        Voir les D.T.
-                    </a>
-                    <a href="{{ route('admin.directions.create') }}" data-open-create-modal data-modal-title="Ajouter un Directeur Technique" class="dt-btn dt-btn-primary">
-                        Ajouter un D.T.
-                    </a>
+        {{-- HEADER : Titre & Actions --}}
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div>
+                <h1 class="text-3xl font-black text-slate-800 tracking-tight">Délégations Techniques</h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Référentiel</span>
+                    <i class="fas fa-chevron-right text-[10px] text-slate-300"></i>
+                    <span class="text-xs font-bold text-cyan-500 uppercase tracking-widest">Pilotage technique</span>
                 </div>
             </div>
-        </section>
-
-        <section class="dt-grid">
-            <article class="dt-panel p-5 lg:p-6">
-                <p class="dt-muted">Delegations</p>
-                <h2 class="mt-2 text-2xl font-bold text-white">Structures configurees</h2>
-                <p class="dt-stat mt-3">{{ $delegations->count() }}</p>
-                <p class="mt-3 text-sm text-slate-300">Maximum autorise: 3 delegations techniques actives.</p>
-                <p class="dt-note mt-2">Couverture: {{ min($delegations->count(), 3) }} / 3</p>
-                <div class="mt-5 flex flex-wrap gap-2">
-                    @php $hasDelegationFormErrors = $errors->has('region') || $errors->has('ville') || $errors->has('secretariat_telephone'); @endphp
-                    @if ($delegations->count() < 3)
-                        <details class="dt-inline-form" @if ($hasDelegationFormErrors) open @endif>
-                            <summary class="dt-btn dt-btn-primary">Ajouter une delegation</summary>
-                            <form method="POST" action="{{ route('admin.delegations-techniques.store') }}" class="mt-4 grid min-w-[300px] gap-3 sm:min-w-[420px]">
-                                @csrf
-                                <div class="space-y-2">
-                                    <label for="region" class="text-sm font-semibold text-slate-300">Region</label>
-                                    <input id="region" name="region" type="text" value="{{ old('region') }}" required class="ent-input" placeholder="Ex: Centre">
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="ville" class="text-sm font-semibold text-slate-300">Ville</label>
-                                    <input id="ville" name="ville" type="text" value="{{ old('ville') }}" required class="ent-input" placeholder="Ex: Ouagadougou">
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="secretariat_telephone" class="text-sm font-semibold text-slate-300">Numero du secretariat</label>
-                                    <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone') }}" required class="ent-input" placeholder="+226 70 00 00 00">
-                                </div>
-                                <button type="submit" class="dt-btn dt-btn-primary justify-center">Configurer la delegation</button>
-                            </form>
-                        </details>
-                    @else
-                        <span class="dt-status">Configuration complete</span>
-                    @endif
-                </div>
-            </article>
-
-            <div class="dt-stack">
-                <article class="dt-panel p-4">
-                    <p class="dt-muted">Services</p>
-                    <div class="mt-2 flex items-end justify-between gap-3">
-                        <div>
-                            <p class="dt-stat">{{ $servicesCount }}</p>
-                            <p class="mt-2 text-sm text-slate-300">Rattaches aux delegations techniques</p>
-                        </div>
-                        <div class="flex gap-2 flex-wrap justify-end">
-                            <a href="{{ route('admin.delegations-techniques.services.index') }}" class="dt-btn dt-btn-soft">Index</a>
-                            <a href="{{ route('admin.services.create') }}" data-open-create-modal data-modal-title="Ajouter un service" class="dt-btn dt-btn-primary">Ajouter</a>
-                        </div>
-                    </div>
-                </article>
-                <article class="dt-panel p-4">
-                    <p class="dt-muted">Agents</p>
-                    <div class="mt-2 flex items-end justify-between gap-3">
-                        <div>
-                            <p class="dt-stat">{{ $agentsCount }}</p>
-                            <p class="mt-2 text-sm text-slate-300">Personnel technique rattache</p>
-                        </div>
-                        <div class="flex gap-2 flex-wrap justify-end">
-                            <a href="{{ route('admin.delegations-techniques.agents.index') }}" class="dt-btn dt-btn-soft">Index</a>
-                            <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="dt-btn dt-btn-primary">Ajouter</a>
-                        </div>
-                    </div>
-                </article>
+            
+            <div class="flex items-center gap-3">
+                <a href="{{ route('admin.delegations-techniques.directeurs.index') }}" class="h-12 px-6 bg-white border border-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
+                    <i class="fas fa-user-tie text-slate-400"></i> Voir les Directeurs
+                </a>
+                <a href="{{ route('admin.directions.create') }}" data-open-modal data-title="Ajouter un Directeur Technique" class="h-12 px-6 bg-cyan-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-cyan-600 transition-all shadow-lg shadow-cyan-100">
+                    <i class="fas fa-plus"></i> Nouveau Directeur
+                </a>
             </div>
+        </div>
 
-            <div class="dt-stack">
-                <article class="dt-panel p-4">
-                    <p class="dt-muted">Secretariat</p>
-                    <div class="mt-2 flex items-end justify-between gap-3">
-                        <div>
-                            <p class="dt-stat">{{ $secretariatsCount }}</p>
-                            <p class="mt-2 text-sm text-slate-300">Secretaires techniques rattaches</p>
-                        </div>
-                        <div class="flex gap-2 flex-wrap justify-end">
-                            <a href="{{ route('admin.delegations-techniques.secretaires.index') }}" class="dt-btn dt-btn-soft">Index</a>
-                            <a href="{{ route('admin.delegations-techniques.directeurs.index') }}" class="dt-btn dt-btn-soft">Directions</a>
-                        </div>
-                    </div>
-                </article>
-                <article class="dt-panel-soft p-4 flex items-center justify-between gap-4">
+        {{-- SECTION KPI (Style SaaS) --}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            @php
+                $stats_kpi = [
+                    ['label' => 'Délégations', 'val' => $delegations->count(), 'icon' => 'fas fa-map-marked-alt', 'grad' => 'from-cyan-400 to-blue-500', 'meta' => 'Sur 3 autorisées'],
+                    ['label' => 'Directeurs T.', 'val' => $directionsCount, 'icon' => 'fas fa-user-shield', 'grad' => 'from-emerald-400 to-teal-500', 'meta' => 'Personnel cadre'],
+                    ['label' => 'Services', 'val' => $servicesCount, 'icon' => 'fas fa-layer-group', 'grad' => 'from-orange-400 to-amber-500', 'meta' => 'Unités techniques'],
+                ];
+            @endphp
+
+            @foreach($stats_kpi as $k)
+            <div class="relative overflow-hidden rounded-[32px] p-8 text-white shadow-xl shadow-slate-200/50 bg-gradient-to-br {{ $k['grad'] }}">
+                <div class="flex justify-between items-start">
                     <div>
-                        <p class="dt-muted">Etat</p>
-                        <p class="mt-2 text-sm text-white">Reseau technique actif et pret pour le pilotage</p>
+                        <p class="text-4xl font-black tracking-tighter">{{ $k['val'] }}</p>
+                        <p class="text-xs font-bold opacity-80 mt-1 uppercase tracking-widest">{{ $k['label'] }}</p>
                     </div>
-                    <span class="dt-status">En ligne</span>
-                </article>
-            </div>
-        </section>
-
-        <section class="dt-panel p-5">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <div>
-                    <p class="dt-muted">Liste Detaillee</p>
-                    <h2 class="text-xl font-bold text-white mt-1">Delegations techniques configurees</h2>
+                    <div class="bg-white/20 h-12 w-12 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                        <i class="{{ $k['icon'] }} text-xl"></i>
+                    </div>
                 </div>
-                <span class="dt-badge">{{ $delegations->count() }} / 3</span>
+                <p class="mt-6 text-[10px] font-bold opacity-70 uppercase tracking-widest">{{ $k['meta'] }}</p>
             </div>
+            @endforeach
+        </div>
 
-            <div class="dt-list">
-                @forelse ($delegations as $delegation)
-                    <div class="dt-list__item">
-                        <div>
-                            <p class="font-semibold text-slate-900 text-lg">{{ $delegation->region }} / {{ $delegation->ville }}</p>
-                            <p class="dt-list__meta mt-2">Secretariat: {{ $delegation->secretariat_telephone }}</p>
-                            <p class="mt-1 text-sm text-slate-400">{{ $delegation->directions_count }} directeur(s) rattache(s)</p>
-                        </div>
-                        <div class="text-right">
-                            <div class="flex items-center justify-end gap-2 flex-wrap">
-                                <a href="{{ route('admin.delegations-techniques.directeurs.index', ['delegation_id' => $delegation->id]) }}" class="dt-btn dt-btn-soft">Directeurs</a>
-                                <a href="{{ route('admin.delegations-techniques.services.index', ['delegation_id' => $delegation->id]) }}" class="dt-btn dt-btn-soft">Services</a>
-                                <a href="{{ route('admin.delegations-techniques.edit', $delegation) }}" class="dt-btn dt-btn-soft">Modifier</a>
-                                <form method="POST" action="{{ route('admin.delegations-techniques.destroy', $delegation) }}" onsubmit="return confirm('Supprimer cette delegation technique ?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="dt-btn dt-btn-danger">Supprimer</button>
-                                </form>
+        {{-- MAIN GRID --}}
+        <div class="grid grid-cols-12 gap-8">
+            
+            {{-- COLONNE GAUCHE (8/12) : Liste des Délégations --}}
+            <div class="col-span-12 lg:col-span-8 space-y-8">
+                
+                <div class="bg-white rounded-[35px] p-8 shadow-sm border border-slate-100">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-lg font-bold text-slate-800">Structures de Coordination</h3>
+                        <span class="px-3 py-1 bg-slate-50 text-slate-400 text-[10px] font-black rounded-full uppercase tracking-widest border border-slate-100">
+                            {{ $delegations->count() }} / 3 Active
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        @forelse ($delegations as $delegation)
+                        <div class="group flex flex-col sm:flex-row sm:items-center justify-between p-6 rounded-[24px] border border-slate-50 bg-slate-50/30 hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
+                            <div class="flex items-center gap-5">
+                                <div class="h-14 w-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-cyan-500 text-xl font-black group-hover:bg-cyan-500 group-hover:text-white transition-all">
+                                    {{ substr($delegation->ville, 0, 1) }}
+                                </div>
+                                <div>
+                                    <p class="font-black text-slate-800 text-lg tracking-tight">{{ $delegation->region }} <span class="text-cyan-500 mx-1">/</span> {{ $delegation->ville }}</p>
+                                    <p class="text-xs text-slate-400 font-medium mt-1">Secrétariat : <span class="text-slate-600">{{ $delegation->secretariat_telephone }}</span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 mt-4 sm:mt-0">
+                                <a href="{{ route('admin.delegations-techniques.edit', $delegation) }}" class="h-10 w-10 bg-white border border-slate-100 text-slate-400 rounded-xl flex items-center justify-center hover:text-cyan-500 transition-colors shadow-sm">
+                                    <i class="fas fa-pen text-xs"></i>
+                                </a>
+                                <div class="h-10 w-px bg-slate-100 mx-1"></div>
+                                <a href="{{ route('admin.delegations-techniques.directeurs.index', ['delegation_id' => $delegation->id]) }}" class="px-4 py-2 bg-white text-slate-600 text-[10px] font-black uppercase rounded-xl border border-slate-100 hover:bg-slate-50 shadow-sm">Directions</a>
+                                <a href="{{ route('admin.delegations-techniques.services.index', ['delegation_id' => $delegation->id]) }}" class="px-4 py-2 bg-white text-slate-600 text-[10px] font-black uppercase rounded-xl border border-slate-100 hover:bg-slate-50 shadow-sm">Services</a>
                             </div>
                         </div>
-                    </div>
-                @empty
-                    <p class="text-sm text-slate-400">Aucune delegation configuree.</p>
-                @endforelse
-            </div>
-        </section>
-
-        <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <section class="dt-panel p-5">
-                <div class="flex items-center justify-between gap-3 mb-4">
-                    <div>
-                        <p class="dt-muted">Flux Recent</p>
-                        <h2 class="text-xl font-bold text-white mt-1">Services recents</h2>
-                    </div>
-                    <a href="{{ route('admin.delegations-techniques.services.index') }}" class="dt-btn dt-btn-soft">Voir tout</a>
-                </div>
-                <div class="dt-list">
-                    @forelse ($recentServices as $service)
-                        <div class="dt-panel-soft p-4 flex items-center justify-between gap-4">
-                            <div>
-                                <p class="font-semibold text-white">{{ $service->nom }}</p>
-                                <p class="mt-1 text-sm text-slate-300">{{ $service->direction?->nom ?? 'Sans direction' }}</p>
-                            </div>
-                            <a href="{{ route('admin.delegations-techniques.services.index') }}" class="dt-btn dt-btn-soft dt-icon-btn" title="Ouvrir">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
-                            </a>
-                        </div>
-                    @empty
-                        <p class="text-sm text-slate-400">Aucun service recent.</p>
-                    @endforelse
-                </div>
-            </section>
-
-            <section class="dt-panel p-5">
-                <div class="flex items-center justify-between gap-3 mb-4">
-                    <div>
-                        <p class="dt-muted">Equipe</p>
-                        <h2 class="text-xl font-bold text-white mt-1">Agents recents</h2>
-                    </div>
-                    <a href="{{ route('admin.delegations-techniques.agents.index') }}" class="dt-btn dt-btn-soft">Voir tout</a>
-                </div>
-                <div class="dt-list">
-                    @forelse ($recentAgents as $agent)
-                        <div class="dt-panel-soft p-4 flex items-center justify-between gap-4">
-                            <div>
-                                    <p class="font-semibold text-white">{{ $agent->prenom }} {{ $agent->nom }}</p>
-                                    <p class="mt-1 text-sm text-slate-300">{{ $agent->service?->nom ?? 'Sans service' }}</p>
-                                </div>
-                                <span class="dt-badge">Agent</span>
-                            </div>
                         @empty
-                            <p class="text-sm text-slate-400">Aucun agent recent.</p>
+                        <div class="py-12 text-center">
+                            <i class="fas fa-map-marker-slash text-4xl text-slate-200 mb-4"></i>
+                            <p class="text-slate-400 font-medium italic">Aucune délégation configurée pour le moment.</p>
+                        </div>
                         @endforelse
                     </div>
                 </div>
-            </section>
-        </section>
+
+                {{-- SERVICES RÉCENTS (Horizontal Scroll ou Grid) --}}
+                <div class="bg-white rounded-[35px] p-8 shadow-sm border border-slate-100">
+                    <h3 class="text-xs font-black text-slate-300 uppercase tracking-[0.2em] mb-6">Derniers Services Techniques</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach ($recentServices->take(4) as $service)
+                        <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-50 group hover:bg-white hover:border-cyan-100 transition-all">
+                            <div class="h-10 w-10 rounded-xl bg-cyan-100 text-cyan-600 flex items-center justify-center group-hover:bg-cyan-500 group-hover:text-white transition-all">
+                                <i class="fas fa-cog text-xs"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-black text-slate-700 truncate">{{ $service->nom }}</p>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase truncate">{{ $service->direction?->nom ?? 'Standard' }}</p>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+
+            {{-- COLONNE DROITE (4/12) --}}
+            <div class="col-span-12 xl:col-span-4 space-y-8">
+                
+                {{-- FORMULAIRE AJOUT RAPIDE --}}
+                @if ($delegations->count() < 3)
+                <div class="bg-slate-900 rounded-[35px] p-8 text-white shadow-xl shadow-slate-200">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center text-emerald-400">
+                            <i class="fas fa-plus-circle text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-black italic">Nouvelle Délégation</h3>
+                    </div>
+
+                    <form method="POST" action="{{ route('admin.delegations-techniques.store') }}" class="space-y-5">
+                        @csrf
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase tracking-widest opacity-50">Région</label>
+                            <input name="region" type="text" placeholder="Ex: Centre" class="w-full bg-white/5 border-none rounded-2xl p-4 text-white text-sm focus:ring-2 focus:ring-emerald-500" required>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase tracking-widest opacity-50">Ville</label>
+                            <input name="ville" type="text" placeholder="Ex: Ouagadougou" class="w-full bg-white/5 border-none rounded-2xl p-4 text-white text-sm focus:ring-2 focus:ring-emerald-500" required>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase tracking-widest opacity-50">Secrétariat</label>
+                            <input name="secretariat_telephone" type="text" placeholder="+226 25 XX XX XX" class="w-full bg-white/5 border-none rounded-2xl p-4 text-white text-sm focus:ring-2 focus:ring-emerald-500" required>
+                        </div>
+                        <button type="submit" class="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">
+                            Activer la Délégation
+                        </button>
+                    </form>
+                </div>
+                @else
+                <div class="bg-emerald-500 rounded-[35px] p-8 text-white text-center">
+                    <div class="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-check-double text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-black italic">Configuration Complète</h3>
+                    <p class="text-xs opacity-80 mt-2">Le quota de 3 délégations techniques a été atteint.</p>
+                </div>
+                @endif
+
+                {{-- AGENTS RÉCENTS --}}
+                <div class="bg-white rounded-[35px] p-8 shadow-sm border border-slate-100">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xs font-black text-slate-300 uppercase tracking-[0.2em]">Agents Techniques</h3>
+                        <span class="h-6 w-6 rounded-lg bg-slate-50 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-100">{{ $agentsCount }}</span>
+                    </div>
+
+                    <div class="space-y-5">
+                        @foreach ($recentAgents->take(5) as $agent)
+                        <div class="flex items-center gap-4">
+                            <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 text-xs font-black">
+                                {{ strtoupper(substr($agent->prenom, 0, 1)) }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-bold text-slate-800 truncate">{{ $agent->prenom }} {{ $agent->nom }}</p>
+                                <p class="text-[10px] text-slate-400 font-medium uppercase">{{ $agent->service?->nom ?? 'Agent de terrain' }}</p>
+                            </div>
+                            <div class="h-2 w-2 rounded-full bg-emerald-400"></div>
+                        </div>
+                        @endforeach
+                    </div>
+                    
+                    <a href="{{ route('admin.delegations-techniques.agents.index') }}" class="mt-8 w-full block py-3 text-center text-[10px] font-black uppercase text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl hover:bg-slate-50 hover:border-slate-200 transition-all">
+                        Gérer le personnel
+                    </a>
+                </div>
+
+            </div>
+        </div>
     </div>
 </div>
 @endsection

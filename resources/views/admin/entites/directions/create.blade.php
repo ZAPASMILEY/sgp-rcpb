@@ -1,95 +1,103 @@
 @extends('layouts.app')
 
-@section('title', 'Nouvelle Direction Faitiere | '.config('app.name', 'SGP-RCPB'))
-
 @section('content')
-    <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="w-full">
-            <section class="admin-panel ent-window h-full w-full p-6 sm:p-8">
-                <div class="ent-window__bar" aria-hidden="true">
-                    <span class="ent-window__dot ent-window__dot--danger"></span>
-                    <span class="ent-window__dot ent-window__dot--warn"></span>
-                    <span class="ent-window__dot ent-window__dot--ok"></span>
-                    <span class="ent-window__label">Fenetre d'ajout</span>
-                </div>
+@php $isModal = request()->has('modal'); @endphp
 
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Faitiere / Direction</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Nouvelle Direction Faitiere</h1>
-                        <p class="mt-2 text-sm text-slate-600">Cette creation est dediee aux directions de la Faitiere uniquement.</p>
-                    </div>
-                    <a href="{{ route('admin.entites.index') }}" target="_top" class="ent-btn ent-btn-soft">Retour Faitiere</a>
-                </div>
-
-                @if ($errors->any())
-                    <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {{ $errors->first() }}
-                    </div>
-                @endif
-
-                <form method="POST" action="{{ route('admin.entites.directions.store') }}" target="_top" class="mt-6 grid gap-6">
-                    @csrf
-
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Direction</p>
-
-                        <div class="space-y-2">
-                            <label for="nom" class="text-sm font-semibold text-slate-700">Nom de la direction</label>
-                            <input id="nom" name="nom" type="text" value="{{ old('nom') }}" required class="ent-input" placeholder="Direction des Operations">
-                        </div>
-
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="directeur_prenom" class="text-sm font-semibold text-slate-700">Prenom du directeur</label>
-                                <input id="directeur_prenom" name="directeur_prenom" type="text" value="{{ old('directeur_prenom') }}" required class="ent-input" placeholder="Prenom">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="directeur_nom" class="text-sm font-semibold text-slate-700">Nom du directeur</label>
-                                <input id="directeur_nom" name="directeur_nom" type="text" value="{{ old('directeur_nom') }}" required class="ent-input" placeholder="Nom">
-                            </div>
-                        </div>
-
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="directeur_email" class="text-sm font-semibold text-slate-700">Email professionnel</label>
-                                <input id="directeur_email" name="directeur_email" type="email" value="{{ old('directeur_email') }}" required class="ent-input" placeholder="directeur@rcpb.org">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="directeur_numero" class="text-sm font-semibold text-slate-700">Telephone</label>
-                                <input id="directeur_numero" name="directeur_numero" type="text" value="{{ old('directeur_numero') }}" class="ent-input" placeholder="+226 70 00 00 00">
-                            </div>
-                        </div>
-
-                        <div class="space-y-2">
-                            <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Telephone du secretariat (optionnel)</label>
-                            <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone') }}" class="ent-input" placeholder="+226 70 00 00 00">
-                        </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
-                        Un compte directeur sera cree automatiquement avec envoi du mot de passe par e-mail.
-                    </div>
-
-                    <button type="submit" id="submit-btn" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">
-                        Enregistrer la direction
-                    </button>
-                </form>
-
-                @push('scripts')
-                <script>
-                    document.querySelector('form').addEventListener('submit', function () {
-                        var btn = document.getElementById('submit-btn');
-                        if (!btn) {
-                            return;
-                        }
-
-                        btn.disabled = true;
-                        btn.textContent = 'Enregistrement...';
-                    });
-                </script>
-                @endpush
-            </section>
+<div class="{{ $isModal ? '' : 'min-h-screen bg-[#f8fafc] p-4 lg:p-12' }}">
+    <div class="max-w-5xl mx-auto">
+        
+        {{-- Header stylisé --}}
+        <div class="mb-10 text-center lg:text-left">
+            <h1 class="text-4xl font-black text-slate-800 tracking-tighter">Configuration Direction</h1>
+            <p class="text-slate-400 font-medium mt-2">Enregistrement d'une nouvelle unité administrative pour la Faîtière.</p>
         </div>
-    </main>
+
+        <form method="POST" action="{{ route('admin.entites.directions.store') }}" target="_top" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            @csrf
+
+            {{-- COLONNE GAUCHE : Identité --}}
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="h-10 w-10 bg-cyan-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-cyan-100">
+                            <i class="fas fa-building text-sm"></i>
+                        </div>
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight">Détails de la Structure</h3>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="group">
+                            <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1 transition-colors group-focus-within:text-cyan-500">Nom de la Direction</label>
+                            <input name="nom" type="text" required class="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-4 mt-2 text-slate-700 font-bold focus:bg-white focus:border-cyan-500 focus:ring-0 transition-all placeholder-slate-300" placeholder="Ex: Direction de l'Audit Interne">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="group">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Prénom Directeur</label>
+                                <input name="directeur_prenom" type="text" required class="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-4 mt-2 font-bold focus:bg-white focus:border-cyan-500 focus:ring-0 transition-all" placeholder="Prénom">
+                            </div>
+                            <div class="group">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Nom Directeur</label>
+                                <input name="directeur_nom" type="text" required class="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-4 mt-2 font-bold focus:bg-white focus:border-cyan-500 focus:ring-0 transition-all" placeholder="NOM">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Contact --}}
+                <div class="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="h-10 w-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-100">
+                            <i class="fas fa-at text-sm"></i>
+                        </div>
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight">Coordonnées & Accès</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="group">
+                            <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Email Pro</label>
+                            <input name="directeur_email" type="email" required class="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-4 mt-2 font-bold focus:bg-white focus:border-cyan-500 focus:ring-0 transition-all" placeholder="directeur@rcpb.org">
+                        </div>
+                        <div class="group">
+                            <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">Téléphone Secrétariat</label>
+                            <input name="secretariat_telephone" type="text" class="w-full bg-slate-50 border-2 border-transparent rounded-2xl p-4 mt-2 font-bold focus:bg-white focus:border-cyan-500 focus:ring-0 transition-all" placeholder="+226 XX XX XX XX">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- COLONNE DROITE : Résumé & Validation --}}
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-slate-900 rounded-[32px] p-8 text-white shadow-2xl shadow-slate-200 sticky top-8">
+                    <h3 class="text-xl font-black italic mb-6">Résumé</h3>
+                    
+                    <div class="space-y-6 border-b border-white/10 pb-6">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="opacity-50 font-bold uppercase">Type</span>
+                            <span class="font-black text-cyan-400">FAÎTIÈRE</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="opacity-50 font-bold uppercase">Statut</span>
+                            <span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg font-black">ACTIF</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <p class="text-[10px] font-bold text-white/40 leading-relaxed uppercase tracking-widest">
+                            En validant ce formulaire, un accès sécurisé sera créé pour le nouveau directeur.
+                        </p>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="w-full mt-10 py-5 bg-cyan-500 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-cyan-500/20 hover:bg-cyan-400 hover:-translate-y-1 transition-all duration-300">
+                        Créer la Direction
+                    </button>
+                    
+                    <a href="{{ route('admin.entites.index') }}" class="block w-full mt-4 py-4 text-center text-[10px] font-black uppercase text-white/30 hover:text-white transition-colors">
+                        Annuler l'opération
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection

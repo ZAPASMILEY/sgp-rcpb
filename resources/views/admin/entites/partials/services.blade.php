@@ -2,7 +2,7 @@
     <form method="GET" class="flex-1 mr-4">
         <input type="text" name="search_services" placeholder="Rechercher un service..." class="ent-input w-full" value="{{ request('search_services') }}">
     </form>
-    <a href="#" class="ent-btn ent-btn-primary">Ajouter un service</a>
+    <a href="{{ route('admin.services.create') }}" data-open-create-modal data-modal-title="Ajouter un service" class="ent-btn ent-btn-primary">Ajouter un service</a>
 </div>
 <div>
     <h2 class="text-lg font-bold mb-4">Liste des services</h2>

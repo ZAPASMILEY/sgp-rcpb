@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\LoginFailure;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,13 @@ class AuthenticatedSessionController extends Controller
         $remember = $request->boolean('remember');
 
         if (! Auth::attempt($credentials, $remember)) {
+            LoginFailure::query()->create([
+                'email' => $credentials['email'],
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 65535),
+                'attempted_at' => now(),
+            ]);
+
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);

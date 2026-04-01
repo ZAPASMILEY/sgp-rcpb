@@ -89,7 +89,14 @@ class EntiteController extends Controller
             $q->where('entite_id', $entite->id)->whereNull('delegation_technique_id');
         });
 
-        $secretairesQuery = (clone $agentsQuery)->where('fonction', 'like', '%secretaire%');
+        $secretairesQuery = Direction::query()
+            ->where('entite_id', $entite->id)
+            ->whereNull('delegation_technique_id')
+            ->where(function ($query) {
+                $query->whereNotNull('secretaire_nom')
+                    ->orWhereNotNull('secretaire_prenom')
+                    ->orWhereNotNull('secretaire_email');
+            });
 
         $dirIds = (clone $directionsQuery)->pluck('id');
         $serIds = (clone $servicesQuery)->pluck('id');
@@ -107,7 +114,7 @@ class EntiteController extends Controller
             'directions' => (clone $directionsQuery)->withCount('services')->latest()->get(),
             'allDirections' => (clone $directionsQuery)->get(),
             'services' => (clone $servicesQuery)->with('direction')->latest()->take(6)->get(),
-            'secretaires' => (clone $secretairesQuery)->latest()->take(6)->get(),
+            'secretaires' => (clone $secretairesQuery)->latest()->take(8)->get(),
             'agents' => (clone $agentsQuery)->with('service')->latest()->take(8)->get(),
             'bestNow' => [
                 'directions' => $this->getBestEval(Direction::class, $dirIds),
@@ -288,6 +295,46 @@ class EntiteController extends Controller
             'notes' => $notes,
             'search' => $search,
             'sort' => $sort,
+        ]);
+    }
+
+    public function indexSecretaires(Request $request): View
+    {
+        $entite = Entite::query()->latest()->first();
+        $search = trim((string) $request->query('search', ''));
+
+        $directions = Direction::query()
+            ->whereNull('delegation_technique_id')
+            ->when($entite, fn ($query) => $query->where('entite_id', $entite->id))
+            ->orderBy('nom')
+            ->get();
+
+        $secretaires = Direction::query()
+            ->whereNull('delegation_technique_id')
+            ->when($entite, fn ($query) => $query->where('entite_id', $entite->id))
+            ->where(function ($query) {
+                $query->whereNotNull('secretaire_nom')
+                    ->orWhereNotNull('secretaire_prenom')
+                    ->orWhereNotNull('secretaire_email');
+            })
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($subQuery) use ($search): void {
+                    $subQuery
+                        ->where('nom', 'like', "%{$search}%")
+                        ->orWhere('secretaire_prenom', 'like', "%{$search}%")
+                        ->orWhere('secretaire_nom', 'like', "%{$search}%")
+                        ->orWhere('secretaire_email', 'like', "%{$search}%");
+                });
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('admin.entites.secretaires.index', [
+            'entite' => $entite,
+            'directions' => $directions,
+            'secretaires' => $secretaires,
+            'search' => $search,
         ]);
     }
 
@@ -475,5 +522,21 @@ class EntiteController extends Controller
             'delegations' => collect(),
             'faitiere' => true,
         ]);
+    }
+
+    /**
+     * Affiche les détails d'un secrétaire (via la direction).
+     */
+    public function showSecretaire(Direction $direction): View
+    {
+        return view('admin.secretaires.show', compact('direction'));
+    }
+
+    /**
+     * Affiche le formulaire d'édition d'un secrétaire (via la direction).
+     */
+    public function editSecretaire(Direction $direction): View
+    {
+        return view('admin.secretaires.edit', compact('direction'));
     }
 }

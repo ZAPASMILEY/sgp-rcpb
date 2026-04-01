@@ -17,6 +17,8 @@ class SettingsController extends Controller
     {
         return view('admin.settings.edit', [
             'theme' => $request->user()->theme_preference ?? 'reference',
+            'maxLoginAttempts' => (int) $request->session()->get('admin_security.max_login_attempts', 3),
+            'lockoutTime' => (int) $request->session()->get('admin_security.lockout_time', 30),
         ]);
     }
 
@@ -55,6 +57,23 @@ class SettingsController extends Controller
         return redirect()
             ->route('admin.settings.edit')
             ->with('status', 'Mot de passe mis a jour avec succes.');
+    }
+
+    public function updateSecurity(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'max_login_attempts' => ['required', 'integer', 'min:1', 'max:10'],
+            'lockout_time' => ['required', 'integer', 'in:15,30,60,1440'],
+        ]);
+
+        $request->session()->put('admin_security', [
+            'max_login_attempts' => (int) $validated['max_login_attempts'],
+            'lockout_time' => (int) $validated['lockout_time'],
+        ]);
+
+        return redirect()
+            ->route('admin.settings.edit')
+            ->with('status', 'Politique de securite mise a jour avec succes.');
     }
 
     public function destroyAccount(Request $request): RedirectResponse

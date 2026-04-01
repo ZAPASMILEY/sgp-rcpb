@@ -24,6 +24,17 @@
         @livewireStyles
 
         <style>
+            html,
+            body {
+                min-height: 100%;
+            }
+
+            html:has(body.pca-theme),
+            html:has(body.embedded-frame) {
+                height: 100%;
+                overflow: hidden !important;
+            }
+
             .create-form-modal {
                 position: fixed;
                 inset: 0;
@@ -41,8 +52,8 @@
             }
 
             .create-form-modal__panel {
-                width: min(980px, 96vw);
-                height: min(86vh, 860px);
+                width: min(1040px, 98vw);
+                height: min(94vh, 920px);
                 border-radius: 18px;
                 border: 1px solid rgba(148, 163, 184, 0.45);
                 background: #ffffff;
@@ -89,11 +100,93 @@
                 border: 0;
                 background: #ffffff;
             }
+
+            .admin-sidebar__logo-image {
+                width: 4rem;
+                height: 4rem;
+                border-radius: 14px;
+                object-fit: cover;
+                background: #ffffff;
+                padding: 0.2rem;
+                border: 1px solid rgba(15, 23, 42, 0.08);
+                flex-shrink: 0;
+            }
+
+            body.embedded-frame {
+                background: #f8fafc;
+            }
+
+            body.embedded-frame #admin-sidebar,
+            body.embedded-frame .admin-topbar {
+                display: none !important;
+            }
+
+            body.embedded-frame .admin-content {
+                padding: 0 !important;
+            }
+
+            body.embedded-frame .admin-shell,
+            body.embedded-frame main.admin-shell,
+            body.embedded-frame div.admin-shell {
+                min-height: auto !important;
+                padding: 1rem !important;
+            }
+
+            .admin-layout,
+            .admin-content {
+                min-height: 100vh;
+            }
+
+            .admin-layout {
+                overflow: visible !important;
+            }
+
+            .admin-sidebar {
+                position: sticky;
+                top: 0;
+                align-self: flex-start;
+                height: 100vh;
+                overflow: hidden;
+                overflow-x: hidden;
+                min-height: 0;
+                overscroll-behavior: contain;
+            }
+
+            .admin-content {
+                height: 100vh;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                min-width: 0;
+            }
+
+            .admin-shell,
+            main.admin-shell,
+            div.admin-shell,
+            [class*=" min-h-screen"],
+            [class^="min-h-screen"] {
+                min-height: auto !important;
+                height: auto !important;
+            }
+
+            main,
+            section,
+            .admin-panel,
+            .ent-window,
+            .ent-card {
+                overflow: visible;
+            }
+
+            @media (max-width: 768px) {
+                .admin-content {
+                    height: auto;
+                    overflow: visible !important;
+                }
+            }
         </style>
 
         @stack('head')
     </head>
-    <body>
+    <body class="pca-theme {{ (request()->header('Sec-Fetch-Dest') === 'iframe' || request()->boolean('modal')) ? 'embedded-frame' : '' }}">
         @livewireScripts
         @php
             $themePreference = auth()->check() ? (auth()->user()->theme_preference ?? 'reference') : 'reference';
@@ -115,7 +208,7 @@
         <div id="admin-layout" class="admin-layout min-h-screen {{ $adminThemeClass }}">
             <aside id="admin-sidebar" class="admin-sidebar">
                 <div class="admin-sidebar__logo-card">
-                    <div class="admin-sidebar__logo-mark">R</div>
+                    <img src="{{ asset('images/rcpb-logo.jpeg') }}" alt="Logo RCPB" class="admin-sidebar__logo-image">
                     <div>
                         <p class="admin-sidebar__logo-title">RCPB</p>
                         <p class="admin-sidebar__logo-subtitle">Réseau des Caisses</p>
@@ -136,7 +229,7 @@
                     </div>
                 </div>
 
-                <nav class="admin-sidebar__nav" aria-label="Navigation PCA">
+                <nav class="admin-sidebar__nav flex min-h-0 flex-1 flex-col overflow-y-auto pr-1" aria-label="Navigation PCA">
                     <a href="{{ route('pca.dashboard') }}" class="admin-tab {{ request()->routeIs('pca.dashboard') ? 'is-active' : '' }}">
                         <span class="admin-tab__icon" aria-hidden="true">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 1 18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6Z"/></svg>
@@ -169,7 +262,7 @@
                     </a>
                 </nav>
 
-                <form method="POST" action="{{ route('pca.logout') }}" class="admin-sidebar__logout">
+                <form method="POST" action="{{ route('pca.logout') }}" class="admin-sidebar__logout pb-2">
                     @csrf
                     <button type="submit" class="ent-btn ent-btn-soft w-full">Déconnexion</button>
                 </form>
@@ -346,7 +439,9 @@
                     }
 
                     function openCreateModal(url, label) {
-                        createFrame.src = url;
+                        var targetUrl = new URL(url, window.location.origin);
+                        targetUrl.searchParams.set('modal', '1');
+                        createFrame.src = targetUrl.toString();
                         createTitle.textContent = label || "Formulaire d'ajout";
                         createModal.classList.add('is-open');
                         createModal.setAttribute('aria-hidden', 'false');

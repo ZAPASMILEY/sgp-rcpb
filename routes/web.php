@@ -38,11 +38,14 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware(['auth', 'admin'])->group(function (): void {
     // Route pour enregistrer un secrétaire depuis la modale de la Faitière
     Route::post('/admin/secretaires', [EntiteController::class, 'storeSecretaire'])->name('admin.secretaires.store');
+    Route::get('/admin/secretaires/{direction}', [EntiteController::class, 'showSecretaire'])->name('admin.secretaires.show');
+    Route::get('/admin/secretaires/{direction}/modifier', [EntiteController::class, 'editSecretaire'])->name('admin.secretaires.edit');
     Route::post('/admin/logout', [AuthenticatedSessionController::class, 'destroy'])->name('admin.logout');
     Route::get('/admin', DashboardController::class)->name('admin.dashboard');
     Route::get('/admin/statistiques', StatistiqueController::class)->name('admin.statistiques.index');
 
     Route::get('/admin/entites', [EntiteController::class, 'index'])->name('admin.entites.index');
+    Route::get('/admin/entites/secretaires', [EntiteController::class, 'indexSecretaires'])->name('admin.entites.secretaires.index');
     Route::post('/admin/entites/reinitialiser', [EntiteController::class, 'reset'])->name('admin.entites.reset');
     Route::get('/admin/entites/creer', [EntiteController::class, 'create'])->name('admin.entites.create');
     Route::get('/admin/entites/directions', [EntiteController::class, 'indexDirections'])->name('admin.entites.directions.index');
@@ -89,6 +92,12 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/caisses', [CaisseController::class, 'index'])->name('admin.caisses.index');
     Route::get('/admin/caisses/creer', [CaisseController::class, 'create'])->name('admin.caisses.create');
     Route::post('/admin/caisses', [CaisseController::class, 'store'])->name('admin.caisses.store');
+    Route::get('/admin/caisses/{caisse}', [CaisseController::class, 'show'])->name('admin.caisses.show');
+    Route::get('/admin/caisses/{caisse}/directions', [CaisseController::class, 'directionsIndex'])->name('admin.caisses.directions.index');
+    Route::get('/admin/caisses/{caisse}/services', [CaisseController::class, 'servicesIndex'])->name('admin.caisses.services.index');
+    Route::get('/admin/caisses/{caisse}/modifier', [CaisseController::class, 'edit'])->name('admin.caisses.edit');
+    Route::put('/admin/caisses/{caisse}', [CaisseController::class, 'update'])->name('admin.caisses.update');
+    Route::delete('/admin/caisses/{caisse}', [CaisseController::class, 'destroy'])->name('admin.caisses.destroy');
 
     Route::get('/admin/agences', [AgenceController::class, 'index'])->name('admin.agences.index');
     Route::get('/admin/agences/creer', [AgenceController::class, 'create'])->name('admin.agences.create');
@@ -122,6 +131,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
 
     Route::get('/admin/parametres', [SettingsController::class, 'edit'])->name('admin.settings.edit');
     Route::put('/admin/parametres/theme', [SettingsController::class, 'updateTheme'])->name('admin.settings.theme.update');
+    Route::put('/admin/parametres/securite', [SettingsController::class, 'updateSecurity'])->name('admin.settings.security.update');
     Route::put('/admin/parametres/mot-de-passe', [SettingsController::class, 'updatePassword'])->name('admin.settings.password.update');
     Route::delete('/admin/parametres/compte', [SettingsController::class, 'destroyAccount'])->name('admin.settings.account.destroy');
 });

@@ -2,196 +2,128 @@
 
 @section('title', 'Directions | SGP-RCPB')
 
-@push('head')
-<style>
-    /* Reset & Background */
-    .app-content-header { display: none !important; }
-    .app-main { background: #f8fafc !important; } /* Fond gris très clair pour faire ressortir les cartes */
-    
-    .fdi-wrapper { padding: 2rem 0; font-family: 'Inter', sans-serif; }
-    .fdi-container { max-width: 1100px; margin: auto; }
-
-    /* Glassmorphism Header */
-    .header-card {
-        background: white;
-        border-radius: 20px;
-        padding: 1.5rem 2rem;
-        border: 1px solid rgba(226, 232, 240, 0.8);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02);
-        margin-bottom: 2rem;
-    }
-
-    /* Nouveau Style de Table (Lignes espacées) */
-    .custom-table { width: 100%; border-spacing: 0 0.75rem; border-collapse: separate; }
-    .custom-table thead th { 
-        padding: 0 1.5rem 0.5rem; 
-        font-size: 11px; 
-        text-transform: uppercase; 
-        color: #94a3b8; 
-        font-weight: 700; 
-        letter-spacing: 1px;
-    }
-
-    .table-row { 
-        background: white; 
-        transition: transform 0.2s, box-shadow 0.2s;
-        border-radius: 16px;
-    }
-    .table-row:hover { 
-        transform: translateY(-2px); 
-        box-shadow: 0 8px 20px rgba(0,0,0,0.04); 
-    }
-
-    .table-row td { 
-        padding: 1.25rem 1.5rem; 
-        border-top: 1px solid #f1f5f9; 
-        border-bottom: 1px solid #f1f5f9; 
-        background: white;
-    }
-    .table-row td:first-child { border-left: 1px solid #f1f5f9; border-radius: 16px 0 0 16px; }
-    .table-row td:last-child { border-right: 1px solid #f1f5f9; border-radius: 0 16px 16px 0; }
-
-    /* Badges & Buttons */
-    .btn-add {
-        background: #10b981;
-        color: white;
-        padding: 0.7rem 1.5rem;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-    }
-    .btn-add:hover { background: #059669; color: white; transform: scale(1.02); }
-
-    .action-btn {
-        width: 38px; height: 38px;
-        border-radius: 10px;
-        display: inline-flex; align-items: center; justify-content: center;
-        background: #f1f5f9; color: #64748b;
-        transition: 0.2s;
-    }
-    .action-btn:hover { background: #e2e8f0; color: #1e293b; }
-    .btn-delete:hover { background: #fee2e2; color: #ef4444; }
-
-    .service-badge {
-        background: #ecfdf5;
-        color: #059669;
-        padding: 0.5rem 1rem;
-        border-radius: 10px;
-        font-weight: 700;
-        font-size: 0.8rem;
-        border: 1px solid #d1fae5;
-    }
-</style>
-@endpush
-
 @section('content')
-<div class="fdi-wrapper">
-    <div class="fdi-container">
-        
-        <div class="header-card flex flex-col md:flex-row justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">Directions</h1>
-                <p class="text-slate-400 text-sm font-medium">Gestion des structures de la Faîtière</p>
-            </div>
-            <a href="{{ route('admin.entites.directions.create') }}" class="btn-add">
-                <i class="fas fa-plus-circle mr-2"></i> Nouvelle Direction
-            </a>
-        </div>
+<div class="min-h-screen bg-[#f8fafc] p-4 lg:p-8 font-sans">
+    <div class="max-w-[1600px] mx-auto space-y-8">
 
-        <div class="header-card">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <form method="GET" action="{{ route('admin.entites.directions.index') }}" class="flex items-center gap-2">
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Rechercher une direction..." class="ent-input px-3 py-2 rounded-lg text-sm w-64" />
-                        <button type="submit" class="ent-btn ent-btn-primary px-4 py-2 text-sm">Rechercher</button>
-                    </form>
+        {{-- HEADER : Titre & Action --}}
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div>
+                <h1 class="text-3xl font-black text-slate-800 tracking-tight">Directions Faîtière</h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Administration</span>
+                    <i class="fas fa-chevron-right text-[10px] text-slate-300"></i>
+                    <span class="text-xs font-bold text-cyan-500 uppercase tracking-widest">Unités Centrales</span>
                 </div>
             </div>
+            
+            <div class="flex items-center gap-4">
+                {{-- Barre de recherche intégrée --}}
+                <form method="GET" action="{{ route('admin.entites.directions.index') }}" class="flex items-center bg-white p-2 rounded-2xl shadow-sm border border-slate-100 min-w-[300px]">
+                    <div class="flex-1 flex items-center px-3 gap-2">
+                        <i class="fas fa-search text-slate-300 text-sm"></i>
+                        <input type="text" name="search" value="{{ request('search') }}" 
+                               class="w-full bg-transparent border-none focus:ring-0 text-sm text-slate-600 placeholder-slate-300 font-medium" 
+                               placeholder="Rechercher une direction...">
+                    </div>
+                    <button type="submit" class="bg-slate-50 text-slate-400 px-4 py-2 rounded-xl text-xs font-black uppercase hover:bg-slate-100 transition-all">Filtrer</button>
+                </form>
+
+                <a href="{{ route('admin.entites.directions.create') }}" data-open-modal data-title="Nouvelle direction faitière" 
+                   class="h-12 px-6 bg-cyan-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-cyan-600 transition-all shadow-lg shadow-cyan-100">
+                    <i class="fas fa-plus"></i> Nouvelle Direction
+                </a>
+            </div>
         </div>
 
-        <table class="custom-table">
-            <thead>
-                <tr>
-                    <th class="text-left">Ordre</th>
-                    <th class="text-left">Détails de la Direction</th>
-                    <th class="text-left">Responsable</th>
-                    <th class="text-center">Note</th>
-                    <th class="text-center">Services</th>
-                    <th class="text-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($directions as $direction)
-                <tr class="table-row">
-                    <td>
-                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 font-bold text-sm">
-                            {{ $loop->iteration + ($directions->currentPage() - 1) * $directions->perPage() }}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 mr-4 font-bold">
-                                {{ substr($direction->nom, 0, 1) }}
-                            </div>
-                            <div>
-                                <div class="font-bold text-slate-800 text-base leading-tight">{{ $direction->nom }}</div>
-                                <div class="text-xs text-slate-400 mt-0.5">ID: #{{ $direction->id }}</div>
-                            </div>
-                        </div>
-                    </td>
-
-                    <td>
-                        <div class="font-semibold text-slate-700">{{ $direction->directeur_prenom }} {{ $direction->directeur_nom }}</div>
-                        <div class="text-xs text-emerald-600 font-medium tracking-wide lowercase">{{ $direction->directeur_email ?? 'Pas d\'email' }}</div>
-                    </td>
-
-                    <td class="text-center">
-                        @if($notes[$direction->id] ?? null)
-                            <span class="inline-flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm"
-                                  style="background: linear-gradient(135deg, #16a34a, #22c55e); color: white;">
-                                {{ number_format($notes[$direction->id], 2) }}
+        {{-- TABLEAU MODERNISÉ --}}
+        <div class="overflow-x-auto">
+            <table class="w-full border-separate border-spacing-y-3">
+                <thead>
+                    <tr class="text-slate-400 text-[11px] font-black uppercase tracking-[0.2em]">
+                        <th class="px-6 pb-2 text-left">#</th>
+                        <th class="px-6 pb-2 text-left">Détails Direction</th>
+                        <th class="px-6 pb-2 text-left">Responsable</th>
+                        <th class="px-6 pb-2 text-center">Services</th>
+                        <th class="px-6 pb-2 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($directions as $direction)
+                    <tr class="bg-white group hover:scale-[1.01] transition-all duration-200">
+                        {{-- Ordre --}}
+                        <td class="px-6 py-5 first:rounded-l-[24px] border-y border-l border-slate-50 shadow-sm shadow-slate-200/20">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-50 text-slate-400 font-black text-xs group-hover:bg-cyan-500 group-hover:text-white transition-colors">
+                                {{ $loop->iteration + ($directions->currentPage() - 1) * $directions->perPage() }}
                             </span>
-                        @else
-                            <span class="text-gray-300 text-xs">—</span>
-                        @endif
-                    </td>
+                        </td>
 
-                    <td class="text-center">
-                        <a href="{{ route('admin.services.index', ['direction_id' => $direction->id, 'source' => 'faitiere']) }}" class="service-badge hover:bg-emerald-100 transition">
-                            {{ $direction->services_count ?? 0 }} Services
-                        </a>
-                    </td>
+                        {{-- Détails --}}
+                        <td class="px-6 py-5 border-y border-slate-50 shadow-sm shadow-slate-200/20">
+                            <div class="flex items-center gap-4">
+                                <div class="h-12 w-12 bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl flex items-center justify-center text-cyan-600 font-black text-lg shadow-sm border border-white">
+                                    {{ substr($direction->nom, 0, 1) }}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="font-black text-slate-800 text-base leading-tight truncate group-hover:text-cyan-600 transition-colors">{{ $direction->nom }}</p>
+                                    <p class="text-[10px] text-slate-300 font-bold uppercase mt-1 tracking-widest">ID: #{{ $direction->id }}</p>
+                                </div>
+                            </div>
+                        </td>
 
-                    <td class="text-right">
-                        <div class="flex justify-end gap-2">
-                            <a href="{{ route('admin.directions.show', $direction) }}" class="action-btn" title="Voir">
-                                <i class="far fa-eye"></i>
+                        {{-- Responsable --}}
+                        <td class="px-6 py-5 border-y border-slate-50 shadow-sm shadow-slate-200/20">
+                            <p class="font-bold text-slate-700 text-sm italic">{{ $direction->directeur_prenom }} {{ $direction->directeur_nom }}</p>
+                            <p class="text-[11px] text-cyan-500 font-medium lowercase flex items-center gap-1 mt-1">
+                                <i class="far fa-envelope opacity-50"></i> {{ $direction->directeur_email ?? 'n/a' }}
+                            </p>
+                        </td>
+
+                        {{-- Services --}}
+                        <td class="px-6 py-5 border-y border-slate-50 shadow-sm shadow-slate-200/20 text-center">
+                            <a href="{{ route('admin.services.index', ['direction_id' => $direction->id, 'source' => 'faitiere']) }}" 
+                               class="px-4 py-2 bg-slate-50 text-slate-500 text-[10px] font-black uppercase rounded-xl border border-slate-100 hover:bg-cyan-500 hover:text-white hover:border-cyan-500 transition-all">
+                                {{ $direction->services_count ?? 0 }} Services
                             </a>
-                            <a href="{{ route('admin.directions.edit', $direction) }}" class="action-btn" title="Modifier">
-                                <i class="far fa-edit"></i>
-                            </a>
-                            <form method="POST" action="{{ route('admin.directions.destroy', $direction) }}" class="inline" onsubmit="return confirm('Confirmer la suppression ?');">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="action-btn btn-delete">
-                                    <i class="far fa-trash-alt"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="6" class="text-center py-20 text-slate-400 font-medium">
-                        <img src="https://illustrations.popsy.co/gray/empty-folder.svg" class="w-32 mx-auto mb-4 opacity-50">
-                        Aucune donnée disponible.
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
+                        </td>
 
-        <div class="mt-6">
+                        {{-- Actions --}}
+                        <td class="px-6 py-5 last:rounded-r-[24px] border-y border-r border-slate-50 shadow-sm shadow-slate-200/20 text-right">
+                            <div class="flex justify-end gap-2">
+                                <a href="{{ route('admin.directions.show', $direction) }}" class="h-9 w-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-cyan-500 hover:border-cyan-200 transition-all shadow-sm">
+                                    <i class="far fa-eye text-sm"></i>
+                                </a>
+                                <a href="{{ route('admin.directions.edit', $direction) }}" class="h-9 w-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:border-emerald-200 transition-all shadow-sm">
+                                    <i class="far fa-edit text-sm"></i>
+                                </a>
+                                <form method="POST" action="{{ route('admin.directions.destroy', $direction) }}" class="inline" onsubmit="return confirm('Confirmer la suppression ?');">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="h-9 w-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm">
+                                        <i class="far fa-trash-alt text-sm"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="py-24 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="h-20 w-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 text-3xl mb-4">
+                                    <i class="fas fa-folder-open"></i>
+                                </div>
+                                <p class="text-slate-400 font-bold italic">Aucune direction trouvée.</p>
+                                <a href="{{ route('admin.entites.directions.create') }}" class="mt-4 text-cyan-500 text-xs font-black uppercase hover:underline">Créer la première direction</a>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- PAGINATION --}}
+        <div class="mt-8 px-4">
             {{ $directions->links() }}
         </div>
     </div>

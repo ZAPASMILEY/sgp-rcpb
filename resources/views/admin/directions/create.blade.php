@@ -1,162 +1,110 @@
 @extends('layouts.app')
 
-@php
-    $isFaitiereDirection = (bool) ($faitiere ?? false);
-    $pageTitle = $isFaitiereDirection ? 'Nouvelle Direction Faitiere' : 'Nouveau Directeur Technique';
-    $pageIntro = $isFaitiereDirection
-        ? 'Cette creation est dediee aux directions de la Faitiere uniquement.'
-        : 'Creez une direction rattachee a une delegation technique avec son directeur et son secretaire.';
-    $submitRoute = $isFaitiereDirection ? route('admin.entites.directions.store') : route('admin.directions.store');
-    $backRoute = $isFaitiereDirection ? route('admin.entites.index') : route('admin.directions.index');
-@endphp
-
-@section('title', $pageTitle.' | '.config('app.name', 'SGP-RCPB'))
-
 @section('content')
-    <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="w-full">
-            <section class="admin-panel ent-window h-full w-full p-6 sm:p-8">
-                <div class="ent-window__bar" aria-hidden="true">
-                    <span class="ent-window__dot ent-window__dot--danger"></span>
-                    <span class="ent-window__dot ent-window__dot--warn"></span>
-                    <span class="ent-window__dot ent-window__dot--ok"></span>
-                    <span class="ent-window__label">Fenetre d'ajout</span>
-                </div>
+@php $isModal = request()->has('modal'); @endphp
 
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            {{ $isFaitiereDirection ? 'Faitiere / Direction' : 'Delegation technique / Direction' }}
-                        </p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $pageTitle }}</h1>
-                        <p class="mt-2 text-sm text-slate-600">{{ $pageIntro }}</p>
-                    </div>
-                    <a href="{{ $backRoute }}" target="_top" class="ent-btn ent-btn-soft">
-                        {{ $isFaitiereDirection ? 'Retour Faitiere' : 'Retour Delegations' }}
-                    </a>
-                </div>
+<div class="min-h-screen bg-slate-500/20 backdrop-blur-sm flex items-center justify-center p-4 lg:p-8">
+    
+    {{-- LA FENÊTRE FLOTTANTE --}}
+    <div class="relative w-full max-w-3xl bg-white rounded-[50px] shadow-[0_30px_100px_rgba(0,0,0,0.15)] overflow-hidden animate-in zoom-in duration-300">
+        
+        {{-- BOUTON FERMER (FLOTTANT) --}}
+        <a href="{{ route('admin.entites.index') }}" class="absolute -top-2 -right-2 lg:top-6 lg:right-6 z-50 h-12 w-12 bg-white rounded-full shadow-xl flex items-center justify-center text-cyan-500 hover:scale-110 transition-all border border-slate-50">
+            <i class="fas fa-times text-xl"></i>
+            <span class="absolute top-2 right-2 h-2.5 w-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
+        </a>
 
-                @if ($errors->any())
-                    <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {{ $errors->first() }}
-                    </div>
-                @endif
-
-                <form method="POST" action="{{ $submitRoute }}" target="_top" class="mt-6 grid gap-6">
-                    @csrf
-
-                    @unless ($isFaitiereDirection)
-                        <div class="space-y-2">
-                            <label for="delegation_technique_id" class="text-sm font-semibold text-slate-700">Delegation technique</label>
-                            <select id="delegation_technique_id" name="delegation_technique_id" required class="ent-select">
-                                <option value="">Selectionner une delegation</option>
-                                @foreach ($delegations as $delegation)
-                                    <option value="{{ $delegation->id }}" @selected((string) old('delegation_technique_id') === (string) $delegation->id)>
-                                        {{ $delegation->region }} / {{ $delegation->ville }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    @endunless
-
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Direction</p>
-
-                        @if ($isFaitiereDirection)
-                            <div class="space-y-2">
-                                <label for="nom" class="text-sm font-semibold text-slate-700">Nom de la direction</label>
-                                <input id="nom" name="nom" type="text" value="{{ old('nom') }}" required class="ent-input" placeholder="Direction des Operations">
-                            </div>
-                        @endif
-
-                        <div class="ent-form-grid">
-                            @if ($isFaitiereDirection)
-                                <div class="space-y-2">
-                                    <label for="date_prise_fonction" class="text-sm font-semibold text-slate-700">Date de prise de fonction</label>
-                                    <input id="date_prise_fonction" name="date_prise_fonction" type="date" value="{{ old('date_prise_fonction') }}" required class="ent-input">
-                                </div>
-                            @endif
-
-                            <div class="space-y-2">
-                                <label for="directeur_prenom" class="text-sm font-semibold text-slate-700">Prenom du directeur</label>
-                                <input id="directeur_prenom" name="directeur_prenom" type="text" value="{{ old('directeur_prenom') }}" required class="ent-input" placeholder="Prenom">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="directeur_nom" class="text-sm font-semibold text-slate-700">Nom du directeur</label>
-                                <input id="directeur_nom" name="directeur_nom" type="text" value="{{ old('directeur_nom') }}" required class="ent-input" placeholder="Nom">
-                            </div>
-                        </div>
-
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="directeur_email" class="text-sm font-semibold text-slate-700">Email professionnel</label>
-                                <input id="directeur_email" name="directeur_email" type="email" value="{{ old('directeur_email') }}" required class="ent-input" placeholder="directeur@rcpb.org">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="directeur_numero" class="text-sm font-semibold text-slate-700">Telephone</label>
-                                <input id="directeur_numero" name="directeur_numero" type="text" value="{{ old('directeur_numero') }}" required class="ent-input" placeholder="+226 70 00 00 00">
-                            </div>
-                        </div>
-                    </div>
-
-                    @unless ($isFaitiereDirection)
-                        <div class="ent-card space-y-4">
-                            <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Secretaire</p>
-
-                            <div class="ent-form-grid">
-                                <div class="space-y-2">
-                                    <label for="secretaire_prenom" class="text-sm font-semibold text-slate-700">Prenom</label>
-                                    <input id="secretaire_prenom" name="secretaire_prenom" type="text" value="{{ old('secretaire_prenom') }}" required class="ent-input" placeholder="Prenom">
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="secretaire_nom" class="text-sm font-semibold text-slate-700">Nom</label>
-                                    <input id="secretaire_nom" name="secretaire_nom" type="text" value="{{ old('secretaire_nom') }}" required class="ent-input" placeholder="Nom">
-                                </div>
-                            </div>
-
-                            <div class="ent-form-grid">
-                                <div class="space-y-2">
-                                    <label for="secretaire_email" class="text-sm font-semibold text-slate-700">Email professionnel</label>
-                                    <input id="secretaire_email" name="secretaire_email" type="email" value="{{ old('secretaire_email') }}" required class="ent-input" placeholder="secretaire@rcpb.org">
-                                </div>
-                                <div class="space-y-2">
-                                    <label for="secretaire_telephone" class="text-sm font-semibold text-slate-700">Telephone</label>
-                                    <input id="secretaire_telephone" name="secretaire_telephone" type="text" value="{{ old('secretaire_telephone') }}" required class="ent-input" placeholder="+226 70 00 00 00">
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        <div class="space-y-2">
-                            <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Telephone du secretariat (optionnel)</label>
-                            <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone') }}" class="ent-input" placeholder="+226 70 00 00 00">
-                        </div>
-                    @endunless
-
-                    <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
-                        {{ $isFaitiereDirection
-                            ? "Un compte directeur sera cree automatiquement avec envoi du mot de passe par e-mail."
-                            : "Les comptes du directeur technique et du secretaire seront crees automatiquement avec envoi des mots de passe par e-mail." }}
-                    </div>
-
-                    <button type="submit" id="submit-btn" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">
-                        Enregistrer la direction
-                    </button>
-                </form>
-
-                @push('scripts')
-                <script>
-                    document.querySelector('form')?.addEventListener('submit', function () {
-                        var btn = document.getElementById('submit-btn');
-                        if (!btn) {
-                            return;
-                        }
-
-                        btn.disabled = true;
-                        btn.textContent = 'Enregistrement...';
-                    });
-                </script>
-                @endpush
-            </section>
+        {{-- HEADER EN DÉGRADÉ --}}
+        <div class="bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] p-8 lg:p-10 flex items-center gap-4">
+            <div class="h-10 w-12 bg-white rounded-xl flex items-center justify-center text-[#22d3ee] font-black shadow-sm">
+                01
+            </div>
+            <h1 class="text-2xl lg:text-3xl font-black text-white tracking-tight">Nouvelle Direction Faîtière</h1>
         </div>
-    </main>
+
+        {{-- CORPS DU FORMULAIRE --}}
+        <form method="POST" action="{{ route('admin.entites.directions.store') }}" target="_top" class="p-8 lg:p-12 space-y-8">
+            @csrf
+
+            {{-- Section : Détails --}}
+            <div class="space-y-4">
+                <h3 class="text-lg font-black text-slate-800 ml-1">Détails Direction</h3>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-slate-400 ml-1">Nom de la direction</label>
+                    <input name="nom" type="text" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500 transition-all placeholder-slate-300" placeholder="Direction de l'Audit Interne">
+                </div>
+            </div>
+
+            {{-- Section : Responsable --}}
+            <div class="space-y-4">
+                <h3 class="text-lg font-black text-slate-800 ml-1">Informations Directeur</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-1">Prénom</label>
+                        <input name="directeur_prenom" type="text" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="Jean-Claude">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-1">Nom</label>
+                        <input name="directeur_nom" type="text" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="ZONGO">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-1">Email</label>
+                        <div class="relative">
+                            <div class="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg bg-white flex items-center justify-center text-slate-300 text-xs">@</div>
+                            <input name="directeur_email" type="email" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 pl-14 font-bold focus:ring-2 focus:ring-cyan-500 text-sm" placeholder="jean-claude.zongo@rcpb.org">
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-1">Téléphone</label>
+                        <div class="relative">
+                            <div class="absolute left-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg bg-white flex items-center justify-center text-slate-300 text-xs"><i class="fas fa-phone"></i></div>
+                            <input name="secretariat_telephone" type="text" class="w-full bg-slate-100 border-none rounded-[20px] p-4 pl-14 font-bold focus:ring-2 focus:ring-cyan-500 text-sm" placeholder="+226 25 30 00 00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- BANDEAU INFO --}}
+            <div class="bg-cyan-50 rounded-2xl p-4 flex items-center gap-3">
+                <div class="h-6 w-6 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[10px] font-black">i</div>
+                <p class="text-[10px] font-black text-cyan-700 uppercase tracking-tight">Compte directeur créé automatiquement</p>
+            </div>
+
+            {{-- BOUTONS D'ACTION --}}
+            <div class="flex flex-col sm:flex-row items-center gap-4 pt-6">
+                <button type="submit" id="submit-btn" class="w-full sm:flex-[2] py-5 bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white rounded-full text-sm font-black uppercase tracking-widest shadow-xl shadow-cyan-200 hover:scale-[1.02] transition-all">
+                    Enregistrer la Structure +
+                </button>
+                <a href="{{ route('admin.entites.index') }}" class="w-full sm:flex-1 py-5 bg-white border-2 border-slate-100 text-slate-400 rounded-full text-sm font-black uppercase tracking-widest text-center hover:bg-slate-50 transition-all">
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    /* Animation pour l'entrée de la fenêtre */
+    .animate-in {
+        animation: zoomIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes zoomIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+</style>
+
+@push('scripts')
+<script>
+    const form = document.querySelector('form');
+    const btn = document.getElementById('submit-btn');
+    form.addEventListener('submit', () => {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Patientez...';
+    });
+</script>
+@endpush
 @endsection

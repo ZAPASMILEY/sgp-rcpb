@@ -7,82 +7,21 @@ use App\Models\Agent;
 use App\Models\Direction;
 use App\Models\DelegationTechnique;
 use App\Models\Entite;
-use App\Models\Evaluation;
-use App\Models\Objectif;
+use App\Models\LoginFailure;
 use App\Models\Service;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
-use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     public function __invoke(): View
     {
-        $performanceGlobale = round((float) (Objectif::query()->avg('avancement_percentage') ?? 0), 1);
-
-        $totalObjectifs  = Objectif::query()->count();
-        $objectifsAtteints = Objectif::query()->where('avancement_percentage', 100)->count();
-
-        $totalEvals     = Evaluation::query()->count();
-        $evalsTerminees = Evaluation::query()->where('statut', 'valide')->count();
-        $tauxCompletion = $totalEvals > 0 ? round(($evalsTerminees / $totalEvals) * 100, 1) : 0;
-
-        $evaluationsEnRetard = Evaluation::query()
-            ->where('date_fin', '<', Carbon::now())
-            ->where('statut', '!=', 'valide')
-            ->count();
-
-        $directionDelegationMap = Direction::query()
-            ->whereNotNull('delegation_technique_id')
-            ->pluck('delegation_technique_id', 'id');
-
-        $serviceDirectionMap = Service::query()
-            ->whereNotNull('direction_id')
-            ->pluck('direction_id', 'id');
-
-        $agentServiceMap = Agent::query()
-            ->whereNotNull('service_id')
-            ->pluck('service_id', 'id');
-
-        $delegationScores = [];
-
-        Objectif::query()
-            ->whereIn('assignable_type', [Agent::class, Service::class, Direction::class])
-            ->get(['assignable_type', 'assignable_id', 'avancement_percentage'])
-            ->each(function (Objectif $objectif) use (&$delegationScores, $directionDelegationMap, $serviceDirectionMap, $agentServiceMap): void {
-                $delegationId = null;
-
-                if ($objectif->assignable_type === Direction::class) {
-                    $delegationId = $directionDelegationMap->get($objectif->assignable_id);
-                }
-
-                if ($objectif->assignable_type === Service::class) {
-                    $directionId = $serviceDirectionMap->get($objectif->assignable_id);
-                    $delegationId = $directionId ? $directionDelegationMap->get($directionId) : null;
-                }
-
-                if ($objectif->assignable_type === Agent::class) {
-                    $serviceId = $agentServiceMap->get($objectif->assignable_id);
-                    $directionId = $serviceId ? $serviceDirectionMap->get($serviceId) : null;
-                    $delegationId = $directionId ? $directionDelegationMap->get($directionId) : null;
-                }
-
-                if (! $delegationId) {
-                    return;
-                }
-
-                $delegationScores[$delegationId][] = (int) $objectif->avancement_percentage;
-            });
-
-        $delegationPerf = collect($delegationScores)
-            ->map(fn (array $scores) => round(array_sum($scores) / count($scores), 1));
-
         $delegations = DelegationTechnique::query()
             ->withCount(['directions', 'services'])
             ->with(['directions' => fn ($q) => $q->select('id', 'delegation_technique_id', 'directeur_prenom', 'directeur_nom')->limit(1)])
-            ->get()
-            ->each(function ($delegation) use ($delegationPerf) {
-                $delegation->performance = $delegationPerf[$delegation->id] ?? null;
-            });
+            ->latest()
+            ->take(6)
+            ->get();
 
         $recentServices = Service::query()
             ->with('direction.delegationTechnique')
@@ -90,40 +29,56 @@ class DashboardController extends Controller
             ->take(6)
             ->get();
 
-        $secretaires = Direction::query()
-            ->whereNotNull('secretaire_nom')
-            ->with('delegationTechnique')
+        $recentAgents = Agent::query()
+            ->with(['service.direction.delegationTechnique'])
             ->latest()
             ->take(6)
             ->get();
 
-        $monthlyLabels = [];
-        $monthlyValues = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $month = Carbon::now()->subMonths($i);
-            $monthlyLabels[] = $month->locale('fr')->isoFormat('MMM');
-            $monthlyValues[] = Evaluation::query()
-                ->whereYear('created_at', $month->year)
-                ->whereMonth('created_at', $month->month)
-                ->count();
-        }
+        $recentDirections = Direction::query()
+            ->with(['delegationTechnique', 'services'])
+            ->latest()
+            ->take(6)
+            ->get();
+
+        $faitiereDirectionsCount = Direction::query()->whereNull('delegation_technique_id')->count();
+        $delegationDirectionsCount = Direction::query()->whereNotNull('delegation_technique_id')->count();
+        $servicesWithoutDirection = Service::query()->whereNull('direction_id')->count();
+        $agentsWithoutService = Agent::query()->whereNull('service_id')->count();
+        $secretairesCount = User::query()->where('role', 'secretaire')->count();
+        $failedLoginAttemptsCount = LoginFailure::query()->count();
+        $failedLoginAttemptsToday = LoginFailure::query()
+            ->whereDate('attempted_at', today())
+            ->count();
+        $failedLoginEmailsCount = LoginFailure::query()
+            ->whereNotNull('email')
+            ->distinct('email')
+            ->count('email');
+
+        $recentLoginFailures = LoginFailure::query()
+            ->latest('attempted_at')
+            ->take(8)
+            ->get();
 
         return view('admin.dashboard', [
             'entitesCount'       => Entite::query()->count(),
+            'delegationsCount'   => DelegationTechnique::query()->count(),
             'directionsCount'    => Direction::query()->count(),
             'servicesCount'      => Service::query()->count(),
             'agentsCount'        => Agent::query()->count(),
-            'objectifsCount'     => $totalObjectifs,
-            'objectifsAtteints'  => $objectifsAtteints,
-            'evaluationsCount'   => $totalEvals,
-            'evaluationsEnRetard' => $evaluationsEnRetard,
-            'performanceGlobale' => $performanceGlobale,
-            'tauxCompletion'     => $tauxCompletion,
+            'secretairesCount'   => $secretairesCount,
+            'faitiereDirectionsCount' => $faitiereDirectionsCount,
+            'delegationDirectionsCount' => $delegationDirectionsCount,
+            'servicesWithoutDirection' => $servicesWithoutDirection,
+            'agentsWithoutService' => $agentsWithoutService,
+            'failedLoginAttemptsCount' => $failedLoginAttemptsCount,
+            'failedLoginAttemptsToday' => $failedLoginAttemptsToday,
+            'failedLoginEmailsCount' => $failedLoginEmailsCount,
             'delegations'        => $delegations,
+            'recentDirections'   => $recentDirections,
             'recentServices'     => $recentServices,
-            'secretaires'        => $secretaires,
-            'monthlyLabels'      => json_encode(array_values($monthlyLabels)),
-            'monthlyValues'      => json_encode(array_values($monthlyValues)),
+            'recentAgents'       => $recentAgents,
+            'recentLoginFailures' => $recentLoginFailures,
         ]);
     }
 }

@@ -100,8 +100,8 @@
                     <span class="clone-badge">Validé</span>
                 </div>
                 <div class="mt-4 flex flex-wrap gap-2">
-                    <a href="{{ route('pca.objectifs.create') }}" class="ent-btn ent-btn-primary">Nouvel objectif</a>
-                    <a href="{{ route('pca.evaluations.create') }}" class="ent-btn ent-btn-soft">Nouvelle évaluation</a>
+                    <a href="{{ route('pca.objectifs.create') }}" data-open-create-modal data-modal-title="Nouvel objectif" class="ent-btn ent-btn-primary">Nouvel objectif</a>
+                    <a href="{{ route('pca.evaluations.create') }}" data-open-create-modal data-modal-title="Nouvelle evaluation" class="ent-btn ent-btn-soft">Nouvelle évaluation</a>
                     <a href="{{ route('pca.settings.edit') }}" class="ent-btn ent-btn-soft">Paramètres</a>
                 </div>
             </section>
@@ -193,3 +193,4 @@
         </div>
     </div>
 @endsection
+
