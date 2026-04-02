@@ -1,4 +1,3 @@
-// ...existing code...
 <?php
 
 use App\Http\Controllers\Admin\AgentController;

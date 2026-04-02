@@ -21,7 +21,9 @@ class Agent extends Model
         'agence_id',
         'nom',
         'prenom',
+        'sexe',
         'fonction',
+        'date_debut_fonction',
         'numero_telephone',
         'email',
         'photo_path',
@@ -50,5 +52,12 @@ class Agent extends Model
     public function evaluations(): MorphMany
     {
         return $this->morphMany(Evaluation::class, 'evaluable');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'date_debut_fonction' => 'date',
+        ];
     }
 }

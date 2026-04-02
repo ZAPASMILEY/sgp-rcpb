@@ -14,22 +14,43 @@
     @php
         $isModalMode = request()->header('Sec-Fetch-Dest') === 'iframe' || request()->boolean('modal');
         $showSidebar = !$isModalMode && !request()->routeIs('login');
-        
-        $menuItems = [
-            ['route' => 'admin.dashboard', 'icon' => 'fas fa-grid-2', 'label' => 'Dashboard'],
-            ['route' => 'admin.entites.index', 'icon' => 'fas fa-university', 'label' => 'Faîtière'],
-            ['route' => 'admin.directions.index', 'icon' => 'fas fa-sitemap', 'label' => 'Délégations'],
-            ['route' => 'admin.caisses.index', 'icon' => 'fas fa-wallet', 'label' => 'Caisses'],
-            ['route' => 'admin.agents.index', 'icon' => 'fas fa-users', 'label' => 'Agents'],
-            ['route' => 'admin.settings.edit', 'icon' => 'fas fa-cog', 'label' => 'Paramètres'],
+
+        $menuSections = [
+            [
+                'title' => 'Principal',
+                'items' => [
+                    ['route' => 'admin.dashboard', 'icon' => 'fas fa-grid-2', 'label' => 'Tableau de bord'],
+                    ['route' => 'admin.entites.index', 'icon' => 'fas fa-university', 'label' => 'Faitiere'],
+                    ['route' => 'admin.directions.index', 'icon' => 'fas fa-sitemap', 'label' => 'Directions'],
+                    ['route' => 'admin.delegations-techniques.directeurs.index', 'icon' => 'fas fa-building-circle-arrow-right', 'label' => 'Delegations'],
+                ],
+            ],
+            [
+                'title' => 'Reseau',
+                'items' => [
+                    ['route' => 'admin.caisses.index', 'icon' => 'fas fa-wallet', 'label' => 'Caisses'],
+                    ['route' => 'admin.agences.index', 'icon' => 'fas fa-building-columns', 'label' => 'Agences'],
+                    ['route' => 'admin.guichets.index', 'icon' => 'fas fa-store', 'label' => 'Guichets'],
+                    ['route' => 'admin.services.index', 'icon' => 'fas fa-layer-group', 'label' => 'Services'],
+                ],
+            ],
+            [
+                'title' => 'Ressources',
+                'items' => [
+                    ['route' => 'admin.agents.index', 'icon' => 'fas fa-users', 'label' => 'Agents'],
+                    ['route' => 'admin.statistiques.index', 'icon' => 'fas fa-chart-column', 'label' => 'Statistiques'],
+                    ['route' => 'admin.dashboard', 'icon' => 'fas fa-bell', 'label' => 'Alertes', 'href' => route('admin.dashboard').'#security-log'],
+                    ['route' => 'admin.settings.edit', 'icon' => 'fas fa-cog', 'label' => 'Parametres'],
+                ],
+            ],
         ];
     @endphp
 
     <style>
         :root {
             --app-bg: #f8fafc;
-            --sidebar-width: 280px;
-            --accent-color: #06b6d4;
+            --sidebar-width: 290px;
+            --accent-color: #15803d;
         }
 
         body {
@@ -39,7 +60,6 @@
             overflow-x: hidden;
         }
 
-        /* --- SIDEBAR CONFIG --- */
         #admin-sidebar {
             width: var(--sidebar-width);
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -52,15 +72,16 @@
             flex-direction: column;
         }
 
-        /* Scroll interne du menu */
         #admin-sidebar nav {
             flex: 1;
             overflow-y: auto;
             scrollbar-width: none;
         }
-        #admin-sidebar nav::-webkit-scrollbar { display: none; }
 
-        /* --- MAIN CONTENT & TOGGLE --- */
+        #admin-sidebar nav::-webkit-scrollbar {
+            display: none;
+        }
+
         main {
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             margin-left: var(--sidebar-width);
@@ -69,20 +90,24 @@
             flex-direction: column;
         }
 
-        .sidebar-closed #admin-sidebar { transform: translateX(-120%); }
-        .sidebar-closed main { margin-left: 0; }
+        .sidebar-closed #admin-sidebar {
+            transform: translateX(calc(-100% + 58px));
+        }
 
-        /* HEADER : Z-index élevé pour rester au-dessus du contenu qui remonte */
+        .sidebar-closed main {
+            margin-left: 58px;
+        }
+
         header {
             position: relative;
-            z-index: 100; 
+            z-index: 100;
             background: transparent;
         }
 
         .sidebar-link-active {
-            background: #f1fbfd;
+            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
             color: var(--accent-color) !important;
-            box-shadow: inset 4px 0 0 var(--accent-color);
+            box-shadow: 0 10px 24px -18px rgba(21, 128, 61, 0.55);
         }
 
         .create-form-modal {
@@ -93,65 +118,88 @@
             background: rgba(15, 23, 42, 0.4);
             backdrop-filter: blur(4px);
         }
-        .create-form-modal.is-open { display: flex; }
+
+        .create-form-modal.is-open {
+            display: flex;
+        }
     </style>
 </head>
 
 <body class="h-full antialiased {{ $isModalMode ? 'bg-slate-50' : '' }}">
-    
     @if($showSidebar)
         <div class="flex min-h-screen p-4">
-            
-            <aside id="admin-sidebar" class="bg-white rounded-[32px] shadow-xl border border-slate-50 flex flex-col">
-                <div class="p-8 shrink-0">
-                    <div class="flex items-center gap-3">
-                        <div class="h-10 w-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-cyan-100">
-                            <i class="fas fa-chart-line"></i>
+            <aside id="admin-sidebar" class="relative flex flex-col overflow-hidden rounded-[34px] border border-emerald-900/10 bg-gradient-to-b from-[#2f944d] via-[#2d8b49] to-[#246b38] text-white shadow-2xl shadow-emerald-950/20">
+                <button id="sidebar-toggle" class="absolute -right-3 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-800">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="shrink-0 border-b border-white/10 px-6 py-8">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/20 bg-white/95 text-emerald-700 shadow-lg">
+                            <i class="fas fa-landmark text-2xl"></i>
                         </div>
-                        <h2 class="font-black text-xl text-slate-800 tracking-tighter">SGP-RCPB</h2>
+                        <h2 class="mt-4 text-2xl font-black tracking-tight">SGP-RCPB</h2>
+                        <p class="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/80">Gestion du reseau cooperatif</p>
                     </div>
                 </div>
 
-                <nav class="px-4 space-y-2">
-                    <p class="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 mb-4">Navigation</p>
-                    @foreach($menuItems as $item)
-                        <a href="{{ route($item['route']) }}" 
-                           class="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group {{ request()->routeIs($item['route'].'*') ? 'sidebar-link-active' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600' }}">
-                            <i class="{{ $item['icon'] }} w-5 text-center"></i>
-                            <span>{{ $item['label'] }}</span>
-                        </a>
+                <nav class="space-y-6 px-4 py-6">
+                    @foreach($menuSections as $section)
+                        <div>
+                            <p class="mb-3 px-3 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100/60">{{ $section['title'] }}</p>
+                            <div class="space-y-1.5">
+                                @foreach($section['items'] as $item)
+                                    @php
+                                        $isActive = request()->routeIs($item['route'].'*');
+                                        $link = $item['href'] ?? route($item['route']);
+                                    @endphp
+                                    <a href="{{ $link }}" class="group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all {{ $isActive ? 'sidebar-link-active' : 'text-emerald-50/80 hover:bg-white/10 hover:text-white' }}">
+                                        <span class="flex h-10 w-10 items-center justify-center rounded-2xl {{ $isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-white/10 text-emerald-50/90 group-hover:bg-white/15' }}">
+                                            <i class="{{ $item['icon'] }}"></i>
+                                        </span>
+                                        <span class="flex-1">{{ $item['label'] }}</span>
+                                        @if($item['label'] === 'Alertes')
+                                            <span class="inline-flex min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">!</span>
+                                        @endif
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
                     @endforeach
                 </nav>
 
-                <div class="p-4 mt-auto shrink-0">
-                    <div class="bg-slate-900 rounded-[24px] p-4 text-white">
+                <div class="mt-auto shrink-0 border-t border-white/10 p-4">
+                    <div class="rounded-[24px] bg-white/10 p-4 text-white backdrop-blur-sm">
                         <div class="flex items-center gap-3">
-                            <div class="h-8 w-8 rounded-lg bg-cyan-500 flex items-center justify-center font-black text-[10px]">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[11px] font-black text-emerald-700">
                                 {{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-black">{{ auth()->user()->name ?? 'Administrateur' }}</p>
+                                <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-50/70">Session active</p>
                             </div>
                             <form action="{{ route('admin.logout') }}" method="POST" class="ml-auto">
                                 @csrf
-                                <button type="submit" class="text-rose-400 hover:text-rose-300"><i class="fas fa-power-off"></i></button>
+                                <button type="submit" class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 text-rose-100 transition hover:bg-rose-500 hover:text-white">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
                             </form>
                         </div>
                     </div>
                 </div>
             </aside>
 
-            <main class="flex flex-col min-w-0">
-                <header class="flex items-center justify-between px-4 lg:px-8 h-20 shrink-0">
-                    <div class="flex items-center gap-6">
-                        <button id="sidebar-toggle" class="h-12 w-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all">
-                            <i class="fas fa-bars"></i>
-                        </button>
-                        <h2 class="text-xl font-extrabold text-slate-800 hidden lg:block">@yield('page_title')</h2>
+            <main class="flex min-w-0 flex-col">
+                <header class="flex h-8 shrink-0 items-center justify-between px-4 pt-0 lg:px-8">
+                    <div class="flex items-center gap-4">
+                        <h2 class="hidden text-lg font-extrabold text-slate-800 lg:block">@yield('page_title')</h2>
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <div id="digital-clock" class="hidden md:block text-sm font-black text-slate-400 mr-4"></div>
-                        <div class="h-12 w-12 bg-white rounded-2xl border border-slate-100 flex items-center justify-center text-slate-300 relative">
+                        <div id="digital-clock" class="mr-4 hidden text-sm font-black text-slate-400 md:block"></div>
+                        <div class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-slate-300">
                             <i class="fas fa-bell"></i>
-                            <span class="absolute top-3 right-3 h-2 w-2 bg-rose-500 rounded-full border-2 border-white"></span>
+                            <span class="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-rose-500"></span>
                         </div>
                     </div>
                 </header>
@@ -166,10 +214,10 @@
     @endif
 
     <div id="create-form-modal" class="create-form-modal items-center justify-center p-4">
-        <div class="bg-white w-full max-w-4xl h-[90vh] rounded-[32px] overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300">
-            <div class="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                <h3 id="modal-title" class="font-black text-slate-800 uppercase tracking-widest text-sm text-center w-full">Nouveau Formulaire</h3>
-                <button onclick="closeModal()" class="h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition">
+        <div class="flex h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl animate-in fade-in zoom-in duration-300">
+            <div class="flex items-center justify-between border-b border-slate-50 bg-slate-50/50 px-8 py-6">
+                <h3 id="modal-title" class="w-full text-center text-sm font-black uppercase tracking-widest text-slate-800">Nouveau Formulaire</h3>
+                <button onclick="closeModal()" class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm transition hover:bg-rose-50 hover:text-rose-500">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -181,14 +229,16 @@
     <script>
         function updateClock() {
             const el = document.getElementById('digital-clock');
-            if(el) el.innerText = new Date().toLocaleTimeString('fr-FR');
+            if (el) el.innerText = new Date().toLocaleTimeString('fr-FR');
         }
-        setInterval(updateClock, 1000); updateClock();
+
+        setInterval(updateClock, 1000);
+        updateClock();
 
         const toggleBtn = document.getElementById('sidebar-toggle');
-        if(localStorage.getItem('sidebar-state') === 'closed') document.body.classList.add('sidebar-closed');
+        if (localStorage.getItem('sidebar-state') === 'closed') document.body.classList.add('sidebar-closed');
 
-        if(toggleBtn) {
+        if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
                 document.body.classList.toggle('sidebar-closed');
                 localStorage.setItem('sidebar-state', document.body.classList.contains('sidebar-closed') ? 'closed' : 'open');
@@ -198,7 +248,7 @@
         function openModal(url, title) {
             const modal = document.getElementById('create-form-modal');
             const frame = document.getElementById('modal-frame');
-            document.getElementById('modal-title').innerText = title || "Nouveau";
+            document.getElementById('modal-title').innerText = title || 'Nouveau';
             const targetUrl = new URL(url, window.location.origin);
             targetUrl.searchParams.set('modal', '1');
             frame.src = targetUrl.toString();
@@ -207,13 +257,17 @@
 
         function closeModal() {
             document.getElementById('create-form-modal').classList.remove('is-open');
-            document.getElementById('modal-frame').src = "";
+            document.getElementById('modal-frame').src = '';
         }
 
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-open-modal], [data-open-create-modal]');
-            if(btn) { e.preventDefault(); openModal(btn.getAttribute('href'), btn.getAttribute('data-title') || btn.getAttribute('data-modal-title')); }
+            if (btn) {
+                e.preventDefault();
+                openModal(btn.getAttribute('href'), btn.getAttribute('data-title') || btn.getAttribute('data-modal-title'));
+            }
         });
     </script>
+    @stack('scripts')
 </body>
 </html>

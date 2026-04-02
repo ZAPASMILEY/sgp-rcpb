@@ -27,7 +27,7 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('admin.entites.store') }}" class="mt-6 grid gap-5">
+                    <form method="POST" action="{{ route('admin.entites.store') }}" enctype="multipart/form-data" class="mt-6 grid gap-5">
                         @csrf
 
                         <div class="ent-form-grid">
@@ -58,6 +58,10 @@
                                 <label for="directrice_generale_email" class="text-sm font-semibold text-slate-700">Email</label>
                                 <input id="directrice_generale_email" name="directrice_generale_email" type="email" value="{{ old('directrice_generale_email') }}" required class="ent-input" placeholder="dg@rcpb.bf">
                             </div>
+                            <div class="space-y-2">
+                                <label for="directrice_generale_photo" class="text-sm font-semibold text-slate-700">Photo</label>
+                                <input id="directrice_generale_photo" name="directrice_generale_photo" type="file" accept="image/*" class="ent-input">
+                            </div>
                         </div>
 
                         <div class="ent-card space-y-2">
@@ -75,6 +79,10 @@
                             <div class="space-y-2">
                                 <label for="dga_email" class="text-sm font-semibold text-slate-700">Email</label>
                                 <input id="dga_email" name="dga_email" type="email" value="{{ old('dga_email') }}" required class="ent-input" placeholder="dga@rcpb.bf">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="dga_photo" class="text-sm font-semibold text-slate-700">Photo</label>
+                                <input id="dga_photo" name="dga_photo" type="file" accept="image/*" class="ent-input">
                             </div>
                         </div>
 
@@ -111,6 +119,10 @@
                             <div class="space-y-2">
                                 <label for="pca_email" class="text-sm font-semibold text-slate-700">Email</label>
                                 <input id="pca_email" name="pca_email" type="email" value="{{ old('pca_email') }}" required class="ent-input" placeholder="pca@entreprise.com">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="pca_photo" class="text-sm font-semibold text-slate-700">Photo</label>
+                                <input id="pca_photo" name="pca_photo" type="file" accept="image/*" class="ent-input">
                             </div>
                         </div>
 

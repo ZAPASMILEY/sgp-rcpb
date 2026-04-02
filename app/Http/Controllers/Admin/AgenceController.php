@@ -114,7 +114,9 @@ class AgenceController extends Controller
         $validated = $request->validate([
             'nom' => ['required', 'string', 'max:255'],
             'prenom' => ['required', 'string', 'max:255'],
+            'sexe' => ['required', 'in:homme,femme'],
             'fonction' => ['required', 'string', 'max:255'],
+            'date_debut_fonction' => ['required', 'date'],
             'numero_telephone' => ['required', 'string', 'max:30'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
         ]);
@@ -134,7 +136,9 @@ class AgenceController extends Controller
             'service_id' => null,
             'nom' => $validated['nom'],
             'prenom' => $validated['prenom'],
+            'sexe' => $validated['sexe'],
             'fonction' => $validated['fonction'],
+            'date_debut_fonction' => $validated['date_debut_fonction'],
             'numero_telephone' => $validated['numero_telephone'],
             'email' => $validated['email'],
             'photo_path' => null,

@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Annee;
 use App\Models\Agent;
+use App\Models\Agence;
+use App\Models\Caisse;
 use App\Models\Direction;
 use App\Models\Entite;
 use App\Models\Evaluation;
+use App\Models\Guichet;
 use App\Models\Objectif;
 use App\Models\Service;
 use Illuminate\Contracts\View\View;
@@ -40,9 +43,19 @@ class StatistiqueController extends Controller
         $entitesCount = Entite::query()->whereYear('created_at', $selectedYear)->count();
         $directionsCount = Direction::query()->whereYear('created_at', $selectedYear)->count();
         $servicesCount = Service::query()->whereYear('created_at', $selectedYear)->count();
-        $agentsCount = Agent::query()->whereYear('created_at', $selectedYear)->count();
+        $caissesCount = Caisse::query()->whereYear('created_at', $selectedYear)->count();
+        $agencesCount = Agence::query()->whereYear('created_at', $selectedYear)->count();
+        $guichetsCount = Guichet::query()->whereYear('created_at', $selectedYear)->count();
+        $agentsCount = Agent::query()
+            ->whereYear('date_debut_fonction', $selectedYear)
+            ->count();
         $objectifsCount = $objectifQuery()->count();
         $evaluationsCount = $evaluationQuery()->count();
+
+        $agentsBySexe = [
+            'Hommes' => Agent::query()->where('sexe', 'homme')->count(),
+            'Femmes' => Agent::query()->where('sexe', 'femme')->count(),
+        ];
 
         $evaluationsByStatut = [
             'Brouillon' => $evaluationQuery()->where('statut', 'brouillon')->count(),
@@ -59,7 +72,11 @@ class StatistiqueController extends Controller
             'entitesCount',
             'directionsCount',
             'servicesCount',
+            'caissesCount',
+            'agencesCount',
+            'guichetsCount',
             'agentsCount',
+            'agentsBySexe',
             'objectifsCount',
             'evaluationsCount',
             'evaluationsByStatut',

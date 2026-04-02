@@ -27,6 +27,9 @@
 
                 <section class="grid gap-6 md:grid-cols-4">
                     <article class="admin-panel p-6">
+                        @if ($entite->directrice_generale_photo_path)
+                            <img src="{{ asset('storage/'.$entite->directrice_generale_photo_path) }}" alt="DG" class="mb-4 h-20 w-20 rounded-full object-cover shadow-md">
+                        @endif
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Directeur general</p>
                         <h2 class="mt-3 text-xl font-semibold text-slate-950">{{ $entite->directrice_generale_prenom }} {{ $entite->directrice_generale_nom }}</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-600">{{ $entite->directrice_generale_email }}</p>
@@ -39,12 +42,18 @@
                     </article>
 
                     <article class="admin-panel p-6">
+                        @if ($entite->dga_photo_path)
+                            <img src="{{ asset('storage/'.$entite->dga_photo_path) }}" alt="DGA" class="mb-4 h-20 w-20 rounded-full object-cover shadow-md">
+                        @endif
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Directeur general adjoint</p>
                         <h2 class="mt-3 text-xl font-semibold text-slate-950">{{ $entite->dga_prenom }} {{ $entite->dga_nom }}</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-600">{{ $entite->dga_email }}</p>
                     </article>
 
                     <article class="admin-panel p-6">
+                        @if ($entite->pca_photo_path)
+                            <img src="{{ asset('storage/'.$entite->pca_photo_path) }}" alt="PCA" class="mb-4 h-20 w-20 rounded-full object-cover shadow-md">
+                        @endif
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">PCA</p>
                         <h2 class="mt-3 text-xl font-semibold text-slate-950">{{ $entite->pca_prenom }} {{ $entite->pca_nom }}</h2>
                         <p class="mt-3 text-sm leading-6 text-slate-600">{{ $entite->pca_email }}</p>

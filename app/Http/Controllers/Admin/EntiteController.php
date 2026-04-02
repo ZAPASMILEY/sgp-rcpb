@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -144,6 +145,7 @@ class EntiteController extends Controller
     public function update(Request $request, Entite $entite): RedirectResponse
     {
         $validated = $this->validateEntite($request, $entite);
+        $validated = $this->storeEntitePhotos($request, $validated, $entite);
 
         DB::transaction(function () use ($entite, $validated) {
             $originalEmails = [
@@ -395,6 +397,7 @@ class EntiteController extends Controller
         }
 
         $validated = $this->validateEntite($request);
+        $validated = $this->storeEntitePhotos($request, $validated);
 
         DB::transaction(function () use ($validated) {
             $entite = Entite::create($validated);
@@ -457,14 +460,44 @@ class EntiteController extends Controller
             'dga_prenom' => 'required|string',
             'dga_nom' => 'required|string',
             'dga_email' => ['required', 'email', $this->uniqueUserEmailRule($entite?->dga_email)],
+            'dga_photo' => 'nullable|image|max:2048',
             'assistante_dg_prenom' => 'required|string',
             'assistante_dg_nom' => 'required|string',
             'assistante_dg_email' => ['required', 'email', $this->uniqueUserEmailRule($entite?->assistante_dg_email)],
             'pca_prenom' => 'required|string',
             'pca_nom' => 'required|string',
             'pca_email' => ['required', 'email', $this->uniqueUserEmailRule($entite?->pca_email)],
+            'pca_photo' => 'nullable|image|max:2048',
+            'directrice_generale_photo' => 'nullable|image|max:2048',
             'secretariat_telephone' => 'required|string',
         ]) + ['nom' => 'Faitiere'];
+    }
+
+    private function storeEntitePhotos(Request $request, array $validated, ?Entite $entite = null): array
+    {
+        $photos = [
+            'directrice_generale_photo' => 'directrice_generale_photo_path',
+            'dga_photo' => 'dga_photo_path',
+            'pca_photo' => 'pca_photo_path',
+        ];
+
+        foreach ($photos as $input => $column) {
+            unset($validated[$input]);
+
+            if (!$request->hasFile($input)) {
+                continue;
+            }
+
+            $path = $request->file($input)->store('entites', 'public');
+
+            if ($entite && !empty($entite->{$column}) && $entite->{$column} !== $path) {
+                Storage::disk('public')->delete($entite->{$column});
+            }
+
+            $validated[$column] = $path;
+        }
+
+        return $validated;
     }
 
     private function uniqueUserEmailRule(?string $email)

@@ -59,6 +59,21 @@
                         </div>
                     </div>
 
+                    <div class="ent-form-grid">
+                        <div class="space-y-2">
+                            <label for="sexe" class="text-sm font-semibold text-slate-700">Sexe</label>
+                            <select id="sexe" name="sexe" required class="ent-select">
+                                <option value="">Selectionner</option>
+                                <option value="homme" @selected(old('sexe') === 'homme')>Homme</option>
+                                <option value="femme" @selected(old('sexe') === 'femme')>Femme</option>
+                            </select>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="date_debut_fonction" class="text-sm font-semibold text-slate-700">Date debut de fonction</label>
+                            <input id="date_debut_fonction" name="date_debut_fonction" type="date" value="{{ old('date_debut_fonction') }}" required class="ent-input">
+                        </div>
+                    </div>
+
                     <div class="space-y-2">
                         <label for="fonction" class="text-sm font-semibold text-slate-700">Fonction</label>
                         <input id="fonction" name="fonction" type="text" value="{{ old('fonction') }}" required class="ent-input" placeholder="Ex: Charge de suivi">

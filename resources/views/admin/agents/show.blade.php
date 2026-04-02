@@ -49,11 +49,19 @@
                             <p class="mt-2 text-lg font-semibold text-slate-950">{{ $agent->fonction }}</p>
                         </div>
                         <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Sexe</p>
+                            <p class="mt-2 text-lg font-semibold text-slate-950">{{ ucfirst($agent->sexe ?? '-') }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 bg-white p-5">
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Service</p>
                             <p class="mt-2 text-lg font-semibold text-slate-950">{{ $agent->service?->nom ?? '-' }}</p>
                             @if ($agent->service?->direction)
                                 <p class="mt-1 text-sm text-slate-500">{{ $agent->service->direction->nom }}</p>
                             @endif
+                        </div>
+                        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Date debut de fonction</p>
+                            <p class="mt-2 text-lg font-semibold text-slate-950">{{ optional($agent->date_debut_fonction)->format('d/m/Y') ?: '-' }}</p>
                         </div>
                         <div class="rounded-2xl border border-slate-200 bg-white p-5">
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Numero</p>

@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\Agence;
+use App\Models\Caisse;
 use App\Models\Direction;
 use App\Models\DelegationTechnique;
 use App\Models\Entite;
+use App\Models\Guichet;
 use App\Models\LoginFailure;
 use App\Models\Service;
 use App\Models\User;
@@ -17,7 +20,7 @@ class DashboardController extends Controller
     public function __invoke(): View
     {
         $delegations = DelegationTechnique::query()
-            ->withCount(['directions', 'services'])
+            ->withCount(['agences', 'caisses'])
             ->with(['directions' => fn ($q) => $q->select('id', 'delegation_technique_id', 'directeur_prenom', 'directeur_nom')->limit(1)])
             ->latest()
             ->take(6)
@@ -61,6 +64,9 @@ class DashboardController extends Controller
             ->get();
 
         return view('admin.dashboard', [
+            'caissesCount'       => Caisse::query()->count(),
+            'agencesCount'       => Agence::query()->count(),
+            'guichetsCount'      => Guichet::query()->count(),
             'entitesCount'       => Entite::query()->count(),
             'delegationsCount'   => DelegationTechnique::query()->count(),
             'directionsCount'    => Direction::query()->count(),

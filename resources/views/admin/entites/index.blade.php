@@ -1,261 +1,307 @@
 @extends('layouts.app')
 
-@section('title', 'Faîtière | '.config('app.name', 'SGP-RCPB'))
+@section('title', 'Faitiere | '.config('app.name', 'SGP-RCPB'))
+@section('page_title', 'Faitiere')
 
 @section('content')
-<div class="min-h-screen bg-[#f8fafc] p-4 lg:p-8 font-sans selection:bg-cyan-100">
-    <div class="max-w-[1600px] mx-auto space-y-8">
-        
-        {{-- Notification de statut --}}
+<div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.18),_transparent_30%),linear-gradient(180deg,_#f8fbff_0%,_#eef4ff_100%)] px-4 pb-8 pt-2 lg:px-8">
+    <div class="mx-auto max-w-7xl space-y-7">
         @if (session('status'))
-            <div id="status-message" class="flex items-center gap-4 p-4 bg-white border border-emerald-100 rounded-2xl shadow-xl shadow-emerald-100/50 animate-in fade-in slide-in-from-top-4 duration-500">
-                <div class="h-10 w-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
+            <div id="status-message" class="fixed right-6 top-6 z-50 flex items-center gap-4 rounded-[24px] border border-emerald-100 bg-white px-5 py-4 shadow-2xl shadow-emerald-100/60">
+                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
                     <i class="fas fa-check"></i>
                 </div>
-                <p class="font-bold text-slate-700 text-sm uppercase tracking-tight">{{ session('status') }}</p>
+                <p class="text-sm font-bold text-slate-700">{{ session('status') }}</p>
             </div>
             <script>setTimeout(() => document.getElementById('status-message')?.remove(), 5000);</script>
         @endif
 
         @if ($entite)
-            {{-- HEADER & ACTIONS --}}
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div>
-                    <h1 class="text-3xl font-black text-slate-800 tracking-tight">Gestion de la Faîtière</h1>
-                    <div class="flex items-center gap-3 mt-2">
-                        <span class="px-3 py-1 bg-cyan-50 text-cyan-600 text-[10px] font-black uppercase rounded-full border border-cyan-100 tracking-widest">Siège Principal</span>
-                        <span class="text-slate-400 text-sm font-medium"><i class="fas fa-map-marker-alt mr-1"></i> {{ $entite->ville }}, {{ $entite->region }}</span>
-                    </div>
-                </div>
-                
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.entites.edit', $entite) }}" class="h-12 px-6 bg-white border border-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
-                        <i class="fas fa-edit text-cyan-500"></i> Modifier
-                    </a>
-                    <a href="{{ route('admin.entites.show', $entite) }}" class="h-12 px-6 bg-white border border-slate-200 text-slate-600 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
-                        <i class="fas fa-eye text-slate-400"></i> Fiche Complète
-                    </a>
-                    <form method="POST" action="{{ route('admin.entites.reset') }}" class="inline">
-                        @csrf
-                        <button class="h-12 w-12 bg-rose-50 text-rose-500 rounded-2xl border border-rose-100 hover:bg-rose-100 transition-all flex items-center justify-center shadow-sm" title="Réinitialiser">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                    </form>
-                </div>
-            </div>
+            @php
+                $kpis = [
+                    ['key' => 'directions', 'label' => 'Directions', 'count' => $stats['directions'], 'icon' => 'fas fa-sitemap', 'gradient' => 'from-sky-500 via-blue-500 to-blue-600', 'soft' => 'bg-blue-50/25', 'list' => route('admin.entites.directions.index'), 'create' => route('admin.entites.directions.create')],
+                    ['key' => 'services', 'label' => 'Services', 'count' => $stats['services'], 'icon' => 'fas fa-briefcase', 'gradient' => 'from-emerald-400 via-teal-400 to-cyan-500', 'soft' => 'bg-emerald-50/25', 'list' => route('admin.services.index'), 'create' => route('admin.services.create')],
+                    ['key' => 'secretaires', 'label' => 'Secretaires', 'count' => $stats['secretaires'], 'icon' => 'fas fa-wallet', 'gradient' => 'from-fuchsia-400 via-pink-500 to-pink-600', 'soft' => 'bg-fuchsia-50/25', 'list' => route('admin.entites.secretaires.index'), 'create' => route('admin.entites.secretaires.index')],
+                    ['key' => 'agents', 'label' => 'Agents', 'count' => $stats['agents'], 'icon' => 'fas fa-users', 'gradient' => 'from-amber-400 via-orange-400 to-orange-500', 'soft' => 'bg-orange-50/25', 'list' => route('admin.agents.index'), 'create' => route('admin.agents.create')],
+                ];
 
-            {{-- SECTION KPI (Style Hotel Booking) --}}
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                @php
-                    $kpis = [
-                        [
-                            'label' => 'Directions', 
-                            'val' => $stats['directions'], 
-                            'icon' => 'fas fa-sitemap', 
-                            'grad' => 'from-cyan-400 to-blue-500', 
-                            'href' => route('admin.entites.directions.index'),
-                            'add_href' => route('admin.entites.directions.create')
-                        ],
-                        [
-                            'label' => 'Services', 
-                            'val' => $stats['services'], 
-                            'icon' => 'fas fa-layer-group', 
-                            'grad' => 'from-emerald-400 to-teal-500', 
-                            'href' => route('admin.services.index'),
-                            'add_href' => route('admin.services.create')
-                        ],
-                        [
-                            'label' => 'Secrétaires',
-                            'val' => $stats['secretaires'],
-                            'icon' => 'fas fa-user-tie',
-                            'grad' => 'from-fuchsia-400 to-pink-500',
-                            'href' => route('admin.entites.secretaires.index'),
-                            'add_href' => route('admin.entites.secretaires.index')
-                        ],
-                        [
-                            'label' => 'Agents', 
-                            'val' => $stats['agents'], 
-                            'icon' => 'fas fa-users', 
-                            'grad' => 'from-orange-400 to-amber-500', 
-                            'href' => route('admin.agents.index'),
-                            'add_href' => route('admin.agents.create')
-                        ],
-                    ];
-                @endphp
+                $tabs = [
+                    'directions' => ['label' => 'Directions', 'icon' => 'fas fa-location-dot'],
+                    'services' => ['label' => 'Services', 'icon' => 'fas fa-briefcase'],
+                    'secretaires' => ['label' => 'Secretaires', 'icon' => 'fas fa-user'],
+                    'agents' => ['label' => 'Agents', 'icon' => 'fas fa-users'],
+                ];
 
-                @foreach($kpis as $k)
-                <div class="relative overflow-hidden rounded-[32px] p-8 text-white shadow-xl shadow-slate-200/50 bg-gradient-to-br {{ $k['grad'] }} group hover:scale-[1.02] transition-transform duration-300">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-5xl font-black tracking-tighter">{{ $k['val'] }}</p>
-                            <p class="text-sm font-bold opacity-80 mt-1 uppercase tracking-[0.2em]">{{ $k['label'] }}</p>
+                $dirigeants = [
+                    [
+                        'label' => 'PCA',
+                        'nom' => trim(($entite->pca_prenom ?? '').' '.($entite->pca_nom ?? '')) ?: 'Non renseigne',
+                        'icon' => 'fas fa-landmark',
+                        'photo' => $entite->pca_photo_path,
+                        'tint' => 'from-rose-50 to-white',
+                        'ring' => 'text-rose-500',
+                    ],
+                    [
+                        'label' => 'DG',
+                        'nom' => trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? '')) ?: 'Non renseigne',
+                        'icon' => 'fas fa-user-tie',
+                        'photo' => $entite->directrice_generale_photo_path,
+                        'tint' => 'from-cyan-50 to-white',
+                        'ring' => 'text-cyan-500',
+                    ],
+                    [
+                        'label' => 'DGA',
+                        'nom' => trim(($entite->dga_prenom ?? '').' '.($entite->dga_nom ?? '')) ?: 'Non renseigne',
+                        'icon' => 'fas fa-user-gear',
+                        'photo' => $entite->dga_photo_path,
+                        'tint' => 'from-fuchsia-50 to-white',
+                        'ring' => 'text-fuchsia-500',
+                    ],
+                ];
+            @endphp
+
+            <section class="overflow-hidden rounded-[34px] border border-white/70 bg-white/80 p-6 shadow-[0_30px_80px_-35px_rgba(148,163,184,0.55)] backdrop-blur xl:p-7">
+                <div class="flex flex-col gap-6">
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="space-y-3">
+                            <h1 class="text-3xl font-black tracking-tight text-slate-900 lg:text-5xl">Gestion de la Faitiere</h1>
+                            <div class="flex flex-wrap items-center gap-4 text-sm font-semibold text-slate-500">
+                                <span class="uppercase tracking-[0.25em] text-slate-700">Siege principal</span>
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-location-dot text-slate-400"></i>
+                                    {{ $entite->ville ?: 'Ouagadougou' }}, {{ $entite->region ?: 'Centre' }}
+                                </span>
+                            </div>
                         </div>
-                        <div class="bg-white/20 h-14 w-14 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                            <i class="{{ $k['icon'] }} text-2xl"></i>
+
+                        <div class="flex items-center gap-3">
+                            <a href="{{ route('admin.entites.edit', $entite) }}" class="inline-flex h-12 items-center gap-3 rounded-2xl bg-slate-900 px-6 text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-lg shadow-slate-300 transition hover:-translate-y-0.5 hover:bg-slate-800">
+                                <i class="fas fa-pen text-cyan-300"></i>
+                                Editer le profil
+                            </a>
+                            <form method="POST" action="{{ route('admin.entites.reset') }}" class="inline">
+                                @csrf
+                                <button type="submit" class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-500 shadow-lg shadow-rose-100/60 transition hover:-translate-y-0.5 hover:bg-rose-500 hover:text-white" title="Reinitialiser">
+                                    <i class="fas fa-rotate-right"></i>
+                                </button>
+                            </form>
                         </div>
                     </div>
-                    <div class="mt-8 flex gap-3">
-                        <a href="{{ $k['href'] }}" class="flex-1 py-3 bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-center backdrop-blur-sm hover:bg-white/30 transition-all">Consulter</a>
-                        <a href="{{ $k['add_href'] }}" class="h-10 w-10 bg-white text-slate-800 rounded-xl flex items-center justify-center hover:scale-110 transition-transform shadow-lg"><i class="fas fa-plus"></i></a>
-                    </div>
-                </div>
-                @endforeach
-            </div>
 
-            <section class="bg-white rounded-[32px] p-6 lg:p-8 shadow-sm border border-slate-100" id="tab-panels-entite">
-                <div class="flex flex-wrap gap-3 border-b border-slate-100 pb-5">
-                    <button type="button" data-entite-tab-trigger="directions" class="entite-tab-trigger inline-flex items-center gap-2 rounded-2xl border border-cyan-100 bg-cyan-50 px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-cyan-600">
-                        <i class="fas fa-sitemap"></i>
-                        <span>Directions</span>
-                    </button>
-                    <button type="button" data-entite-tab-trigger="services" class="entite-tab-trigger inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                        <i class="fas fa-layer-group"></i>
-                        <span>Services</span>
-                    </button>
-                    <button type="button" id="tab-secretaires" data-entite-tab-trigger="secretaires" class="entite-tab-trigger inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                        <i class="fas fa-user-tie"></i>
-                        <span>Secrétaires</span>
-                    </button>
-                    <button type="button" data-entite-tab-trigger="agents" class="entite-tab-trigger inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                        <i class="fas fa-users"></i>
-                        <span>Agents</span>
-                    </button>
-                </div>
-
-                <div class="mt-6">
-                    <div data-entite-tab-panel="directions">
-                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                            @forelse($directions as $direction)
-                                <article class="rounded-[28px] border border-slate-100 bg-slate-50 p-6 shadow-sm">
-                                    <div class="flex items-start justify-between gap-4">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        @foreach ($kpis as $kpi)
+                            <article class="rounded-[28px] bg-gradient-to-br {{ $kpi['gradient'] }} p-[1px] shadow-[0_18px_50px_-24px_rgba(15,23,42,0.55)]">
+                                <div class="h-full rounded-[27px] {{ $kpi['soft'] }} p-5 text-white backdrop-blur">
+                                    <div class="flex items-start justify-between">
                                         <div>
-                                            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500">Direction</p>
-                                            <h3 class="mt-2 text-lg font-black text-slate-800">{{ $direction->nom }}</h3>
+                                            <p class="text-5xl font-black leading-none drop-shadow-sm">{{ $kpi['count'] }}</p>
+                                            <p class="mt-3 text-lg font-extrabold uppercase tracking-[0.12em]">{{ $kpi['label'] }}</p>
                                         </div>
-                                        <span class="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
-                                            {{ $direction->services_count }} service(s)
+                                        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/25 text-lg shadow-inner">
+                                            <i class="{{ $kpi['icon'] }}"></i>
                                         </span>
                                     </div>
-                                    <p class="mt-4 text-sm font-semibold text-slate-500">
-                                        {{ trim($direction->directeur_prenom.' '.$direction->directeur_nom) ?: 'Directeur non renseigné' }}
-                                    </p>
-                                    <div class="mt-5 flex gap-3">
-                                        <a href="{{ route('admin.entites.directions.index') }}" class="ent-btn ent-btn-soft flex-1 justify-center">Voir liste</a>
-                                        <a href="{{ route('admin.entites.directions.create') }}" class="ent-btn ent-btn-primary justify-center px-4">Ajouter</a>
+                                    <div class="mt-6 flex items-center gap-3">
+                                        <a href="{{ $kpi['list'] }}" class="inline-flex min-w-0 flex-1 items-center justify-center rounded-2xl bg-white/20 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/30">
+                                            Consulter
+                                        </a>
+                                        <a href="{{ $kpi['create'] }}" class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white/90 text-slate-700 shadow-lg transition hover:scale-105">
+                                            <i class="fas fa-plus"></i>
+                                        </a>
                                     </div>
-                                </article>
-                            @empty
-                                <p class="text-sm text-slate-400">Aucune direction enregistrée.</p>
-                            @endforelse
-                        </div>
-                    </div>
-
-                    <div data-entite-tab-panel="services" class="hidden">
-                        @include('admin.entites.partials.services')
-                    </div>
-
-                    <div data-entite-tab-panel="secretaires" class="hidden">
-                        @include('admin.entites.partials.secretaires', ['directions' => $allDirections])
-                    </div>
-
-                    <div data-entite-tab-panel="agents" class="hidden">
-                        <div class="flex items-center justify-between mb-5">
-                            <h2 class="text-xl font-black text-slate-800">Liste des agents</h2>
-                            <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="ent-btn ent-btn-primary">Ajouter un agent</a>
-                        </div>
-                        @if($agents->isEmpty())
-                            <p class="text-sm text-slate-400">Aucun agent trouvé.</p>
-                        @else
-                            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                                @foreach($agents as $agent)
-                                    <article class="rounded-[24px] border border-slate-100 bg-slate-50 p-5">
-                                        <p class="text-lg font-black text-slate-800">{{ $agent->prenom }} {{ $agent->nom }}</p>
-                                        <p class="mt-2 text-sm font-medium text-slate-500">{{ $agent->fonction ?: 'Fonction non renseignée' }}</p>
-                                        <p class="mt-1 text-xs font-semibold uppercase tracking-widest text-slate-400">{{ $agent->service?->nom ?? 'Sans service' }}</p>
-                                    </article>
-                                @endforeach
-                            </div>
-                        @endif
+                                </div>
+                            </article>
+                        @endforeach
                     </div>
                 </div>
             </section>
 
-            <div class="grid grid-cols-12 gap-8">
-                {{-- COLONNE GAUCHE : INFOS & DIRIGEANTS (8/12) --}}
-                <div class="col-span-12 lg:col-span-8 space-y-8">
-                    <div class="bg-white rounded-[32px] p-8 lg:p-12 shadow-sm border border-slate-100 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 p-12 opacity-[0.03] text-9xl pointer-events-none">
-                            <i class="fas fa-building"></i>
+            <section class="space-y-7">
+                <div class="overflow-hidden rounded-[34px] border border-white/70 bg-white/85 shadow-[0_24px_70px_-35px_rgba(148,163,184,0.6)] backdrop-blur">
+                    <div class="flex flex-wrap items-center gap-3 border-b border-slate-100/80 px-4 py-4 lg:px-6">
+                        @foreach ($tabs as $key => $tab)
+                            <button type="button" data-entite-tab-trigger="{{ $key }}" class="entite-tab-trigger inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-extrabold tracking-[0.08em] text-slate-500 transition hover:bg-sky-50 hover:text-sky-600">
+                                <i class="{{ $tab['icon'] }} text-xs"></i>
+                                <span>{{ $tab['label'] }}</span>
+                            </button>
+                        @endforeach
+
+                        <div class="ml-auto">
+                            <button type="button" class="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-400 shadow-sm">
+                                <i class="fas fa-sliders"></i>
+                            </button>
                         </div>
-                        
-                        <div class="relative z-10">
-                            <h3 class="text-xs font-black text-cyan-500 uppercase tracking-[0.3em] mb-4 text-center lg:text-left">Organisation de Haut Niveau</h3>
-                            <h2 class="text-4xl font-black text-slate-800 tracking-tight mb-6 text-center lg:text-left">Structure de la Faîtière</h2>
-                            <p class="text-slate-500 leading-relaxed mb-10 text-center lg:text-left">La faîtière assure le pilotage stratégique de l'ensemble du réseau RCPB. Elle centralise les décisions administratives et la gestion du personnel cadre.</p>
-                            
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                @php
-                                    $dirigeants = [
-                                        ['label' => 'Directrice Générale', 'nom' => $entite->directrice_generale_prenom . ' ' . $entite->directrice_generale_nom, 'icon' => 'fa-user-tie'],
-                                        ['label' => 'DGA', 'nom' => $entite->dga_prenom . ' ' . $entite->dga_nom, 'icon' => 'fa-user-shield'],
-                                        ['label' => 'PCA', 'nom' => $entite->pca_prenom . ' ' . $entite->pca_nom, 'icon' => 'fa-landmark']
-                                    ];
-                                @endphp
-                                @foreach($dirigeants as $d)
-                                <div class="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col items-center text-center group hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all duration-300">
-                                    <div class="h-12 w-12 bg-white rounded-2xl flex items-center justify-center text-cyan-500 mb-4 shadow-sm group-hover:bg-cyan-500 group-hover:text-white transition-all">
-                                        <i class="fas {{ $d['icon'] }}"></i>
+                    </div>
+
+                    <div class="p-4 lg:p-6">
+                        <div data-entite-tab-panel="directions" class="space-y-5">
+                            <div class="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_18px_45px_-35px_rgba(15,23,42,0.55)]">
+                                <div class="mb-5 flex items-center gap-3 text-sm font-black uppercase tracking-[0.14em] text-slate-700">
+                                    <i class="fas fa-list-ul text-cyan-500"></i>
+                                    Liste des directions & contacts du siege
+                                </div>
+
+                                <div class="space-y-4">
+                                    @forelse ($directions as $direction)
+                                        <article class="flex flex-col gap-4 rounded-[24px] border border-slate-100 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div class="flex items-center gap-4">
+                                                <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,_#dbeafe,_#ffffff)] text-sky-600 shadow-inner">
+                                                    <i class="fas fa-user-tie text-xl"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 class="text-lg font-black text-slate-800">{{ $direction->nom }}</h3>
+                                                    <p class="text-base text-slate-500">
+                                                        {{ trim(($direction->directeur_prenom ?? '').' '.($direction->directeur_nom ?? '')) ?: 'Responsable non renseigne' }}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div class="flex items-center gap-3">
+                                                <a href="{{ route('admin.entites.directions.index') }}" class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
+                                                    Voir liste
+                                                </a>
+                                                <a href="{{ route('admin.entites.directions.create') }}" class="inline-flex items-center rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5">
+                                                    Ajouter
+                                                </a>
+                                            </div>
+                                        </article>
+                                    @empty
+                                        <div class="rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-400">
+                                            Aucune direction n'est encore enregistree.
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+
+                        <div data-entite-tab-panel="services" class="hidden">
+                            <div class="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_18px_45px_-35px_rgba(15,23,42,0.55)]">
+                                @include('admin.entites.partials.services')
+                            </div>
+                        </div>
+
+                        <div data-entite-tab-panel="secretaires" class="hidden">
+                            <div class="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_18px_45px_-35px_rgba(15,23,42,0.55)]">
+                                @include('admin.entites.partials.secretaires', ['allDirections' => $allDirections])
+                            </div>
+                        </div>
+
+                        <div data-entite-tab-panel="agents" class="hidden">
+                            <div class="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_18px_45px_-35px_rgba(15,23,42,0.55)]">
+                                <div class="mb-5 flex items-center justify-between gap-4">
+                                    <div>
+                                        <h2 class="text-xl font-black text-slate-800">Agents de la faitiere</h2>
+                                        <p class="mt-1 text-sm text-slate-400">Consultez la liste rapide des agents rattaches au siege.</p>
                                     </div>
-                                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{{ $d['label'] }}</span>
-                                    <span class="text-sm font-black text-slate-800 tracking-tight line-clamp-1">{{ $d['nom'] }}</span>
+                                    <a href="{{ route('admin.agents.create') }}" class="inline-flex items-center rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5">
+                                        Ajouter un agent
+                                    </a>
                                 </div>
-                                @endforeach
+
+                                @if ($agents->isEmpty())
+                                    <div class="rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-400">
+                                        Aucun agent trouve.
+                                    </div>
+                                @else
+                                    <div class="grid gap-4 md:grid-cols-2">
+                                        @foreach ($agents as $agent)
+                                            <article class="rounded-[24px] border border-slate-100 bg-slate-50/80 p-4">
+                                                <div class="flex items-center gap-4">
+                                                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-white text-amber-500 shadow-sm">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h3 class="font-black text-slate-800">{{ trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) ?: 'Agent non renseigne' }}</h3>
+                                                        <p class="text-sm text-slate-500">{{ $agent->fonction ?: 'Fonction non renseignee' }}</p>
+                                                        <p class="text-xs text-slate-400">{{ $agent->service?->nom ?? 'Sans service' }}</p>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        @endforeach
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {{-- COLONNE DROITE : STATUT & LOGS (4/12) --}}
-                <div class="col-span-12 lg:col-span-4 space-y-8">
-                    <div class="bg-slate-900 rounded-[32px] p-8 text-white shadow-xl shadow-slate-200">
-                        <h3 class="text-lg font-black italic mb-6">Informations Siège</h3>
-                        <div class="space-y-6">
-                            <div class="flex gap-4 items-start">
-                                <div class="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                                    <i class="fas fa-phone text-cyan-400"></i>
-                                </div>
-                                <div>
-                                    <p class="text-[10px] font-black uppercase tracking-widest opacity-50">Contact Principal</p>
-                                    <p class="text-sm font-bold mt-1 text-cyan-100">+226 25 XX XX XX</p>
-                                </div>
-                            </div>
-                            <div class="flex gap-4 items-start">
-                                <div class="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                                    <i class="fas fa-calendar-alt text-emerald-400"></i>
-                                </div>
-                                <div>
-                                    <p class="text-[10px] font-black uppercase tracking-widest opacity-50">Dernière Mise à jour</p>
-                                    <p class="text-sm font-bold mt-1 text-emerald-100">{{ $entite->updated_at->format('d M Y') }}</p>
-                                </div>
-                            </div>
+                <div class="overflow-hidden rounded-[34px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_70px_-35px_rgba(148,163,184,0.6)] backdrop-blur lg:p-8">
+                    <div class="grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-start">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-[0.25em] text-cyan-500">Organisation de haut niveau</p>
+                            <h2 class="mt-3 text-3xl font-black tracking-tight text-slate-900 lg:text-4xl">Structure de la Faitiere</h2>
+                            <p class="mt-4 max-w-3xl text-base leading-8 text-slate-500">
+                                La faitiere assure le pilotage strategique de l'ensemble du reseau RCPB. Elle centralise les decisions administratives et la gestion du personnel cadre.
+                            </p>
                         </div>
-                        <div class="mt-10 p-6 bg-white/5 rounded-3xl border border-white/10">
-                            <p class="text-xs leading-relaxed opacity-70 italic text-center">"Assurer la pérennité et la solidarité du réseau à travers une gouvernance rigoureuse."</p>
+                        <div class="hidden justify-end lg:flex">
+                            <div class="h-24 w-32 rounded-[28px] bg-[radial-gradient(circle_at_top_left,_rgba(191,219,254,0.8),_rgba(255,255,255,0.5)_70%)]"></div>
                         </div>
                     </div>
-                </div>
-            </div>
 
+                    <div class="mt-8 grid gap-4 md:grid-cols-3">
+                        @foreach ($dirigeants as $dirigeant)
+                            <article class="rounded-[28px] border border-slate-100 bg-gradient-to-br {{ $dirigeant['tint'] }} p-6 shadow-sm">
+                                @if (!empty($dirigeant['photo']))
+                                    <img src="{{ asset('storage/'.$dirigeant['photo']) }}" alt="{{ $dirigeant['label'] }}" class="mx-auto h-20 w-20 rounded-full object-cover shadow-md">
+                                @else
+                                    <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white text-2xl shadow-md {{ $dirigeant['ring'] }}">
+                                        <i class="{{ $dirigeant['icon'] }}"></i>
+                                    </div>
+                                @endif
+                                <div class="mt-5 text-center">
+                                    <p class="text-sm font-medium text-slate-500">{{ $dirigeant['label'] }}</p>
+                                    <h3 class="mt-2 text-xl font-black text-slate-800">{{ $dirigeant['nom'] }}</h3>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                </div>
+
+                <div class="overflow-hidden rounded-[34px] border border-white/70 bg-white/85 p-6 shadow-[0_24px_70px_-35px_rgba(148,163,184,0.6)] backdrop-blur lg:p-8">
+                    <div class="grid gap-5 lg:grid-cols-[1.1fr_0.9fr_0.9fr] lg:items-start">
+                        <div class="flex items-center gap-4">
+                            <span class="h-14 w-1.5 rounded-full bg-cyan-500"></span>
+                            <div>
+                                <h3 class="text-3xl font-black italic tracking-tight text-slate-900">Infos Siege</h3>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 rounded-[24px] bg-slate-50/80 p-4">
+                            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-600">
+                                <i class="fas fa-phone"></i>
+                            </div>
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Contact siege</p>
+                                <p class="mt-1 text-lg font-bold text-slate-800">+226 25 30 XX XX</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 rounded-[24px] bg-slate-50/80 p-4">
+                            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div>
+                                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Derniere maj</p>
+                                <p class="mt-1 text-lg font-bold text-slate-800">{{ $entite->updated_at->format('d M Y a H:i') }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 rounded-[28px] bg-slate-900 px-6 py-6 text-center text-sm italic text-cyan-50 shadow-inner">
+                        "Assurer la perennite et la solidarite du reseau a travers une gouvernance rigoureuse."
+                    </div>
+                </div>
+            </section>
         @else
-            {{-- EMPTY STATE --}}
-            <div class="bg-white rounded-[40px] p-20 text-center border border-slate-100 shadow-2xl">
-                <div class="w-32 h-32 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-8">
-                    <i class="fas fa-building text-5xl text-slate-200"></i>
+            <div class="rounded-[36px] border border-dashed border-slate-200 bg-white/90 px-8 py-20 text-center shadow-[0_30px_80px_-35px_rgba(148,163,184,0.55)]">
+                <div class="mx-auto mb-8 flex h-28 w-28 items-center justify-center rounded-full bg-slate-100 text-5xl text-slate-300 shadow-inner">
+                    <i class="fas fa-building"></i>
                 </div>
-                <h2 class="text-3xl font-black text-slate-800 tracking-tight uppercase mb-4 italic">Aucune faîtière enregistrée</h2>
-                <p class="text-slate-400 max-w-md mx-auto mb-10">Vous devez configurer l'entité de tête (Faîtière) pour commencer à gérer les directions et le personnel.</p>
-                <a href="{{ route('admin.entites.create') }}" class="inline-flex h-14 px-12 bg-cyan-500 text-white rounded-2xl items-center text-xs font-black uppercase tracking-widest shadow-xl shadow-cyan-200 hover:bg-cyan-600 transition-all">
-                    Créer la faîtière maintenant
+                <h2 class="text-4xl font-black tracking-tight text-slate-800">Faitiere non configuree</h2>
+                <p class="mx-auto mt-4 max-w-2xl text-slate-500">L'entite principale du reseau n'est pas encore configuree. Creez-la pour afficher ce tableau de bord.</p>
+                <a href="{{ route('admin.entites.create') }}" class="mt-8 inline-flex items-center rounded-2xl bg-cyan-600 px-8 py-4 text-sm font-black uppercase tracking-[0.18em] text-white shadow-xl shadow-cyan-200 transition hover:bg-slate-900">
+                    Initialiser la structure
                 </a>
             </div>
         @endif
@@ -272,11 +318,12 @@ document.addEventListener('DOMContentLoaded', function () {
     function activateTab(tabName) {
         triggers.forEach((trigger) => {
             const isActive = trigger.getAttribute('data-entite-tab-trigger') === tabName;
-            trigger.classList.toggle('bg-cyan-50', isActive);
-            trigger.classList.toggle('border-cyan-100', isActive);
-            trigger.classList.toggle('text-cyan-600', isActive);
-            trigger.classList.toggle('bg-white', !isActive);
-            trigger.classList.toggle('border-slate-200', !isActive);
+
+            trigger.classList.toggle('bg-sky-50', isActive);
+            trigger.classList.toggle('text-sky-600', isActive);
+            trigger.classList.toggle('shadow-sm', isActive);
+            trigger.classList.toggle('border', isActive);
+            trigger.classList.toggle('border-sky-100', isActive);
             trigger.classList.toggle('text-slate-500', !isActive);
         });
 
@@ -291,12 +338,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    if (window.location.hash === '#tab-secretaires') {
-        activateTab('secretaires');
-        document.getElementById('tab-panels-entite')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-        activateTab('directions');
-    }
+    activateTab('directions');
 });
 </script>
 @endpush

@@ -1,143 +1,294 @@
 @extends('layouts.app')
 
 @section('title', 'Tableau de bord | SGP-RCPB')
-
-{{-- On vide le titre du layout pour supprimer "Aperçu" et gagner de la place --}}
 @section('page_title', '')
 
 @section('content')
 @php
-    $calendarStart = now()->startOfMonth()->startOfWeek(\Illuminate\Support\Carbon::SUNDAY);
+    $calendarStart = now()->startOfMonth()->startOfWeek(\Illuminate\Support\Carbon::MONDAY);
     $calendarEnd = now()->endOfMonth()->endOfWeek(\Illuminate\Support\Carbon::SUNDAY);
     $calendarDays = [];
-    for ($date = $calendarStart->copy(); $date->lte($calendarEnd); $date->addDay()) { $calendarDays[] = $date->copy(); }
 
-    $calendarHighlights = collect([now()->day, min(now()->endOfMonth()->day, now()->copy()->addDays(6)->day)])->unique();
+    for ($date = $calendarStart->copy(); $date->lte($calendarEnd); $date->addDay()) {
+        $calendarDays[] = $date->copy();
+    }
 
-    $adminKpis = [
-        ['label' => 'Directions', 'value' => $faitiereDirectionsCount, 'meta' => 'Directions Faîtières', 'href' => route('admin.directions.index'), 'tone' => 'from-[#22d3ee] to-[#3b82f6]', 'icon' => 'fas fa-sitemap'],
-        ['label' => 'Services', 'value' => $servicesCount, 'meta' => $servicesWithoutDirection.' sans direction', 'href' => route('admin.services.index'), 'tone' => 'from-[#34d399] to-[#10b981]', 'icon' => 'fas fa-layer-group'],
-        ['label' => 'Agents', 'value' => $agentsCount, 'meta' => $agentsWithoutService.' sans service', 'href' => route('admin.agents.index'), 'tone' => 'from-[#fb923c] to-[#f59e0b]', 'icon' => 'fas fa-users'],
-        ['label' => 'Alertes', 'value' => $failedLoginAttemptsToday, 'meta' => 'Tentatives échouées', 'href' => '#', 'tone' => 'from-[#f87171] to-[#ef4444]', 'icon' => 'fas fa-exclamation-triangle'],
+    $overviewCards = [
+        [
+            'label' => 'Directions',
+            'value' => $directionsCount,
+            'meta' => $faitiereDirectionsCount.' a la faitiere / '.$delegationDirectionsCount.' en delegation',
+            'href' => route('admin.directions.index'),
+            'icon' => 'fas fa-sitemap',
+            'valueClass' => 'text-sky-500',
+            'iconClass' => 'bg-sky-50 text-sky-500',
+            'borderClass' => 'border-slate-100',
+        ],
+        [
+            'label' => 'Delegations techniques',
+            'value' => $delegationsCount,
+            'meta' => $delegationDirectionsCount.' directions rattachees',
+            'href' => route('admin.delegations-techniques.directeurs.index'),
+            'icon' => 'fas fa-building-circle-arrow-right',
+            'valueClass' => 'text-emerald-500',
+            'iconClass' => 'bg-emerald-50 text-emerald-500',
+            'borderClass' => 'border-slate-100',
+        ],
+        [
+            'label' => 'Services',
+            'value' => $servicesCount,
+            'meta' => $servicesWithoutDirection.' sans direction',
+            'href' => route('admin.services.index'),
+            'icon' => 'fas fa-layer-group',
+            'valueClass' => 'text-cyan-500',
+            'iconClass' => 'bg-cyan-50 text-cyan-500',
+            'borderClass' => 'border-slate-100',
+        ],
+        [
+            'label' => 'Agents',
+            'value' => $agentsCount,
+            'meta' => $agentsWithoutService.' sans service',
+            'href' => route('admin.agents.index'),
+            'icon' => 'fas fa-users',
+            'valueClass' => 'text-amber-500',
+            'iconClass' => 'bg-amber-50 text-amber-500',
+            'borderClass' => 'border-slate-100',
+        ],
+        [
+            'label' => 'Secretaires',
+            'value' => $secretairesCount,
+            'meta' => 'Total des secretaires du reseau',
+            'href' => route('admin.entites.secretaires.index'),
+            'icon' => 'fas fa-user-tie',
+            'valueClass' => 'text-fuchsia-500',
+            'iconClass' => 'bg-fuchsia-50 text-fuchsia-500',
+            'borderClass' => 'border-slate-100',
+        ],
+        [
+            'label' => 'Alertes securite',
+            'value' => $failedLoginAttemptsToday,
+            'meta' => $failedLoginEmailsCount.' email(s) distinct(s)',
+            'href' => '#security-log',
+            'icon' => 'fas fa-shield-halved',
+            'valueClass' => 'text-rose-500',
+            'iconClass' => 'bg-rose-50 text-rose-500',
+            'borderClass' => 'border-rose-200',
+        ],
     ];
 @endphp
 
-{{-- -mt-20 fait remonter tout le bloc au niveau du header --}}
-<div class="px-4 pb-8 lg:px-8 -mt-20 relative z-10">
-    <div class="mx-auto max-w-[1600px] space-y-6">
-        
-        {{-- Header interne du Dashboard --}}
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-4">
-            <div class="flex-1">
-                <h1 class="text-3xl font-black text-slate-800 tracking-tighter">Tableau de bord Administration</h1>
-                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Gestion centrale SGP-RCPB • {{ now()->translatedFormat('l d F Y') }}</p>
-            </div>
-            
-            <div class="flex items-center gap-3 bg-white p-2 rounded-[24px] shadow-sm border border-slate-100 flex-1 max-w-xl">
-                <div class="flex-1 flex items-center px-4 gap-3">
-                    <i class="fas fa-search text-slate-300"></i>
-                    <input type="text" class="w-full py-2 bg-transparent border-none focus:ring-0 text-sm text-slate-600 placeholder-slate-300" placeholder="Rechercher une entité...">
+<div class="relative z-10 -mt-8 bg-[linear-gradient(180deg,#f6f9ff_0%,#fbfdff_100%)] px-4 pb-6 pt-0 lg:px-8">
+    <div class="mx-auto max-w-[1500px] space-y-4">
+        <section class="rounded-[26px] border border-white bg-white/90 px-5 py-4 shadow-[0_18px_60px_-35px_rgba(148,163,184,0.6)] backdrop-blur">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                    <p class="text-base font-black text-emerald-700">Tableau de bord</p>
+                    <div class="mt-1 flex flex-wrap items-center gap-3">
+                        <h1 class="text-3xl font-black tracking-tight text-slate-900">Pilotage administratif</h1>
+                    </div>
+                    <p class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Synthese du {{ now()->translatedFormat('d F Y') }}</p>
                 </div>
-                <button class="bg-cyan-500 text-white h-10 w-10 rounded-xl shadow-lg shadow-cyan-100 flex items-center justify-center transition hover:scale-105">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-        </div>
 
-        {{-- KPI Cards --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            @foreach ($adminKpis as $kpi)
-                <div class="relative overflow-hidden rounded-[32px] p-6 text-white shadow-xl shadow-slate-200/50 bg-gradient-to-br {{ $kpi['tone'] }}">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-4xl font-black">{{ $kpi['value'] }}</p>
-                            <p class="text-[10px] font-black opacity-80 mt-1 uppercase tracking-widest">{{ $kpi['label'] }}</p>
-                        </div>
-                        <div class="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
-                            <i class="{{ $kpi['icon'] }} text-xl"></i>
-                        </div>
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
+                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Caisses</p>
+                        <p class="mt-1 text-xl font-black text-slate-900">{{ $caissesCount }}</p>
                     </div>
-                    <div class="mt-6 flex items-center justify-between">
-                        <span class="text-[10px] font-black opacity-70 uppercase tracking-tight">{{ $kpi['meta'] }}</span>
-                        <i class="fas fa-arrow-right text-[10px] opacity-40"></i>
+                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Agences</p>
+                        <p class="mt-1 text-xl font-black text-slate-900">{{ $agencesCount }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Guichets</p>
+                        <p class="mt-1 text-xl font-black text-slate-900">{{ $guichetsCount }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Alertes</p>
+                        <p class="mt-1 text-xl font-black text-rose-500">{{ $failedLoginAttemptsCount }}</p>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-6">
+            @foreach ($overviewCards as $card)
+                <article class="rounded-[20px] border {{ $card['borderClass'] }} bg-white px-4 py-3 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.3)]">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{{ $card['label'] }}</p>
+                            <p class="mt-2 text-3xl font-black tracking-tight {{ $card['valueClass'] }}">{{ $card['value'] }}</p>
+                            <p class="mt-1 line-clamp-1 text-[11px] font-bold text-slate-400">{{ $card['meta'] }}</p>
+                        </div>
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl {{ $card['iconClass'] }}">
+                            <i class="{{ $card['icon'] }} text-base"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex justify-end">
+                        <a href="{{ $card['href'] }}" class="inline-flex h-8 items-center rounded-xl bg-slate-50 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-900 hover:text-white">
+                            Ouvrir
+                        </a>
+                    </div>
+                </article>
             @endforeach
-        </div>
+        </section>
 
-        {{-- Main Grid --}}
-        <div class="grid grid-cols-12 gap-8">
-            {{-- Liste Directions --}}
-            <div class="col-span-12 xl:col-span-8 space-y-6">
-                <div class="bg-white rounded-[35px] p-8 shadow-sm border border-slate-100">
-                    <div class="flex items-center justify-between mb-8">
-                        <h3 class="text-lg font-black text-slate-800 tracking-tight italic">Dernières Directions</h3>
-                        <a href="{{ route('admin.directions.index') }}" class="text-xs font-black text-cyan-500 uppercase tracking-widest">Voir tout</a>
-                    </div>
-                    
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="text-slate-300 text-[10px] font-black uppercase tracking-[0.2em] border-b border-slate-50">
-                                    <th class="pb-4">Direction</th>
-                                    <th class="pb-4">Ville</th>
-                                    <th class="pb-4">Statut</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-sm">
-                                @foreach ($recentDirections->take(5) as $direction)
-                                <tr class="group hover:bg-slate-50 transition-colors">
-                                    <td class="py-4">
-                                        <p class="font-black text-slate-700">{{ $direction->nom }}</p>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{{ $direction->directeur_nom ?: 'Sans directeur' }}</p>
-                                    </td>
-                                    <td class="py-4 text-xs font-black text-slate-400 uppercase tracking-widest">
-                                        {{ $direction->delegationTechnique?->ville ?? 'Faîtière' }}
-                                    </td>
-                                    <td class="py-4">
-                                        <span class="bg-emerald-50 text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">Actif</span>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Sidebar Dashboard --}}
-            <div class="col-span-12 xl:col-span-4 space-y-8">
-                {{-- Calendrier Épuré --}}
-                <div class="bg-white rounded-[35px] p-8 shadow-sm border border-slate-100">
-                    <h3 class="text-lg font-black text-slate-800 mb-6 italic">{{ now()->translatedFormat('F Y') }}</h3>
-                    <div class="grid grid-cols-7 gap-1 text-center mb-4">
-                        @foreach (['S', 'M', 'T', 'W', 'T', 'F', 'S'] as $weekday)
-                            <span class="text-[10px] font-black text-slate-300 uppercase">{{ $weekday }}</span>
-                        @endforeach
-                    </div>
-                    <div class="grid grid-cols-7 gap-2">
-                        @foreach ($calendarDays as $day)
-                            <div class="h-8 flex items-center justify-center text-[11px] font-black rounded-xl
-                                {{ $day->isToday() ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-100' : ($day->month === now()->month ? 'text-slate-600 hover:bg-slate-50' : 'text-slate-200') }}">
-                                {{ $day->day }}
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-                
-                {{-- Sécurité --}}
-                <div class="bg-slate-900 rounded-[35px] p-8 text-white shadow-xl shadow-slate-200">
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="h-10 w-10 rounded-xl bg-rose-500 flex items-center justify-center shadow-lg shadow-rose-500/20">
-                            <i class="fas fa-shield-alt text-sm"></i>
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(340px,0.9fr)]">
+            <div class="space-y-4">
+                <section class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-black tracking-tight text-slate-900">Delegations recentes</h2>
+                            <p class="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Vue compacte du reseau territorial</p>
                         </div>
-                        <h3 class="text-base font-black italic">Journal de Sécurité</h3>
+                        <a href="{{ route('admin.delegations-techniques.directeurs.index') }}" class="inline-flex h-8 items-center rounded-full bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-white">Voir tout</a>
                     </div>
-                    <p class="text-3xl font-black tracking-tighter">{{ $failedLoginAttemptsCount }}</p>
-                    <p class="text-[10px] font-bold opacity-40 uppercase tracking-[0.2em] mt-1">Alertes suspectes</p>
-                    <button class="w-full mt-6 py-3 bg-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all">Analyser les Logs</button>
+
+                    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+                        @forelse ($delegations as $delegation)
+                            <article class="rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <h3 class="truncate text-base font-black text-slate-900">{{ $delegation->ville }}</h3>
+                                        <p class="text-[11px] font-semibold text-slate-400">{{ $delegation->adresse ?: 'Adresse non renseignee' }}</p>
+                                    </div>
+                                    <a href="{{ route('admin.delegations-techniques.directeurs.index', ['delegation_id' => $delegation->id]) }}" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition hover:bg-emerald-600 hover:text-white" title="Ouvrir la delegation {{ $delegation->ville }}">
+                                        <i class="fas fa-building"></i>
+                                    </a>
+                                </div>
+                                <div class="mt-4 grid grid-cols-2 gap-2 text-center">
+                                    <div class="rounded-2xl bg-white px-3 py-3 shadow-sm">
+                                        <p class="text-lg font-black text-slate-900">{{ $delegation->caisses_count }}</p>
+                                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Caisses</p>
+                                    </div>
+                                    <div class="rounded-2xl bg-white px-3 py-3 shadow-sm">
+                                        <p class="text-lg font-black text-slate-900">{{ $delegation->agences_count }}</p>
+                                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Agences</p>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-[11px] font-semibold text-slate-500">
+                                    @php($leadDirection = $delegation->directions->first())
+                                    {{ $leadDirection ? trim(($leadDirection->directeur_prenom ?? '').' '.($leadDirection->directeur_nom ?? '')) : 'Aucun responsable charge' }}
+                                </div>
+                            </article>
+                        @empty
+                            <div class="rounded-[20px] border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-400 lg:col-span-2 2xl:col-span-3">
+                                Aucune delegation technique recente.
+                            </div>
+                        @endforelse
+                    </div>
+                </section>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <section class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                            <div class="mb-4 flex items-center justify-between">
+                                <h2 class="text-lg font-black tracking-tight text-slate-900">Derniers services</h2>
+                                <a href="{{ route('admin.services.index') }}" class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Liste</a>
+                            </div>
+                            <div class="space-y-3">
+                                @forelse ($recentServices as $service)
+                                    <article class="flex items-center justify-between gap-3 rounded-[18px] bg-slate-50 px-4 py-3">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-black text-slate-900">{{ $service->nom }}</p>
+                                            <p class="truncate text-[11px] font-semibold text-slate-400">{{ $service->direction?->nom ?? 'Sans direction' }}</p>
+                                        </div>
+                                        <span class="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-600 shadow-sm">{{ $service->direction?->delegationTechnique?->ville ?? 'Siege' }}</span>
+                                    </article>
+                                @empty
+                                    <p class="rounded-[18px] bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">Aucun service recent.</p>
+                                @endforelse
+                            </div>
+                        </section>
+
+                        <section class="rounded-[26px] border border-slate-100 bg-white p-4 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                            <div class="mb-3 flex items-center justify-between">
+                                <div>
+                                    <h2 class="text-sm font-black tracking-tight text-slate-900">Calendrier</h2>
+                                    <p class="mt-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{{ now()->translatedFormat('M Y') }}</p>
+                                </div>
+                                <div class="flex gap-1.5">
+                                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                                        <i class="fas fa-chevron-left text-[9px]"></i>
+                                    </span>
+                                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400">
+                                        <i class="fas fa-chevron-right text-[9px]"></i>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-7 gap-1 text-center">
+                                @foreach (['L', 'M', 'M', 'J', 'V', 'S', 'D'] as $weekday)
+                                    <span class="py-0.5 text-[9px] font-black uppercase text-slate-300">{{ $weekday }}</span>
+                                @endforeach
+                            </div>
+
+                            <div class="mt-1.5 grid grid-cols-7 gap-1">
+                                @foreach ($calendarDays as $day)
+                                    <div class="flex h-7 items-center justify-center rounded-lg text-[10px] font-black transition-all {{ $day->isToday() ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100' : ($day->month === now()->month ? 'bg-slate-50 text-slate-600' : 'bg-slate-50/60 text-slate-300') }}">
+                                        {{ $day->day }}
+                                    </div>
+                                @endforeach
+                            </div>
+                        </section>
+                    </div>
                 </div>
             </div>
+
+            <aside class="space-y-4">
+                <section class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                    <div class="mb-4 flex items-center justify-between">
+                        <h2 class="text-lg font-black tracking-tight text-slate-900">Derniers agents</h2>
+                        <a href="{{ route('admin.agents.index') }}" class="inline-flex h-8 items-center rounded-full bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-white">Voir tous</a>
+                    </div>
+                    <div class="space-y-3">
+                        @forelse ($recentAgents as $agent)
+                            <article class="rounded-[18px] bg-slate-50 px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-black text-slate-900">{{ trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) ?: 'Agent non renseigne' }}</p>
+                                        <p class="truncate text-[11px] font-semibold text-slate-400">{{ $agent->service?->nom ?? 'Sans service' }}</p>
+                                    </div>
+                                </div>
+                            </article>
+                        @empty
+                            <p class="rounded-[18px] bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">Aucun agent recent.</p>
+                        @endforelse
+                    </div>
+                </section>
+
+                <section id="security-log" class="rounded-[26px] border border-rose-200 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-black tracking-tight text-rose-600">Journal de securite</h2>
+                            <p class="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">{{ $failedLoginAttemptsCount }} tentative(s) enregistree(s)</p>
+                        </div>
+                        <span class="inline-flex h-8 items-center rounded-full bg-rose-500 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-white">A surveiller</span>
+                    </div>
+
+                    <div class="space-y-3">
+                        @forelse ($recentLoginFailures as $failure)
+                            <article class="rounded-[18px] bg-rose-50 px-4 py-3">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-[10px] text-white">
+                                        <i class="fas fa-exclamation"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-black text-rose-700">{{ $failure->email ?: 'Email non renseigne' }}</p>
+                                        <p class="truncate text-[11px] font-semibold text-rose-500">
+                                            {{ $failure->ip_address ?: 'IP inconnue' }} • {{ optional($failure->attempted_at)->format('d/m/Y H:i') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </article>
+                        @empty
+                            <p class="rounded-[18px] bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">Aucune alerte de connexion recente.</p>
+                        @endforelse
+                    </div>
+                </section>
+            </aside>
         </div>
     </div>
 </div>

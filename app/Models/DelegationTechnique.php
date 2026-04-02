@@ -34,4 +34,9 @@ class DelegationTechnique extends Model
     {
         return $this->hasManyThrough(Service::class, Direction::class, 'delegation_technique_id', 'direction_id');
     }
+
+    public function caisses(): HasManyThrough
+    {
+        return $this->hasManyThrough(Caisse::class, Direction::class, 'delegation_technique_id', 'superviseur_direction_id');
+    }
 }

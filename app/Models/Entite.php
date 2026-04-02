@@ -21,15 +21,18 @@ class Entite extends Model
         'directrice_generale_prenom',
         'directrice_generale_nom',
         'directrice_generale_email',
+        'directrice_generale_photo_path',
         'dga_prenom',
         'dga_nom',
         'dga_email',
+        'dga_photo_path',
         'assistante_dg_prenom',
         'assistante_dg_nom',
         'assistante_dg_email',
         'pca_prenom',
         'pca_nom',
         'pca_email',
+        'pca_photo_path',
         'secretariat_telephone',
     ];
 

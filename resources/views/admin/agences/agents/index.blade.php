@@ -40,7 +40,9 @@
                                 <th>#</th>
                                 <th>Nom</th>
                                 <th>Prenom</th>
+                                <th>Sexe</th>
                                 <th>Fonction</th>
+                                <th>Debut fonction</th>
                                 <th>Numero</th>
                                 <th>Email</th>
                                 <th class="text-right">Actions</th>
@@ -52,7 +54,9 @@
                                     <td>{{ ($agents->firstItem() ?? 1) + $loop->index }}</td>
                                     <td>{{ $agent->nom }}</td>
                                     <td>{{ $agent->prenom }}</td>
+                                    <td>{{ ucfirst($agent->sexe ?? '-') }}</td>
                                     <td>{{ $agent->fonction }}</td>
+                                    <td>{{ optional($agent->date_debut_fonction)->format('d/m/Y') ?: '-' }}</td>
                                     <td>{{ $agent->numero_telephone }}</td>
                                     <td>{{ $agent->email }}</td>
                                     <td class="whitespace-nowrap text-right">
@@ -83,7 +87,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="py-10 text-center text-sm text-slate-500">
+                                    <td colspan="9" class="py-10 text-center text-sm text-slate-500">
                                         Aucun agent enregistre pour cette agence.
                                     </td>
                                 </tr>

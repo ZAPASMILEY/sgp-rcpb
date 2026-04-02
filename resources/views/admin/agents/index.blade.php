@@ -121,8 +121,10 @@
                                 <th>Photo</th>
                                 <th>Nom</th>
                                 <th>Prenom</th>
+                                <th>Sexe</th>
                                 <th>Service</th>
                                 <th>Fonction</th>
+                                <th>Debut fonction</th>
                                 <th>Numero</th>
                                 <th>Mail</th>
                                 <th class="text-right">Actions</th>
@@ -130,7 +132,7 @@
                         </thead>
                         <tbody>
                             @forelse ($agents as $agent)
-                                <tr data-search-content="{{ strtolower(trim($agent->nom.' '.$agent->prenom.' '.($agent->service?->nom ?? '').' '.$agent->fonction.' '.$agent->numero_telephone.' '.$agent->email)) }}">
+                                <tr data-search-content="{{ strtolower(trim($agent->nom.' '.$agent->prenom.' '.($agent->sexe ?? '').' '.($agent->service?->nom ?? '').' '.$agent->fonction.' '.$agent->numero_telephone.' '.$agent->email)) }}">
                                     <td data-label="#"><p class="ent-identity">{{ ($agents->firstItem() ?? 1) + $loop->index }}</p></td>
                                     <td data-label="Photo">
                                         @if ($agent->photo_path)
@@ -143,8 +145,10 @@
                                     </td>
                                     <td data-label="Nom"><p class="ent-identity">{{ $agent->nom }}</p></td>
                                     <td data-label="Prenom"><p class="ent-identity">{{ $agent->prenom }}</p></td>
+                                    <td data-label="Sexe"><p class="ent-identity">{{ ucfirst($agent->sexe ?? '-') }}</p></td>
                                     <td data-label="Service"><p class="ent-identity">{{ $agent->service?->nom ?? '-' }}</p></td>
                                     <td data-label="Fonction"><p class="ent-identity">{{ $agent->fonction }}</p></td>
+                                    <td data-label="Debut"><p class="ent-subtext">{{ optional($agent->date_debut_fonction)->format('d/m/Y') ?: '-' }}</p></td>
                                     <td data-label="Numero"><p class="ent-identity">{{ $agent->numero_telephone }}</p></td>
                                     <td data-label="Mail"><p class="ent-subtext">{{ $agent->email }}</p></td>
                                     <td data-label="Actions" class="whitespace-nowrap">
@@ -174,7 +178,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="py-10 text-center text-sm text-slate-500">
+                                    <td colspan="11" class="py-10 text-center text-sm text-slate-500">
                                         Aucun agent enregistre.
                                     </td>
                                 </tr>

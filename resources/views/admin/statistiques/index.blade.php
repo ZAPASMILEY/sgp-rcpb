@@ -8,6 +8,9 @@
             'Entites' => $entitesCount,
             'Directions' => $directionsCount,
             'Services' => $servicesCount,
+            'Caisses' => $caissesCount,
+            'Agences' => $agencesCount,
+            'Guichets' => $guichetsCount,
             'Agents' => $agentsCount,
             'Objectifs' => $objectifsCount,
             'Evaluations' => $evaluationsCount,
@@ -37,6 +40,29 @@
                     </form>
                 </div>
             </header>
+
+            <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <article class="admin-panel p-4">
+                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Caisses</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $caissesCount }}</p>
+                    <p class="mt-2 text-sm text-slate-600">Creees sur l'annee selectionnee.</p>
+                </article>
+                <article class="admin-panel p-4">
+                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Agences</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $agencesCount }}</p>
+                    <p class="mt-2 text-sm text-slate-600">Creees sur l'annee selectionnee.</p>
+                </article>
+                <article class="admin-panel p-4">
+                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Guichets</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $guichetsCount }}</p>
+                    <p class="mt-2 text-sm text-slate-600">Crees sur l'annee selectionnee.</p>
+                </article>
+                <article class="admin-panel p-4">
+                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Personnel</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $agentsCount }}</p>
+                    <p class="mt-2 text-sm text-slate-600">Selon la date de debut de fonction.</p>
+                </article>
+            </section>
 
             <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <article class="admin-panel p-4">
@@ -83,6 +109,18 @@
                         @foreach ($evaluationsByStatut as $statut => $total)
                             <li>
                                 <span class="text-sm font-medium text-slate-700">{{ $statut }}</span>
+                                <span class="neo-pill neo-pill--draft">{{ $total }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </article>
+
+                <article class="admin-panel p-5">
+                    <h2 class="text-base font-semibold text-slate-900">Personnel par sexe</h2>
+                    <ul class="neo-list">
+                        @foreach ($agentsBySexe as $label => $total)
+                            <li>
+                                <span class="text-sm font-medium text-slate-700">{{ $label }}</span>
                                 <span class="neo-pill neo-pill--draft">{{ $total }}</span>
                             </li>
                         @endforeach
