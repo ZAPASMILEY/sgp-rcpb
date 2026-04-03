@@ -4,6 +4,12 @@
 
 @section('content')
 <div class="min-h-screen bg-[#f8fafc] p-4 lg:p-8 font-sans">
+    <div class="mb-4">
+        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
+            <i class="fas fa-arrow-left"></i>
+            <span>Retour</span>
+        </a>
+    </div>
     <div class="max-w-[1600px] mx-auto space-y-8">
 
         {{-- HEADER : Titre & Action --}}
@@ -34,6 +40,10 @@
                     <i class="fas fa-plus"></i> Nouvelle Direction
                 </a>
             </div>
+        </div>
+
+        <div class="flex justify-end">
+            <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $directions->total() }} direction(s)</div>
         </div>
 
         {{-- TABLEAU MODERNISÉ --}}

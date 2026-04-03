@@ -12,9 +12,12 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Evaluations</h1>
                         <p class="mt-2 text-sm text-slate-600">Liste des evaluations des entites, directions, services et agents.</p>
                     </div>
-                    <a href="{{ route('admin.evaluations.index') }}" class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
-                        Reinitialiser
-                    </a>
+                    <div class="flex items-center gap-3">
+                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $evaluations->total() }} évaluation(s)</div>
+                        <a href="{{ route('admin.evaluations.index') }}" class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
+                            Reinitialiser
+                        </a>
+                    </div>
                 </div>
             </header>
 

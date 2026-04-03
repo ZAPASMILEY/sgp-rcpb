@@ -17,6 +17,7 @@ class Agent extends Model
      */
     protected $fillable = [
         'user_id',
+        'delegation_technique_id',
         'service_id',
         'agence_id',
         'nom',
@@ -28,6 +29,11 @@ class Agent extends Model
         'email',
         'photo_path',
     ];
+
+    public function delegationTechnique(): BelongsTo
+    {
+        return $this->belongsTo(DelegationTechnique::class);
+    }
 
     public function user(): BelongsTo
     {

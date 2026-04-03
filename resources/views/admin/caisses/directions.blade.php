@@ -3,6 +3,12 @@
 @section('title', 'Directions caisse | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
+    <div class="mb-4">
+        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
+            <i class="fas fa-arrow-left"></i>
+            <span>Retour</span>
+        </a>
+    </div>
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto max-w-6xl space-y-6">
             <section class="admin-panel p-6">

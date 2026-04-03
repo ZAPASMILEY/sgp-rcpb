@@ -10,6 +10,7 @@
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
+    @stack('head')
 
     @php
         $isModalMode = request()->header('Sec-Fetch-Dest') === 'iframe' || request()->boolean('modal');
@@ -17,16 +18,15 @@
 
         $menuSections = [
             [
-                'title' => 'Principal',
+                'title' => '1. Principal',
                 'items' => [
                     ['route' => 'admin.dashboard', 'icon' => 'fas fa-grid-2', 'label' => 'Tableau de bord'],
                     ['route' => 'admin.entites.index', 'icon' => 'fas fa-university', 'label' => 'Faitiere'],
-                    ['route' => 'admin.directions.index', 'icon' => 'fas fa-sitemap', 'label' => 'Directions'],
-                    ['route' => 'admin.delegations-techniques.directeurs.index', 'icon' => 'fas fa-building-circle-arrow-right', 'label' => 'Delegations'],
+                    ['route' => 'admin.delegations-techniques.index', 'icon' => 'fas fa-building-circle-arrow-right', 'label' => 'Delegations'],
                 ],
             ],
             [
-                'title' => 'Reseau',
+                'title' => '2. Reseau',
                 'items' => [
                     ['route' => 'admin.caisses.index', 'icon' => 'fas fa-wallet', 'label' => 'Caisses'],
                     ['route' => 'admin.agences.index', 'icon' => 'fas fa-building-columns', 'label' => 'Agences'],
@@ -35,7 +35,7 @@
                 ],
             ],
             [
-                'title' => 'Ressources',
+                'title' => '3. Ressources',
                 'items' => [
                     ['route' => 'admin.agents.index', 'icon' => 'fas fa-users', 'label' => 'Agents'],
                     ['route' => 'admin.statistiques.index', 'icon' => 'fas fa-chart-column', 'label' => 'Statistiques'],
@@ -49,8 +49,10 @@
     <style>
         :root {
             --app-bg: #f8fafc;
-            --sidebar-width: 290px;
+            --sidebar-width: 260px;
             --accent-color: #15803d;
+            --sidebar-green: #008751;
+            --sidebar-green-dark: #006837;
         }
 
         body {
@@ -60,54 +62,144 @@
             overflow-x: hidden;
         }
 
-        #admin-sidebar {
+        /* --- SIDEBAR --- */
+        .sidebar {
             width: var(--sidebar-width);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 100vh;
             position: fixed;
-            left: 1rem;
-            top: 1rem;
-            bottom: 1rem;
-            z-index: 50;
+            left: 0;
+            top: 0;
+            background: linear-gradient(180deg, var(--sidebar-green) 0%, var(--sidebar-green-dark) 100%);
+            color: #fff;
+            transition: transform 0.3s ease;
+            z-index: 1050;
+            border-right: 1px solid rgba(255,255,255,0.08);
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
         }
 
-        #admin-sidebar nav {
-            flex: 1;
-            overflow-y: auto;
-            scrollbar-width: none;
+        .sidebar::-webkit-scrollbar { width: 0; }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
-        #admin-sidebar nav::-webkit-scrollbar {
+        .sidebar-label {
+            padding: 1.2rem 1.5rem 0.4rem;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+            font-weight: 800;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.85) !important;
+            padding: 0.6rem 1.2rem;
+            display: flex;
+            align-items: center;
+            border-radius: 10px;
+            margin: 0.15rem 0.8rem;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .sidebar .nav-link i {
+            font-size: 1rem;
+            width: 1.5rem;
+            text-align: center;
+            margin-right: 0.75rem;
+        }
+
+        .sidebar .nav-link:hover {
+            background: rgba(255,255,255,0.12);
+            color: #fff !important;
+        }
+
+        .sidebar .nav-link.active {
+            background: #fff !important;
+            color: var(--sidebar-green) !important;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            transition: margin 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Collapsed sidebar */
+        body.sidebar-collapsed .sidebar {
+            width: 62px;
+            overflow: visible;
+        }
+        body.sidebar-collapsed .sidebar .sidebar-header,
+        body.sidebar-collapsed .sidebar .sidebar-label,
+        body.sidebar-collapsed .sidebar .nav-link span,
+        body.sidebar-collapsed .sidebar .nav-link .badge-alert,
+        body.sidebar-collapsed .sidebar .sidebar-user-info {
             display: none;
         }
+        body.sidebar-collapsed .sidebar .nav-link {
+            justify-content: center;
+            margin: 0.15rem 0.5rem;
+            padding: 0.65rem;
+        }
+        body.sidebar-collapsed .sidebar .nav-link i {
+            margin-right: 0;
+            font-size: 1.1rem;
+        }
+        body.sidebar-collapsed .main-content {
+            margin-left: 62px;
+        }
+        body.sidebar-collapsed .sidebar .sidebar-user-compact {
+            justify-content: center;
+        }
+        body.sidebar-collapsed .sidebar .sidebar-user-compact .user-avatar {
+            margin: 0 auto;
+        }
 
-        main {
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-left: var(--sidebar-width);
-            width: 100%;
+        /* Toggle arrow */
+        .sidebar-collapse-btn {
+            position: absolute;
+            right: -14px;
+            top: 28px;
+            z-index: 1060;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #e2e8f0;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--sidebar-green);
+            font-size: 0.7rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.2s;
         }
-
-        .sidebar-closed #admin-sidebar {
-            transform: translateX(calc(-100% + 58px));
+        .sidebar-collapse-btn:hover {
+            background: var(--sidebar-green);
+            color: #fff;
+            border-color: var(--sidebar-green);
         }
-
-        .sidebar-closed main {
-            margin-left: 58px;
+        body.sidebar-collapsed .sidebar-collapse-btn i {
+            transform: rotate(180deg);
         }
 
         header {
             position: relative;
             z-index: 100;
             background: transparent;
-        }
-
-        .sidebar-link-active {
-            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-            color: var(--accent-color) !important;
-            box-shadow: 0 10px 24px -18px rgba(21, 128, 61, 0.55);
         }
 
         .create-form-modal {
@@ -122,92 +214,89 @@
         .create-form-modal.is-open {
             display: flex;
         }
+
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; }
+            .sidebar.show { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; }
+            .sidebar-collapse-btn { display: none !important; }
+        }
     </style>
 </head>
 
 <body class="h-full antialiased {{ $isModalMode ? 'bg-slate-50' : '' }}">
     @if($showSidebar)
-        <div class="flex min-h-screen p-4">
-            <aside id="admin-sidebar" class="relative flex flex-col overflow-hidden rounded-[34px] border border-emerald-900/10 bg-gradient-to-b from-[#2f944d] via-[#2d8b49] to-[#246b38] text-white shadow-2xl shadow-emerald-950/20">
-                <button id="sidebar-toggle" class="absolute -right-3 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 transition-all hover:bg-emerald-800">
-                    <i class="fas fa-bars"></i>
-                </button>
-
-                <div class="shrink-0 border-b border-white/10 px-6 py-8">
-                    <div class="flex flex-col items-center text-center">
-                        <div class="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/20 bg-white/95 text-emerald-700 shadow-lg">
-                            <i class="fas fa-landmark text-2xl"></i>
-                        </div>
-                        <h2 class="mt-4 text-2xl font-black tracking-tight">SGP-RCPB</h2>
-                        <p class="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-50/80">Gestion du reseau cooperatif</p>
-                    </div>
+        <nav class="sidebar shadow" id="sidebar">
+            <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Reduire le menu">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="sidebar-header">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-2 border-white/20 bg-white text-emerald-700 shadow">
+                    <i class="fas fa-landmark text-2xl"></i>
                 </div>
+                <h5 class="mt-3 text-xl font-black text-white">SGP-RCPB</h5>
+                <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-widest text-white/70">Gestion du reseau cooperatif</p>
+            </div>
 
-                <nav class="space-y-6 px-4 py-6">
-                    @foreach($menuSections as $section)
-                        <div>
-                            <p class="mb-3 px-3 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100/60">{{ $section['title'] }}</p>
-                            <div class="space-y-1.5">
-                                @foreach($section['items'] as $item)
-                                    @php
-                                        $isActive = request()->routeIs($item['route'].'*');
-                                        $link = $item['href'] ?? route($item['route']);
-                                    @endphp
-                                    <a href="{{ $link }}" class="group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all {{ $isActive ? 'sidebar-link-active' : 'text-emerald-50/80 hover:bg-white/10 hover:text-white' }}">
-                                        <span class="flex h-10 w-10 items-center justify-center rounded-2xl {{ $isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-white/10 text-emerald-50/90 group-hover:bg-white/15' }}">
-                                            <i class="{{ $item['icon'] }}"></i>
-                                        </span>
-                                        <span class="flex-1">{{ $item['label'] }}</span>
-                                        @if($item['label'] === 'Alertes')
-                                            <span class="inline-flex min-w-[24px] items-center justify-center rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-black text-white">!</span>
-                                        @endif
-                                    </a>
-                                @endforeach
-                            </div>
-                        </div>
+            <div class="flex flex-1 flex-col mt-1">
+                @foreach($menuSections as $section)
+                    <div class="sidebar-label">{{ $section['title'] }}</div>
+                    @foreach($section['items'] as $item)
+                        @php
+                            $isActive = request()->routeIs($item['route'].'*');
+                            $link = $item['href'] ?? route($item['route']);
+                        @endphp
+                        <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
+                            <i class="{{ $item['icon'] }}"></i>
+                            <span>{{ $item['label'] }}</span>
+                            @if($item['label'] === 'Alertes')
+                                <span class="ml-auto inline-flex min-w-[22px] items-center justify-center rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-black text-white">!</span>
+                            @endif
+                        </a>
                     @endforeach
-                </nav>
+                @endforeach
+            </div>
 
-                <div class="mt-auto shrink-0 border-t border-white/10 p-4">
-                    <div class="rounded-[24px] bg-white/10 p-4 text-white backdrop-blur-sm">
-                        <div class="flex items-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[11px] font-black text-emerald-700">
-                                {{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}
-                            </div>
-                            <div class="min-w-0">
-                                <p class="truncate text-sm font-black">{{ auth()->user()->name ?? 'Administrateur' }}</p>
-                                <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-50/70">Session active</p>
-                            </div>
-                            <form action="{{ route('admin.logout') }}" method="POST" class="ml-auto">
-                                @csrf
-                                <button type="submit" class="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/15 text-rose-100 transition hover:bg-rose-500 hover:text-white">
-                                    <i class="fas fa-power-off"></i>
-                                </button>
-                            </form>
-                        </div>
+            <div class="mt-auto border-t border-white/10 p-3">
+                <div class="sidebar-user-compact flex items-center gap-3 rounded-xl bg-white/10 px-3 py-3">
+                    <div class="user-avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-black text-emerald-700">
+                        {{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}
+                    </div>
+                    <div class="sidebar-user-info min-w-0 flex-1">
+                        <p class="truncate text-sm font-bold text-white">{{ auth()->user()->name ?? 'Admin' }}</p>
+                        <p class="text-[10px] font-semibold uppercase tracking-wider text-white/60">Session active</p>
+                    </div>
+                    <form action="{{ route('admin.logout') }}" method="POST" class="sidebar-user-info">
+                        @csrf
+                        <button type="submit" class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/70 transition hover:bg-rose-500 hover:text-white">
+                            <i class="fas fa-power-off text-sm"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <header class="flex h-12 shrink-0 items-center justify-between px-6 pt-2 lg:px-8">
+                <div class="flex items-center gap-4">
+                    <button class="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm lg:hidden" id="btnToggleSidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h2 class="hidden text-lg font-extrabold text-slate-800 lg:block">@yield('page_title')</h2>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div id="digital-clock" class="mr-4 hidden text-sm font-black text-rose-500 md:block"></div>
+                    <div class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-slate-300">
+                        <i class="fas fa-bell"></i>
+                        <span class="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-rose-500"></span>
                     </div>
                 </div>
-            </aside>
+            </header>
 
-            <main class="flex min-w-0 flex-col">
-                <header class="flex h-8 shrink-0 items-center justify-between px-4 pt-0 lg:px-8">
-                    <div class="flex items-center gap-4">
-                        <h2 class="hidden text-lg font-extrabold text-slate-800 lg:block">@yield('page_title')</h2>
-                    </div>
-
-                    <div class="flex items-center gap-3">
-                        <div id="digital-clock" class="mr-4 hidden text-sm font-black text-slate-400 md:block"></div>
-                        <div class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-100 bg-white text-slate-300">
-                            <i class="fas fa-bell"></i>
-                            <span class="absolute right-2.5 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-rose-500"></span>
-                        </div>
-                    </div>
-                </header>
-
-                <div class="flex-1 w-full overflow-visible">
-                    @yield('content')
-                </div>
-            </main>
+            <div class="flex-1 w-full overflow-visible">
+                @yield('content')
+            </div>
         </div>
     @else
         <div class="{{ $isModalMode ? '' : 'p-6' }}">@yield('content')</div>
@@ -235,13 +324,20 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        const toggleBtn = document.getElementById('sidebar-toggle');
-        if (localStorage.getItem('sidebar-state') === 'closed') document.body.classList.add('sidebar-closed');
-
+        const toggleBtn = document.getElementById('btnToggleSidebar');
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
-                document.body.classList.toggle('sidebar-closed');
-                localStorage.setItem('sidebar-state', document.body.classList.contains('sidebar-closed') ? 'closed' : 'open');
+                document.getElementById('sidebar')?.classList.toggle('show');
+            });
+        }
+
+        // Sidebar collapse toggle
+        if (localStorage.getItem('sidebar-collapsed') === '1') document.body.classList.add('sidebar-collapsed');
+        const collapseBtn = document.getElementById('sidebarCollapseBtn');
+        if (collapseBtn) {
+            collapseBtn.addEventListener('click', () => {
+                document.body.classList.toggle('sidebar-collapsed');
+                localStorage.setItem('sidebar-collapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
             });
         }
 

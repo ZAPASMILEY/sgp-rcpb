@@ -3,6 +3,12 @@
 @section('title', 'Agents de l\'agence | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
+    <div class="mb-4">
+        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
+            <i class="fas fa-arrow-left"></i>
+            <span>Retour</span>
+        </a>
+    </div>
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto max-w-6xl space-y-6">
             <section class="admin-panel p-6">
@@ -23,6 +29,9 @@
                         <a href="{{ route('admin.agences.index') }}" class="ent-btn ent-btn-soft">Index agences</a>
                         <a href="{{ route('admin.agences.agents.create', $agence) }}" data-open-create-modal data-modal-title="Ajouter un agent d'agence" class="ent-btn ent-btn-primary">Ajouter un agent</a>
                     </div>
+                </div>
+                <div class="mt-4">
+                    <div class="inline-flex px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $agents->total() }} agent(s)</div>
                 </div>
             </section>
 

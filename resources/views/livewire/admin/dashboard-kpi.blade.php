@@ -1,5 +1,5 @@
 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-    <a href="{{ route('admin.directions.index') }}" class="rounded-[1.6rem] bg-gradient-to-br from-emerald-500 to-emerald-400 p-5 text-white shadow-[0_18px_38px_rgba(16,185,129,0.25)] transition hover:-translate-y-1">
+    <a href="{{ route('admin.entites.directions.index') }}" class="rounded-[1.6rem] bg-gradient-to-br from-emerald-500 to-emerald-400 p-5 text-white shadow-[0_18px_38px_rgba(16,185,129,0.25)] transition hover:-translate-y-1">
         <div class="flex items-start justify-between gap-4">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-white/75">Total directions</p>

@@ -25,9 +25,10 @@
             </header>
 
             @if (session('status'))
-                <div data-auto-dismiss="4000" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                <div id="pca-objectifs-status-message" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                     {{ session('status') }}
                 </div>
+                <script>setTimeout(() => document.getElementById('pca-objectifs-status-message')?.remove(), 3000);</script>
             @endif
 
             <section class="admin-panel px-6 py-6 lg:px-8">

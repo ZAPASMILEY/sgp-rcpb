@@ -11,7 +11,10 @@
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Delegation Technique / Index</p>
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Agents</h1>
                     </div>
-                    <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="ent-btn ent-btn-primary">Ajouter</a>
+                    <div class="flex items-center gap-3">
+                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $agents->total() }} agent(s)</div>
+                        <a href="{{ route('admin.agents.create') }}" data-open-create-modal data-modal-title="Ajouter un agent" class="ent-btn ent-btn-primary">Ajouter</a>
+                    </div>
                 </div>
             </section>
 

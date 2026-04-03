@@ -1,11 +1,16 @@
-<div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+<div class="mb-5 flex items-center justify-between gap-4">
     <div>
         <h2 class="text-xl font-black text-slate-800">Secretaires de la faitiere</h2>
         <p class="mt-1 text-sm text-slate-400">Liste des secretaires rattachees aux directions du siege.</p>
     </div>
-    <button type="button" class="inline-flex items-center rounded-2xl bg-gradient-to-r from-fuchsia-500 to-pink-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-fuchsia-200 transition hover:-translate-y-0.5" onclick="document.getElementById('modal-secretaire').classList.remove('hidden')">
-        Ajouter une secretaire
-    </button>
+    <div class="flex items-center gap-3">
+        <a href="{{ route('admin.entites.secretaires.index') }}" class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
+            Voir liste
+        </a>
+        <button type="button" class="inline-flex items-center rounded-2xl bg-gradient-to-r from-fuchsia-500 to-pink-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-fuchsia-200 transition hover:-translate-y-0.5" onclick="document.getElementById('modal-secretaire').classList.remove('hidden')">
+            Ajouter
+        </button>
+    </div>
 </div>
 
 <div id="modal-secretaire" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/40 p-4">
@@ -65,28 +70,19 @@
         Aucune secretaire enregistree pour les directions de la faitiere.
     </div>
 @else
-    <div class="space-y-4">
+    <div class="grid gap-4 md:grid-cols-2">
         @foreach($secretaires as $direction)
-            <article class="flex flex-col gap-4 rounded-[24px] border border-slate-100 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <article class="rounded-[24px] border border-slate-100 bg-slate-50/80 p-4">
                 <div class="flex items-center gap-4">
-                    <div class="flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,_#fae8ff,_#ffffff)] text-fuchsia-500 shadow-inner">
-                        <i class="fas fa-user-tie text-xl"></i>
+                    <div class="flex h-12 w-12 items-center justify-center rounded-full bg-white text-fuchsia-500 shadow-sm">
+                        <i class="fas fa-user-tie"></i>
                     </div>
-                    <div>
-                        <h3 class="text-lg font-black text-slate-800">
+                    <div class="min-w-0">
+                        <h3 class="truncate font-black text-slate-800">
                             {{ trim(($direction->secretaire_prenom ?? '').' '.($direction->secretaire_nom ?? '')) ?: 'Nom non renseigne' }}
                         </h3>
-                        <p class="text-base text-slate-500">{{ $direction->nom }}</p>
+                        <p class="truncate text-sm text-slate-500">{{ $direction->nom }}</p>
                     </div>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.secretaires.show', $direction->id) }}" class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
-                        Voir fiche
-                    </a>
-                    <a href="{{ route('admin.secretaires.edit', $direction->id) }}" class="inline-flex items-center rounded-2xl bg-gradient-to-r from-fuchsia-500 to-pink-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-fuchsia-200 transition hover:-translate-y-0.5">
-                        Modifier
-                    </a>
                 </div>
             </article>
         @endforeach

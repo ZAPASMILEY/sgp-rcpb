@@ -4,7 +4,7 @@
         <p class="mt-1 text-sm text-slate-400">Affichage rapide des services rattaches au siege principal.</p>
     </div>
     <div class="flex items-center gap-3">
-        <a href="{{ route('admin.services.index') }}" class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
+        <a href="{{ route('admin.services.index', ['source' => 'faitiere']) }}" class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
             Voir liste
         </a>
         <a href="{{ route('admin.services.create') }}" data-open-create-modal data-modal-title="Ajouter un service" class="inline-flex items-center rounded-2xl bg-gradient-to-r from-cyan-500 to-sky-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-200 transition hover:-translate-y-0.5">

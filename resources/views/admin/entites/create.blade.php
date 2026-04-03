@@ -4,6 +4,12 @@
 
 @section('content')
         <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
+            <div class="mb-4">
+                <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Retour</span>
+                </a>
+            </div>
             <div class="mx-auto max-w-3xl">
                 <section class="admin-panel ent-window p-6 sm:p-8">
                     <div class="ent-window__bar" aria-hidden="true">

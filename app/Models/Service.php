@@ -20,15 +20,23 @@ class Service extends Model
         'user_id',
         'nom',
         'direction_id',
+        'delegation_technique_id',
         'chef_prenom',
         'chef_nom',
+        'chef_sexe',
         'chef_email',
         'chef_telephone',
+        'chef_date_debut_mois',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function delegationTechnique(): BelongsTo
+    {
+        return $this->belongsTo(DelegationTechnique::class);
     }
 
     public function direction(): BelongsTo

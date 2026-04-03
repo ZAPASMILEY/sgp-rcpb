@@ -46,9 +46,10 @@
             </header>
 
             @if (session('status'))
-                <div data-auto-dismiss="4000" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                <div id="service-status-message" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                     {{ session('status') }}
                 </div>
+                <script>setTimeout(() => document.getElementById('service-status-message')?.remove(), 3000);</script>
             @endif
 
 

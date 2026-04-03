@@ -19,6 +19,7 @@
                             <input type="search" name="search" value="{{ $search }}" class="ent-input min-w-[260px]" placeholder="Rechercher un service, chef, region...">
                             <button type="submit" class="ent-btn ent-btn-soft">Rechercher</button>
                         </form>
+                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $services->total() }} service(s)</div>
                         <a href="{{ route('admin.services.create') }}" data-open-create-modal data-modal-title="Ajouter un service" class="ent-btn ent-btn-primary">Ajouter</a>
                     </div>
                 </div>

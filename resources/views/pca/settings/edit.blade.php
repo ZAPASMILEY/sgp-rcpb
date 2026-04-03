@@ -16,9 +16,10 @@
             </header>
 
             @if (session('status'))
-                <div data-auto-dismiss="4000" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                <div id="pca-settings-status-message" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                     {{ session('status') }}
                 </div>
+                <script>setTimeout(() => document.getElementById('pca-settings-status-message')?.remove(), 3000);</script>
             @endif
 
             <div class="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">

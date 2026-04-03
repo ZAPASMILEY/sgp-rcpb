@@ -15,17 +15,34 @@ class Caisse extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'delegation_technique_id',
+        'ville_id',
         'nom',
+        'annee_ouverture',
+        'quartier',
+        'directeur_prenom',
         'directeur_nom',
+        'directeur_sexe',
         'directeur_email',
         'directeur_telephone',
+        'directeur_date_debut_mois',
         'secretariat_telephone',
-        'superviseur_direction_id',
+        'secretaire_prenom',
+        'secretaire_nom',
+        'secretaire_sexe',
+        'secretaire_email',
+        'secretaire_telephone',
+        'secretaire_date_debut_mois',
     ];
 
-    public function superviseur(): BelongsTo
+    public function delegationTechnique(): BelongsTo
     {
-        return $this->belongsTo(Direction::class, 'superviseur_direction_id');
+        return $this->belongsTo(DelegationTechnique::class);
+    }
+
+    public function ville(): BelongsTo
+    {
+        return $this->belongsTo(Ville::class);
     }
 
     public function agences(): HasMany

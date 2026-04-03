@@ -17,17 +17,51 @@ use Illuminate\Validation\Rules\Password;
 
 class ServiceController extends Controller
 {
+    /**
+     * Liste des services d'une caisse
+     */
+    public function caisseServices($caisseId): View
+    {
+        $services = Service::whereHas('direction', function ($q) use ($caisseId) {
+            $q->where('caisse_id', $caisseId);
+        })->with('direction')->latest()->get();
+        $caisse = \App\Models\Caisse::findOrFail($caisseId);
+        return view('admin.services.caisse', compact('services', 'caisse'));
+    }
+
+    /**
+     * Liste des services de la faitière uniquement
+     */
+    public function faitiereServices(): View
+    {
+        $services = Service::whereHas('direction', function ($q) {
+            $q->whereNull('delegation_technique_id');
+        })->with('direction')->latest()->get();
+        return view('admin.services.faitiere', compact('services'));
+    }
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
         $directionId = (string) $request->query('direction_id', '');
         $source = (string) $request->query('source', '');
+        $delegationId = (string) $request->query('delegation_id', '');
+        $caisseId = (string) $request->query('caisse_id', '');
 
         $servicesQuery = Service::query()
             ->with(['direction.entite'])
             ->when($source === 'faitiere', function ($query): void {
                 $query->whereHas('direction', function ($q): void {
                     $q->whereNull('delegation_technique_id');
+                });
+            })
+            ->when($delegationId !== '', function ($query) use ($delegationId): void {
+                $query->whereHas('direction', function ($q) use ($delegationId): void {
+                    $q->where('delegation_technique_id', $delegationId);
+                });
+            })
+            ->when($caisseId !== '', function ($query) use ($caisseId): void {
+                $query->whereHas('direction', function ($q) use ($caisseId): void {
+                    $q->where('caisse_id', $caisseId);
                 });
             })
             ->when($search !== '', function ($query) use ($search): void {
@@ -58,6 +92,8 @@ class ServiceController extends Controller
                 'search' => $search,
                 'direction_id' => $directionId,
                 'source' => $source,
+                'delegation_id' => $delegationId,
+                'caisse_id' => $caisseId,
             ],
             'directions' => Direction::query()->with('entite')
                 ->when($source === 'faitiere', fn ($q) => $q->whereNull('delegation_technique_id'))

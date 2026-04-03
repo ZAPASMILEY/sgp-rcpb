@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeMail;
 use App\Models\Agent;
+use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
 use App\Models\Entite;
@@ -12,6 +13,7 @@ use App\Models\Evaluation;
 use App\Models\Objectif;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\Ville;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -147,52 +149,51 @@ class DirectionController extends Controller
     public function index(): View
     {
         $delegations = DelegationTechnique::query()
-            ->withCount('directions')
+            ->withCount(['caisses'])
+            ->with(['directions' => fn ($q) => $q->orderBy('nom'), 'villes' => fn ($q) => $q->orderBy('nom')])
             ->orderBy('region')
             ->orderBy('ville')
             ->get();
 
-        $directions = Direction::query()
-            ->with('delegationTechnique')
-            ->withCount('services')
-            ->latest()
-            ->get();
-
-        $servicesCount = Service::query()->count();
-        $secretariatsCount = Direction::query()
-            ->whereNotNull('secretaire_nom')
+        $agentsCount = Agent::query()
+            ->where(function ($q) {
+                $q->whereNotNull('delegation_technique_id')
+                  ->orWhereHas('service.direction', function ($sq) {
+                      $sq->whereNotNull('delegation_technique_id');
+                  });
+            })
             ->count();
-        $agentsCount = Agent::query()->count();
 
-        $recentServices = Service::query()
-            ->with('direction')
-            ->latest()
-            ->limit(5)
-            ->get();
+        $servicesCount = Service::query()
+            ->whereNotNull('delegation_technique_id')
+            ->count();
 
-        $secretaires = Agent::query()
-            ->with('service.direction')
-            ->where('fonction', 'like', '%secretaire%')
-            ->latest()
-            ->limit(5)
-            ->get();
+        $stats = [
+            'delegations' => $delegations->count(),
+            'caisses'     => $delegations->sum('caisses_count'),
+            'agents'      => $agentsCount,
+            'services'    => $servicesCount,
+        ];
 
-        $recentAgents = Agent::query()
-            ->with('service.direction')
-            ->latest()
-            ->limit(5)
-            ->get();
+        return view('admin.delegations_techniques.index', [
+            'delegations' => $delegations,
+            'stats'       => $stats,
+            'services'    => Service::query()->orderBy('nom')->get(),
+        ]);
+    }
 
-        return view('admin.directions.index', [
-            'directions'        => $directions,
-            'directionsCount'   => $directions->count(),
-            'servicesCount'     => $servicesCount,
-            'secretariatsCount' => $secretariatsCount,
-            'agentsCount'       => $agentsCount,
-            'recentServices'    => $recentServices,
-            'secretaires'       => $secretaires,
-            'recentAgents'      => $recentAgents,
-            'delegations'       => $delegations,
+    public function showDelegation(DelegationTechnique $delegationTechnique): View
+    {
+        $delegationTechnique->loadCount(['caisses', 'agents']);
+        $delegationTechnique->load('villes');
+
+        $caisses = $delegationTechnique->caisses()->with('ville')->orderBy('nom')->get();
+        $agents  = $delegationTechnique->agents()->orderBy('nom')->get();
+
+        return view('admin.delegations_techniques.show', [
+            'delegation' => $delegationTechnique,
+            'caisses'    => $caisses,
+            'agents'     => $agents,
         ]);
     }
 
@@ -200,14 +201,27 @@ class DirectionController extends Controller
     {
         if (DelegationTechnique::query()->count() >= 3) {
             return redirect()
-                ->route('admin.directions.index')
+                ->route('admin.delegations-techniques.index')
                 ->with('status', 'Maximum 3 delegations techniques configurees.');
         }
 
         $validated = $request->validate([
-            'region'                => ['required', 'string', 'max:255'],
-            'ville'                 => ['required', 'string', 'max:255'],
-            'secretariat_telephone' => ['required', 'string', 'max:30'],
+            'region'                      => ['required', 'string', 'max:255'],
+            'ville'                       => ['required', 'string', 'max:255'],
+            'secretariat_telephone'       => ['required', 'string', 'max:30'],
+            'directeur_prenom'            => ['required', 'string', 'max:255'],
+            'directeur_nom'               => ['required', 'string', 'max:255'],
+            'directeur_sexe'              => ['required', 'in:Masculin,Feminin'],
+            'directeur_email'             => ['required', 'email', 'max:255'],
+            'directeur_telephone'         => ['nullable', 'string', 'max:30'],
+            'directeur_date_debut_mois'   => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'directeur_photo'             => ['nullable', 'image', 'max:2048'],
+            'secretaire_prenom'           => ['required', 'string', 'max:255'],
+            'secretaire_nom'              => ['required', 'string', 'max:255'],
+            'secretaire_sexe'             => ['required', 'in:Masculin,Feminin'],
+            'secretaire_email'            => ['required', 'email', 'max:255'],
+            'secretaire_telephone'        => ['nullable', 'string', 'max:30'],
+            'secretaire_date_debut_mois'  => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
         ]);
 
         $alreadyExists = DelegationTechnique::query()
@@ -217,19 +231,97 @@ class DirectionController extends Controller
 
         if ($alreadyExists) {
             return redirect()
-                ->route('admin.directions.index')
+                ->route('admin.delegations-techniques.index')
                 ->with('status', 'Cette delegation existe deja.');
         }
+
+        if ($request->hasFile('directeur_photo')) {
+            $validated['directeur_photo_path'] = $request->file('directeur_photo')->store('delegations/photos', 'public');
+        }
+        unset($validated['directeur_photo']);
 
         DelegationTechnique::query()->create($validated);
 
         return redirect()
-            ->route('admin.directions.index')
-            ->with('status', 'Delegation technique configuree avec succes.');
+            ->route('admin.delegations-techniques.index')
+            ->with('status', 'Delegation technique creee avec succes.');
+    }
+
+    public function storeCaisse(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'delegation_technique_id' => ['required', 'exists:delegation_techniques,id'],
+            'ville_id'                => ['required', 'exists:villes,id'],
+            'nom'                     => ['required', 'string', 'max:255'],
+            'annee_ouverture'         => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
+            'quartier'                => ['nullable', 'string', 'max:255'],
+            'directeur_prenom'        => ['required', 'string', 'max:255'],
+            'directeur_nom'           => ['required', 'string', 'max:255'],
+            'directeur_sexe'          => ['required', 'in:Masculin,Feminin'],
+            'directeur_email'         => ['required', 'email', 'max:255'],
+            'directeur_telephone'     => ['required', 'string', 'max:30'],
+            'directeur_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'secretariat_telephone'   => ['required', 'string', 'max:30'],
+            'secretaire_prenom'       => ['required', 'string', 'max:255'],
+            'secretaire_nom'          => ['required', 'string', 'max:255'],
+            'secretaire_sexe'         => ['required', 'in:Masculin,Feminin'],
+            'secretaire_email'        => ['required', 'email', 'max:255'],
+            'secretaire_telephone'    => ['nullable', 'string', 'max:30'],
+            'secretaire_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+        ]);
+
+        Caisse::query()->create($validated);
+
+        return redirect()
+            ->route('admin.delegations-techniques.show', $validated['delegation_technique_id'])
+            ->with('status', 'Caisse creee avec succes.');
+    }
+
+    public function storeDelegationAgent(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'delegation_technique_id' => ['required', 'exists:delegation_techniques,id'],
+            'service_id'              => ['nullable', 'exists:services,id'],
+            'prenom'                  => ['required', 'string', 'max:255'],
+            'nom'                     => ['required', 'string', 'max:255'],
+            'sexe'                    => ['required', 'in:Masculin,Feminin'],
+            'fonction'                => ['required', 'string', 'max:255'],
+            'email'                   => ['required', 'email', 'max:255'],
+            'numero_telephone'        => ['nullable', 'string', 'max:30'],
+            'date_debut_fonction'     => ['nullable', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+        ]);
+
+        Agent::query()->create($validated);
+
+        return redirect()
+            ->route('admin.delegations-techniques.show', $validated['delegation_technique_id'])
+            ->with('status', 'Agent ajoute avec succes.');
+    }
+
+    public function storeDelegationService(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'delegation_technique_id' => ['required', 'exists:delegation_techniques,id'],
+            'nom'                     => ['required', 'string', 'max:255'],
+            'chef_prenom'             => ['required', 'string', 'max:255'],
+            'chef_nom'                => ['required', 'string', 'max:255'],
+            'chef_sexe'               => ['required', 'in:Masculin,Feminin'],
+            'chef_email'              => ['required', 'email', 'max:255'],
+            'chef_telephone'          => ['required', 'string', 'max:30'],
+            'chef_date_debut_mois'    => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+        ]);
+
+        Service::query()->create($validated);
+
+        return redirect()
+            ->route('admin.delegations-techniques.index')
+            ->with('status', 'Service cree avec succes.');
     }
 
     public function editDelegation(DelegationTechnique $delegationTechnique): View
     {
+        $delegationTechnique->load('villes');
+
         return view('admin.delegations_techniques.edit', [
             'delegationTechnique' => $delegationTechnique,
         ]);
@@ -239,7 +331,47 @@ class DirectionController extends Controller
     {
         $validated = $this->validateDelegation($request, $delegationTechnique);
 
+        // Handle director photo
+        if ($request->hasFile('directeur_photo')) {
+            $validated['directeur_photo_path'] = $request->file('directeur_photo')->store('delegations/photos', 'public');
+        }
+        unset($validated['directeur_photo']);
+
+        // Extract villes before updating delegation
+        $villesData = $validated['villes'] ?? [];
+        unset($validated['villes']);
+
+        // Check uniqueness of ville names across other delegations
+        foreach ($villesData as $villeItem) {
+            $existsElsewhere = Ville::where('nom', $villeItem['nom'])
+                ->where('delegation_technique_id', '!=', $delegationTechnique->id)
+                ->when(!empty($villeItem['id']), fn ($q) => $q->where('id', '!=', $villeItem['id']))
+                ->exists();
+
+            if ($existsElsewhere) {
+                return redirect()->back()->withInput()->withErrors([
+                    'villes' => "La ville \"{$villeItem['nom']}\" est déjà couverte par une autre délégation.",
+                ]);
+            }
+        }
+
         $delegationTechnique->update($validated);
+
+        // Sync villes
+        $existingIds = [];
+        foreach ($villesData as $villeItem) {
+            if (!empty($villeItem['id'])) {
+                $ville = Ville::find($villeItem['id']);
+                if ($ville && $ville->delegation_technique_id === $delegationTechnique->id) {
+                    $ville->update(['nom' => $villeItem['nom']]);
+                    $existingIds[] = $ville->id;
+                }
+            } else {
+                $new = $delegationTechnique->villes()->create(['nom' => $villeItem['nom']]);
+                $existingIds[] = $new->id;
+            }
+        }
+        $delegationTechnique->villes()->whereNotIn('id', $existingIds)->delete();
 
         Direction::query()
             ->where('delegation_technique_id', $delegationTechnique->id)
@@ -249,7 +381,7 @@ class DirectionController extends Controller
             ]);
 
         return redirect()
-            ->route('admin.directions.index')
+            ->route('admin.delegations-techniques.show', $delegationTechnique)
             ->with('status', 'Delegation technique mise a jour avec succes.');
     }
 
@@ -258,7 +390,7 @@ class DirectionController extends Controller
         $delegationTechnique->delete();
 
         return redirect()
-            ->route('admin.directions.index')
+            ->route('admin.delegations-techniques.index')
             ->with('status', 'Delegation technique supprimee avec succes.');
     }
 
@@ -317,7 +449,7 @@ class DirectionController extends Controller
         }
 
         $validated['entite_id']             = $entite?->id;
-        $validated['nom']                   = 'Delegation Technique '.$delegation->region.' - '.$delegation->ville;
+        // On conserve le nom saisi par l'utilisateur
         $validated['directeur_region']      = $delegation->region;
         $validated['secretariat_telephone'] = $delegation->secretariat_telephone;
 
@@ -361,7 +493,7 @@ class DirectionController extends Controller
         }
 
         return redirect()
-            ->route('admin.delegations-techniques.directeurs.index', ['delegation_id' => $delegation->id])
+            ->route('admin.delegations-techniques.index')
             ->with('status', 'Directeur technique cree avec succes. Les mots de passe ont ete envoyes par e-mail.');
     }
 
@@ -492,9 +624,25 @@ class DirectionController extends Controller
     private function validateDelegation(Request $request, ?DelegationTechnique $delegationTechnique = null): array
     {
         return $request->validate([
-            'region' => ['required', 'string', 'max:255'],
-            'ville' => ['required', 'string', 'max:255'],
-            'secretariat_telephone' => ['required', 'string', 'max:30'],
+            'region'                      => ['required', 'string', 'max:255'],
+            'ville'                       => ['required', 'string', 'max:255'],
+            'secretariat_telephone'       => ['required', 'string', 'max:30'],
+            'directeur_prenom'            => ['nullable', 'string', 'max:255'],
+            'directeur_nom'               => ['nullable', 'string', 'max:255'],
+            'directeur_sexe'              => ['nullable', 'in:Masculin,Feminin'],
+            'directeur_email'             => ['nullable', 'email', 'max:255'],
+            'directeur_telephone'         => ['nullable', 'string', 'max:30'],
+            'directeur_date_debut_mois'   => ['nullable', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'directeur_photo'             => ['nullable', 'image', 'max:2048'],
+            'secretaire_prenom'           => ['nullable', 'string', 'max:255'],
+            'secretaire_nom'              => ['nullable', 'string', 'max:255'],
+            'secretaire_sexe'             => ['nullable', 'in:Masculin,Feminin'],
+            'secretaire_email'            => ['nullable', 'email', 'max:255'],
+            'secretaire_telephone'        => ['nullable', 'string', 'max:30'],
+            'secretaire_date_debut_mois'  => ['nullable', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'villes'                      => ['nullable', 'array'],
+            'villes.*.id'                 => ['nullable', 'integer'],
+            'villes.*.nom'                => ['required_with:villes', 'string', 'max:255'],
         ]);
     }
 }

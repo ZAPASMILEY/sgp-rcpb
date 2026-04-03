@@ -115,6 +115,7 @@ class EntiteController extends Controller
             'directions' => (clone $directionsQuery)->withCount('services')->latest()->get(),
             'allDirections' => (clone $directionsQuery)->get(),
             'services' => (clone $servicesQuery)->with('direction')->latest()->take(6)->get(),
+            'allServices' => (clone $servicesQuery)->with('direction')->orderBy('nom')->get(),
             'secretaires' => (clone $secretairesQuery)->latest()->take(8)->get(),
             'agents' => (clone $agentsQuery)->with('service')->latest()->take(8)->get(),
             'bestNow' => [
@@ -188,6 +189,55 @@ class EntiteController extends Controller
         });
 
         return redirect()->route('admin.entites.index')->with('success', 'Faitiere modifiee avec succes.');
+    }
+
+    public function storeFaitiereAgent(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'service_id'          => ['required', 'integer', 'exists:services,id'],
+            'prenom'              => ['required', 'string', 'max:255'],
+            'nom'                 => ['required', 'string', 'max:255'],
+            'sexe'                => ['required', 'in:Masculin,Feminin'],
+            'fonction'            => ['required', 'string', 'max:255'],
+            'email'               => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'numero_telephone'    => ['nullable', 'string', 'max:30'],
+            'date_debut_fonction' => ['nullable', 'date'],
+        ]);
+
+        $plainPassword = Str::random(12);
+
+        $user = User::create([
+            'name'     => $validated['prenom'] . ' ' . $validated['nom'],
+            'email'    => $validated['email'],
+            'password' => Hash::make($plainPassword),
+            'role'     => 'agent',
+        ]);
+
+        $validated['user_id'] = $user->id;
+        Agent::query()->create($validated);
+
+        Mail::to($user->email)->send(new WelcomeMail(
+            recipientName:  $user->name,
+            recipientEmail: $user->email,
+            plainPassword:  $plainPassword,
+            role:           'agent',
+            loginUrl:       rtrim((string) config('app.url'), '/') . '/login',
+        ));
+
+        return redirect()
+            ->route('admin.entites.index')
+            ->with('success', 'Agent créé avec succès.');
+    }
+
+    public function updatePhone(Request $request, Entite $entite): RedirectResponse
+    {
+        $validated = $request->validate([
+            'secretariat_telephone' => ['required', 'string', 'max:30'],
+        ]);
+
+        $entite->update($validated);
+
+        return redirect()->route('admin.entites.index')->with('success', 'Numéro de contact mis à jour.');
     }
 
     private function getBestEval($type, $ids, $nameField = null): array
@@ -297,6 +347,41 @@ class EntiteController extends Controller
             'notes' => $notes,
             'search' => $search,
             'sort' => $sort,
+        ]);
+    }
+
+    public function indexAgents(Request $request): View
+    {
+        $entite = Entite::query()->latest()->first();
+        $search = trim((string) $request->query('search', ''));
+
+        $agents = Agent::query()
+            ->with('service.direction')
+            ->when($entite, function ($query) use ($entite): void {
+                $query->whereHas('service.direction', function ($q) use ($entite): void {
+                    $q->where('entite_id', $entite->id)->whereNull('delegation_technique_id');
+                });
+            })
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($subQuery) use ($search): void {
+                    $subQuery
+                        ->where('nom', 'like', "%{$search}%")
+                        ->orWhere('prenom', 'like', "%{$search}%")
+                        ->orWhere('fonction', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhereHas('service', function ($serviceQuery) use ($search): void {
+                            $serviceQuery->where('nom', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('admin.entites.agents_index', [
+            'entite' => $entite,
+            'agents' => $agents,
+            'search' => $search,
         ]);
     }
 
@@ -571,5 +656,20 @@ class EntiteController extends Controller
     public function editSecretaire(Direction $direction): View
     {
         return view('admin.secretaires.edit', compact('direction'));
+    }
+
+    /**
+     * Supprime les informations du secrétaire d'une direction.
+     */
+    public function destroySecretaire(Direction $direction): RedirectResponse
+    {
+        $direction->update([
+            'secretaire_user_id' => null,
+            'secretaire_prenom' => null,
+            'secretaire_nom' => null,
+            'secretaire_email' => null,
+        ]);
+
+        return redirect()->route('admin.entites.index')->with('status', 'Secretaire supprime avec succes.');
     }
 }

@@ -43,6 +43,7 @@ class AgentController extends Controller
 
         return view('admin.agents.index', [
             'agents' => $agentsQuery->paginate(10)->withQueryString(),
+            'services' => Service::query()->with('direction.entite')->orderBy('nom')->get(['id', 'nom', 'direction_id']),
             'filters' => [
                 'search' => $search,
             ],

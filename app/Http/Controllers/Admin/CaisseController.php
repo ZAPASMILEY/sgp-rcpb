@@ -21,7 +21,7 @@ class CaisseController extends Controller
 
         return view('admin.caisses.index', [
             'caisses' => Caisse::query()
-                ->with('superviseur.delegationTechnique')
+                ->with('delegationTechnique')
                 ->when($search !== '', function (EloquentBuilder $query) use ($search): void {
                     $query->where(function (EloquentBuilder $subQuery) use ($search): void {
                         $subQuery
@@ -30,21 +30,17 @@ class CaisseController extends Controller
                             ->orWhere('directeur_email', 'like', "%{$search}%")
                             ->orWhere('directeur_telephone', 'like', "%{$search}%")
                             ->orWhere('secretariat_telephone', 'like', "%{$search}%")
-                            ->orWhereHas('superviseur', function (EloquentBuilder $directionQuery) use ($search): void {
-                                $directionQuery
-                                    ->where('directeur_prenom', 'like', "%{$search}%")
-                                    ->orWhere('directeur_nom', 'like', "%{$search}%")
-                                    ->orWhereHas('delegationTechnique', function (EloquentBuilder $delegationQuery) use ($search): void {
-                                        $delegationQuery
-                                            ->where('region', 'like', "%{$search}%")
-                                            ->orWhere('ville', 'like', "%{$search}%");
-                                    });
+                            ->orWhereHas('delegationTechnique', function (EloquentBuilder $delegationQuery) use ($search): void {
+                                $delegationQuery
+                                    ->where('region', 'like', "%{$search}%")
+                                    ->orWhere('ville', 'like', "%{$search}%");
                             });
                     });
                 })
                 ->latest()
                 ->paginate(12)
                 ->withQueryString(),
+            'delegations' => DelegationTechnique::query()->orderBy('region')->get(),
             'search' => $search,
         ]);
     }
@@ -67,14 +63,14 @@ class CaisseController extends Controller
     public function show(Caisse $caisse): View
     {
         return view('admin.caisses.show', [
-            'caisse' => $caisse->load('superviseur.delegationTechnique'),
+            'caisse' => $caisse->load('delegationTechnique'),
         ]);
     }
 
     public function directionsIndex(Caisse $caisse): View
     {
         return view('admin.caisses.directions', [
-            'caisse' => $caisse->load('superviseur.delegationTechnique'),
+            'caisse' => $caisse->load('delegationTechnique'),
             'caisseDirections' => collect(),
         ]);
     }
@@ -82,7 +78,7 @@ class CaisseController extends Controller
     public function servicesIndex(Caisse $caisse): View
     {
         return view('admin.caisses.services', [
-            'caisse' => $caisse->load('superviseur.delegationTechnique'),
+            'caisse' => $caisse->load('delegationTechnique'),
             'services' => collect(),
         ]);
     }
@@ -90,7 +86,7 @@ class CaisseController extends Controller
     public function edit(Caisse $caisse): View
     {
         return view('admin.caisses.edit', [
-            'caisse' => $caisse->load('superviseur.delegationTechnique'),
+            'caisse' => $caisse->load('delegationTechnique'),
             'delegations' => DelegationTechnique::query()
                 ->orderBy('region')
                 ->orderBy('ville')
@@ -107,10 +103,7 @@ class CaisseController extends Controller
     {
         $validated = $this->validateCaisse($request);
 
-        $payload = $validated;
-        unset($payload['delegation_technique_id']);
-
-        Caisse::query()->create($payload);
+        Caisse::query()->create($validated);
 
         return redirect()
             ->route('admin.caisses.index')
@@ -121,10 +114,7 @@ class CaisseController extends Controller
     {
         $validated = $this->validateCaisse($request, $caisse);
 
-        $payload = $validated;
-        unset($payload['delegation_technique_id']);
-
-        $caisse->update($payload);
+        $caisse->update($validated);
 
         return redirect()
             ->route('admin.caisses.index')
@@ -143,10 +133,14 @@ class CaisseController extends Controller
     private function validateCaisse(Request $request, ?Caisse $caisse = null): array
     {
         return $request->validate([
-            'nom' => ['required', 'string', 'max:255'],
-            'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
-            'directeur_nom' => ['required', 'string', 'max:255'],
-            'directeur_email' => [
+            'delegation_technique_id'   => ['required', 'integer', 'exists:delegation_techniques,id'],
+            'nom'                       => ['required', 'string', 'max:255'],
+            'annee_ouverture'           => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
+            'quartier'                  => ['required', 'string', 'max:255'],
+            'directeur_prenom'          => ['required', 'string', 'max:255'],
+            'directeur_nom'             => ['required', 'string', 'max:255'],
+            'directeur_sexe'            => ['required', 'in:Masculin,Feminin'],
+            'directeur_email'           => [
                 'required',
                 'email',
                 'max:255',
@@ -154,15 +148,15 @@ class CaisseController extends Controller
                     ? Rule::unique('caisses', 'directeur_email')->ignore($caisse->id)
                     : Rule::unique('caisses', 'directeur_email'),
             ],
-            'directeur_telephone' => ['required', 'string', 'max:30'],
-            'secretariat_telephone' => ['required', 'string', 'max:30'],
-            'superviseur_direction_id' => [
-                'required',
-                'integer',
-                Rule::exists('directions', 'id')->where(function (Builder $query) use ($request): void {
-                    $query->where('delegation_technique_id', $request->integer('delegation_technique_id'));
-                }),
-            ],
+            'directeur_telephone'       => ['required', 'string', 'max:30'],
+            'directeur_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'secretariat_telephone'     => ['required', 'string', 'max:30'],
+            'secretaire_prenom'         => ['required', 'string', 'max:255'],
+            'secretaire_nom'            => ['required', 'string', 'max:255'],
+            'secretaire_sexe'           => ['required', 'in:Masculin,Feminin'],
+            'secretaire_email'          => ['required', 'email', 'max:255'],
+            'secretaire_telephone'      => ['nullable', 'string', 'max:30'],
+            'secretaire_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
         ]);
     }
 }

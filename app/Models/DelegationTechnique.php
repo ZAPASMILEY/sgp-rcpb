@@ -18,6 +18,19 @@ class DelegationTechnique extends Model
         'region',
         'ville',
         'secretariat_telephone',
+        'directeur_prenom',
+        'directeur_nom',
+        'directeur_sexe',
+        'directeur_email',
+        'directeur_telephone',
+        'directeur_date_debut_mois',
+        'directeur_photo_path',
+        'secretaire_prenom',
+        'secretaire_nom',
+        'secretaire_sexe',
+        'secretaire_email',
+        'secretaire_telephone',
+        'secretaire_date_debut_mois',
     ];
 
     public function directions(): HasMany
@@ -35,8 +48,18 @@ class DelegationTechnique extends Model
         return $this->hasManyThrough(Service::class, Direction::class, 'delegation_technique_id', 'direction_id');
     }
 
-    public function caisses(): HasManyThrough
+    public function caisses(): HasMany
     {
-        return $this->hasManyThrough(Caisse::class, Direction::class, 'delegation_technique_id', 'superviseur_direction_id');
+        return $this->hasMany(Caisse::class);
+    }
+
+    public function agents(): HasMany
+    {
+        return $this->hasMany(Agent::class);
+    }
+
+    public function villes(): HasMany
+    {
+        return $this->hasMany(Ville::class);
     }
 }

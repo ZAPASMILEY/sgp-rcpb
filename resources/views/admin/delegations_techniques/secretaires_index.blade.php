@@ -6,8 +6,13 @@
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto max-w-6xl space-y-6">
             <section class="admin-panel p-6">
-                <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Delegation Technique / Index</p>
-                <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Secretaires</h1>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Delegation Technique / Index</p>
+                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Secretaires</h1>
+                    </div>
+                    <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $secretaires->total() }} secrétaire(s)</div>
+                </div>
             </section>
 
             <section class="admin-panel p-6">

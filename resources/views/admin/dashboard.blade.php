@@ -4,6 +4,12 @@
 @section('page_title', '')
 
 @section('content')
+    <div class="mb-4">
+        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
+            <i class="fas fa-arrow-left"></i>
+            <span>Retour</span>
+        </a>
+    </div>
 @php
     $calendarStart = now()->startOfMonth()->startOfWeek(\Illuminate\Support\Carbon::MONDAY);
     $calendarEnd = now()->endOfMonth()->endOfWeek(\Illuminate\Support\Carbon::SUNDAY);
@@ -18,7 +24,7 @@
             'label' => 'Directions',
             'value' => $directionsCount,
             'meta' => $faitiereDirectionsCount.' a la faitiere / '.$delegationDirectionsCount.' en delegation',
-            'href' => route('admin.directions.index'),
+            'href' => route('admin.entites.directions.index'),
             'icon' => 'fas fa-sitemap',
             'valueClass' => 'text-sky-500',
             'iconClass' => 'bg-sky-50 text-sky-500',
@@ -28,7 +34,7 @@
             'label' => 'Delegations techniques',
             'value' => $delegationsCount,
             'meta' => $delegationDirectionsCount.' directions rattachees',
-            'href' => route('admin.delegations-techniques.directeurs.index'),
+            'href' => route('admin.delegations-techniques.index'),
             'icon' => 'fas fa-building-circle-arrow-right',
             'valueClass' => 'text-emerald-500',
             'iconClass' => 'bg-emerald-50 text-emerald-500',
@@ -140,7 +146,7 @@
                             <h2 class="text-xl font-black tracking-tight text-slate-900">Delegations recentes</h2>
                             <p class="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Vue compacte du reseau territorial</p>
                         </div>
-                        <a href="{{ route('admin.delegations-techniques.directeurs.index') }}" class="inline-flex h-8 items-center rounded-full bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-white">Voir tout</a>
+                        <a href="{{ route('admin.delegations-techniques.index') }}" class="inline-flex h-8 items-center rounded-full bg-emerald-700 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-white">Voir tout</a>
                     </div>
 
                     <div class="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
@@ -151,7 +157,7 @@
                                         <h3 class="truncate text-base font-black text-slate-900">{{ $delegation->ville }}</h3>
                                         <p class="text-[11px] font-semibold text-slate-400">{{ $delegation->adresse ?: 'Adresse non renseignee' }}</p>
                                     </div>
-                                    <a href="{{ route('admin.delegations-techniques.directeurs.index', ['delegation_id' => $delegation->id]) }}" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition hover:bg-emerald-600 hover:text-white" title="Ouvrir la delegation {{ $delegation->ville }}">
+                                    <a href="{{ route('admin.delegations-techniques.index') }}" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition hover:bg-emerald-600 hover:text-white" title="Ouvrir la delegation {{ $delegation->ville }}">
                                         <i class="fas fa-building"></i>
                                     </a>
                                 </div>

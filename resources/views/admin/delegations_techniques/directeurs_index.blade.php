@@ -12,7 +12,10 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Directeurs Techniques</h1>
                         <p class="mt-2 text-sm text-slate-600">Chaque delegation dispose de son index via le filtre ci-dessous.</p>
                     </div>
-                    <a href="{{ route('admin.directions.create') }}" data-open-create-modal data-modal-title="Ajouter un Directeur Technique" class="ent-btn ent-btn-primary">Ajouter</a>
+                    <div class="flex items-center gap-3">
+                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $directeurs->total() }} directeur(s)</div>
+                        <a href="{{ route('admin.directions.create') }}" data-open-create-modal data-modal-title="Ajouter un Directeur Technique" class="ent-btn ent-btn-primary">Ajouter</a>
+                    </div>
                 </div>
             </section>
 

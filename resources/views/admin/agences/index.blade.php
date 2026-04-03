@@ -101,6 +101,12 @@
 @endpush
 
 @section('content')
+    <div class="mb-4">
+        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
+            <i class="fas fa-arrow-left"></i>
+            <span>Retour</span>
+        </a>
+    </div>
     <div class="agences-page admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto max-w-7xl space-y-6">
             <section class="agences-hero admin-panel p-6 lg:p-8">
@@ -110,7 +116,10 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Index des agences</h1>
                         <p class="mt-2 text-sm text-slate-600">Liste des agences avec le chef d'agence, la secretaire, la delegation technique et le directeur de caisse superviseur.</p>
                     </div>
-                    <a href="{{ route('admin.agences.create') }}" data-open-create-modal data-modal-title="Ajouter une agence" class="ent-btn ent-btn-primary">Ajouter une agence</a>
+                    <div class="flex items-center gap-3">
+                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $agences->total() }} agence(s)</div>
+                        <a href="{{ route('admin.agences.create') }}" data-open-create-modal data-modal-title="Ajouter une agence" class="ent-btn ent-btn-primary">Ajouter une agence</a>
+                    </div>
                 </div>
             </section>
 

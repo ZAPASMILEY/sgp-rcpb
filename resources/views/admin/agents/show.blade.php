@@ -3,6 +3,12 @@
 @section('title', 'Agent | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
+    <div class="mb-4">
+        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
+            <i class="fas fa-arrow-left"></i>
+            <span>Retour</span>
+        </a>
+    </div>
     <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
         <div class="mx-auto flex max-w-4xl flex-col gap-6">
             <section class="admin-panel p-6 sm:p-8">

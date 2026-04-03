@@ -20,7 +20,7 @@
                         @endif
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <a href="{{ $isFaitiereDirection ? route('admin.entites.directions.index') : route('admin.directions.index') }}" class="ent-btn ent-btn-soft">Retour</a>
+                        <a href="{{ $isFaitiereDirection ? route('admin.entites.directions.index') : route('admin.delegations-techniques.index') }}" class="ent-btn ent-btn-soft">Retour</a>
                         <a href="{{ route('admin.directions.edit', $direction) }}" class="ent-btn ent-btn-primary">Modifier</a>
                     </div>
                 </div>
