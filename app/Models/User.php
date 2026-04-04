@@ -76,6 +76,18 @@ class User extends Authenticatable
 
     public function isPersonnel(): bool
     {
-        return in_array($this->role, ['agent', 'directeur', 'directeur_adjoint', 'assistant', 'chef', 'secretaire'], true);
+        return in_array($this->role, ['agent', 'directeur', 'directeur_adjoint', 'assistant', 'chef', 'secretaire', 'pca', 'rh'], true);
+    }
+
+    public function alertes()
+    {
+        return $this->belongsToMany(Alerte::class, 'alerte_user')
+            ->withPivot('lu', 'lu_at')
+            ->withTimestamps();
+    }
+
+    public function alertesNonLues()
+    {
+        return $this->alertes()->wherePivot('lu', false);
     }
 }

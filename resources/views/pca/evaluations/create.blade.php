@@ -102,6 +102,11 @@
                     var option = document.createElement('option');
                     option.value = String(item.id);
                     option.textContent = item.label;
+                    if (item.dg) {
+                        option.style.background = 'linear-gradient(90deg,#f6e27a,#fffbe6)';
+                        option.style.fontWeight = 'bold';
+                        option.textContent += ' (DG)';
+                    }
                     if (previousTarget !== '' && String(item.id) === previousTarget) {
                         option.selected = true;
                     }

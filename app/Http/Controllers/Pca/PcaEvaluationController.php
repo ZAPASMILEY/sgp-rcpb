@@ -245,12 +245,24 @@ class PcaEvaluationController extends Controller
         $entite = Entite::query()->findOrFail($entiteId);
         $directions = Direction::query()->where('entite_id', $entiteId)->orderBy('nom')->get();
 
+        $directeurs = $directions->map(fn (Direction $d) => [
+            'id' => $d->id,
+            'label' => ($d->directeur_nom ?: 'Directeur non renseigné').' — '.$d->nom,
+        ])->values()->all();
+
+        // Ajout DG en haut de la liste si présente dans l'entité
+        if ($entite->directrice_generale_nom && $entite->directrice_generale_email) {
+            array_unshift($directeurs, [
+                'id' => 'dg-'.$entite->id,
+                'label' => 'Directrice Générale — '.$entite->directrice_generale_nom,
+                'dg' => true,
+                'dg_email' => $entite->directrice_generale_email,
+            ]);
+        }
+
         return [
             'entite' => [['id' => $entite->id, 'label' => $entite->nom]],
-            'directeur' => $directions->map(fn (Direction $d) => [
-                'id' => $d->id,
-                'label' => ($d->directeur_nom ?: 'Directeur non renseigne').' — '.$d->nom,
-            ])->values()->all(),
+            'directeur' => $directeurs,
         ];
     }
 

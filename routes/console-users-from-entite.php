@@ -1,12 +1,5 @@
 <?php
-
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
-
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
-
+// Script à placer dans routes/console.php ou à exécuter via tinker
 use App\Models\Entite;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -24,7 +17,6 @@ Artisan::command('users:create-from-entite', function () {
             'nom'    => $entite->pca_nom,
             'email'  => $entite->pca_email,
             'role'   => 'pca',
-            'pca_entite_id' => $entite->id,
         ],
         [
             'prenom' => $entite->directrice_generale_prenom,
@@ -44,27 +36,15 @@ Artisan::command('users:create-from-entite', function () {
         if (!$u['email']) continue;
         $exists = User::where('email', $u['email'])->first();
         if ($exists) {
-            // Si c'est le PCA, on met à jour le pca_entite_id si besoin
-            if ($u['role'] === 'pca' && empty($exists->pca_entite_id)) {
-                $exists->pca_entite_id = $entite->id;
-                $exists->save();
-                $this->info("pca_entite_id mis à jour pour le PCA existant: {$u['email']}");
-            } else {
-                $this->info("Utilisateur déjà existant: {$u['email']}");
-            }
+            $this->info("Utilisateur déjà existant: {$u['email']}");
             continue;
         }
-        $data = [
+        $user = User::create([
             'name' => trim(($u['prenom'] ?? '') . ' ' . ($u['nom'] ?? '')),
             'email' => $u['email'],
             'role' => $u['role'],
             'password' => Hash::make('changeme123'), // Mot de passe temporaire
-        ];
-        if (isset($u['pca_entite_id'])) {
-            $data['pca_entite_id'] = $u['pca_entite_id'];
-        }
-        $user = User::create($data);
+        ]);
         $this->info("Utilisateur créé: {$user->name} ({$user->role})");
     }
 });
-

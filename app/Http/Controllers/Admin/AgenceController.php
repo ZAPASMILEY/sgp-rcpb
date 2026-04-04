@@ -8,6 +8,7 @@ use App\Models\Agence;
 use App\Models\Agent;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
+use App\Models\Guichet;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Query\Builder;
@@ -30,6 +31,13 @@ class AgenceController extends Controller
                 ])
                 ->latest()
                 ->paginate(12),
+            'stats' => [
+                'total' => Agence::count(),
+                'par_delegation' => DelegationTechnique::query()
+                    ->withCount('agences')
+                    ->orderBy('region')
+                    ->get(),
+            ],
         ]);
     }
 
@@ -60,10 +68,10 @@ class AgenceController extends Controller
             ],
             'chef_nom' => ['required', 'string', 'max:255'],
             'chef_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'chef_email'), 'different:secretaire_email'],
-            'chef_telephone' => ['required', 'string', 'max:30'],
+            'chef_telephone' => ['required', 'string', 'max:30', Rule::unique('agences', 'chef_telephone'), 'different:secretaire_telephone'],
             'secretaire_nom' => ['required', 'string', 'max:255'],
             'secretaire_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'secretaire_email'), 'different:chef_email'],
-            'secretaire_telephone' => ['required', 'string', 'max:30'],
+            'secretaire_telephone' => ['required', 'string', 'max:30', Rule::unique('agences', 'secretaire_telephone'), 'different:chef_telephone'],
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
             'superviseur_caisse_id' => [
                 'required',
@@ -80,8 +88,12 @@ class AgenceController extends Controller
             'nom.unique' => 'Cette agence existe deja pour la delegation technique selectionnee.',
             'chef_email.unique' => 'Cet email du chef est deja utilise.',
             'secretaire_email.unique' => 'Cet email du secretaire est deja utilise.',
+            'chef_telephone.unique' => 'Ce telephone du chef est deja utilise.',
+            'secretaire_telephone.unique' => 'Ce telephone du secretaire est deja utilise.',
             'chef_email.different' => 'Le mail du chef doit etre different de celui du secretaire.',
             'secretaire_email.different' => 'Le mail du secretaire doit etre different de celui du chef.',
+            'chef_telephone.different' => 'Le telephone du chef doit etre different de celui du secretaire.',
+            'secretaire_telephone.different' => 'Le telephone du secretaire doit etre different de celui du chef.',
         ]);
 
         Agence::query()->create($validated);
@@ -89,6 +101,59 @@ class AgenceController extends Controller
         return redirect()
             ->route('admin.agences.index')
             ->with('status', 'Agence creee avec succes.');
+    }
+
+    public function show(Agence $agence): View
+    {
+        return view('admin.agences.show', [
+            'agence' => $agence->load(['delegationTechnique', 'superviseurCaisse']),
+        ]);
+    }
+
+    public function edit(Agence $agence): View
+    {
+        return view('admin.agences.edit', [
+            'agence' => $agence,
+            'delegations' => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
+            'caisses' => Caisse::query()->with('superviseur.delegationTechnique')->orderBy('nom')->get(),
+        ]);
+    }
+
+    public function update(Request $request, Agence $agence): RedirectResponse
+    {
+        $validated = $request->validate([
+            'nom' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('agences', 'nom')->where(function (Builder $query) use ($request): void {
+                    $query->where('delegation_technique_id', $request->integer('delegation_technique_id'));
+                })->ignore($agence->id),
+            ],
+            'chef_nom' => ['required', 'string', 'max:255'],
+            'chef_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'chef_email')->ignore($agence->id), 'different:secretaire_email'],
+            'chef_telephone' => ['required', 'string', 'max:30', Rule::unique('agences', 'chef_telephone')->ignore($agence->id), 'different:secretaire_telephone'],
+            'secretaire_nom' => ['required', 'string', 'max:255'],
+            'secretaire_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'secretaire_email')->ignore($agence->id), 'different:chef_email'],
+            'secretaire_telephone' => ['required', 'string', 'max:30', Rule::unique('agences', 'secretaire_telephone')->ignore($agence->id), 'different:chef_telephone'],
+            'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
+            'superviseur_caisse_id' => ['required', 'integer', 'exists:caisses,id'],
+        ]);
+
+        $agence->update($validated);
+
+        return redirect()
+            ->route('admin.agences.index')
+            ->with('status', 'Agence modifiee avec succes.');
+    }
+
+    public function destroy(Agence $agence): RedirectResponse
+    {
+        $agence->delete();
+
+        return redirect()
+            ->route('admin.agences.index')
+            ->with('status', 'Agence supprimee avec succes.');
     }
 
     public function agentsIndex(Agence $agence): View
@@ -117,7 +182,7 @@ class AgenceController extends Controller
             'sexe' => ['required', 'in:homme,femme'],
             'fonction' => ['required', 'string', 'max:255'],
             'date_debut_fonction' => ['required', 'date'],
-            'numero_telephone' => ['required', 'string', 'max:30'],
+            'numero_telephone' => ['required', 'string', 'max:30', Rule::unique('agents', 'numero_telephone')],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
         ]);
 

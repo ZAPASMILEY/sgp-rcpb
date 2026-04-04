@@ -13,6 +13,21 @@ use Illuminate\Validation\Rules\Password;
 
 class SettingsController extends Controller
 {
+    public function updateUserRole(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'role'    => ['required', 'string', 'in:admin,pca,agent,directeur,directeur_adjoint,assistant,chef,secretaire,rh'],
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+        $user->role = $validated['role'];
+        $user->save();
+
+        return redirect()
+            ->route('admin.settings.edit')
+            ->with('status', 'Rôle de ' . $user->name . ' mis à jour avec succès.');
+    }
     public function edit(Request $request): View
     {
         return view('admin.settings.edit', [
@@ -105,5 +120,41 @@ class SettingsController extends Controller
         return redirect()
             ->route('login')
             ->with('status', 'Compte supprime avec succes.');
+    }
+
+    public function searchUsers(Request $request)
+    {
+        $query = $request->query('q', '');
+
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        $users = User::query()
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('email', 'like', "%{$query}%")
+                  ->orWhere('role', 'like', "%{$query}%");
+            })
+            ->select('id', 'name', 'email', 'role')
+            ->take(10)
+            ->get();
+
+        return response()->json($users);
+    }
+
+    public function updateUserPassword(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'user_id'  => ['required', 'exists:users,id'],
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+        $user->forceFill(['password' => Hash::make($validated['password'])])->save();
+
+        return redirect()
+            ->route('admin.settings.edit')
+            ->with('status', 'Mot de passe de ' . $user->name . ' mis à jour avec succès.');
     }
 }

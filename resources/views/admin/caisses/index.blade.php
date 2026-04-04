@@ -2,179 +2,146 @@
 
 @section('title', 'Caisses | '.config('app.name', 'SGP-RCPB'))
 
-@push('head')
-    <style>
-        .caisses-table thead th,
-        .caisses-table tbody td {
-            padding-left: 0.75rem;
-            padding-right: 0.75rem;
-        }
-
-        .caisses-table thead th {
-            letter-spacing: 0.12em;
-        }
-
-        .caisses-nowrap {
-            white-space: nowrap;
-        }
-
-        .caisses-subtext {
-            margin-top: 0.1rem;
-            font-size: 0.74rem;
-            line-height: 1.2;
-        }
-
-        .caisses-actions {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 0.5rem;
-            white-space: nowrap;
-        }
-
-        .caisses-actions .ent-btn {
-            width: 2.6rem;
-            height: 2.6rem;
-        }
-    </style>
-@endpush
-
 @section('content')
-    <div class="mb-4">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
-            <i class="fas fa-arrow-left"></i>
-            <span>Retour</span>
-        </a>
-    </div>
-    <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto max-w-6xl space-y-6">
-            <section class="admin-panel p-6">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Referentiel / Caisses</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Les Caisses de la RCPB </h1>
-                        <p class="mt-2 text-sm text-slate-600">Liste des caisses avec les coordonnees du directeur, le numero du secretariat et la delegation technique.</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $caisses->total() }} caisse(s)</div>
-                        <button type="button" onclick="document.getElementById('caisse-form').classList.remove('hidden')" class="ent-btn ent-btn-primary">Ajouter une caisse</button>
-                    </div>
+<div class="min-h-screen bg-[#f1f5f9] px-4 pb-8 pt-4 lg:px-8">
+    <div class="mx-auto max-w-7xl space-y-6">
+
+        @if (session('status'))
+            <div id="caisse-status-message" class="fixed right-6 top-6 z-50 flex items-center gap-4 rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-2xl shadow-emerald-100/60">
+                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                    <i class="fas fa-check"></i>
                 </div>
-            </section>
+                <p class="text-sm font-bold text-slate-700">{{ session('status') }}</p>
+            </div>
+            <script>setTimeout(() => document.getElementById('caisse-status-message')?.remove(), 3000);</script>
+        @endif
 
-            @if (session('status'))
-                <div id="caisse-status-message" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    {{ session('status') }}
+        @php
+            $gradients = [
+                'from-violet-500 to-purple-600',
+                'from-blue-500 to-indigo-600',
+                'from-amber-400 to-orange-500',
+                'from-rose-400 to-pink-500',
+                'from-cyan-400 to-teal-500',
+            ];
+        @endphp
+
+        {{-- Header --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight text-slate-900">Les Caisses de la RCPB</h1>
+                    <p class="mt-1 text-sm text-slate-400">Liste des caisses avec les coordonnées du directeur, le numéro du secrétariat et la délégation technique.</p>
                 </div>
-                <script>setTimeout(() => document.getElementById('caisse-status-message')?.remove(), 3000);</script>
-            @endif
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="document.getElementById('caisse-form').classList.remove('hidden')" class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700">
+                        <i class="fas fa-plus text-xs text-emerald-300"></i> Ajouter une caisse
+                    </button>
+                </div>
+            </div>
+        </div>
 
-            <section class="admin-panel p-6">
-                <form method="GET" action="{{ route('admin.caisses.index') }}" class="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
-                    <div class="flex-1">
-                        <label for="search" class="sr-only">Rechercher une caisse</label>
-                        <input
-                            id="search"
-                            name="search"
-                            type="search"
-                            value="{{ $search }}"
-                            class="ent-input"
-                            placeholder="Rechercher par caisse, directeur, contact, secretariat ou delegation"
-                        >
+        {{-- KPI Cards --}}
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-{{ 1 + $stats['par_delegation']->count() }}">
+            {{-- Total global --}}
+            <div class="rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 p-5 text-white shadow-sm">
+                <div class="flex items-start justify-between">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                        <i class="fas fa-university text-sm"></i>
+                    </span>
+                    <span class="text-3xl font-black">{{ $stats['total'] }}</span>
+                </div>
+                <p class="mt-3 text-sm font-bold">Total Caisses</p>
+            </div>
+            {{-- Par délégation --}}
+            @foreach ($stats['par_delegation'] as $i => $delegation)
+                <div class="rounded-2xl bg-gradient-to-br {{ $gradients[$i % count($gradients)] }} p-5 text-white shadow-sm">
+                    <div class="flex items-start justify-between">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                            <i class="fas fa-map-marker-alt text-sm"></i>
+                        </span>
+                        <span class="text-3xl font-black">{{ $delegation->caisses_count }}</span>
                     </div>
-                    <div class="flex gap-2">
-                        <button type="submit" class="ent-btn ent-btn-primary">
-                            <i class="fas fa-search"></i>
-                            <span>Rechercher</span>
-                        </button>
-                        @if ($search !== '')
-                            <a href="{{ route('admin.caisses.index') }}" class="ent-btn ent-btn-soft">Reinitialiser</a>
-                        @endif
-                    </div>
-                </form>
+                    <p class="mt-3 text-sm font-bold">{{ $delegation->region }}</p>
+                </div>
+            @endforeach
+        </div>
 
-                <div class="overflow-x-auto">
-                    <table class="caisses-table ent-table ent-table--compact text-left text-sm text-slate-700">
-                        <thead>
-                            <tr>
-                                <th>N</th>
-                                <th>Caisse</th>
-                                <th>Directeur de caisse</th>
-                                <th>Contact directeur</th>
-                                <th>Secretariat</th>
-                                <th>Délégation</th>
-                                <th class="text-right">Actions</th>
+        {{-- Search + Table --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="mb-6">
+                <label for="caisse-search" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recherche</label>
+                <div class="relative mt-1.5">
+                    <input
+                        id="caisse-search"
+                        type="text"
+                        placeholder="Rechercher par caisse, directeur, contact, secrétariat ou délégation"
+                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400"
+                        autocomplete="off"
+                    >
+                    <div id="caisse-suggestions" class="absolute left-0 right-0 top-full z-20 mt-1 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"></div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-700">
+                    <thead>
+                        <tr class="border-b border-slate-100">
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">N</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Caisse</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Directeur de caisse</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Contact directeur</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Secrétariat</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Délégation</th>
+                            <th class="px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($caisses as $caisse)
+                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($caisse->nom.' '.$caisse->directeur_prenom.' '.$caisse->directeur_nom.' '.$caisse->directeur_email.' '.$caisse->secretariat_telephone.' '.($caisse->delegationTechnique?->region ?? '').' '.($caisse->delegationTechnique?->ville ?? ''))) }}">
+                                <td class="whitespace-nowrap px-3 py-3">{{ ($caisses->firstItem() ?? 1) + $loop->index }}</td>
+                                <td class="whitespace-nowrap px-3 py-3 font-semibold text-slate-800">{{ $caisse->nom }}</td>
+                                <td class="whitespace-nowrap px-3 py-3">{{ $caisse->directeur_prenom }} {{ $caisse->directeur_nom }}</td>
+                                <td class="whitespace-nowrap px-3 py-3">{{ $caisse->directeur_email }}</td>
+                                <td class="whitespace-nowrap px-3 py-3">{{ $caisse->secretariat_telephone }}</td>
+                                <td class="px-3 py-3">
+                                    @if ($caisse->delegationTechnique)
+                                        <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{{ $caisse->delegationTechnique->region }} / {{ $caisse->delegationTechnique->ville }}</span>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-3 text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <a href="{{ route('admin.caisses.show', $caisse) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Voir"><i class="fas fa-eye text-xs"></i></a>
+                                        <a href="{{ route('admin.caisses.edit', $caisse) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-50 hover:text-blue-500" title="Modifier"><i class="fas fa-pen text-xs"></i></a>
+                                        <form method="POST" action="{{ route('admin.caisses.destroy', $caisse) }}" onsubmit="return confirm('Supprimer cette caisse ?');" class="inline-flex">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer"><i class="fas fa-trash text-xs"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($caisses as $caisse)
-                                <tr>
-                                    <td class="caisses-nowrap">{{ ($caisses->firstItem() ?? 1) + $loop->index }}</td>
-                                    <td class="caisses-nowrap">{{ $caisse->nom }}</td>
-                                    <td class="caisses-nowrap">{{ $caisse->directeur_prenom }} {{ $caisse->directeur_nom }}</td>
-                                    <td class="caisses-nowrap">
-                                        <p>{{ $caisse->directeur_email }}</p>
-                                    </td>
-                                    <td class="caisses-nowrap">{{ $caisse->secretariat_telephone }}</td>
-                                    <td>
-                                        @if ($caisse->delegationTechnique)
-                                            <p class="caisses-nowrap">{{ $caisse->delegationTechnique->region }} / {{ $caisse->delegationTechnique->ville }}</p>
-                                        @else
-                                            -
-                                        @endif
-                                    </td>
-                                    <td class="text-right">
-                                        <div class="caisses-actions">
-                                            <a
-                                                href="{{ route('admin.caisses.show', $caisse) }}"
-                                                class="ent-btn ent-btn-soft inline-flex h-10 w-10 items-center justify-center p-0"
-                                                title="Voir"
-                                                aria-label="Voir"
-                                            >
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a
-                                                href="{{ route('admin.caisses.edit', $caisse) }}"
-                                                class="ent-btn ent-btn-soft inline-flex h-10 w-10 items-center justify-center p-0"
-                                                title="Modifier"
-                                                aria-label="Modifier"
-                                            >
-                                                <i class="fas fa-pen"></i>
-                                            </a>
-                                            <form method="POST" action="{{ route('admin.caisses.destroy', $caisse) }}" onsubmit="return confirm('Supprimer cette caisse ?');" class="inline-flex">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button
-                                                    type="submit"
-                                                    class="ent-btn ent-btn-danger inline-flex h-10 w-10 items-center justify-center p-0"
-                                                    title="Supprimer"
-                                                    aria-label="Supprimer"
-                                                >
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="py-10 text-center text-sm text-slate-500">
-                                        {{ $search !== '' ? 'Aucune caisse ne correspond a votre recherche.' : 'Aucune caisse enregistree.' }}
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="py-10 text-center text-sm text-slate-400">
+                                    Aucune caisse enregistrée.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-                @if ($caisses->hasPages())
-                    <div class="mt-6 border-t border-slate-200 pt-4">
-                        {{ $caisses->links() }}
-                    </div>
-                @endif
-            </section>
+            @if ($caisses->hasPages())
+                <div class="mt-6 border-t border-slate-100 pt-4">
+                    {{ $caisses->links() }}
+                </div>
+            @endif
         </div>
     </div>
+</div>
 
     {{-- Caisse creation modal --}}
     <div id="caisse-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -313,3 +280,52 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var searchInput = document.getElementById('caisse-search');
+            var suggestionsBox = document.getElementById('caisse-suggestions');
+            if (!searchInput || !suggestionsBox) return;
+
+            var rows = Array.from(document.querySelectorAll('tr[data-search-content]'));
+            var pool = new Set();
+            rows.forEach(function (row) {
+                var cells = row.querySelectorAll('td');
+                if (cells.length < 6) return;
+                [cells[1], cells[2], cells[3], cells[4], cells[5]].forEach(function (cell) {
+                    var txt = (cell.innerText || '').replace(/\s+/g, ' ').trim();
+                    if (txt.length >= 2 && txt !== '-') pool.add(txt);
+                });
+            });
+            var suggestions = Array.from(pool);
+
+            function hide() { suggestionsBox.innerHTML = ''; suggestionsBox.classList.add('hidden'); }
+
+            function render(query) {
+                var q = query.trim().toLowerCase();
+                if (q.length < 1) { hide(); return; }
+                var matched = suggestions.filter(function (s) { return s.toLowerCase().includes(q); }).slice(0, 6);
+                if (!matched.length) { hide(); return; }
+                suggestionsBox.innerHTML = matched.map(function (s) {
+                    return '<button type="button" class="block w-full border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">' + s + '</button>';
+                }).join('');
+                suggestionsBox.classList.remove('hidden');
+                suggestionsBox.querySelectorAll('button').forEach(function (btn) {
+                    btn.addEventListener('click', function () { searchInput.value = btn.textContent; filter(); hide(); });
+                });
+            }
+
+            function filter() {
+                var q = searchInput.value.trim().toLowerCase();
+                rows.forEach(function (row) {
+                    row.style.display = q === '' || (row.getAttribute('data-search-content') || '').includes(q) ? '' : 'none';
+                });
+            }
+
+            searchInput.addEventListener('input', function () { render(searchInput.value); filter(); });
+            searchInput.addEventListener('blur', function () { setTimeout(hide, 120); });
+            searchInput.addEventListener('focus', function () { if (searchInput.value.trim()) render(searchInput.value); });
+        });
+    </script>
+@endpush

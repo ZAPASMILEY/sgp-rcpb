@@ -200,7 +200,7 @@ class EntiteController extends Controller
             'sexe'                => ['required', 'in:Masculin,Feminin'],
             'fonction'            => ['required', 'string', 'max:255'],
             'email'               => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
-            'numero_telephone'    => ['nullable', 'string', 'max:30'],
+            'numero_telephone'    => ['nullable', 'string', 'max:30', Rule::unique('agents', 'numero_telephone')],
             'date_debut_fonction' => ['nullable', 'date'],
         ]);
 

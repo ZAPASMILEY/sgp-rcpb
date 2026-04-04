@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeMail;
+use App\Models\Agence;
 use App\Models\Agent;
+use App\Models\DelegationTechnique;
+use App\Models\Entite;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -22,31 +25,48 @@ class AgentController extends Controller
 {
     public function index(Request $request): View
     {
-        $search = trim((string) $request->query('search', ''));
+        $tab = (string) $request->query('tab', 'faitiere');
+        $validTabs = ['faitiere', 'delegations', 'caisses', 'agences', 'guichets'];
+        if (! in_array($tab, $validTabs, true)) {
+            $tab = 'faitiere';
+        }
 
-        $agentsQuery = Agent::query()
-            ->with('service')
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where(function ($subQuery) use ($search): void {
-                    $subQuery
-                        ->where('nom', 'like', "%{$search}%")
-                        ->orWhere('prenom', 'like', "%{$search}%")
-                        ->orWhere('fonction', 'like', "%{$search}%")
-                        ->orWhere('numero_telephone', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhereHas('service', function ($serviceQuery) use ($search): void {
-                            $serviceQuery->where('nom', 'like', "%{$search}%");
-                        });
-                });
-            })
-            ->latest();
+        $agentsQuery = Agent::query()->with(['service.direction.delegationTechnique', 'agence.delegationTechnique', 'agence.superviseurCaisse', 'delegationTechnique']);
+
+        match ($tab) {
+            'faitiere' => $agentsQuery->whereHas('service.direction', function ($q): void {
+                $q->whereNull('delegation_technique_id');
+            }),
+            'delegations' => $agentsQuery->whereNotNull('delegation_technique_id'),
+            'caisses' => $agentsQuery->whereHas('agence', function ($q): void {
+                $q->whereNotNull('superviseur_caisse_id');
+            }),
+            'agences' => $agentsQuery->whereNotNull('agence_id'),
+            'guichets' => $agentsQuery->whereNotNull('agence_id')->whereHas('agence.guichets'),
+        };
+
+        $agents = $agentsQuery->latest()->get();
+
+        $counts = [
+            'faitiere' => Agent::whereHas('service.direction', fn ($q) => $q->whereNull('delegation_technique_id'))->count(),
+            'delegations' => Agent::whereNotNull('delegation_technique_id')->count(),
+            'caisses' => Agent::whereHas('agence', fn ($q) => $q->whereNotNull('superviseur_caisse_id'))->count(),
+            'agences' => Agent::whereNotNull('agence_id')->count(),
+            'guichets' => Agent::whereNotNull('agence_id')->whereHas('agence.guichets')->count(),
+        ];
 
         return view('admin.agents.index', [
-            'agents' => $agentsQuery->paginate(10)->withQueryString(),
-            'services' => Service::query()->with('direction.entite')->orderBy('nom')->get(['id', 'nom', 'direction_id']),
-            'filters' => [
-                'search' => $search,
+            'agents' => $agents,
+            'tab' => $tab,
+            'counts' => $counts,
+            'stats' => [
+                'total' => Agent::count(),
+                'par_delegation' => DelegationTechnique::query()
+                    ->withCount('agents')
+                    ->orderBy('region')
+                    ->get(),
             ],
+            'services' => Service::query()->with('direction.entite')->orderBy('nom')->get(['id', 'nom', 'direction_id']),
         ]);
     }
 
@@ -172,7 +192,14 @@ class AgentController extends Controller
             'sexe'             => ['required', 'in:homme,femme'],
             'fonction'         => ['required', 'string', 'max:255'],
             'date_debut_fonction' => ['required', 'date'],
-            'numero_telephone' => ['required', 'string', 'max:30'],
+            'numero_telephone' => [
+                'required',
+                'string',
+                'max:30',
+                $agent
+                    ? Rule::unique('agents', 'numero_telephone')->ignore($agent->id)
+                    : Rule::unique('agents', 'numero_telephone'),
+            ],
             'email'            => $emailRule,
             'photo_import'     => ['nullable', 'image', 'max:3072'],
             'photo_camera'     => ['nullable', 'image', 'max:3072'],

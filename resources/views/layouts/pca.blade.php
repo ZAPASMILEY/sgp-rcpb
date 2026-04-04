@@ -278,6 +278,44 @@
                     <p class="admin-topbar__title">{{ $pcaTopbarLabel }}</p>
                     <div class="admin-topbar__actions" id="admin-topbar-actions">
                         <span class="hidden rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 sm:inline-flex">Année {{ $displayYear }}</span>
+                        <div class="relative" id="pca-notif-bell-wrapper">
+                            <button onclick="document.getElementById('pca-notif-dropdown').classList.toggle('hidden')" class="admin-topbar__icon relative" aria-label="Notifications">
+                                <i class="fas fa-bell text-sm"></i>
+                                @if(($alertesNonLuesCount ?? 0) > 0)
+                                    <span class="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">{{ $alertesNonLuesCount > 99 ? '99+' : $alertesNonLuesCount }}</span>
+                                @endif
+                            </button>
+                            <div id="pca-notif-dropdown" class="absolute right-0 top-full z-50 mt-2 hidden w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                                <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                                    <p class="text-sm font-black text-slate-800">Notifications</p>
+                                    @if(($alertesNonLuesCount ?? 0) > 0)
+                                        <form method="POST" action="{{ route('alertes.lire-tout') }}">
+                                            @csrf
+                                            <button type="submit" class="text-[11px] font-bold text-emerald-600 hover:underline">Tout marquer lu</button>
+                                        </form>
+                                    @endif
+                                </div>
+                                <div class="max-h-80 overflow-y-auto">
+                                    @forelse(($alertesNonLues ?? collect()) as $notif)
+                                        <div class="flex items-start gap-3 border-b border-slate-50 px-4 py-3 transition hover:bg-slate-50">
+                                            <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {{ $notif->priorite === 'critique' ? 'bg-red-100 text-red-500' : ($notif->priorite === 'haute' ? 'bg-orange-100 text-orange-500' : 'bg-blue-100 text-blue-500') }}">
+                                                <i class="fas {{ $notif->priorite === 'critique' || $notif->priorite === 'haute' ? 'fa-circle-exclamation' : 'fa-bell' }} text-xs"></i>
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-bold text-slate-800">{{ $notif->titre }}</p>
+                                                <p class="mt-0.5 truncate text-[11px] text-slate-400">{{ Str::limit($notif->message ?? '', 50) }}</p>
+                                                <p class="mt-1 text-[10px] font-semibold text-slate-300">{{ $notif->created_at->diffForHumans() }}</p>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="px-4 py-8 text-center text-sm text-slate-400">
+                                            <i class="fas fa-check-circle mb-2 text-2xl text-emerald-300"></i>
+                                            <p>Aucune notification</p>
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
                         <button id="topbar-quick-toggle" type="button" class="admin-topbar__icon" aria-label="Actions rapides" aria-expanded="false" aria-controls="topbar-quick-panel">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Zm8.25 3.75-.94-.27a7.9 7.9 0 0 0-.67-1.6l.53-.82-1.76-1.76-.82.53c-.51-.28-1.04-.5-1.6-.67l-.27-.94h-2.5l-.27.94c-.56.17-1.09.39-1.6.67l-.82-.53-1.76 1.76.53.82c-.28.51-.5 1.04-.67 1.6l-.94.27v2.5l.94.27c.17.56.39 1.09.67 1.6l-.53.82 1.76 1.76.82-.53c.51.28 1.04.5 1.6.67l.27.94h2.5l.27-.94c.56-.17 1.09-.39 1.6-.67l.82.53 1.76-1.76-.53-.82c.28-.51.5-1.04.67-1.6l.94-.27v-2.5Z"/></svg>
                         </button>
@@ -484,6 +522,16 @@
                             // Keep modal open if frame location cannot be inspected.
                         }
                     });
+                }
+            });
+        </script>
+
+        <script>
+            document.addEventListener('click', (e) => {
+                const wrapper = document.getElementById('pca-notif-bell-wrapper');
+                const dropdown = document.getElementById('pca-notif-dropdown');
+                if (wrapper && dropdown && !wrapper.contains(e.target)) {
+                    dropdown.classList.add('hidden');
                 }
             });
         </script>

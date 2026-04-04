@@ -138,6 +138,30 @@
             @endforeach
         </section>
 
+        {{-- Charts Row --}}
+        <section class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {{-- Donut: Répartition du réseau --}}
+            <div class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                <h2 class="text-base font-black tracking-tight text-slate-900">Répartition du réseau</h2>
+                <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Caisses, Agences, Guichets</p>
+                <div id="chart-reseau" class="mt-2"></div>
+            </div>
+
+            {{-- Bar: Délégations --}}
+            <div class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                <h2 class="text-base font-black tracking-tight text-slate-900">Caisses & Agences par délégation</h2>
+                <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Répartition territoriale</p>
+                <div id="chart-delegations" class="mt-2"></div>
+            </div>
+
+            {{-- Area: Alertes 7 jours --}}
+            <div class="rounded-[26px] border border-rose-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                <h2 class="text-base font-black tracking-tight text-rose-600">Alertes de sécurité</h2>
+                <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">7 derniers jours</p>
+                <div id="chart-alerts" class="mt-2"></div>
+            </div>
+        </section>
+
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(340px,0.9fr)]">
             <div class="space-y-4">
                 <section class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
@@ -298,4 +322,70 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. Donut — Répartition du réseau
+    new ApexCharts(document.querySelector('#chart-reseau'), {
+        chart: { type: 'donut', height: 260, fontFamily: 'Inter, sans-serif' },
+        series: @json($reseauChart['series']),
+        labels: @json($reseauChart['labels']),
+        colors: ['#10b981', '#3b82f6', '#f59e0b'],
+        legend: { position: 'bottom', fontSize: '12px', fontWeight: 700, labels: { colors: '#64748b' } },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '60%',
+                    labels: {
+                        show: true,
+                        total: { show: true, label: 'Total', fontSize: '13px', fontWeight: 900, color: '#334155' }
+                    }
+                }
+            }
+        },
+        dataLabels: { enabled: false },
+        stroke: { width: 2, colors: ['#fff'] },
+        tooltip: { y: { formatter: function (val) { return val + ' structures'; } } },
+    }).render();
+
+    // 2. Bar — Délégations
+    new ApexCharts(document.querySelector('#chart-delegations'), {
+        chart: { type: 'bar', height: 260, fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
+        series: [
+            { name: 'Caisses', data: @json($delegationsChart['caisses']) },
+            { name: 'Agences', data: @json($delegationsChart['agences']) },
+        ],
+        xaxis: {
+            categories: @json($delegationsChart['categories']),
+            labels: { style: { fontSize: '10px', fontWeight: 700, colors: '#94a3b8' }, rotate: -45, rotateAlways: @json(count($delegationsChart['categories']) > 5) },
+        },
+        yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#94a3b8' } } },
+        colors: ['#10b981', '#6366f1'],
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
+        dataLabels: { enabled: false },
+        legend: { position: 'top', fontSize: '12px', fontWeight: 700, labels: { colors: '#64748b' } },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+        tooltip: { y: { formatter: function (val) { return val + ' structures'; } } },
+    }).render();
+
+    // 3. Area — Alertes 7 jours
+    new ApexCharts(document.querySelector('#chart-alerts'), {
+        chart: { type: 'area', height: 260, fontFamily: 'Inter, sans-serif', toolbar: { show: false }, sparkline: { enabled: false } },
+        series: [{ name: 'Tentatives', data: @json($alertsChart['series']) }],
+        xaxis: {
+            categories: @json($alertsChart['categories']),
+            labels: { style: { fontSize: '10px', fontWeight: 700, colors: '#94a3b8' } },
+        },
+        yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#94a3b8' } }, min: 0 },
+        colors: ['#f43f5e'],
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, type: 'vertical', opacityFrom: 0.4, opacityTo: 0.05 } },
+        stroke: { curve: 'smooth', width: 3 },
+        dataLabels: { enabled: false },
+        grid: { borderColor: '#fff1f2', strokeDashArray: 4 },
+        tooltip: { y: { formatter: function (val) { return val + ' tentative(s)'; } } },
+    }).render();
+});
+</script>
+@endpush
 @endsection

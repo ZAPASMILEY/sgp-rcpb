@@ -25,15 +25,18 @@
             
             <div class="flex items-center gap-4">
                 {{-- Barre de recherche intégrée --}}
-                <form method="GET" action="{{ route('admin.entites.directions.index') }}" class="flex items-center bg-white p-2 rounded-2xl shadow-sm border border-slate-100 min-w-[300px]">
-                    <div class="flex-1 flex items-center px-3 gap-2">
-                        <i class="fas fa-search text-slate-300 text-sm"></i>
-                        <input type="text" name="search" value="{{ request('search') }}" 
-                               class="w-full bg-transparent border-none focus:ring-0 text-sm text-slate-600 placeholder-slate-300 font-medium" 
-                               placeholder="Rechercher une direction...">
+                <div class="relative min-w-[300px]">
+                    <div class="flex items-center bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+                        <div class="flex-1 flex items-center px-3 gap-2">
+                            <i class="fas fa-search text-slate-300 text-sm"></i>
+                            <input id="direction-search" type="text"
+                                   class="w-full bg-transparent border-none focus:ring-0 text-sm text-slate-600 placeholder-slate-300 font-medium" 
+                                   placeholder="Rechercher une direction..."
+                                   autocomplete="off">
+                        </div>
                     </div>
-                    <button type="submit" class="bg-slate-50 text-slate-400 px-4 py-2 rounded-xl text-xs font-black uppercase hover:bg-slate-100 transition-all">Filtrer</button>
-                </form>
+                    <div id="direction-suggestions" class="absolute left-0 right-0 top-full z-20 mt-1 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"></div>
+                </div>
 
                 <a href="{{ route('admin.entites.directions.create') }}" data-open-modal data-title="Nouvelle direction faitière" 
                    class="h-12 px-6 bg-cyan-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-cyan-600 transition-all shadow-lg shadow-cyan-100">
@@ -60,7 +63,7 @@
                 </thead>
                 <tbody>
                     @forelse ($directions as $direction)
-                    <tr class="bg-white group hover:scale-[1.01] transition-all duration-200">
+                    <tr class="bg-white group hover:scale-[1.01] transition-all duration-200" data-search-content="{{ strtolower(trim($direction->nom.' '.$direction->directeur_prenom.' '.$direction->directeur_nom.' '.($direction->directeur_email ?? '').' '.($direction->services_count ?? 0).' services')) }}">
                         {{-- Ordre --}}
                         <td class="px-6 py-5 first:rounded-l-[24px] border-y border-l border-slate-50 shadow-sm shadow-slate-200/20">
                             <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-50 text-slate-400 font-black text-xs group-hover:bg-cyan-500 group-hover:text-white transition-colors">
@@ -139,3 +142,52 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var searchInput = document.getElementById('direction-search');
+            var suggestionsBox = document.getElementById('direction-suggestions');
+            if (!searchInput || !suggestionsBox) return;
+
+            var rows = Array.from(document.querySelectorAll('tr[data-search-content]'));
+            var pool = new Set();
+            rows.forEach(function (row) {
+                var cells = row.querySelectorAll('td');
+                if (cells.length < 4) return;
+                [cells[1], cells[2], cells[3]].forEach(function (cell) {
+                    var txt = (cell.innerText || '').replace(/\s+/g, ' ').trim();
+                    if (txt.length >= 2 && txt !== '-' && txt !== 'n/a') pool.add(txt);
+                });
+            });
+            var suggestions = Array.from(pool);
+
+            function hide() { suggestionsBox.innerHTML = ''; suggestionsBox.classList.add('hidden'); }
+
+            function render(query) {
+                var q = query.trim().toLowerCase();
+                if (q.length < 1) { hide(); return; }
+                var matched = suggestions.filter(function (s) { return s.toLowerCase().includes(q); }).slice(0, 6);
+                if (!matched.length) { hide(); return; }
+                suggestionsBox.innerHTML = matched.map(function (s) {
+                    return '<button type="button" class="block w-full border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">' + s + '</button>';
+                }).join('');
+                suggestionsBox.classList.remove('hidden');
+                suggestionsBox.querySelectorAll('button').forEach(function (btn) {
+                    btn.addEventListener('click', function () { searchInput.value = btn.textContent; filter(); hide(); });
+                });
+            }
+
+            function filter() {
+                var q = searchInput.value.trim().toLowerCase();
+                rows.forEach(function (row) {
+                    row.style.display = q === '' || (row.getAttribute('data-search-content') || '').includes(q) ? '' : 'none';
+                });
+            }
+
+            searchInput.addEventListener('input', function () { render(searchInput.value); filter(); });
+            searchInput.addEventListener('blur', function () { setTimeout(hide, 120); });
+            searchInput.addEventListener('focus', function () { if (searchInput.value.trim()) render(searchInput.value); });
+        });
+    </script>
+@endpush

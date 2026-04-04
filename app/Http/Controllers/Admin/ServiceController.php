@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeMail;
+use App\Models\DelegationTechnique;
 use App\Models\Direction;
 use App\Models\Service;
 use App\Models\User;
@@ -98,6 +99,18 @@ class ServiceController extends Controller
             'directions' => Direction::query()->with('entite')
                 ->when($source === 'faitiere', fn ($q) => $q->whereNull('delegation_technique_id'))
                 ->orderBy('nom')->get(['id', 'nom', 'entite_id']),
+            'stats' => [
+                'total' => Service::count(),
+                'par_delegation' => DelegationTechnique::query()
+                    ->orderBy('region')
+                    ->get()
+                    ->map(function ($d) {
+                        $d->services_count = Service::query()
+                            ->whereHas('direction', fn ($q) => $q->where('delegation_technique_id', $d->id))
+                            ->count();
+                        return $d;
+                    }),
+            ],
         ]);
     }
 
@@ -204,12 +217,26 @@ class ServiceController extends Controller
         }
 
         return $request->validate([
-            'nom'              => ['required', 'string', 'max:255'],
+            'nom'              => [
+                'required',
+                'string',
+                'max:255',
+                $service
+                    ? Rule::unique('services', 'nom')->ignore($service->id)
+                    : Rule::unique('services', 'nom'),
+            ],
             'direction_id'     => ['required', 'integer', 'exists:directions,id'],
             'chef_prenom'      => ['required', 'string', 'max:255'],
             'chef_nom'         => ['required', 'string', 'max:255'],
             'chef_email'       => $emailRule,
-            'chef_telephone'   => ['required', 'string', 'max:30'],
+            'chef_telephone'   => [
+                'required',
+                'string',
+                'max:30',
+                $service
+                    ? Rule::unique('services', 'chef_telephone')->ignore($service->id)
+                    : Rule::unique('services', 'chef_telephone'),
+            ],
         ]);
     }
 }

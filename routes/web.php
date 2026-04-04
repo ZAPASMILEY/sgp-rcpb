@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\AgenceController;
+use App\Http\Controllers\Admin\AlerteController;
 use App\Http\Controllers\Admin\CaisseController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DirectionController;
@@ -115,12 +116,19 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/agences', [AgenceController::class, 'index'])->name('admin.agences.index');
     Route::get('/admin/agences/creer', [AgenceController::class, 'create'])->name('admin.agences.create');
     Route::post('/admin/agences', [AgenceController::class, 'store'])->name('admin.agences.store');
+    Route::get('/admin/agences/{agence}', [AgenceController::class, 'show'])->name('admin.agences.show');
+    Route::get('/admin/agences/{agence}/modifier', [AgenceController::class, 'edit'])->name('admin.agences.edit');
+    Route::put('/admin/agences/{agence}', [AgenceController::class, 'update'])->name('admin.agences.update');
+    Route::delete('/admin/agences/{agence}', [AgenceController::class, 'destroy'])->name('admin.agences.destroy');
     Route::get('/admin/agences/{agence}/agents', [AgenceController::class, 'agentsIndex'])->name('admin.agences.agents.index');
     Route::get('/admin/agences/{agence}/agents/creer', [AgenceController::class, 'createAgent'])->name('admin.agences.agents.create');
     Route::post('/admin/agences/{agence}/agents', [AgenceController::class, 'storeAgent'])->name('admin.agences.agents.store');
     Route::get('/admin/guichets', [GuichetController::class, 'index'])->name('admin.guichets.index');
     Route::get('/admin/guichets/creer', [GuichetController::class, 'create'])->name('admin.guichets.create');
     Route::post('/admin/guichets', [GuichetController::class, 'store'])->name('admin.guichets.store');
+    Route::get('/admin/guichets/{guichet}/modifier', [GuichetController::class, 'edit'])->name('admin.guichets.edit');
+    Route::put('/admin/guichets/{guichet}', [GuichetController::class, 'update'])->name('admin.guichets.update');
+    Route::delete('/admin/guichets/{guichet}', [GuichetController::class, 'destroy'])->name('admin.guichets.destroy');
 
     Route::get('/admin/objectifs', [ObjectifController::class, 'index'])->name('admin.objectifs.index');
     Route::get('/admin/objectifs/creer', [ObjectifController::class, 'create'])->name('admin.objectifs.create');
@@ -142,11 +150,20 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/evaluations/{evaluation}/pdf', [EvaluationController::class, 'exportPdf'])->name('admin.evaluations.pdf');
     Route::delete('/admin/evaluations/{evaluation}', [EvaluationController::class, 'destroy'])->name('admin.evaluations.destroy');
 
+    Route::get('/admin/alertes', [AlerteController::class, 'index'])->name('admin.alertes.index');
+    Route::post('/admin/alertes', [AlerteController::class, 'store'])->name('admin.alertes.store');
+    Route::patch('/admin/alertes/{alerte}/statut', [AlerteController::class, 'updateStatut'])->name('admin.alertes.statut');
+    Route::delete('/admin/alertes/{alerte}', [AlerteController::class, 'destroy'])->name('admin.alertes.destroy');
+    Route::post('/admin/alertes/lire-tout', [AlerteController::class, 'lireTout'])->name('admin.alertes.lire-tout');
+
     Route::get('/admin/parametres', [SettingsController::class, 'edit'])->name('admin.settings.edit');
     Route::put('/admin/parametres/theme', [SettingsController::class, 'updateTheme'])->name('admin.settings.theme.update');
     Route::put('/admin/parametres/securite', [SettingsController::class, 'updateSecurity'])->name('admin.settings.security.update');
     Route::put('/admin/parametres/mot-de-passe', [SettingsController::class, 'updatePassword'])->name('admin.settings.password.update');
     Route::delete('/admin/parametres/compte', [SettingsController::class, 'destroyAccount'])->name('admin.settings.account.destroy');
+    Route::get('/admin/parametres/utilisateurs/recherche', [SettingsController::class, 'searchUsers'])->name('admin.settings.users.search');
+    Route::put('/admin/parametres/utilisateurs/mot-de-passe', [SettingsController::class, 'updateUserPassword'])->name('admin.settings.users.password.update');
+    Route::put('/admin/parametres/utilisateurs/role', [SettingsController::class, 'updateUserRole'])->name('admin.settings.users.role.update');
 });
 
 Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function (): void {
@@ -180,3 +197,6 @@ Route::middleware(['auth', 'personnel'])->group(function (): void {
     Route::post('/personnel/logout', [AuthenticatedSessionController::class, 'destroy'])->name('personnel.logout');
     Route::get('/personnel', PersonnelDashboardController::class)->name('personnel.dashboard');
 });
+
+// Shared route — all authenticated users can mark notifications as read
+Route::middleware('auth')->post('/alertes/lire-tout', [AlerteController::class, 'lireTout'])->name('alertes.lire-tout');

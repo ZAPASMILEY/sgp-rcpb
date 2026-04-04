@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agence;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
+use App\Models\Guichet;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Contracts\View\View;
@@ -42,6 +44,13 @@ class CaisseController extends Controller
                 ->withQueryString(),
             'delegations' => DelegationTechnique::query()->orderBy('region')->get(),
             'search' => $search,
+            'stats' => [
+                'total' => Caisse::count(),
+                'par_delegation' => DelegationTechnique::query()
+                    ->withCount('caisses')
+                    ->orderBy('region')
+                    ->get(),
+            ],
         ]);
     }
 
@@ -134,7 +143,14 @@ class CaisseController extends Controller
     {
         return $request->validate([
             'delegation_technique_id'   => ['required', 'integer', 'exists:delegation_techniques,id'],
-            'nom'                       => ['required', 'string', 'max:255'],
+            'nom'                       => [
+                'required',
+                'string',
+                'max:255',
+                $caisse
+                    ? Rule::unique('caisses', 'nom')->ignore($caisse->id)
+                    : Rule::unique('caisses', 'nom'),
+            ],
             'annee_ouverture'           => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
             'quartier'                  => ['required', 'string', 'max:255'],
             'directeur_prenom'          => ['required', 'string', 'max:255'],
@@ -148,14 +164,35 @@ class CaisseController extends Controller
                     ? Rule::unique('caisses', 'directeur_email')->ignore($caisse->id)
                     : Rule::unique('caisses', 'directeur_email'),
             ],
-            'directeur_telephone'       => ['required', 'string', 'max:30'],
+            'directeur_telephone'       => [
+                'required',
+                'string',
+                'max:30',
+                $caisse
+                    ? Rule::unique('caisses', 'directeur_telephone')->ignore($caisse->id)
+                    : Rule::unique('caisses', 'directeur_telephone'),
+            ],
             'directeur_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
             'secretariat_telephone'     => ['required', 'string', 'max:30'],
             'secretaire_prenom'         => ['required', 'string', 'max:255'],
             'secretaire_nom'            => ['required', 'string', 'max:255'],
             'secretaire_sexe'           => ['required', 'in:Masculin,Feminin'],
-            'secretaire_email'          => ['required', 'email', 'max:255'],
-            'secretaire_telephone'      => ['nullable', 'string', 'max:30'],
+            'secretaire_email'          => [
+                'required',
+                'email',
+                'max:255',
+                $caisse
+                    ? Rule::unique('caisses', 'secretaire_email')->ignore($caisse->id)
+                    : Rule::unique('caisses', 'secretaire_email'),
+            ],
+            'secretaire_telephone'      => [
+                'nullable',
+                'string',
+                'max:30',
+                $caisse
+                    ? Rule::unique('caisses', 'secretaire_telephone')->ignore($caisse->id)
+                    : Rule::unique('caisses', 'secretaire_telephone'),
+            ],
             'secretaire_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
         ]);
     }

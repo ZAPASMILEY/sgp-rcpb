@@ -63,10 +63,41 @@ class DashboardController extends Controller
             ->take(8)
             ->get();
 
+        // Chart data: réseau distribution (donut)
+        $reseauChart = [
+            'labels' => ['Caisses', 'Agences', 'Guichets'],
+            'series' => [
+                Caisse::query()->count(),
+                Agence::query()->count(),
+                Guichet::query()->count(),
+            ],
+        ];
+
+        // Chart data: delegations with counts (bar)
+        $allDelegations = DelegationTechnique::query()
+            ->withCount(['caisses', 'agences'])
+            ->orderBy('region')
+            ->get();
+        $delegationsChart = [
+            'categories' => $allDelegations->pluck('region')->all(),
+            'caisses' => $allDelegations->pluck('caisses_count')->all(),
+            'agences' => $allDelegations->pluck('agences_count')->all(),
+        ];
+
+        // Chart data: alertes 7 derniers jours (area)
+        $alertsChart = ['categories' => [], 'series' => []];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = now()->subDays($i);
+            $alertsChart['categories'][] = $day->translatedFormat('D d');
+            $alertsChart['series'][] = LoginFailure::query()
+                ->whereDate('attempted_at', $day->toDateString())
+                ->count();
+        }
+
         return view('admin.dashboard', [
-            'caissesCount'       => Caisse::query()->count(),
-            'agencesCount'       => Agence::query()->count(),
-            'guichetsCount'      => Guichet::query()->count(),
+            'caissesCount'       => $reseauChart['series'][0],
+            'agencesCount'       => $reseauChart['series'][1],
+            'guichetsCount'      => $reseauChart['series'][2],
             'entitesCount'       => Entite::query()->count(),
             'delegationsCount'   => DelegationTechnique::query()->count(),
             'directionsCount'    => Direction::query()->count(),
@@ -85,6 +116,9 @@ class DashboardController extends Controller
             'recentServices'     => $recentServices,
             'recentAgents'       => $recentAgents,
             'recentLoginFailures' => $recentLoginFailures,
+            'reseauChart'        => $reseauChart,
+            'delegationsChart'   => $delegationsChart,
+            'alertsChart'        => $alertsChart,
         ]);
     }
 }

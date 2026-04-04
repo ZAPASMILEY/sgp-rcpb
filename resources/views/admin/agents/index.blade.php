@@ -2,206 +2,171 @@
 
 @section('title', 'Agents | '.config('app.name', 'SGP-RCPB'))
 
-@push('head')
-    <style>
-        .agents-page .agents-hero {
-            border-radius: 28px;
-            border: 1px solid rgba(148, 163, 184, 0.22);
-            background:
-                radial-gradient(circle at 12% 8%, rgba(16, 185, 129, 0.16), transparent 40%),
-                radial-gradient(circle at 92% 0%, rgba(59, 130, 246, 0.14), transparent 36%),
-                linear-gradient(180deg, rgba(22, 189, 55, 0.96), rgba(212, 205, 4, 0.95));
-            box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12);
-        }
-
-        .agents-page .agents-kpi {
-            border-radius: 16px;
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            background: rgba(255, 255, 255, 0.88);
-            padding: 0.75rem 0.9rem;
-        }
-
-        .agents-page .agents-kpi-label {
-            font-size: 0.66rem;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            font-weight: 700;
-            color: #64748b;
-        }
-
-        .agents-page .agents-kpi-value {
-            margin-top: 0.2rem;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #0f172a;
-        }
-
-        .agents-page .agents-filters {
-            border-radius: 20px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 248, 255, 0.94));
-            border-color: rgba(186, 198, 216, 0.72);
-        }
-
-        .agents-page .agents-table {
-            border-radius: 20px;
-            border-color: rgba(186, 198, 216, 0.72);
-            box-shadow: 0 10px 30px rgba(30, 41, 59, 0.08) inset;
-        }
-
-        .agents-page .agents-table .ent-table thead th {
-            background: linear-gradient(180deg, #f6f8fd 0%, #eef3fb 100%);
-            border-bottom-color: rgba(190, 201, 220, 0.85);
-        }
-    </style>
-@endpush
-
 @section('content')
-    <div class="mb-4">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
-            <i class="fas fa-arrow-left"></i>
-            <span>Retour</span>
-        </a>
-    </div>
-    <div class="agents-page admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-6xl flex-col gap-6">
-            <header class="agents-hero admin-panel px-6 py-6 lg:px-8">
-                <div class="flex flex-col gap-5">
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration / Referentiel</p>
-                            <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Agents</h1>
-                            <p class="mt-2 text-sm text-slate-600">Gestion centralisee des agents, services et contacts.</p>
-                        </div>
-                        <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-soft inline-flex items-center justify-center whitespace-nowrap">
-                            Reinitialiser
-                        </a>
-                    </div>
+<div class="min-h-screen bg-[#f1f5f9] px-4 pb-8 pt-4 lg:px-8">
+    <div class="mx-auto max-w-7xl space-y-6">
 
-                    <div class="grid gap-3 sm:grid-cols-2 lg:max-w-md">
-                        <article class="agents-kpi">
-                            <p class="agents-kpi-label">Total agents</p>
-                            <p class="agents-kpi-value">{{ $agents->total() }}</p>
-                        </article>
-                        <article class="agents-kpi">
-                            <p class="agents-kpi-label">Etat recherche</p>
-                            <p class="agents-kpi-value">{{ $filters['search'] ? 'Filtres actifs' : 'Tous les agents' }}</p>
-                        </article>
-                    </div>
+        @if (session('status'))
+            <div id="agent-status-message" class="fixed right-6 top-6 z-50 flex items-center gap-4 rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-2xl shadow-emerald-100/60">
+                <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                    <i class="fas fa-check"></i>
                 </div>
-            </header>
+                <p class="text-sm font-bold text-slate-700">{{ session('status') }}</p>
+            </div>
+            <script>setTimeout(() => document.getElementById('agent-status-message')?.remove(), 3000);</script>
+        @endif
 
-            @if (session('status'))
-                <div id="agent-status-message" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                    {{ session('status') }}
+        {{-- Header --}}
+        <div class="rounded-2xl bg-white p-5 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight text-slate-900">Agents</h1>
+                    <p class="mt-1 text-sm text-slate-400">Gestion centralisée des agents par structure organisationnelle.</p>
                 </div>
-                <script>setTimeout(() => document.getElementById('agent-status-message')?.remove(), 3000);</script>
-            @endif
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="document.getElementById('agent-create-modal').classList.remove('hidden')" class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700">
+                        <i class="fas fa-plus text-xs text-emerald-300"></i> Ajouter un agent
+                    </button>
+                </div>
+            </div>
+        </div>
 
-            
-
-            <section class="admin-panel px-6 py-6 lg:px-8">
-                <form id="agent-filters-form" method="GET" action="{{ route('admin.agents.index') }}" class="agents-filters ent-filters mb-6 grid gap-3 lg:grid-cols-[1.2fr_auto_auto] lg:items-end">
-                    <div class="relative space-y-2">
-                        <label for="search" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Recherche</label>
-                        <input
-                            id="search"
-                            name="search"
-                            type="text"
-                            value="{{ $filters['search'] }}"
-                            placeholder="Nom, prenom, fonction, numero, mail"
-                            class="ent-input"
-                            autocomplete="off"
-                            aria-autocomplete="list"
-                            aria-controls="agent-search-suggestions"
-                        >
-                        <div id="agent-search-suggestions" class="absolute left-0 right-0 top-full z-20 mt-1 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"></div>
+        {{-- KPI Cards --}}
+        @php
+            $gradients = [
+                'from-violet-500 to-purple-600',
+                'from-blue-500 to-indigo-600',
+                'from-amber-400 to-orange-500',
+                'from-rose-400 to-pink-500',
+                'from-cyan-400 to-teal-500',
+            ];
+        @endphp
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-{{ 1 + $stats['par_delegation']->count() }}">
+            <div class="rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 p-5 text-white shadow-sm">
+                <div class="flex items-start justify-between">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                        <i class="fas fa-users text-sm"></i>
+                    </span>
+                    <span class="text-3xl font-black">{{ $stats['total'] }}</span>
+                </div>
+                <p class="mt-3 text-sm font-bold">Total Agents</p>
+            </div>
+            @foreach ($stats['par_delegation'] as $i => $delegation)
+                <div class="rounded-2xl bg-gradient-to-br {{ $gradients[$i % count($gradients)] }} p-5 text-white shadow-sm">
+                    <div class="flex items-start justify-between">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                            <i class="fas fa-map-marker-alt text-sm"></i>
+                        </span>
+                        <span class="text-3xl font-black">{{ $delegation->agents_count }}</span>
                     </div>
-                    <button type="submit" class="ent-btn ent-btn-primary">Filtrer</button>
-                    <button type="button" onclick="document.getElementById('agent-create-modal').classList.remove('hidden')" class="ent-btn ent-btn-primary text-center">Ajouter</button>
-                </form>
+                    <p class="mt-3 text-sm font-bold">{{ $delegation->region }}</p>
+                </div>
+            @endforeach
+        </div>
 
-                <div class="agents-table ent-table-wrap overflow-x-auto">
-                    <table class="ent-table ent-table--stack text-left text-sm text-slate-700">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Photo</th>
-                                <th>Nom</th>
-                                <th>Prenom</th>
-                                <th>Sexe</th>
-                                <th>Service</th>
-                                <th>Fonction</th>
-                                <th>Debut fonction</th>
-                                <th>Numero</th>
-                                <th>Mail</th>
-                                <th class="text-right">Actions</th>
+        {{-- Tabs --}}
+        @php
+            $tabs = [
+                'faitiere'    => ['label' => 'Faîtière',     'icon' => 'fa-building'],
+                'delegations' => ['label' => 'Délégations',  'icon' => 'fa-sitemap'],
+                'caisses'     => ['label' => 'Caisses',      'icon' => 'fa-university'],
+                'agences'     => ['label' => 'Agences',      'icon' => 'fa-building-columns'],
+                'guichets'    => ['label' => 'Guichets',     'icon' => 'fa-window-maximize'],
+            ];
+        @endphp
+        <div class="rounded-2xl bg-white p-5 shadow-sm">
+            {{-- Tab navigation --}}
+            <div class="flex flex-wrap gap-1 border-b border-slate-100 pb-4 mb-6">
+                @foreach ($tabs as $key => $t)
+                    <a href="{{ route('admin.agents.index', ['tab' => $key]) }}"
+                       class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition
+                              {{ $tab === $key ? 'bg-blue-500 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600' }}">
+                        <i class="fas {{ $t['icon'] }} text-xs {{ $tab === $key ? 'text-white' : 'text-slate-300' }}"></i>
+                        {{ $t['label'] }}
+                        <span class="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-black
+                                     {{ $tab === $key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400' }}">
+                            {{ $counts[$key] }}
+                        </span>
+                    </a>
+                @endforeach
+            </div>
+
+            {{-- Search --}}
+            <div class="mb-6">
+                <label for="agent-search" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recherche</label>
+                <div class="relative mt-1.5">
+                    <input
+                        id="agent-search"
+                        type="text"
+                        placeholder="Rechercher par nom, prénom, fonction, mail ou région"
+                        class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400"
+                        autocomplete="off"
+                    >
+                    <div id="agent-suggestions" class="absolute left-0 right-0 top-full z-20 mt-1 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"></div>
+                </div>
+            </div>
+
+            {{-- Table --}}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-700">
+                    <thead>
+                        <tr class="border-b border-slate-100">
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">#</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Nom</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Prénom</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Fonction</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Mail</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Région</th>
+                            <th class="px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($agents as $agent)
+                            @php
+                                $region = $agent->delegationTechnique?->region
+                                    ?? $agent->agence?->delegationTechnique?->region
+                                    ?? ($agent->service?->direction?->delegationTechnique?->region
+                                        ? $agent->service->direction->delegationTechnique->region
+                                        : (($agent->service?->direction && $agent->service->direction->delegation_technique_id === null) ? 'Faîtière' : '-'));
+                            @endphp
+                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($agent->nom.' '.$agent->prenom.' '.$agent->fonction.' '.$agent->email.' '.$region)) }}">
+                                <td class="whitespace-nowrap px-3 py-3">{{ $loop->iteration }}</td>
+                                <td class="whitespace-nowrap px-3 py-3 font-semibold text-slate-800">{{ $agent->nom }}</td>
+                                <td class="whitespace-nowrap px-3 py-3">{{ $agent->prenom }}</td>
+                                <td class="whitespace-nowrap px-3 py-3">{{ $agent->fonction }}</td>
+                                <td class="whitespace-nowrap px-3 py-3 text-slate-500">{{ $agent->email }}</td>
+                                <td class="px-3 py-3">
+                                    @if ($region !== '-')
+                                        <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{{ $region }}</span>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-3 text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <a href="{{ route('admin.agents.show', $agent) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Voir"><i class="fas fa-eye text-xs"></i></a>
+                                        <a href="{{ route('admin.agents.edit', $agent) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-50 hover:text-blue-500" title="Modifier"><i class="fas fa-pen text-xs"></i></a>
+                                        <form method="POST" action="{{ route('admin.agents.destroy', $agent) }}" onsubmit="return confirm('Supprimer cet agent ?');" class="inline-flex">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer"><i class="fas fa-trash text-xs"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($agents as $agent)
-                                <tr data-search-content="{{ strtolower(trim($agent->nom.' '.$agent->prenom.' '.($agent->sexe ?? '').' '.($agent->service?->nom ?? '').' '.$agent->fonction.' '.$agent->numero_telephone.' '.$agent->email)) }}">
-                                    <td data-label="#"><p class="ent-identity">{{ ($agents->firstItem() ?? 1) + $loop->index }}</p></td>
-                                    <td data-label="Photo">
-                                        @if ($agent->photo_path)
-                                            <img src="{{ Storage::url($agent->photo_path) }}" alt="Photo de {{ $agent->prenom }} {{ $agent->nom }}" class="h-11 w-11 rounded-xl object-cover ring-1 ring-slate-200">
-                                        @else
-                                            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 ring-1 ring-slate-200">
-                                                {{ strtoupper(substr($agent->prenom, 0, 1).substr($agent->nom, 0, 1)) }}
-                                            </div>
-                                        @endif
-                                    </td>
-                                    <td data-label="Nom"><p class="ent-identity">{{ $agent->nom }}</p></td>
-                                    <td data-label="Prenom"><p class="ent-identity">{{ $agent->prenom }}</p></td>
-                                    <td data-label="Sexe"><p class="ent-identity">{{ ucfirst($agent->sexe ?? '-') }}</p></td>
-                                    <td data-label="Service"><p class="ent-identity">{{ $agent->service?->nom ?? '-' }}</p></td>
-                                    <td data-label="Fonction"><p class="ent-identity">{{ $agent->fonction }}</p></td>
-                                    <td data-label="Debut"><p class="ent-subtext">{{ optional($agent->date_debut_fonction)->format('d/m/Y') ?: '-' }}</p></td>
-                                    <td data-label="Numero"><p class="ent-identity">{{ $agent->numero_telephone }}</p></td>
-                                    <td data-label="Mail"><p class="ent-subtext">{{ $agent->email }}</p></td>
-                                    <td data-label="Actions" class="whitespace-nowrap">
-                                        <div class="ent-actions flex-nowrap">
-                                            <a href="{{ route('admin.agents.show', $agent) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Voir l'agent" aria-label="Voir l'agent">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5S21.75 12 21.75 12s-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z" />
-                                                    <circle cx="12" cy="12" r="3" />
-                                                </svg>
-                                            </a>
-                                            <a href="{{ route('admin.agents.edit', $agent) }}" class="ent-btn ent-btn-soft inline-flex h-7 w-7 items-center justify-center p-0" title="Modifier l'agent" aria-label="Modifier l'agent">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 3.487 3.651 3.651M4.5 19.5l3.981-.884a2.25 2.25 0 0 0 1.068-.574L20.513 7.078a1.875 1.875 0 0 0 0-2.652l-.939-.939a1.875 1.875 0 0 0-2.652 0L5.958 14.451a2.25 2.25 0 0 0-.574 1.068L4.5 19.5Z" />
-                                                </svg>
-                                            </a>
-                                            <form method="POST" action="{{ route('admin.agents.destroy', $agent) }}" onsubmit="return confirm('Supprimer cet agent ?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="ent-btn ent-btn-danger inline-flex h-7 w-7 items-center justify-center p-0" title="Supprimer l'agent" aria-label="Supprimer l'agent">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 6.75h18M9.75 6.75V5.625A1.875 1.875 0 0 1 11.625 3.75h.75A1.875 1.875 0 0 1 14.25 5.625V6.75m3.75 0V18A2.25 2.25 0 0 1 15.75 20.25h-7.5A2.25 2.25 0 0 1 6 18V6.75h12Zm-8.25 4.5v5.25m4.5-5.25v5.25" />
-                                                    </svg>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="11" class="py-10 text-center text-sm text-slate-500">
-                                        Aucun agent enregistre.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                @if ($agents->hasPages())
-                    <div class="mt-6 border-t border-slate-200 pt-4">
-                        {{ $agents->links() }}
-                    </div>
-                @endif
-            </section>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="py-10 text-center text-sm text-slate-400">
+                                    Aucun agent enregistré pour cette catégorie.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+</div>
 
     {{-- Agent creation modal --}}
     <div id="agent-create-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -212,7 +177,7 @@
             </button>
 
             <div class="mb-6">
-                <p class="text-xs font-black uppercase tracking-[0.25em] text-orange-500">Nouvel agent</p>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-500">Nouvel agent</p>
                 <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Ajouter un Agent</h2>
             </div>
 
@@ -221,13 +186,13 @@
 
                 <div>
                     <h3 class="flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-slate-700 mb-3">
-                        <i class="fas fa-briefcase text-orange-500"></i>
+                        <i class="fas fa-briefcase text-emerald-500"></i>
                         Affectation
                     </h3>
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div class="md:col-span-2">
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Service <span class="text-rose-500">*</span></label>
-                            <select name="service_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400">
+                            <select name="service_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                                 <option value="">-- Choisir --</option>
                                 @foreach ($services as $svc)
                                     <option value="{{ $svc->id }}" {{ (int) old('service_id') === $svc->id ? 'selected' : '' }}>{{ $svc->nom }} {{ $svc->direction ? '('.$svc->direction->nom.')' : '' }}</option>
@@ -236,28 +201,28 @@
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Fonction <span class="text-rose-500">*</span></label>
-                            <input type="text" name="fonction" value="{{ old('fonction') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400" placeholder="Ex: Caissier, Comptable...">
+                            <input type="text" name="fonction" value="{{ old('fonction') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400" placeholder="Ex: Caissier, Comptable...">
                         </div>
                     </div>
                 </div>
 
                 <div>
                     <h3 class="flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-slate-700 mb-3">
-                        <i class="fas fa-user text-orange-500"></i>
+                        <i class="fas fa-user text-emerald-500"></i>
                         Identité de l'agent
                     </h3>
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div>
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Prénom <span class="text-rose-500">*</span></label>
-                            <input type="text" name="prenom" value="{{ old('prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400">
+                            <input type="text" name="prenom" value="{{ old('prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom <span class="text-rose-500">*</span></label>
-                            <input type="text" name="nom" value="{{ old('nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400">
+                            <input type="text" name="nom" value="{{ old('nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Sexe <span class="text-rose-500">*</span></label>
-                            <select name="sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400">
+                            <select name="sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                                 <option value="">-- Choisir --</option>
                                 <option value="homme" {{ old('sexe') === 'homme' ? 'selected' : '' }}>Homme</option>
                                 <option value="femme" {{ old('sexe') === 'femme' ? 'selected' : '' }}>Femme</option>
@@ -265,21 +230,21 @@
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                            <input type="email" name="email" value="{{ old('email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400">
+                            <input type="email" name="email" value="{{ old('email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone <span class="text-rose-500">*</span></label>
-                            <input type="text" name="numero_telephone" value="{{ old('numero_telephone') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400">
+                            <input type="text" name="numero_telephone" value="{{ old('numero_telephone') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Date début fonction <span class="text-rose-500">*</span></label>
-                            <input type="date" name="date_debut_fonction" value="{{ old('date_debut_fonction') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400">
+                            <input type="date" name="date_debut_fonction" value="{{ old('date_debut_fonction') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                         </div>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-4 pt-2">
-                    <button type="submit" class="inline-flex h-11 items-center gap-3 rounded-2xl bg-orange-500 px-8 text-sm font-black uppercase tracking-[0.14em] text-white shadow-lg shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-600">
+                    <button type="submit" class="inline-flex h-11 items-center gap-3 rounded-2xl bg-emerald-600 px-8 text-sm font-black uppercase tracking-[0.14em] text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700">
                         <i class="fas fa-check"></i>
                         Enregistrer
                     </button>
@@ -295,73 +260,55 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            var searchInput = document.getElementById('search');
-            var suggestions = document.getElementById('agent-search-suggestions');
-            var rows = Array.from(document.querySelectorAll('tbody tr[data-search-content]'));
+            var searchInput = document.getElementById('agent-search');
+            var suggestionsBox = document.getElementById('agent-suggestions');
+            if (!searchInput || !suggestionsBox) return;
 
-            if (!searchInput || !suggestions || rows.length === 0) {
-                return;
-            }
+            var rows = Array.from(document.querySelectorAll('tr[data-search-content]'));
+            var pool = new Set();
+            rows.forEach(function (row) {
+                var cells = row.querySelectorAll('td');
+                if (cells.length < 5) return;
+                [cells[1], cells[2], cells[3], cells[4]].forEach(function (cell) {
+                    var txt = (cell.innerText || '').replace(/\s+/g, ' ').trim();
+                    if (txt.length >= 2 && txt !== '-') pool.add(txt);
+                });
+            });
+            var terms = Array.from(pool);
 
             function hideSuggestions() {
-                suggestions.innerHTML = '';
-                suggestions.classList.add('hidden');
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.classList.add('hidden');
             }
 
             function filterRows(query) {
-                var value = query.trim().toLowerCase();
-
+                var q = query.trim().toLowerCase();
                 rows.forEach(function (row) {
-                    row.style.display = value === '' || row.dataset.searchContent.indexOf(value) !== -1 ? '' : 'none';
+                    row.style.display = q === '' || row.dataset.searchContent.indexOf(q) !== -1 ? '' : 'none';
                 });
             }
 
-            function renderSuggestions(query) {
-                var value = query.trim().toLowerCase();
-
-                if (value === '') {
-                    hideSuggestions();
-                    return;
-                }
-
-                var matches = rows
-                    .filter(function (row) {
-                        return row.dataset.searchContent.indexOf(value) !== -1;
-                    })
-                    .slice(0, 5)
-                    .map(function (row) {
-                        return row.dataset.searchContent;
-                    });
-
-                if (matches.length === 0) {
-                    hideSuggestions();
-                    return;
-                }
-
-                suggestions.innerHTML = matches.map(function (match) {
-                    return '<button type="button" class="flex w-full items-center px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50">' + match + '</button>';
+            searchInput.addEventListener('input', function () {
+                var q = searchInput.value.trim().toLowerCase();
+                filterRows(q);
+                if (q.length < 1) { hideSuggestions(); return; }
+                var matches = terms.filter(function (t) { return t.toLowerCase().indexOf(q) !== -1; }).slice(0, 6);
+                if (matches.length === 0) { hideSuggestions(); return; }
+                suggestionsBox.innerHTML = matches.map(function (m) {
+                    return '<button type="button" class="flex w-full items-center px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50">' + m + '</button>';
                 }).join('');
-
-                suggestions.querySelectorAll('button').forEach(function (button) {
-                    button.addEventListener('click', function () {
-                        searchInput.value = button.textContent.trim();
+                suggestionsBox.querySelectorAll('button').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        searchInput.value = btn.textContent.trim();
                         filterRows(searchInput.value);
                         hideSuggestions();
                     });
                 });
-
-                suggestions.classList.remove('hidden');
-            }
-
-            searchInput.addEventListener('input', function () {
-                filterRows(searchInput.value);
-                renderSuggestions(searchInput.value);
+                suggestionsBox.classList.remove('hidden');
             });
 
-            document.addEventListener('click', function (event) {
-                if (!suggestions.contains(event.target) && event.target !== searchInput) {
-                    hideSuggestions();
-                }
+            document.addEventListener('click', function (e) {
+                if (!suggestionsBox.contains(e.target) && e.target !== searchInput) hideSuggestions();
             });
         });
     </script>

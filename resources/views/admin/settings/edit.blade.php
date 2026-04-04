@@ -198,6 +198,19 @@
                             </div>
                             <span class="rounded bg-white/5 px-2 py-0.5 text-[8px] font-black uppercase">Desactive</span>
                         </div>
+
+                        <button id="open-manage-pwd-modal" class="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10">
+                            <div class="flex items-center gap-3">
+                                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
+                                    <i class="fas fa-users-cog text-sm"></i>
+                                </span>
+                                <div class="text-left">
+                                    <p class="text-xs font-black uppercase tracking-wider">Gerer les mots de passe</p>
+                                    <p class="text-[10px] text-white/40">Modifier le mot de passe du personnel</p>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-right text-xs text-white/20"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -300,6 +313,105 @@
         </form>
     </div>
 </div>
+
+{{-- MODALE : GERER LES MOTS DE PASSE DU PERSONNEL --}}
+<div id="manage-pwd-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('manage-pwd-modal').classList.add('hidden'); resetManagePwdModal();"></div>
+    <div class="relative w-full max-w-lg rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+        <button type="button" onclick="document.getElementById('manage-pwd-modal').classList.add('hidden'); resetManagePwdModal();" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div class="mb-6">
+            <p class="text-xs font-black uppercase tracking-[0.25em] text-amber-500">Administration</p>
+            <h2 class="mt-2 text-xl font-black tracking-tight text-slate-900">Gerer les mots de passe</h2>
+            <p class="mt-1 text-xs text-slate-400">Recherchez un membre du personnel et modifiez son mot de passe.</p>
+        </div>
+
+        {{-- Search input --}}
+        <div class="relative mb-4">
+            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                <i class="fas fa-search text-xs text-slate-300"></i>
+            </div>
+            <input id="manage-pwd-search" type="text" placeholder="Rechercher par nom, email ou role..." autocomplete="off" class="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-400">
+            <div id="manage-pwd-spinner" class="hidden absolute inset-y-0 right-0 flex items-center pr-4">
+                <i class="fas fa-circle-notch fa-spin text-xs text-slate-300"></i>
+            </div>
+        </div>
+
+        {{-- Search results list --}}
+        <div id="manage-pwd-results" class="mb-4 max-h-48 space-y-1 overflow-y-auto"></div>
+
+        {{-- Selected user form (hidden by default) --}}
+        <div id="manage-pwd-form-wrap" class="hidden">
+            <div id="manage-pwd-selected" class="mb-4 flex items-center gap-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-sm font-black text-white" id="manage-pwd-avatar"></span>
+                <div>
+                    <p class="text-sm font-black text-slate-800" id="manage-pwd-name"></p>
+                    <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400" id="manage-pwd-role"></p>
+                </div>
+                <button type="button" onclick="resetManagePwdModal();" class="ml-auto flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
+                    <i class="fas fa-times text-[10px]"></i>
+                </button>
+            </div>
+
+            <form method="POST" action="{{ route('admin.settings.users.password.update') }}" class="space-y-4">
+                @csrf @method('PUT')
+                <input type="hidden" name="user_id" id="manage-pwd-user-id">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nouveau mot de passe <span class="text-rose-500">*</span></label>
+                        <input name="password" type="password" required minlength="8" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-400">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Confirmation <span class="text-rose-500">*</span></label>
+                        <input name="password_confirmation" type="password" required minlength="8" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-400">
+                    </div>
+                </div>
+                <div class="flex items-center gap-4 pt-2">
+                    <button type="submit" class="inline-flex h-11 items-center gap-3 rounded-2xl bg-amber-500 px-8 text-sm font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-amber-600">
+                        <i class="fas fa-check"></i> Modifier
+                    </button>
+                    <button type="button" onclick="document.getElementById('manage-pwd-modal').classList.add('hidden'); resetManagePwdModal();" class="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
+                        Annuler
+                    </button>
+                </div>
+            </form>
+
+            {{-- Formulaire de changement de rôle --}}
+            <form method="POST" action="{{ route('admin.settings.users.role.update') }}" class="mt-6 space-y-4">
+                @csrf @method('PUT')
+                <input type="hidden" name="user_id" id="manage-role-user-id">
+                <div>
+                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Rôle <span class="text-amber-500">*</span></label>
+                    <select name="role" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-400">
+                        <option value="agent">Agent</option>
+                        <option value="chef">Chef</option>
+                        <option value="directeur">Directeur</option>
+                        <option value="directeur_adjoint">Directeur Adjoint</option>
+                        <option value="assistant">Assistant</option>
+                        <option value="secretaire">Secrétaire</option>
+                        <option value="admin">Administrateur</option>
+                        <option value="pca">PCA</option>
+                        <option value="rh">RH</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-4 pt-2">
+                    <button type="submit" class="inline-flex h-11 items-center gap-3 rounded-2xl bg-amber-500 px-8 text-sm font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-amber-600">
+                        <i class="fas fa-check"></i> Attribuer le rôle
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {{-- Empty state --}}
+        <div id="manage-pwd-empty" class="py-6 text-center">
+            <i class="fas fa-user-lock mb-2 text-2xl text-slate-200"></i>
+            <p class="text-xs text-slate-400">Tapez au moins 2 caracteres pour rechercher</p>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -312,6 +424,93 @@ document.addEventListener('DOMContentLoaded', function () {
     };
     setupModal('password-modal', 'open-password-modal');
     setupModal('delete-modal', 'open-delete-modal');
+    setupModal('manage-pwd-modal', 'open-manage-pwd-modal');
+
+    // --- Gerer les mots de passe: recherche AJAX ---
+    const searchInput = document.getElementById('manage-pwd-search');
+    const resultsDiv = document.getElementById('manage-pwd-results');
+    const formWrap = document.getElementById('manage-pwd-form-wrap');
+    const emptyState = document.getElementById('manage-pwd-empty');
+    const spinner = document.getElementById('manage-pwd-spinner');
+    let searchTimeout = null;
+
+    searchInput?.addEventListener('input', function () {
+        const q = this.value.trim();
+        clearTimeout(searchTimeout);
+
+        if (q.length < 2) {
+            resultsDiv.innerHTML = '';
+            formWrap.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            return;
+        }
+
+        spinner?.classList.remove('hidden');
+        searchTimeout = setTimeout(() => {
+            fetch(`{{ route('admin.settings.users.search') }}?q=${encodeURIComponent(q)}`, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(users => {
+                spinner?.classList.add('hidden');
+                emptyState.classList.add('hidden');
+                formWrap.classList.add('hidden');
+
+                if (users.length === 0) {
+                    resultsDiv.innerHTML = '<p class="py-4 text-center text-xs text-slate-400"><i class="fas fa-search mr-1"></i>Aucun resultat</p>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = users.map(u => {
+                    const initials = u.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                    const roleBadge = {
+                        admin: 'bg-rose-100 text-rose-600',
+                        pca: 'bg-amber-100 text-amber-700',
+                        directeur: 'bg-blue-100 text-blue-600',
+                        directeur_adjoint: 'bg-indigo-100 text-indigo-600',
+                        chef: 'bg-cyan-100 text-cyan-600',
+                        agent: 'bg-slate-100 text-slate-600',
+                        secretaire: 'bg-purple-100 text-purple-600',
+                        assistant: 'bg-teal-100 text-teal-600'
+                    }[u.role] || 'bg-slate-100 text-slate-600';
+
+                    return `<button type="button" onclick="selectUserForPwd(${u.id}, '${u.name.replace(/'/g, "\\'")}', '${u.role}', '${initials}')" class="flex w-full items-center gap-3 rounded-xl border border-slate-100 bg-white p-3 text-left transition hover:border-amber-200 hover:bg-amber-50/50">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-[10px] font-black text-white">${initials}</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-bold text-slate-800">${u.name}</p>
+                            <p class="truncate text-[10px] text-slate-400">${u.email}</p>
+                        </div>
+                        <span class="rounded-lg px-2 py-0.5 text-[9px] font-black uppercase ${roleBadge}">${u.role}</span>
+                    </button>`;
+                }).join('');
+            })
+            .catch(() => {
+                spinner?.classList.add('hidden');
+                resultsDiv.innerHTML = '<p class="py-4 text-center text-xs text-rose-400"><i class="fas fa-exclamation-triangle mr-1"></i>Erreur de recherche</p>';
+            });
+        }, 300);
+    });
 });
+
+function selectUserForPwd(id, name, role, initials) {
+    document.getElementById('manage-pwd-user-id').value = id;
+    document.getElementById('manage-role-user-id').value = id;
+    document.getElementById('manage-pwd-name').textContent = name;
+    document.getElementById('manage-pwd-role').textContent = role;
+    document.getElementById('manage-pwd-avatar').textContent = initials;
+    document.getElementById('manage-pwd-results').innerHTML = '';
+    document.getElementById('manage-pwd-search').value = '';
+    document.getElementById('manage-pwd-form-wrap').classList.remove('hidden');
+    document.getElementById('manage-pwd-empty').classList.add('hidden');
+}
+
+function resetManagePwdModal() {
+    document.getElementById('manage-pwd-search').value = '';
+    document.getElementById('manage-pwd-results').innerHTML = '';
+    document.getElementById('manage-pwd-form-wrap').classList.add('hidden');
+    document.getElementById('manage-pwd-empty').classList.remove('hidden');
+    document.getElementById('manage-pwd-user-id').value = '';
+    document.getElementById('manage-role-user-id').value = '';
+}
 </script>
 @endpush

@@ -3,136 +3,127 @@
 @section('title', 'Statistiques | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-    <div class="mb-4">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
-            <i class="fas fa-arrow-left"></i>
-            <span>Retour</span>
-        </a>
-    </div>
     @php
         $distribution = [
-            'Entites' => $entitesCount,
+            'Entités' => $entitesCount,
             'Directions' => $directionsCount,
             'Services' => $servicesCount,
             'Caisses' => $caissesCount,
             'Agences' => $agencesCount,
             'Guichets' => $guichetsCount,
             'Agents' => $agentsCount,
-            'Objectifs' => $objectifsCount,
-            'Evaluations' => $evaluationsCount,
         ];
-        $maxValue = max(1, ...array_values($distribution));
+
+        $kpis = [
+            ['label' => 'Caisses',   'count' => $caissesCount,  'icon' => 'fas fa-university',       'gradient' => 'from-emerald-400 to-teal-500'],
+            ['label' => 'Agences',   'count' => $agencesCount,  'icon' => 'fas fa-building',          'gradient' => 'from-violet-500 to-purple-600'],
+            ['label' => 'Guichets',  'count' => $guichetsCount, 'icon' => 'fas fa-window-maximize',   'gradient' => 'from-blue-500 to-indigo-600'],
+            ['label' => 'Personnel', 'count' => $agentsCount,   'icon' => 'fas fa-users',             'gradient' => 'from-amber-400 to-orange-500'],
+        ];
     @endphp
 
-    <div class="admin-shell stats-page min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto max-w-6xl space-y-6">
-            <header class="admin-panel px-6 py-6 lg:px-8">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div class="min-h-screen bg-[#f1f5f9] px-4 pb-8 pt-4 lg:px-8">
+        <div class="mx-auto max-w-7xl space-y-6">
+
+            {{-- Header --}}
+            <div class="rounded-2xl bg-white p-5 shadow-sm">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Pilotage / Statistiques</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Statistiques globales</h1>
-                        <p class="mt-2 text-sm text-slate-600">Vue consolidee des structures, objectifs et evaluations pour {{ $selectedYear }}.</p>
+                        <h1 class="text-2xl font-black tracking-tight text-slate-900">Statistiques globales</h1>
+                        <p class="mt-1 text-sm text-slate-400">Vue consolidée des structures pour {{ $selectedYear }}.</p>
                     </div>
-                    <form method="GET" action="{{ route('admin.statistiques.index') }}" class="grid gap-2 sm:grid-cols-[minmax(0,180px)_auto] sm:items-end">
+                    <form method="GET" action="{{ route('admin.statistiques.index') }}" class="flex items-end gap-3">
                         <div>
-                            <label for="annee" class="text-sm font-semibold text-slate-700">Annee</label>
-                            <select id="annee" name="annee" class="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200">
+                            <label for="annee" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Année</label>
+                            <select id="annee" name="annee" class="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                                 @foreach ($availableYears as $year)
                                     <option value="{{ $year }}" @selected($year === $selectedYear)>{{ $year }}</option>
                                 @endforeach
                             </select>
                         </div>
-                        <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">Filtrer</button>
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700">
+                            <i class="fas fa-filter text-xs"></i> Filtrer
+                        </button>
                     </form>
                 </div>
-            </header>
+            </div>
 
-            <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <article class="admin-panel p-4">
-                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Caisses</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $caissesCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Creees sur l'annee selectionnee.</p>
-                </article>
-                <article class="admin-panel p-4">
-                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Agences</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $agencesCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Creees sur l'annee selectionnee.</p>
-                </article>
-                <article class="admin-panel p-4">
-                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Guichets</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $guichetsCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Crees sur l'annee selectionnee.</p>
-                </article>
-                <article class="admin-panel p-4">
-                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Personnel</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $agentsCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Selon la date de debut de fonction.</p>
-                </article>
-            </section>
-
-            <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <article class="admin-panel p-4">
-                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Objectifs</p>
-                    <p class="mt-2 text-3xl font-bold text-slate-900">{{ $objectifsCount }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Total d'objectifs crees.</p>
-                </article>
-                <article class="admin-panel p-4">
-                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Termines</p>
-                    <p class="mt-2 text-3xl font-bold text-emerald-700">{{ $objectifsTermines }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Objectifs a 100% ou plus.</p>
-                </article>
-                <article class="admin-panel p-4">
-                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">En cours</p>
-                    <p class="mt-2 text-3xl font-bold text-amber-700">{{ $objectifsEnCours }}</p>
-                    <p class="mt-2 text-sm text-slate-600">Objectifs non acheves.</p>
-                </article>
-                <article class="admin-panel p-4">
-                    <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Avancement moyen</p>
-                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $avancementMoyen }}%</p>
-                    <p class="mt-2 text-sm text-slate-600">Moyenne de progression des objectifs.</p>
-                </article>
-            </section>
-
-            <section class="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-                <article class="admin-panel p-5">
-                    <h2 class="text-base font-semibold text-slate-900">Repartition des volumes</h2>
-                    <div class="clone-bars mt-4">
-                        @foreach ($distribution as $label => $value)
-                            @php($height = max(10, min(100, (int) ceil(($value / $maxValue) * 100 / 10) * 10)))
-                            <span class="neo-bar--{{ $height }}" title="{{ $label }}: {{ $value }}"></span>
-                        @endforeach
+            {{-- KPI Cards --}}
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                @foreach ($kpis as $kpi)
+                    <div class="rounded-2xl bg-gradient-to-br {{ $kpi['gradient'] }} p-5 text-white shadow-sm">
+                        <div class="flex items-start justify-between">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+                                <i class="{{ $kpi['icon'] }} text-sm"></i>
+                            </span>
+                            <span class="text-3xl font-black">{{ $kpi['count'] }}</span>
+                        </div>
+                        <p class="mt-3 text-sm font-bold">{{ $kpi['label'] }}</p>
                     </div>
-                    <div class="clone-legend mt-3">
-                        @foreach ($distribution as $label => $value)
-                            <span>{{ $label }}</span>
-                        @endforeach
-                    </div>
-                </article>
+                @endforeach
+            </div>
 
-                <article class="admin-panel p-5">
-                    <h2 class="text-base font-semibold text-slate-900">Evaluations par statut</h2>
-                    <ul class="neo-list">
-                        @foreach ($evaluationsByStatut as $statut => $total)
-                            <li>
-                                <span class="text-sm font-medium text-slate-700">{{ $statut }}</span>
-                                <span class="neo-pill neo-pill--draft">{{ $total }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                </article>
+            {{-- Charts row --}}
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
+                {{-- Bar chart: Répartition des volumes --}}
+                <div class="rounded-2xl bg-white p-5 shadow-sm">
+                    <h2 class="text-base font-black tracking-tight text-slate-900">Répartition des volumes</h2>
+                    <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Structures — {{ $selectedYear }}</p>
+                    <div id="chart-distribution" class="mt-4"></div>
+                </div>
 
-                <article class="admin-panel p-5">
-                    <h2 class="text-base font-semibold text-slate-900">Personnel par sexe</h2>
-                    <ul class="neo-list">
-                        @foreach ($agentsBySexe as $label => $total)
-                            <li>
-                                <span class="text-sm font-medium text-slate-700">{{ $label }}</span>
-                                <span class="neo-pill neo-pill--draft">{{ $total }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                </article>
-            </section>
+                {{-- Donut: Personnel par sexe --}}
+                <div class="rounded-2xl bg-white p-5 shadow-sm">
+                    <h2 class="text-base font-black tracking-tight text-slate-900">Personnel par sexe</h2>
+                    <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Ensemble du réseau</p>
+                    <div id="chart-sexe" class="mt-4"></div>
+                </div>
+            </div>
+
         </div>
     </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var font = 'Inter, sans-serif';
+
+    // 1. Bar — Répartition des volumes
+    new ApexCharts(document.querySelector('#chart-distribution'), {
+        chart: { type: 'bar', height: 320, fontFamily: font, toolbar: { show: false } },
+        series: [{ name: 'Nombre', data: @json(array_values($distribution)) }],
+        xaxis: {
+            categories: @json(array_keys($distribution)),
+            labels: { style: { fontSize: '10px', fontWeight: 700, colors: '#94a3b8' }, rotate: -45, rotateAlways: true },
+        },
+        yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#94a3b8' } } },
+        colors: ['#10b981'],
+        plotOptions: { bar: { borderRadius: 6, columnWidth: '50%', distributed: true } },
+        dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 900, colors: ['#fff'] }, offsetY: -2 },
+        legend: { show: false },
+        grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+        tooltip: { y: { formatter: function (val) { return val; } } },
+    }).render();
+
+    // 2. Donut — Personnel par sexe
+    new ApexCharts(document.querySelector('#chart-sexe'), {
+        chart: { type: 'donut', height: 300, fontFamily: font },
+        series: @json(array_values($agentsBySexe)),
+        labels: @json(array_keys($agentsBySexe)),
+        colors: ['#3b82f6', '#f472b6'],
+        legend: { position: 'bottom', fontSize: '12px', fontWeight: 700, labels: { colors: '#64748b' } },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '60%',
+                    labels: { show: true, total: { show: true, label: 'Total', fontSize: '13px', fontWeight: 900, color: '#334155' } }
+                }
+            }
+        },
+        dataLabels: { enabled: false },
+        stroke: { width: 2, colors: ['#fff'] },
+    }).render();
+});
+</script>
+@endpush
 @endsection
