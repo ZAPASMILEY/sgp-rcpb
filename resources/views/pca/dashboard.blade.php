@@ -17,17 +17,39 @@
         ];
     @endphp
 
-    <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto max-w-6xl clone-wrap">
 
-            <section class="clone-hero">
-                <div>
-                    <p class="clone-eyebrow">Bonjour PCA</p>
-                    <h1 class="clone-title">Tableau de bord de {{ $entite->nom }}</h1>
-                </div>
-                <div class="clone-top-actions">
-                    <input type="search" class="clone-search" placeholder="Rechercher une direction">
-                    <span class="clone-avatar">P</span>
+    <div class="relative z-10 -mt-8 bg-[linear-gradient(180deg,#f6f9ff_0%,#fbfdff_100%)] px-4 pb-6 pt-0 lg:px-8">
+        <div class="mb-4">
+            <button onclick="history.back()" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm"><i class="fas fa-arrow-left"></i><span>Retour</span></button>
+        </div>
+        <div class="mx-auto max-w-[1500px] space-y-4">
+            <section class="rounded-[26px] border border-white bg-white/90 px-5 py-4 shadow-[0_18px_60px_-35px_rgba(148,163,184,0.6)] backdrop-blur">
+                <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div>
+                        <p class="text-base font-black text-emerald-700">Tableau de bord</p>
+                        <div class="mt-1 flex flex-wrap items-center gap-3">
+                            <h1 class="text-3xl font-black tracking-tight text-slate-900">Pilotage administratif de {{ $entite->nom }}</h1>
+                        </div>
+                        <p class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Synthese du {{ now()->translatedFormat('d F Y') }}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Objectifs entité</p>
+                            <p class="mt-1 text-xl font-black text-slate-900">{{ $objectifsEntiteCount }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Objectifs directeurs</p>
+                            <p class="mt-1 text-xl font-black text-slate-900">{{ $objectifsDirecteursCount }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Évaluations entité</p>
+                            <p class="mt-1 text-xl font-black text-slate-900">{{ $evaluationsEntiteCount }}</p>
+                        </div>
+                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Évaluations directeurs</p>
+                            <p class="mt-1 text-xl font-black text-slate-900">{{ $evaluationsDirecteursCount }}</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -37,28 +59,7 @@
                 </div>
             @endif
 
-            <section class="clone-cards">
-                <article class="clone-card">
-                    <p class="clone-card__label">Obj entite</p>
-                    <p class="clone-card__value">{{ $objectifsEntiteCount }}</p>
-                    <p class="clone-card__sub">Objectifs de l'entité</p>
-                </article>
-                <article class="clone-card">
-                    <p class="clone-card__label">Obj directeurs</p>
-                    <p class="clone-card__value">{{ $objectifsDirecteursCount }}</p>
-                    <p class="clone-card__sub">Objectifs des directeurs</p>
-                </article>
-                <article class="clone-card">
-                    <p class="clone-card__label">Eval entite</p>
-                    <p class="clone-card__value">{{ $evaluationsEntiteCount }}</p>
-                    <p class="clone-card__sub">Évaluations de l'entité</p>
-                </article>
-                <article class="clone-card">
-                    <p class="clone-card__label">Eval directeurs</p>
-                    <p class="clone-card__value">{{ $evaluationsDirecteursCount }}</p>
-                    <p class="clone-card__sub">Évaluations des directeurs</p>
-                </article>
-            </section>
+            <!-- Les autres sections du dashboard PCA suivent, à harmoniser de la même façon si besoin -->
 
             <section class="clone-grid">
                 <article class="clone-spot" style="--neo-progress: {{ $progressRate }};">

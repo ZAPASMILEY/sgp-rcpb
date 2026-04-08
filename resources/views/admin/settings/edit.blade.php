@@ -156,7 +156,7 @@
 
                         <div class="flex justify-end">
                             <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-slate-700">
-                                <i class="fas fa-check text-xs"></i> Mettre a jour
+                                <i class="fas fa-check text-xs"></i> Mis à jour
                             </button>
                         </div>
                     </form>
@@ -388,6 +388,7 @@
                         <option value="agent">Agent</option>
                         <option value="chef">Chef</option>
                         <option value="directeur">Directeur</option>
+                        <option value="dg">DG</option>
                         <option value="directeur_adjoint">Directeur Adjoint</option>
                         <option value="assistant">Assistant</option>
                         <option value="secretaire">Secrétaire</option>
@@ -463,6 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 resultsDiv.innerHTML = users.map(u => {
                     const initials = u.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
                     const roleBadge = {
                         admin: 'bg-rose-100 text-rose-600',
                         pca: 'bg-amber-100 text-amber-700',
@@ -471,7 +473,8 @@ document.addEventListener('DOMContentLoaded', function () {
                         chef: 'bg-cyan-100 text-cyan-600',
                         agent: 'bg-slate-100 text-slate-600',
                         secretaire: 'bg-purple-100 text-purple-600',
-                        assistant: 'bg-teal-100 text-teal-600'
+                        assistant: 'bg-teal-100 text-teal-600',
+                        dg: 'bg-cyan-100 text-cyan-600'
                     }[u.role] || 'bg-slate-100 text-slate-600';
 
                     return `<button type="button" onclick="selectUserForPwd(${u.id}, '${u.name.replace(/'/g, "\\'")}', '${u.role}', '${initials}')" class="flex w-full items-center gap-3 rounded-xl border border-slate-100 bg-white p-3 text-left transition hover:border-amber-200 hover:bg-amber-50/50">
@@ -480,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <p class="truncate text-sm font-bold text-slate-800">${u.name}</p>
                             <p class="truncate text-[10px] text-slate-400">${u.email}</p>
                         </div>
-                        <span class="rounded-lg px-2 py-0.5 text-[9px] font-black uppercase ${roleBadge}">${u.role}</span>
+                        <span class="rounded-lg px-2 py-0.5 text-[9px] font-black uppercase ${roleBadge}">${u.role === 'dg' ? 'DG' : u.role.charAt(0).toUpperCase() + u.role.slice(1).replace('_', ' ')}</span>
                     </button>`;
                 }).join('');
             })

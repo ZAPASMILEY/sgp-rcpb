@@ -4,6 +4,9 @@
 
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-5 sm:px-6 lg:px-10">
+        <div class="mb-4">
+            <button onclick="history.back()" class="ent-btn ent-btn-soft"><i class="fas fa-arrow-left mr-2"></i>Retour</button>
+        </div>
         <div class="mx-auto flex max-w-5xl flex-col gap-5">
             <header class="admin-panel px-6 py-5 lg:px-8">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Espace PCA / Parametres</p>

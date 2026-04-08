@@ -14,6 +14,9 @@
     @endphp
 
     <div class="admin-shell stats-page min-h-screen px-4 py-6 sm:px-6 lg:px-10">
+        <div class="mb-4">
+            <button onclick="history.back()" class="ent-btn ent-btn-soft"><i class="fas fa-arrow-left mr-2"></i>Retour</button>
+        </div>
         <div class="mx-auto max-w-6xl space-y-6">
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -49,7 +52,7 @@
                 </article>
                 <article class="admin-panel p-4">
                     <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Avancement moyen</p>
-                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $avancementMoyen }}%</p>
+                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $avancementMoyen }} / 100</p>
                     <p class="mt-2 text-sm text-slate-600">Moyenne globale de progression.</p>
                 </article>
                 <article class="admin-panel p-4">
@@ -62,7 +65,7 @@
             <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <article class="admin-panel p-4">
                     <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Plus forte note du DG</p>
-                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $meilleureNoteDirecteurGeneral }}%</p>
+                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $meilleureNoteDirecteurGeneral }} / 100</p>
                     <p class="mt-2 text-sm text-slate-600">Meilleure note finale sur les evaluations de l'entite.</p>
                 </article>
                 <article class="admin-panel p-4">

@@ -1,5 +1,6 @@
 <?php
 // Script à placer dans routes/console.php ou à exécuter via tinker
+use Illuminate\Support\Facades\Artisan;
 use App\Models\Entite;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;

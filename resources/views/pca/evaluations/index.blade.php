@@ -95,7 +95,7 @@
                                     <td data-label="Type">{{ $typeLabel }}</td>
                                     <td data-label="Cible">{{ $cibleLabel }}</td>
                                     <td data-label="Periode" class="whitespace-nowrap">{{ $evaluation->date_debut->format('d/m/Y') }} – {{ $evaluation->date_fin->format('d/m/Y') }}</td>
-                                    <td data-label="Note finale">{{ $evaluation->note_finale }}%</td>
+                                    <td data-label="Note finale">{{ $evaluation->note_finale }} / 100</td>
                                     <td data-label="Mention">
                                         <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $mentionClass }}">
                                             {{ $mention }}

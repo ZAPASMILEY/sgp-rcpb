@@ -18,11 +18,12 @@ class AuthenticatedSessionController extends Controller
             if ($request->user()->isPca()) {
                 return redirect()->route('pca.dashboard');
             }
-
+            if (method_exists($request->user(), 'isDg') && $request->user()->isDg()) {
+                return redirect()->route('dg.dashboard');
+            }
             if ($request->user()->isPersonnel()) {
                 return redirect()->route('personnel.dashboard');
             }
-
             return redirect()->route('admin.dashboard');
         }
 
@@ -56,11 +57,12 @@ class AuthenticatedSessionController extends Controller
         if ($request->user()?->isPca()) {
             return redirect()->intended(route('pca.dashboard'));
         }
-
+        if (method_exists($request->user(), 'isDg') && $request->user()->isDg()) {
+            return redirect()->intended(route('dg.dashboard'));
+        }
         if ($request->user()?->isPersonnel()) {
             return redirect()->intended(route('personnel.dashboard'));
         }
-
         return redirect()->intended(route('admin.dashboard'));
     }
 

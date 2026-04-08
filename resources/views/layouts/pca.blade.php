@@ -5,7 +5,6 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>@yield('title', config('app.name', 'SGP-RCPB'))</title>
-
         @php
             $hasViteBuild = file_exists(public_path('build/manifest.json'));
             $hasViteHot = file_exists(public_path('hot'));
@@ -17,9 +16,10 @@
         @if ($hasViteBuild || ($hasViteHot && $isLocalHost))
             @vite(['resources/css/app.css', 'resources/js/app.js'])
         @else
-            <script src="https://cdn.tailwindcss.com"></script>
             <link rel="stylesheet" href="{{ asset('css/admin-fallback.css') }}">
         @endif
+        <!-- Font Awesome local -->
+        <link rel="stylesheet" href="{{ asset('resources/css/all.min.css') }}">
 
         @livewireStyles
 

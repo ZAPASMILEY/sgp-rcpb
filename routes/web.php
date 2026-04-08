@@ -23,7 +23,10 @@ use App\Http\Controllers\Pca\PcaSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('welcome');
-Route::redirect('/login', '/admin/login')->name('legacy.login');
+Route::get('/login', function () {
+    return view('auth.login');
+})->name('login');
+Route::post('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store'])->name('login.store');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/admin/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -174,7 +177,10 @@ Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function 
     Route::get('/objectifs', [PcaObjectifController::class, 'index'])->name('objectifs.index');
     Route::get('/objectifs/creer', [PcaObjectifController::class, 'create'])->name('objectifs.create');
     Route::post('/objectifs', [PcaObjectifController::class, 'store'])->name('objectifs.store');
+    Route::get('/objectifs/{objectif}/modifier', [PcaObjectifController::class, 'edit'])->name('objectifs.edit');
     Route::get('/objectifs/{objectif}', [PcaObjectifController::class, 'show'])->name('objectifs.show');
+    Route::get('/objectifs/{objectif}/contrat', [PcaObjectifController::class, 'contrat'])->name('objectifs.contrat');
+    Route::get('/objectifs/{objectif}/contrat/telecharger', [PcaObjectifController::class, 'contratDownload'])->name('objectifs.contrat.download');
     Route::post('/objectifs/{objectif}/progression', [PcaObjectifController::class, 'adjustProgress'])->name('objectifs.progress');
     Route::delete('/objectifs/{objectif}', [PcaObjectifController::class, 'destroy'])->name('objectifs.destroy');
 
@@ -200,3 +206,17 @@ Route::middleware(['auth', 'personnel'])->group(function (): void {
 
 // Shared route — all authenticated users can mark notifications as read
 Route::middleware('auth')->post('/alertes/lire-tout', [AlerteController::class, 'lireTout'])->name('alertes.lire-tout');
+
+// Routes DG
+Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function (): void {
+    Route::post('/logout', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/', \App\Http\Controllers\Dg\DgDashboardController::class)->name('dashboard');
+    Route::get('/objectifs/creer', [\App\Http\Controllers\Dg\DgObjectifController::class, 'create'])->name('objectifs.create');
+    Route::post('/objectifs', [\App\Http\Controllers\Dg\DgObjectifController::class, 'store'])->name('objectifs.store');
+    Route::get('/objectifs/{fiche}', [\App\Http\Controllers\Dg\DgObjectifController::class, 'show'])->name('objectifs.show');
+    Route::patch('/objectifs/{fiche}/statut', [\App\Http\Controllers\Dg\DgObjectifController::class, 'statut'])->name('objectifs.statut');
+    Route::patch('/objectifs/{fiche}/avancement', [\App\Http\Controllers\Dg\DgObjectifController::class, 'avancement'])->name('objectifs.avancement');
+});
+
+// Espace DG : Mon espace
+Route::middleware(['auth', 'dg'])->get('/dg/mon-espace', \App\Http\Controllers\Dg\MonEspaceController::class)->name('dg.mon-espace');

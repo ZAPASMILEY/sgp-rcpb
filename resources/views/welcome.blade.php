@@ -83,8 +83,9 @@
                 <span class="text-xl font-black tracking-tighter">SGP <span class="text-[#34d399]">RCPB</span></span>
             </div>
 
-            <a href="{{ route('login') }}" class="hidden sm:flex font-bold text-sm hover:text-[#34d399] transition-colors mr-8">Se connecter</a>
-            <a href="{{ route('login') }}" class="btn-sgp text-sm py-3 px-8">Accès direct</a>
+                <a href="/login" class="hidden sm:flex font-bold text-sm hover:text-[#34d399] transition-colors mr-8">Se connecter</a>
+                <a href="/login" class="btn-sgp text-sm py-3 px-8">Accès direct</a>
+        
         </nav>
 
         <main class="relative z-10 flex flex-col items-center justify-center flex-1 px-6 text-center py-20">
@@ -102,9 +103,10 @@
                 Suivez les objectifs, gérez les évaluations et coordonnez les entités du réseau en toute simplicité depuis un tableau de bord centralisé.
             </p>
 
-            <a href="{{ auth()->check() ? url('/admin/dashboard') : route('login') }}" class="btn-sgp text-lg">
-                Accéder à mon espace &nbsp; →
-            </a>
+          
+                <a href="/login" class="btn-sgp text-lg">
+                    Accéder à mon espace &nbsp; →
+                </a>
         </main>
 
         <div class="px-16"><div class="divider-glow"></div></div>

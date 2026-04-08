@@ -3,19 +3,40 @@
 namespace App\Http\Controllers\Pca;
 
 use App\Http\Controllers\Controller;
-use App\Models\Annee;
+use App\Models\FicheObjectif;
+use App\Models\FicheObjectifObjectif;
 use App\Models\Direction;
 use App\Models\Entite;
+use App\Models\Annee;
 use App\Models\Evaluation;
-use App\Models\Objectif;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class PcaObjectifController extends Controller
 {
+    /**
+     * Affiche le contrat d'objectifs avant telechargement.
+     */
+    public function contrat(Request $request, FicheObjectif $objectif): View
+    {
+        return view('pca.objectifs.contrat', $this->buildContratData($request, $objectif));
+    }
+
+    /**
+     * Genere et telecharge le contrat d'objectifs en PDF.
+     */
+    public function contratDownload(Request $request, FicheObjectif $objectif): Response
+    {
+        $pdf = Pdf::loadView('pdf.contrat-objectif', $this->buildContratData($request, $objectif));
+
+        return $pdf->download('contrat-objectif-'.$objectif->id.'.pdf');
+    }
+
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -28,33 +49,28 @@ class PcaObjectifController extends Controller
 
         $search = trim((string) $request->query('search', ''));
 
-        $objectifs = Objectif::query()
-            ->with('assignable')
-            ->where(function ($q) use ($entiteId, $directionIds): void {
-                $q->where(function ($sub) use ($entiteId): void {
-                    $sub->where('assignable_type', Entite::class)
-                        ->where('assignable_id', $entiteId);
-                })->orWhere(function ($sub) use ($directionIds): void {
+        $fiches = FicheObjectif::query()
+            ->where(function ($q) use ($entiteId, $directionIds) {
+                $q->where(function ($sub) use ($directionIds) {
                     $sub->where('assignable_type', Direction::class)
                         ->whereIn('assignable_id', $directionIds);
+                })->orWhere(function ($sub) use ($entiteId) {
+                    $sub->where('assignable_type', Entite::class)
+                        ->where('assignable_id', $entiteId);
                 });
             })
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where('commentaire', 'like', "%{$search}%");
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($sub) use ($search) {
+                    $sub->where('titre', 'like', "%{$search}%")
+                        ->orWhere('annee', 'like', "%{$search}%");
+                });
             })
-            ->latest('date')
-            ->latest()
+            ->orderByDesc('date')
             ->paginate(10)
             ->withQueryString();
 
-        $objectifs->getCollection()->transform(function (Objectif $objectif): Objectif {
-            $objectif->setAttribute('is_evaluation_locked', $this->isLockedByEvaluation($objectif));
-
-            return $objectif;
-        });
-
         return view('pca.objectifs.index', [
-            'objectifs' => $objectifs,
+            'fiches' => $fiches,
             'filters' => ['search' => $search],
         ]);
     }
@@ -67,37 +83,50 @@ class PcaObjectifController extends Controller
         ]);
     }
 
-    public function show(Request $request, Objectif $objectif): View
+    public function show(Request $request, $id): View
     {
-        $this->authorizeObjectif($objectif, $request->user()->pca_entite_id);
+        $fiche = FicheObjectif::with('objectifs')->findOrFail($id);
 
         return view('pca.objectifs.show', [
-            'objectif' => $objectif->load('assignable'),
+            'fiche' => $fiche,
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $entiteId = $request->user()->pca_entite_id;
-        $validated = $this->validateObjectif($request, $entiteId);
         $date = now()->toDateString();
 
-        Objectif::query()->create([
-            'assignable_type' => $validated['assignable_class'],
-            'assignable_id' => $validated['assignable_id'],
-            'annee_id' => Annee::resolveIdForDate($date),
+        $validated = $request->validate([
+            'date_echeance' => ['required', 'date', 'after_or_equal:today'],
+            'titre_fiche' => ['required', 'string', 'max:255'],
+            'objectifs' => ['required', 'array', 'min:1'],
+            'objectifs.*' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $fiche = FicheObjectif::create([
+            'titre' => $validated['titre_fiche'],
+            'annee' => date('Y'),
+            'assignable_type' => Entite::class,
+            'assignable_id' => $entiteId,
             'date' => $date,
             'date_echeance' => $validated['date_echeance'],
-            'commentaire' => $validated['commentaire'],
             'avancement_percentage' => 0,
+            'statut' => 'en_attente',
         ]);
+
+        foreach ($validated['objectifs'] as $objectifDesc) {
+            $fiche->objectifs()->create([
+                'description' => $objectifDesc,
+            ]);
+        }
 
         return redirect()
             ->route('pca.objectifs.index')
-            ->with('status', 'Objectif cree avec succes.');
+            ->with('status', "Fiche d'objectifs creee avec succes pour le DG.");
     }
 
-    public function adjustProgress(Request $request, Objectif $objectif): RedirectResponse
+    public function adjustProgress(Request $request, FicheObjectifObjectif $objectif): RedirectResponse
     {
         $this->authorizeObjectif($objectif, $request->user()->pca_entite_id);
 
@@ -108,7 +137,7 @@ class PcaObjectifController extends Controller
         if (Carbon::parse($objectif->date_echeance)->isBefore(today())) {
             return redirect()
                 ->route('pca.objectifs.index')
-                ->with('status', 'L\'echeance est depassee. L\'avancement de cet objectif ne peut plus etre modifie.');
+                ->with('status', "L'echeance est depassee. L'avancement de cet objectif ne peut plus etre modifie.");
         }
 
         if ($this->isLockedByEvaluation($objectif)) {
@@ -130,18 +159,58 @@ class PcaObjectifController extends Controller
             ->with('status', 'Avancement mis a jour a '.$next.'%.');
     }
 
-    public function destroy(Request $request, Objectif $objectif): RedirectResponse
+    public function destroy(Request $request, $id): RedirectResponse
     {
-        $this->authorizeObjectif($objectif, $request->user()->pca_entite_id);
+        $fiche = FicheObjectif::findOrFail($id);
 
-        $objectif->delete();
+        if ($fiche->statut !== 'en_attente' && $fiche->statut !== null) {
+            return redirect()->route('pca.objectifs.index')->with('status', 'Suppression impossible : fiche deja validee ou refusee.');
+        }
 
-        return redirect()
-            ->route('pca.objectifs.index')
-            ->with('status', 'Objectif supprime.');
+        $fiche->objectifs()->delete();
+        $fiche->delete();
+
+        return redirect()->route('pca.objectifs.index')->with('status', 'Fiche supprimee.');
     }
 
-    private function authorizeObjectif(Objectif $objectif, int $entiteId): void
+    public function edit(Request $request, $id): View
+    {
+        $fiche = FicheObjectif::with('objectifs')->findOrFail($id);
+
+        if ($fiche->statut !== 'en_attente' && $fiche->statut !== null) {
+            return redirect()->route('pca.objectifs.index')->with('status', 'Modification impossible : fiche deja validee ou refusee.');
+        }
+
+        return view('pca.objectifs.edit', [
+            'fiche' => $fiche,
+            'assignmentOptions' => $this->assignmentOptions($request->user()->pca_entite_id),
+        ]);
+    }
+
+    private function authorizeObjectif(FicheObjectifObjectif $objectif, int $entiteId): void
+    {
+        $directionIds = Direction::query()
+            ->where('entite_id', $entiteId)
+            ->pluck('id')
+            ->all();
+
+        $fiche = $objectif->ficheObjectif;
+
+        if (! $fiche) {
+            abort(403);
+        }
+
+        $allowed = (
+            ($fiche->assignable_type === Entite::class && (int) $fiche->assignable_id === $entiteId) ||
+            ($fiche->assignable_type === Direction::class && in_array((int) $fiche->assignable_id, $directionIds, true))
+        );
+
+        if (! $allowed) {
+            abort(403);
+        }
+    }
+
+    private function authorizeFiche(FicheObjectif $fiche, int $entiteId): void
     {
         $directionIds = Direction::query()
             ->where('entite_id', $entiteId)
@@ -149,8 +218,8 @@ class PcaObjectifController extends Controller
             ->all();
 
         $allowed = (
-            ($objectif->assignable_type === Entite::class && (int) $objectif->assignable_id === $entiteId) ||
-            ($objectif->assignable_type === Direction::class && in_array((int) $objectif->assignable_id, $directionIds, true))
+            ($fiche->assignable_type === Entite::class && (int) $fiche->assignable_id === $entiteId) ||
+            ($fiche->assignable_type === Direction::class && in_array((int) $fiche->assignable_id, $directionIds, true))
         );
 
         if (! $allowed) {
@@ -205,13 +274,78 @@ class PcaObjectifController extends Controller
         return $validated;
     }
 
-    private function isLockedByEvaluation(Objectif $objectif): bool
+    private function isLockedByEvaluation(FicheObjectifObjectif $objectif): bool
     {
+        $fiche = $objectif->ficheObjectif;
+
+        if (! $fiche) {
+            return false;
+        }
+
         return Evaluation::query()
-            ->where('evaluable_type', $objectif->assignable_type)
-            ->where('evaluable_id', $objectif->assignable_id)
-            ->whereDate('date_debut', '<=', $objectif->date_echeance)
-            ->whereDate('date_fin', '>=', $objectif->date_echeance)
+            ->where('evaluable_type', $fiche->assignable_type)
+            ->where('evaluable_id', $fiche->assignable_id)
+            ->whereDate('date_debut', '<=', $fiche->date_echeance)
+            ->whereDate('date_fin', '>=', $fiche->date_echeance)
             ->exists();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildContratData(Request $request, FicheObjectif $objectif): array
+    {
+        $this->authorizeFiche($objectif, $request->user()->pca_entite_id);
+
+        $objectif->load('objectifs', 'assignable');
+
+        $assignable = $objectif->assignable;
+        $entite = null;
+        $salarieNom = '';
+        $salarieFonction = '';
+
+        if ($assignable instanceof Direction) {
+            $entite = $assignable->entite;
+            $salarieNom = trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? ''));
+            $salarieFonction = 'Directeur General';
+        } elseif ($assignable instanceof Entite) {
+            $entite = $assignable;
+            $salarieNom = trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? ''));
+            $salarieFonction = 'Directeur General';
+        }
+
+        $entite ??= Entite::query()->findOrFail($request->user()->pca_entite_id);
+        $institutionSigle = $this->resolveInstitutionSigle($entite);
+
+        return [
+            'contrat' => $objectif,
+            'partieCollaborateur' => (object) [
+                'name' => $salarieNom !== '' ? $salarieNom : ($assignable->nom ?? 'Collaborateur'),
+                'role' => $salarieFonction,
+            ],
+            'partieFaitiere' => $entite,
+            'partieFaitiereNomComplet' => trim(($entite->pca_prenom ?? '').' '.($entite->pca_nom ?? '')),
+            'objectifs' => $objectif->objectifs,
+            'dateDebut' => $objectif->date,
+            'dateFin' => $objectif->date_echeance,
+            'salarie_nom' => $salarieNom,
+            'salarie_fonction' => $salarieFonction,
+            'institution_representant' => trim(($entite->pca_prenom ?? '').' '.($entite->pca_nom ?? '')),
+            'institution_fonction' => "President du Conseil d'Administration",
+            'institution_sigle' => $institutionSigle,
+            'date_debut' => $objectif->date,
+            'date_fin' => $objectif->date_echeance,
+        ];
+    }
+
+    private function resolveInstitutionSigle(Entite $entite): string
+    {
+        $nom = strtolower(trim((string) $entite->nom));
+
+        if ($nom !== '' && (str_contains($nom, 'faitiere') || str_contains($nom, 'fcpb'))) {
+            return 'FCPB';
+        }
+
+        return 'RCPB';
     }
 }

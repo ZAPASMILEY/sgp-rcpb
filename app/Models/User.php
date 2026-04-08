@@ -2,23 +2,18 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-
-class User extends Authenticatable
-{
-    /** @use HasFactory<UserFactory> */
+class User extends Authenticatable{
     use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $fillable = [
         'name',
@@ -29,12 +24,10 @@ class User extends Authenticatable
         'pca_entite_id',
     ];
 
-    // Roles valides: admin, pca, agent, directeur, directeur_adjoint, assistant, chef, secretaire
-
     /**
      * The attributes that should be hidden for serialization.
      *
-     * @var list<string>
+     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -42,41 +35,24 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
 
-    public function evaluations(): HasMany
-    {
-        return $this->hasMany(Evaluation::class, 'evaluateur_id');
-    }
-
+    // Relations
     public function entite(): BelongsTo
     {
         return $this->belongsTo(Entite::class, 'pca_entite_id');
     }
 
-    public function isAdmin(): bool
+    public function evaluations(): HasMany
     {
-        return $this->role === 'admin';
-    }
-
-    public function isPca(): bool
-    {
-        return $this->role === 'pca';
-    }
-
-    public function isPersonnel(): bool
-    {
-        return in_array($this->role, ['agent', 'directeur', 'directeur_adjoint', 'assistant', 'chef', 'secretaire', 'pca', 'rh'], true);
+        return $this->hasMany(Evaluation::class, 'evaluateur_id');
     }
 
     public function alertes()
@@ -90,4 +66,50 @@ class User extends Authenticatable
     {
         return $this->alertes()->wherePivot('lu', false);
     }
+
+    // Subordonnés du DG (DGA, secrétaire)
+    public function subordonnes()
+    {
+        $entite = $this->entite;
+        if (!$entite) {
+            return collect();
+        }
+        $dgaId = $entite->dga_user_id ?? null;
+        $assistanteId = null;
+        if (!empty($entite->assistante_dg_email)) {
+            $assistante = User::where('email', $entite->assistante_dg_email)->first();
+            $assistanteId = $assistante?->id;
+        }
+        $ids = collect([$dgaId, $assistanteId])->filter();
+        return User::whereIn('id', $ids)->get();
+    }
+
+    // Rôles
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isPca(): bool
+    {
+        return $this->role === 'pca';
+    }
+
+    public function isDg(): bool
+    {
+        return $this->role === 'dg';
+    }
+
+    public function isDga(): bool
+    {
+        return $this->role === 'dga';
+    }
+
+    public function isPersonnel(): bool
+    {
+        return in_array($this->role, [
+            'agent', 'directeur', 'directeur_adjoint', 'assistante', 'chef', 'secretaire', 'pca', 'rh', 'dg', 'dga'
+        ], true);
+    }
 }
+
