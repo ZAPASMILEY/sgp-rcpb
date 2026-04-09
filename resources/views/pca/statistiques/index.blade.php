@@ -52,7 +52,7 @@
                 </article>
                 <article class="admin-panel p-4">
                     <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Avancement moyen</p>
-                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $avancementMoyen }} / 100</p>
+                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $avancementMoyen }}</p>
                     <p class="mt-2 text-sm text-slate-600">Moyenne globale de progression.</p>
                 </article>
                 <article class="admin-panel p-4">
@@ -65,7 +65,7 @@
             <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <article class="admin-panel p-4">
                     <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Plus forte note du DG</p>
-                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $meilleureNoteDirecteurGeneral }} / 100</p>
+                    <p class="mt-2 text-3xl font-bold text-indigo-700">{{ $meilleureNoteDirecteurGeneral }}</p>
                     <p class="mt-2 text-sm text-slate-600">Meilleure note finale sur les evaluations de l'entite.</p>
                 </article>
                 <article class="admin-panel p-4">

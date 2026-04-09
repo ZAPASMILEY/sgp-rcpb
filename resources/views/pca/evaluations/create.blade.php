@@ -55,9 +55,9 @@
                                 <select id="evaluable_type" name="evaluable_type" class="ent-select" required>
                                     <option value="">Selectionner un type</option>
                                     <option value="entite" @selected(old('evaluable_type') === 'entite')>Entite</option>
+                                    <option value="user" @selected(old('evaluable_type') === 'user')>Directeur Général</option>
                                 </select>
                             </div>
-
                             <div class="space-y-2">
                                 <label for="evaluable_id" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Cible</label>
                                 <select id="evaluable_id" name="evaluable_id" class="ent-select" required data-previous-target="{{ old('evaluable_id') }}">
@@ -68,12 +68,13 @@
 
                         <div class="grid gap-5 md:grid-cols-2">
                             <div class="space-y-2">
-                                <label for="date_debut" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date debut</label>
-                                <input id="date_debut" name="date_debut" type="date" value="{{ old('date_debut') }}" class="ent-input" required>
+                                <label for="date_debut" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date début</label>
+                                <input id="date_debut" name="date_debut" type="text" value="{{ old('date_debut') }}" class="ent-input" placeholder="MM/YYYY" required autocomplete="off" maxlength="7">
+                                <div id="date_debut_error" class="text-rose-600 text-xs mt-1" style="display:none"></div>
                             </div>
                             <div class="space-y-2">
                                 <label for="date_fin" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date fin</label>
-                                <input id="date_fin" name="date_fin" type="date" value="{{ old('date_fin') }}" class="ent-input" required>
+                                <input id="date_fin" name="date_fin" type="text" value="{{ old('date_fin') }}" class="ent-input" placeholder="MM/YYYY" required readonly>
                             </div>
                         </div>
                         <div>
@@ -84,7 +85,7 @@
                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                             <div class="space-y-2">
                                 <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Annee</label>
-                                <input type="text" value="{{ $displayYear }}" class="ent-input bg-slate-50 text-slate-600" readonly>
+                                <input id="annee_field" type="text" value="{{ $displayYear }}" class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_semestre" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Semestre</label>
@@ -96,7 +97,7 @@
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_date_evaluation" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date de l'evaluation</label>
-                                <input id="identification_date_evaluation" name="identification[date_evaluation]" type="date" value="{{ old('identification.date_evaluation') }}" class="ent-input">
+                                <input id="identification_date_evaluation" name="identification[date_evaluation]" type="text" value="{{ old('identification.date_evaluation') }}" class="ent-input" placeholder="JJ/MM/YYYY" autocomplete="off">
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_matricule" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Matricule</label>
@@ -193,7 +194,7 @@
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <h2 class="text-lg font-black text-slate-900">4. Criteres subjectifs</h2>
-                                <p class="mt-1 text-sm text-slate-500">Choisissez des fiches d'objectifs non echues, puis renseignez les sous-criteres et leurs notes. Barème : 1 a 5.</p>
+                                <p class="mt-1 text-sm text-slate-500">Renseignez les sous-criteres et leurs notes. Barème : 1 a 5.</p>
                             </div>
                             <button id="add-subjective-criterion" type="button" class="ent-btn ent-btn-soft">Ajouter un critere</button>
                         </div>
@@ -250,7 +251,7 @@
 
                         <div class="space-y-2">
                             <label for="commentaires_evalue" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Commentaires de l'evalue</label>
-                            <textarea id="commentaires_evalue" name="commentaires_evalue" rows="5" class="ent-input">{{ old('commentaires_evalue') }}</textarea>
+                            <textarea id="commentaires_evalue" name="commentaires_evalue" rows="5" class="ent-input" readonly disabled>{{ old('commentaires_evalue') }}</textarea>
                         </div>
 
                         <div class="space-y-2">
@@ -269,17 +270,66 @@
                             <div class="space-y-2">
                                 <label for="signature_evalue_nom" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Evalue</label>
                                 <input id="signature_evalue_nom" name="signature_evalue_nom" type="text" value="{{ old('signature_evalue_nom') }}" class="ent-input">
-                                <input name="date_signature_evalue" type="date" value="{{ old('date_signature_evalue') }}" class="ent-input">
+                                <input id="date_signature_evalue" name="date_signature_evalue" type="date" value="{{ old('date_signature_evalue') }}" class="ent-input">
                             </div>
                             <div class="space-y-2">
                                 <label for="signature_evaluateur_nom" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Evaluateur</label>
                                 <input id="signature_evaluateur_nom" name="signature_evaluateur_nom" type="text" value="{{ old('signature_evaluateur_nom', auth()->user()->name ?? '') }}" class="ent-input">
-                                <input name="date_signature_evaluateur" type="date" value="{{ old('date_signature_evaluateur') }}" class="ent-input">
+                                <input id="date_signature_evaluateur" name="date_signature_evaluateur" type="date" value="{{ old('date_signature_evaluateur') }}" class="ent-input">
                             </div>
                         </div>
                     </section>
 
                     <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-6">
+                                <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    // Synchronisation du nom de l'évalué
+                                    var nomIdentification = document.getElementById('identification_nom_prenom');
+                                    var nomSignature = document.getElementById('signature_evalue_nom');
+                                    if (nomIdentification && nomSignature) {
+                                        function syncNom() {
+                                            nomSignature.value = nomIdentification.value;
+                                        }
+                                        nomIdentification.addEventListener('input', syncNom);
+                                        nomIdentification.addEventListener('change', syncNom);
+                                        // Initial sync au chargement si vide
+                                        if (!nomSignature.value) {
+                                            nomSignature.value = nomIdentification.value;
+                                        }
+                                    }
+                                });
+                                </script>
+                            <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                function todayISO() {
+                                    const d = new Date();
+                                    return d.toISOString().slice(0, 10);
+                                }
+                                var dateEvalue = document.getElementById('date_signature_evalue');
+                                var dateEvaluateur = document.getElementById('date_signature_evaluateur');
+                                if (dateEvalue && !dateEvalue.value) dateEvalue.value = todayISO();
+                                if (dateEvaluateur && !dateEvaluateur.value) dateEvaluateur.value = todayISO();
+
+                                // --- Année field sync with Date début ---
+                                var dateDebut = document.getElementById('date_debut');
+                                var anneeField = document.getElementById('annee_field');
+                                if (dateDebut && anneeField) {
+                                    dateDebut.addEventListener('input', function() {
+                                        // Expect MM/YYYY
+                                        var val = dateDebut.value;
+                                        var year = '';
+                                        if (/^(0[1-9]|1[0-2])\/(\d{4})$/.test(val)) {
+                                            year = val.split('/')[1];
+                                        }
+                                        anneeField.value = year;
+                                    });
+                                    // Trigger once on load if value exists
+                                    if (dateDebut.value && /^(0[1-9]|1[0-2])\/(\d{4})$/.test(dateDebut.value)) {
+                                        anneeField.value = dateDebut.value.split('/')[1];
+                                    }
+                                }
+                            });
+                            </script>
                         <a href="{{ route('pca.evaluations.index') }}" class="ent-btn ent-btn-soft">Annuler</a>
                         <button type="submit" class="ent-btn ent-btn-primary">Creer l'evaluation</button>
                     </div>
@@ -565,16 +615,7 @@
             }
 
             function getObjectiveOptionsForCurrentSelection() {
-                if (typeSelect.value && targetSelect.value) {
-                    return objectiveCatalog.filter((item) =>
-                        item.type === typeSelect.value && String(item.target_id) === String(targetSelect.value)
-                    );
-                }
-
-                if (typeSelect.value) {
-                    return objectiveCatalog.filter((item) => item.type === typeSelect.value);
-                }
-
+                // Afficher toutes les fiches d'objectif, sans filtrage
                 return objectiveCatalog;
             }
 
@@ -812,4 +853,55 @@
             updateScoreSummary();
         });
     </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const debut = document.getElementById('date_debut');
+        const fin = document.getElementById('date_fin');
+        const error = document.getElementById('date_debut_error');
+        if (debut && fin) {
+            debut.addEventListener('input', function(e) {
+                let val = debut.value.replace(/[^0-9]/g, '');
+                if (val.length > 6) val = val.slice(0, 6);
+                if (val.length > 2) {
+                    val = val.slice(0,2) + '/' + val.slice(2);
+                }
+                debut.value = val;
+                // Validation stricte MM/YYYY
+                const match = val.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
+                if (match) {
+                    let month = parseInt(match[1], 10);
+                    let year = parseInt(match[2], 10);
+                    month += 6;
+                    if (month > 12) {
+                        year += Math.floor((month-1) / 12);
+                        month = ((month-1) % 12) + 1;
+                    }
+                    const mm = month < 10 ? '0'+month : ''+month;
+                    fin.value = mm + '/' + year;
+                    error.style.display = 'none';
+                } else {
+                    fin.value = '';
+                    if (val.length === 7) {
+                        error.textContent = 'Format invalide. Utilisez MM/YYYY.';
+                        error.style.display = 'block';
+                    } else {
+                        error.style.display = 'none';
+                    }
+                }
+            });
+        }
+    });
+    </script>
 @endpush
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dateEval = document.getElementById('identification_date_evaluation');
+    if (dateEval && !dateEval.value) {
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        dateEval.value = dd + '/' + mm + '/' + yyyy;
+    }
+});
+</script>

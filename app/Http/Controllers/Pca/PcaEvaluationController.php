@@ -21,6 +21,7 @@ class PcaEvaluationController extends Controller
     /** @var array<string, array{class: class-string, role: string}> */
     private const TARGET_MAP = [
         'entite' => ['class' => Entite::class, 'role' => 'entity'],
+        'user'   => ['class' => \App\Models\User::class, 'role' => 'dg'],
     ];
 
     public function index(Request $request): View
@@ -31,12 +32,25 @@ class PcaEvaluationController extends Controller
         $search = trim((string) $request->query('search', ''));
         $statut = trim((string) $request->query('statut', ''));
 
+        $dgUser = \App\Models\User::where('role', 'dg')->first();
         $evaluations = Evaluation::query()
             ->with(['evaluable', 'evaluateur'])
-            ->where('evaluable_type', Entite::class)
-            ->where('evaluable_id', $entiteId)
+            ->where(function ($query) use ($entiteId, $dgUser) {
+                $query->where(function ($q) use ($entiteId) {
+                    $q->where('evaluable_type', Entite::class)
+                      ->where('evaluable_id', $entiteId);
+                });
+                if ($dgUser) {
+                    $query->orWhere(function ($q) use ($dgUser) {
+                        $q->where('evaluable_type', \App\Models\User::class)
+                          ->where('evaluable_id', $dgUser->id);
+                    });
+                }
+            })
             ->when($search !== '', function ($query) use ($search): void {
-                $query->whereHasMorph('evaluable', [Entite::class], fn ($q) => $q->where('nom', 'like', "%{$search}%"));
+                $query->whereHasMorph('evaluable', [Entite::class, \App\Models\User::class], function ($q) use ($search) {
+                    $q->where('nom', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%");
+                });
             })
             ->when($statut !== '', fn ($query) => $query->where('statut', $statut))
             ->latest()
@@ -52,8 +66,11 @@ class PcaEvaluationController extends Controller
     public function create(Request $request): View
     {
         $entiteId = $request->user()->pca_entite_id;
+        // On récupère le DG (Directeur Général)
+        $dg = \App\Models\User::where('role', 'dg')->first();
 
         return view('pca.evaluations.create', [
+            'dg' => $dg,
             'assignmentOptions' => $this->buildAssignmentOptions($entiteId),
             'targetProfiles' => $this->buildTargetProfiles($entiteId),
             'objectiveOptions' => $this->buildObjectiveOptions($entiteId),
@@ -66,10 +83,10 @@ class PcaEvaluationController extends Controller
         $entiteId = $request->user()->pca_entite_id;
 
         $validated = $request->validate([
-            'evaluable_type' => ['required', 'string', 'in:entite'],
+            'evaluable_type' => ['required', 'string', 'in:entite,user'],
             'evaluable_id' => ['required'],
-            'date_debut' => ['required', 'date'],
-            'date_fin' => ['required', 'date', 'after_or_equal:date_debut'],
+            'date_debut' => ['required', 'regex:/^(0[1-9]|1[0-2])\/(\d{4})$/'],
+            'date_fin' => ['required', 'regex:/^(0[1-9]|1[0-2])\/(\d{4})$/'],
             'identification.nom_prenom' => ['nullable', 'string', 'max:255'],
             'identification.semestre' => ['nullable', 'string', 'max:20'],
             'identification.date_recrutement' => ['nullable', 'date'],
@@ -108,6 +125,21 @@ class PcaEvaluationController extends Controller
             'date_signature_directeur' => ['nullable', 'date'],
             'date_signature_evaluateur' => ['nullable', 'date'],
         ]);
+
+        // Conversion MM/YYYY -> YYYY-MM-01 pour stockage et logique
+        $validated['date_debut'] = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', function($m) {
+            return $m[2] . '-' . $m[1] . '-01';
+        }, $validated['date_debut']);
+        $validated['date_fin'] = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', function($m) {
+            return $m[2] . '-' . $m[1] . '-01';
+        }, $validated['date_fin']);
+
+        // Vérification date_fin >= date_debut
+        if (strtotime($validated['date_fin']) < strtotime($validated['date_debut'])) {
+            return back()->withInput()->withErrors([
+                'date_fin' => "La date de fin doit être postérieure ou égale à la date de début.",
+            ]);
+        }
 
         $targetConfig = self::TARGET_MAP[$validated['evaluable_type']];
         $targetId = (int) $validated['evaluable_id'];
@@ -318,9 +350,25 @@ class PcaEvaluationController extends Controller
 
     private function authorizeEvaluation(Evaluation $evaluation, int $entiteId): void
     {
-        $allowed = $evaluation->evaluable_type === Entite::class
-            && (int) $evaluation->evaluable_id === $entiteId;
-
+        $allowed = false;
+        // Autoriser le PCA de l'entité
+        if ($evaluation->evaluable_type === Entite::class && (int) $evaluation->evaluable_id === $entiteId) {
+            $allowed = true;
+        }
+        // Autoriser le DG à voir ses propres évaluations
+        if ($evaluation->evaluable_type === \App\Models\User::class) {
+            $dgUser = \App\Models\User::where('role', 'dg')->first();
+            if ($dgUser && (int) $evaluation->evaluable_id === $dgUser->id) {
+                // Si l'utilisateur connecté est le DG, il peut voir
+                if (auth()->check() && auth()->user()->id === $dgUser->id) {
+                    $allowed = true;
+                }
+                // Ou si c'est le PCA de l'entité
+                if ((int) $entiteId === ($evaluation->evaluateur->pca_entite_id ?? null)) {
+                    $allowed = true;
+                }
+            }
+        }
         if (! $allowed) {
             abort(403);
         }
@@ -332,10 +380,16 @@ class PcaEvaluationController extends Controller
             if ($targetId !== $entiteId) {
                 abort(403);
             }
-
             return;
         }
-
+        if ($targetType === 'user') {
+            // Only allow the DG user of the Faîtière (main entity)
+            $dgUser = \App\Models\User::where('role', 'dg')->first();
+            if (!$dgUser || $targetId !== $dgUser->id) {
+                abort(403);
+            }
+            return;
+        }
         abort(403);
     }
 
@@ -343,14 +397,18 @@ class PcaEvaluationController extends Controller
     private function buildAssignmentOptions(int $entiteId): array
     {
         $entite = Entite::query()->findOrFail($entiteId);
-        $dgNom = trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? ''));
+        $dgUser = \App\Models\User::where('role', 'dg')->first();
+        $dgNom = $dgUser ? $dgUser->name : trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? ''));
 
         return [
             'entite' => [[
                 'id' => $entite->id,
                 'label' => ($dgNom !== '' ? $dgNom : 'DG non renseigne').' - '.$entite->nom,
             ]],
-            'directeur' => [],
+            'user' => $dgUser ? [[
+                'id' => $dgUser->id,
+                'label' => $dgUser->name.' (Directeur Général)',
+            ]] : [],
         ];
     }
 
@@ -359,6 +417,7 @@ class PcaEvaluationController extends Controller
     {
         $profiles = [];
         $entite = Entite::query()->findOrFail($entiteId);
+        $dgUser = \App\Models\User::where('role', 'dg')->first();
         $profiles['entite:'.$entite->id] = [
             'nom_prenom' => trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? '')),
             'poste' => 'Directeur General',
@@ -380,7 +439,29 @@ class PcaEvaluationController extends Controller
             'formations' => [],
             'experiences' => [],
         ];
-
+        if ($dgUser) {
+            $profiles['user:'.$dgUser->id] = [
+                'nom_prenom' => $dgUser->name,
+                'poste' => 'Directeur Général',
+                'emploi' => 'Directeur Général',
+                'direction' => $entite->nom,
+                'direction_service' => $entite->nom,
+                'categorie' => 'Direction générale',
+                'sexe' => null,
+                'niveau' => null,
+                'anciennete' => null,
+                'matricule' => null,
+                'semestre' => null,
+                'date_recrutement' => null,
+                'date_evaluation' => null,
+                'date_titularisation' => null,
+                'date_naissance' => null,
+                'date_confirmation' => null,
+                'date_affectation' => null,
+                'formations' => [],
+                'experiences' => [],
+            ];
+        }
         return $profiles;
     }
 
@@ -417,10 +498,11 @@ class PcaEvaluationController extends Controller
     /** @return array<string, array<int, array<string, mixed>>> */
     private function buildObjectiveOptions(int $entiteId): array
     {
-        $options = ['entite' => [], 'directeur' => []];
+        $options = ['entite' => [], 'user' => []];
         $today = now()->toDateString();
 
-        $fiches = FicheObjectif::query()
+        // Fiches pour l'entité
+        $fichesEntite = FicheObjectif::query()
             ->with('objectifs')
             ->where('statut', 'acceptee')
             ->whereDate('date_echeance', '>=', $today)
@@ -429,7 +511,7 @@ class PcaEvaluationController extends Controller
             ->orderBy('titre')
             ->get();
 
-        foreach ($fiches as $fiche) {
+        foreach ($fichesEntite as $fiche) {
             $options['entite'][] = [
                 'id' => $fiche->id,
                 'target_id' => $fiche->assignable_id,
@@ -440,6 +522,32 @@ class PcaEvaluationController extends Controller
                     'titre' => $item->description,
                 ])->values()->all(),
             ];
+        }
+
+        // Fiches pour le DG (user)
+        $dgUser = \App\Models\User::where('role', 'dg')->first();
+        if ($dgUser) {
+            $fichesDG = FicheObjectif::query()
+                ->with('objectifs')
+                ->where('statut', 'acceptee')
+                ->whereDate('date_echeance', '>=', $today)
+                ->where('assignable_type', \App\Models\User::class)
+                ->where('assignable_id', $dgUser->id)
+                ->orderBy('titre')
+                ->get();
+
+            foreach ($fichesDG as $fiche) {
+                $options['user'][] = [
+                    'id' => $fiche->id,
+                    'target_id' => $fiche->assignable_id,
+                    'titre' => $fiche->titre,
+                    'date_echeance' => $fiche->date_echeance,
+                    'objectifs' => $fiche->objectifs->map(fn ($item) => [
+                        'source_fiche_objectif_objectif_id' => $item->id,
+                        'titre' => $item->description,
+                    ])->values()->all(),
+                ];
+            }
         }
 
         return $options;

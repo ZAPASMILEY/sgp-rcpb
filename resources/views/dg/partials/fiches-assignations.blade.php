@@ -20,7 +20,7 @@
         <ul class="divide-y divide-slate-200">
             @foreach($evaluationsSubordonnes as $evaluation)
                 <li class="py-2 flex items-center justify-between">
-                    <span>Période : {{ $evaluation->date_debut }} - {{ $evaluation->date_fin }} - {{ $evaluation->assignable_nom }}</span>
+                    <span>Période : {{ $evaluation->date_debut->format('m/Y') }} - {{ $evaluation->date_fin->format('m/Y') }} - {{ $evaluation->assignable_nom }}</span>
                     <a href="{{ route('dg.evaluations.show', $evaluation) }}" class="ent-btn ent-btn-soft">Voir</a>
                 </li>
             @endforeach

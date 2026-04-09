@@ -10,7 +10,7 @@
         </div>
         <div>
             <h1 class="text-2xl font-black text-slate-900">Fiche d'objectifs</h1>
-            <div class="text-sm text-slate-400">DÃ©tail et validation de la fiche</div>
+            <div class="text-sm text-slate-400">Detail et validation de la fiche</div>
         </div>
     </div>
 
@@ -20,7 +20,7 @@
             <div class="text-base font-semibold text-slate-800">{{ $fiche->titre }}</div>
         </div>
         <div>
-            <div class="text-xs text-slate-400 font-bold uppercase">AnnÃ©e</div>
+            <div class="text-xs text-slate-400 font-bold uppercase">Année</div>
             <div class="text-base font-semibold text-slate-800">{{ $fiche->annee }}</div>
         </div>
         <div>
@@ -28,7 +28,7 @@
             <div class="text-base text-slate-700">{{ $fiche->date }}</div>
         </div>
         <div>
-            <div class="text-xs text-slate-400 font-bold uppercase">Ã‰chÃ©ance</div>
+            <div class="text-xs text-slate-400 font-bold uppercase">Échéance</div>
             <div class="text-base text-slate-700">{{ $fiche->date_echeance }}</div>
         </div>
         <div class="col-span-2">
@@ -85,6 +85,6 @@
     </form>
     @endif
 
-    <a href="{{ route('dg.mon-espace') }}" class="inline-block mt-8 text-emerald-700 font-bold hover:underline">&larr; Retour Ã  la liste</a>
+    <a href="{{ route('dg.mon-espace') }}" class="inline-block mt-8 text-emerald-700 font-bold hover:underline">&larr; Retour à la liste</a>
 </div>
 @endsection

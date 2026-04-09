@@ -12,7 +12,7 @@
                     <div><strong>Annee :</strong> {{ $fiche->annee }}</div>
                     <div><strong>Date :</strong> {{ $fiche->date }}</div>
                     <div><strong>Echeance :</strong> {{ $fiche->date_echeance }}</div>
-                    <div><strong>Avancement :</strong> {{ $fiche->avancement_percentage }} / 100</div>
+                    <div><strong>Avancement :</strong> {{ $fiche->avancement_percentage }}</div>
                     <div>
                         <strong>Statut :</strong>
                         @if ($fiche->statut === 'acceptee')

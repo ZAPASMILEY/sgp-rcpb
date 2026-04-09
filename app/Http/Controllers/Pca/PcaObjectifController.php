@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
+use App\Mail\FicheObjectifAssigneeMail;
+use Illuminate\Support\Facades\Mail;
 
 class PcaObjectifController extends Controller
 {
@@ -119,6 +121,14 @@ class PcaObjectifController extends Controller
             $fiche->objectifs()->create([
                 'description' => $objectifDesc,
             ]);
+        }
+
+        // Envoi du mail au DG après création de la fiche
+        $entite = Entite::find($entiteId);
+        if ($entite && $entite->directrice_generale_email) {
+            $dgName = trim(($entite->directrice_generale_prenom ?? '') . ' ' . ($entite->directrice_generale_nom ?? ''));
+            Mail::to($entite->directrice_generale_email)
+                ->send(new FicheObjectifAssigneeMail($fiche, $dgName));
         }
 
         return redirect()

@@ -69,15 +69,22 @@
                                 @php
                                     $evaluable = $evaluation->evaluable;
                                     $role = $evaluation->evaluable_role ?? 'entity';
-                                    $typeLabel = $evaluation->evaluable_type === \App\Models\Direction::class && $role === 'manager'
-                                        ? 'Directeur'
-                                        : ($evaluation->evaluable_type === \App\Models\Entite::class ? 'Entite' : '-');
-                                    $cibleLabel = $evaluable instanceof \App\Models\Direction && $role === 'manager'
-                                        ? ($evaluable->directeur_nom ?: 'Directeur non renseigne')
-                                        : ($evaluable?->nom ?? '—');
-                                    $mention = $evaluation->note_finale < 50 ? 'Insuffisant'
-                                        : ($evaluation->note_finale < 70 ? 'Passable'
-                                        : ($evaluation->note_finale < 85 ? 'Bien' : 'Excellent'));
+                                    if ($evaluation->evaluable_type === \App\Models\User::class && $role === 'dg') {
+                                        $typeLabel = 'Directeur Général';
+                                        $cibleLabel = $evaluable?->name ?? '—';
+                                    } elseif ($evaluation->evaluable_type === \App\Models\Direction::class && $role === 'manager') {
+                                        $typeLabel = 'Directeur';
+                                        $cibleLabel = $evaluable->directeur_nom ?: 'Directeur non renseigné';
+                                    } elseif ($evaluation->evaluable_type === \App\Models\Entite::class) {
+                                        $typeLabel = 'Entité';
+                                        $cibleLabel = $evaluable?->nom ?? '—';
+                                    } else {
+                                        $typeLabel = '-';
+                                        $cibleLabel = '—';
+                                    }
+                                    $mention = $evaluation->note_finale < 5 ? 'Insuffisant'
+                                        : ($evaluation->note_finale < 7 ? 'Passable'
+                                        : ($evaluation->note_finale < 8.5 ? 'Bien' : 'Excellent'));
                                     $mentionClass = match ($mention) {
                                         'Excellent' => 'text-emerald-700 bg-emerald-50 border-emerald-200',
                                         'Bien'      => 'text-sky-700 bg-sky-50 border-sky-200',
@@ -94,8 +101,8 @@
                                     <td data-label="#">{{ $evaluation->id }}</td>
                                     <td data-label="Type">{{ $typeLabel }}</td>
                                     <td data-label="Cible">{{ $cibleLabel }}</td>
-                                    <td data-label="Periode" class="whitespace-nowrap">{{ $evaluation->date_debut->format('d/m/Y') }} – {{ $evaluation->date_fin->format('d/m/Y') }}</td>
-                                    <td data-label="Note finale">{{ $evaluation->note_finale }} / 100</td>
+                                    <td data-label="Periode" class="whitespace-nowrap">{{ $evaluation->date_debut->format('m/Y') }} – {{ $evaluation->date_fin->format('m/Y') }}</td>
+                                    <td data-label="Note finale">{{ $evaluation->note_finale }}</td>
                                     <td data-label="Mention">
                                         <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold {{ $mentionClass }}">
                                             {{ $mention }}

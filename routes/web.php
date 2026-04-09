@@ -216,7 +216,18 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/objectifs/{fiche}', [\App\Http\Controllers\Dg\DgObjectifController::class, 'show'])->name('objectifs.show');
     Route::patch('/objectifs/{fiche}/statut', [\App\Http\Controllers\Dg\DgObjectifController::class, 'statut'])->name('objectifs.statut');
     Route::patch('/objectifs/{fiche}/avancement', [\App\Http\Controllers\Dg\DgObjectifController::class, 'avancement'])->name('objectifs.avancement');
+    // Route pour afficher une évaluation DG
+    Route::get('/evaluations/{evaluation}', [App\Http\Controllers\Dg\EvaluationController::class, 'show'])->name('evaluations.show');
+    Route::get('/evaluations/{evaluation}/pdf', [App\Http\Controllers\Dg\EvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
 });
+
+// DG - Enregistrer le commentaire de l'évalué
+Route::middleware(['auth'])->group(function () {
+    Route::post('/dg/evaluations/{evaluation}/commentaire', [\App\Http\Controllers\Dg\EvaluationController::class, 'commentaire'])->name('dg.evaluations.commentaire');
+});
+
+// DG - Changer le statut de l'évaluation (accepter/refuser)
+Route::middleware(['auth'])->patch('/dg/evaluations/{evaluation}/statut', [\App\Http\Controllers\Dg\EvaluationController::class, 'statut'])->name('dg.evaluations.statut');
 
 // Espace DG : Mon espace
 Route::middleware(['auth', 'dg'])->get('/dg/mon-espace', \App\Http\Controllers\Dg\MonEspaceController::class)->name('dg.mon-espace');

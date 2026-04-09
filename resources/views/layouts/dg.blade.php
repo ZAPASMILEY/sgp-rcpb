@@ -1,5 +1,3 @@
-
-
 @php
     $menuSections = [
         [
@@ -72,6 +70,8 @@
         </nav>
         <main class="main-content flex-1">
             @yield('content')
+            @yield('actions')
+            @yield('export')
         </main>
     </div>
 </body>

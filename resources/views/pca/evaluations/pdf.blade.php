@@ -15,8 +15,12 @@
     </style>
 </head>
 <body>
-    <h1>Fiche d'evaluation des performances</h1>
-    <p class="muted">{{ $cibleType }} : {{ $cibleLabel }} | Periode : {{ $evaluation->date_debut->format('d/m/Y') }} - {{ $evaluation->date_fin->format('d/m/Y') }}</p>
+    <h1>Fiche d'evaluation des performances du DIRECTEUR GENERAL</h1>
+    <p class="muted">Directeur Général : {{ $cibleLabel }} | Année : {{ $evaluation->identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y') }}
+    @if($evaluation->identification->semestre)
+        &nbsp; Semestre : {{ $evaluation->identification->semestre }}
+    @endif
+    </p>
 
     <table class="grid">
         <tr>
@@ -132,6 +136,14 @@
             </table>
         </div>
     @endforeach
+
+    <h2>Note totale d'évaluation</h2>
+    <table class="grid">
+        <tr>
+            <td><strong>Note finale</strong></td>
+            <td>{{ number_format((float) $evaluation->note_finale, 2, ',', ' ') }}</td>
+        </tr>
+    </table>
 
     <h2>Plan d'amelioration</h2>
     <table class="grid">

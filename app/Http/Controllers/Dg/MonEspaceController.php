@@ -12,16 +12,9 @@ class MonEspaceController extends Controller
 {
     public function __invoke(Request $request)
     {
-        $user = Auth::user();
-
-
-        // Afficher toutes les fiches créées par le PCA (toutes les fiches existantes)
+        // Le DG voit tout ce qui vient du PCA : toutes les fiches et toutes les évaluations
         $fiches = FicheObjectif::all();
-
-        // Évaluations assignées au DG (User)
-        $evaluations = Evaluation::where('evaluable_type', 'App\\Models\\User')
-            ->where('evaluable_id', $user->id)
-            ->get();
+        $evaluations = Evaluation::all();
 
         return view('dg.mon-espace', [
             'fiches' => $fiches,
