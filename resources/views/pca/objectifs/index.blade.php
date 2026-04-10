@@ -8,16 +8,16 @@
             [
                 'label' => 'Fiches total',
                 'value' => $stats['total'] ?? $fiches->total(),
-                'meta' => 'Objectifs de la faîtière et des directions',
+                'meta' => 'Fiches assignees au Directeur General',
                 'tone' => 'border-slate-100 bg-white text-slate-900',
                 'accent' => 'text-slate-500',
                 'icon' => 'fas fa-folder-open',
                 'iconWrap' => 'bg-slate-100 text-slate-700',
             ],
             [
-                'label' => 'Acceptées',
+                'label' => 'Acceptees',
                 'value' => $stats['acceptees'] ?? 0,
-                'meta' => 'Fiches validées par la direction générale',
+                'meta' => 'Fiches validees par le DG',
                 'tone' => 'border-emerald-100 bg-emerald-50/80 text-emerald-900',
                 'accent' => 'text-emerald-700',
                 'icon' => 'fas fa-circle-check',
@@ -33,9 +33,9 @@
                 'iconWrap' => 'bg-white text-amber-600',
             ],
             [
-                'label' => 'Refusées',
+                'label' => 'Refusees',
                 'value' => $stats['refusees'] ?? 0,
-                'meta' => 'Fiches à reprendre ou à corriger',
+                'meta' => 'Fiches a reprendre ou corriger',
                 'tone' => 'border-rose-100 bg-rose-50/80 text-rose-900',
                 'accent' => 'text-rose-700',
                 'icon' => 'fas fa-ban',
@@ -50,9 +50,9 @@
                 <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-3xl">
                         <p class="text-base font-black text-emerald-700">Objectifs</p>
-                        <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900 lg:text-4xl">Pilotage des fiches d'objectifs PCA</h1>
+                        <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900 lg:text-4xl">Fiches d'objectifs du Directeur General</h1>
                         <p class="mt-2 text-sm text-slate-500">
-                            Suivez les fiches de l'entité faîtière et de ses directions dans un espace plus clair, plus rapide à parcourir et plus simple à filtrer.
+                            Cette page centralise uniquement les fiches d'objectifs du Directeur General, avec une lecture plus claire du statut et de l'avancement.
                         </p>
                         <div class="mt-4 flex flex-wrap items-center gap-2">
                             <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
@@ -69,7 +69,7 @@
                     <div class="flex flex-wrap items-center gap-3">
                         <a href="{{ route('pca.objectifs.index') }}" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
                             <i class="fas fa-rotate-right mr-2 text-xs"></i>
-                            Réinitialiser
+                            Reinitialiser
                         </a>
                         <a href="{{ route('pca.objectifs.create') }}" data-open-create-modal data-modal-title="Ajouter un objectif" class="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(16,185,129,0.9)] transition hover:bg-emerald-600">
                             <i class="fas fa-plus mr-2 text-xs"></i>
@@ -118,7 +118,7 @@
                                         name="search"
                                         type="text"
                                         value="{{ $filters['search'] }}"
-                                        placeholder="Titre, année"
+                                        placeholder="Titre, annee"
                                         class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
                                     >
                                 </div>
@@ -138,7 +138,7 @@
                     <div class="rounded-[24px] border border-cyan-100 bg-[linear-gradient(135deg,#ecfeff_0%,#f8fafc_100%)] p-4">
                         <p class="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-700">Vue rapide</p>
                         <p class="mt-2 text-sm font-semibold text-slate-800">
-                            Cette page centralise les fiches de la faîtière et des directions pour faciliter la validation, la consultation et la mise à jour.
+                            Le PCA ne cree et ne suit ici que les objectifs du Directeur General de son entite.
                         </p>
                         <div class="mt-4 grid grid-cols-2 gap-3">
                             <div class="rounded-2xl bg-white/90 px-4 py-3 shadow-sm">
@@ -161,7 +161,7 @@
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Cible</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Fiche</th>
-                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Période</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Periode</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Objectifs</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Avancement</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
@@ -172,11 +172,8 @@
                                 @forelse ($fiches as $fiche)
                                     @php
                                         $assignable = $fiche->assignable;
-                                        $isEntite = $fiche->assignable_type === \App\Models\Entite::class;
-                                        $cibleType = $isEntite ? 'Faîtière' : 'Direction';
-                                        $cibleNom = $isEntite
-                                            ? ($assignable?->nom ?? 'Entité non renseignée')
-                                            : ($assignable?->nom ?? 'Direction non renseignée');
+                                        $cibleType = 'Directeur General';
+                                        $cibleNom = $assignable?->name ?? 'DG non renseigne';
                                         $statut = $fiche->statut ?? 'en_attente';
                                         $statusClasses = match ($statut) {
                                             'acceptee' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -184,8 +181,8 @@
                                             default => 'border-slate-200 bg-slate-100 text-slate-700',
                                         };
                                         $statusLabel = match ($statut) {
-                                            'acceptee' => 'Acceptée',
-                                            'refusee' => 'Refusée',
+                                            'acceptee' => 'Acceptee',
+                                            'refusee' => 'Refusee',
                                             default => 'En attente',
                                         };
                                         $progressValue = (int) ($fiche->avancement_percentage ?? 0);
@@ -201,11 +198,11 @@
                                         </td>
                                         <td class="px-4 py-4">
                                             <p class="text-sm font-black text-slate-900">{{ $fiche->titre }}</p>
-                                            <p class="mt-1 text-xs font-semibold text-slate-500">Année {{ $fiche->annee }}</p>
+                                            <p class="mt-1 text-xs font-semibold text-slate-500">Annee {{ $fiche->annee }}</p>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap">
                                             <p class="font-semibold text-slate-700">{{ \Illuminate\Support\Carbon::parse($fiche->date)->format('d/m/Y') }}</p>
-                                            <p class="mt-1 text-xs font-semibold text-slate-400">Échéance {{ \Illuminate\Support\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}</p>
+                                            <p class="mt-1 text-xs font-semibold text-slate-400">Echeance {{ \Illuminate\Support\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}</p>
                                         </td>
                                         <td class="px-4 py-4">
                                             <span class="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">
@@ -234,9 +231,6 @@
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 @if ($fiche->statut === 'en_attente' || $fiche->statut === null)
-                                                    <a href="{{ route('pca.objectifs.edit', $fiche->id) }}" class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-500 transition hover:bg-amber-100 hover:text-amber-700" title="Modifier" aria-label="Modifier la fiche">
-                                                        <i class="fas fa-pen-to-square"></i>
-                                                    </a>
                                                     <form method="POST" action="{{ route('pca.objectifs.destroy', $fiche->id) }}" onsubmit="return confirm('Supprimer cette fiche ?');" class="inline">
                                                         @csrf
                                                         @method('DELETE')
@@ -252,8 +246,8 @@
                                     <tr>
                                         <td colspan="8" class="px-4 py-12 text-center">
                                             <div class="mx-auto max-w-md rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-8">
-                                                <p class="text-base font-black text-slate-700">Aucune fiche d'objectifs trouvée</p>
-                                                <p class="mt-2 text-sm text-slate-500">Essayez une autre recherche ou créez une nouvelle fiche pour démarrer le suivi.</p>
+                                                <p class="text-base font-black text-slate-700">Aucune fiche d'objectifs trouvee</p>
+                                                <p class="mt-2 text-sm text-slate-500">Creez une nouvelle fiche pour demarrer le suivi du Directeur General.</p>
                                             </div>
                                         </td>
                                     </tr>

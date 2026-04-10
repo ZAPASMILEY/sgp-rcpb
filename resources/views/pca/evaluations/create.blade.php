@@ -53,8 +53,7 @@
                             <div class="space-y-2">
                                 <label for="evaluable_type" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Type de cible</label>
                                 <select id="evaluable_type" name="evaluable_type" class="ent-select" required>
-                                    <option value="">Selectionner un type</option>
-                                    <option value="entite" @selected(old('evaluable_type') === 'entite')>Entite</option>
+                                    <option value="user" selected>Directeur General</option>
                                     <option value="user" @selected(old('evaluable_type') === 'user')>Directeur Général</option>
                                 </select>
                             </div>
@@ -396,9 +395,8 @@
             const availableTypes = Object.entries(assignmentOptions)
                 .filter(([, items]) => Array.isArray(items) && items.length > 0)
                 .map(([key]) => key);
-            const objectiveCatalog = Object.entries(objectiveOptions).flatMap(([type, items]) =>
-                (Array.isArray(items) ? items : []).map((item) => ({ ...item, type }))
-            );
+            const objectiveCatalog = (Array.isArray(objectiveOptions.user) ? objectiveOptions.user : [])
+                .map((item) => ({ ...item, type: 'user' }));
 
             const identificationFields = {
                 nom_prenom: document.getElementById('identification_nom_prenom'),
@@ -615,7 +613,6 @@
             }
 
             function getObjectiveOptionsForCurrentSelection() {
-                // Afficher toutes les fiches d'objectif, sans filtrage
                 return objectiveCatalog;
             }
 

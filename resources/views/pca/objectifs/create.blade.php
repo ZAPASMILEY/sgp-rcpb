@@ -21,13 +21,14 @@
                     </div>
                 @endif
 
-                {{-- Inject assignment options as JSON --}}
-                <script id="objectif-assignment-options" type="application/json">
-                    {!! json_encode($assignmentOptions) !!}
-                </script>
-
                 <form method="POST" action="{{ route('pca.objectifs.store') }}" class="mt-6 grid gap-5">
                     @csrf
+
+                    <div class="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-4">
+                        <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Cible unique</p>
+                        <p class="mt-2 text-base font-black text-slate-900">{{ $dgUser?->name ?? 'DG non configure' }}</p>
+                        <p class="mt-1 text-sm text-slate-500">Les objectifs crees par le PCA sont assignes uniquement au Directeur General.</p>
+                    </div>
 
                     <div class="ent-form-grid">
                         <div class="space-y-2">

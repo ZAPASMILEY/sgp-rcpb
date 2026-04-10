@@ -5,15 +5,14 @@ namespace App\Http\Controllers\Pca;
 use App\Http\Controllers\Controller;
 use App\Models\FicheObjectif;
 use App\Models\FicheObjectifObjectif;
-use App\Models\Direction;
 use App\Models\Entite;
 use App\Models\Annee;
 use App\Models\Evaluation;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 use App\Mail\FicheObjectifAssigneeMail;
@@ -43,26 +42,15 @@ class PcaObjectifController extends Controller
     {
         $user = $request->user();
         $entiteId = $user->pca_entite_id;
-
-        $directionIds = Direction::query()
-            ->where('entite_id', $entiteId)
-            ->pluck('id')
-            ->all();
+        $dgUser = $this->resolveEntiteDgUser($entiteId);
 
         $search = trim((string) $request->query('search', ''));
 
         $baseQuery = FicheObjectif::query()
             ->with('assignable')
             ->withCount('objectifs')
-            ->where(function ($q) use ($entiteId, $directionIds) {
-                $q->where(function ($sub) use ($directionIds) {
-                    $sub->where('assignable_type', Direction::class)
-                        ->whereIn('assignable_id', $directionIds);
-                })->orWhere(function ($sub) use ($entiteId) {
-                    $sub->where('assignable_type', Entite::class)
-                        ->where('assignable_id', $entiteId);
-                });
-            })
+            ->where('assignable_type', User::class)
+            ->when($dgUser, fn ($query) => $query->where('assignable_id', $dgUser->id), fn ($query) => $query->whereRaw('1 = 0'))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($sub) use ($search) {
                     $sub->where('titre', 'like', "%{$search}%")
@@ -94,8 +82,10 @@ class PcaObjectifController extends Controller
 
     public function create(Request $request): View
     {
+        $dgUser = $this->resolveEntiteDgUser((int) $request->user()->pca_entite_id);
+
         return view('pca.objectifs.create', [
-            'assignmentOptions' => $this->assignmentOptions($request->user()->pca_entite_id),
+            'dgUser' => $dgUser,
             'today' => now()->toDateString(),
         ]);
     }
@@ -103,6 +93,7 @@ class PcaObjectifController extends Controller
     public function show(Request $request, $id): View
     {
         $fiche = FicheObjectif::with('objectifs')->findOrFail($id);
+        $this->authorizeFiche($fiche, (int) $request->user()->pca_entite_id);
 
         return view('pca.objectifs.show', [
             'fiche' => $fiche,
@@ -113,6 +104,13 @@ class PcaObjectifController extends Controller
     {
         $entiteId = $request->user()->pca_entite_id;
         $date = now()->toDateString();
+        $dgUser = $this->resolveEntiteDgUser((int) $entiteId);
+
+        if (! $dgUser) {
+            return redirect()
+                ->route('pca.objectifs.index')
+                ->with('status', "Aucun compte DG n'est associe a cette entite.");
+        }
 
         $validated = $request->validate([
             'date_echeance' => ['required', 'date', 'after_or_equal:today'],
@@ -124,8 +122,8 @@ class PcaObjectifController extends Controller
         $fiche = FicheObjectif::create([
             'titre' => $validated['titre_fiche'],
             'annee' => date('Y'),
-            'assignable_type' => Entite::class,
-            'assignable_id' => $entiteId,
+            'assignable_type' => User::class,
+            'assignable_id' => $dgUser->id,
             'date' => $date,
             'date_echeance' => $validated['date_echeance'],
             'avancement_percentage' => 0,
@@ -187,6 +185,7 @@ class PcaObjectifController extends Controller
     public function destroy(Request $request, $id): RedirectResponse
     {
         $fiche = FicheObjectif::findOrFail($id);
+        $this->authorizeFiche($fiche, (int) $request->user()->pca_entite_id);
 
         if ($fiche->statut !== 'en_attente' && $fiche->statut !== null) {
             return redirect()->route('pca.objectifs.index')->with('status', 'Suppression impossible : fiche deja validee ou refusee.');
@@ -201,34 +200,29 @@ class PcaObjectifController extends Controller
     public function edit(Request $request, $id): View|RedirectResponse
     {
         $fiche = FicheObjectif::with('objectifs')->findOrFail($id);
+        $this->authorizeFiche($fiche, (int) $request->user()->pca_entite_id);
 
         if ($fiche->statut !== 'en_attente' && $fiche->statut !== null) {
             return redirect()->route('pca.objectifs.index')->with('status', 'Modification impossible : fiche deja validee ou refusee.');
         }
 
-        return view('pca.objectifs.edit', [
-            'fiche' => $fiche,
-            'assignmentOptions' => $this->assignmentOptions($request->user()->pca_entite_id),
-        ]);
+        return redirect()
+            ->route('pca.objectifs.show', $fiche)
+            ->with('status', 'La modification directe de cette fiche n\'est pas disponible.');
     }
 
     private function authorizeObjectif(FicheObjectifObjectif $objectif, int $entiteId): void
     {
-        $directionIds = Direction::query()
-            ->where('entite_id', $entiteId)
-            ->pluck('id')
-            ->all();
-
         $fiche = $objectif->ficheObjectif;
+        $dgUser = $this->resolveEntiteDgUser($entiteId);
 
         if (! $fiche) {
             abort(403);
         }
 
-        $allowed = (
-            ($fiche->assignable_type === Entite::class && (int) $fiche->assignable_id === $entiteId) ||
-            ($fiche->assignable_type === Direction::class && in_array((int) $fiche->assignable_id, $directionIds, true))
-        );
+        $allowed = $dgUser
+            && $fiche->assignable_type === User::class
+            && (int) $fiche->assignable_id === (int) $dgUser->id;
 
         if (! $allowed) {
             abort(403);
@@ -237,66 +231,15 @@ class PcaObjectifController extends Controller
 
     private function authorizeFiche(FicheObjectif $fiche, int $entiteId): void
     {
-        $directionIds = Direction::query()
-            ->where('entite_id', $entiteId)
-            ->pluck('id')
-            ->all();
+        $dgUser = $this->resolveEntiteDgUser($entiteId);
 
-        $allowed = (
-            ($fiche->assignable_type === Entite::class && (int) $fiche->assignable_id === $entiteId) ||
-            ($fiche->assignable_type === Direction::class && in_array((int) $fiche->assignable_id, $directionIds, true))
-        );
+        $allowed = $dgUser
+            && $fiche->assignable_type === User::class
+            && (int) $fiche->assignable_id === (int) $dgUser->id;
 
         if (! $allowed) {
             abort(403);
         }
-    }
-
-    /**
-     * @return array<string, array<int, array{id:int,label:string}>>
-     */
-    private function assignmentOptions(int $entiteId): array
-    {
-        $entite = Entite::query()->findOrFail($entiteId);
-        $directions = Direction::query()->where('entite_id', $entiteId)->orderBy('nom')->get();
-
-        return [
-            'entite' => [['id' => $entite->id, 'label' => $entite->nom]],
-            'direction' => $directions->map(fn (Direction $d) => [
-                'id' => $d->id,
-                'label' => $d->nom.' ('.(($d->directeur_nom) ?: 'Directeur non renseigne').')',
-            ])->values()->all(),
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function validateObjectif(Request $request, int $entiteId): array
-    {
-        $validated = $request->validate([
-            'assignable_type' => ['required', 'string', 'in:entite,direction'],
-            'assignable_id' => ['required', 'integer'],
-            'date_echeance' => ['required', 'date', 'after_or_equal:today'],
-            'commentaire' => ['required', 'string', 'max:5000'],
-        ]);
-
-        $directionIds = Direction::query()
-            ->where('entite_id', $entiteId)
-            ->pluck('id')
-            ->all();
-
-        if ($validated['assignable_type'] === 'entite' && (int) $validated['assignable_id'] !== $entiteId) {
-            throw ValidationException::withMessages(['assignable_id' => 'Cible invalide.']);
-        }
-
-        if ($validated['assignable_type'] === 'direction' && ! in_array((int) $validated['assignable_id'], $directionIds, true)) {
-            throw ValidationException::withMessages(['assignable_id' => 'Cible invalide.']);
-        }
-
-        $validated['assignable_class'] = $validated['assignable_type'] === 'entite' ? Entite::class : Direction::class;
-
-        return $validated;
     }
 
     private function isLockedByEvaluation(FicheObjectifObjectif $objectif): bool
@@ -329,13 +272,9 @@ class PcaObjectifController extends Controller
         $salarieNom = '';
         $salarieFonction = '';
 
-        if ($assignable instanceof Direction) {
-            $entite = $assignable->entite;
-            $salarieNom = trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? ''));
-            $salarieFonction = 'Directeur General';
-        } elseif ($assignable instanceof Entite) {
-            $entite = $assignable;
-            $salarieNom = trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? ''));
+        if ($assignable instanceof User) {
+            $entite = Entite::query()->find($request->user()->pca_entite_id);
+            $salarieNom = $assignable->name ?? '';
             $salarieFonction = 'Directeur General';
         }
 
@@ -372,5 +311,21 @@ class PcaObjectifController extends Controller
         }
 
         return 'RCPB';
+    }
+
+    private function resolveEntiteDgUser(int $entiteId): ?User
+    {
+        $entite = Entite::query()->find($entiteId);
+
+        return User::query()
+            ->where('role', 'dg')
+            ->where(function ($query) use ($entiteId, $entite): void {
+                $query->where('pca_entite_id', $entiteId);
+
+                if ($entite?->directrice_generale_email) {
+                    $query->orWhere('email', $entite->directrice_generale_email);
+                }
+            })
+            ->first();
     }
 }
