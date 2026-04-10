@@ -16,6 +16,18 @@ class PcaDashboardController extends Controller
         $entite = $request->user()->entite()->with('objectifs')->firstOrFail();
         $entiteId = $entite->id;
 
+        // Comptage optimisé des fiches d'objectifs DG par statut
+        $fichesObjectifsDG = \App\Models\FicheObjectif::query()
+            ->where('assignable_type', \App\Models\Entite::class)
+            ->where('assignable_id', $entiteId)
+            ->get();
+
+        $fichesStatsDG = [
+            'acceptées' => $fichesObjectifsDG->where('statut', 'acceptee')->count(),
+            'en_attente' => $fichesObjectifsDG->where('statut', 'en_attente')->count(),
+            'refusées' => $fichesObjectifsDG->where('statut', 'refusee')->count(),
+        ];
+
         $directions = Direction::query()
             ->where('entite_id', $entiteId)
             ->get();
@@ -81,6 +93,7 @@ class PcaDashboardController extends Controller
             'evaluationsDirecteursCount',
             'recentEvaluations',
             'objectifsPendingCount',
+            'fichesStatsDG',
         ));
     }
 }

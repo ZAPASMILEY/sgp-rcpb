@@ -4,51 +4,69 @@
 
 @section('content')
     @php
-        $pcaTotal = $objectifsEntiteCount + $objectifsDirecteursCount + $evaluationsEntiteCount + $evaluationsDirecteursCount;
-        $objectifTotal = max(1, $objectifsEntiteCount + $objectifsDirecteursCount);
-        $evaluationTotal = $evaluationsEntiteCount + $evaluationsDirecteursCount;
-        $progressRate = min(100, (int) round(($evaluationTotal / $objectifTotal) * 100));
-        $maxPca = max(1, $objectifsEntiteCount, $objectifsDirecteursCount, $evaluationsEntiteCount, $evaluationsDirecteursCount);
-        $pcaBars = [
-            'Obj entite' => max(16, (int) round(($objectifsEntiteCount / $maxPca) * 100)),
-            'Obj directeurs' => max(16, (int) round(($objectifsDirecteursCount / $maxPca) * 100)),
-            'Eval entite' => max(16, (int) round(($evaluationsEntiteCount / $maxPca) * 100)),
-            'Eval directeurs' => max(16, (int) round(($evaluationsDirecteursCount / $maxPca) * 100)),
+        $overviewCards = [
+            [
+                'label' => "Fiches d'objectifs DG",
+                'value' => $nbFichesObjectifsDG ?? 0,
+                'meta' => 'Total fiches assignées',
+                'icon' => 'fas fa-bullseye',
+                'valueClass' => 'text-emerald-500',
+                'iconClass' => 'bg-emerald-50 text-emerald-500',
+                'borderClass' => 'border-slate-100',
+            ],
+            [
+                'label' => 'Évaluations DG',
+                'value' => $nbEvaluationsDG ?? 0,
+                'meta' => 'Total évaluations reçues',
+                'icon' => 'fas fa-clipboard-check',
+                'valueClass' => 'text-blue-500',
+                'iconClass' => 'bg-blue-50 text-blue-500',
+                'borderClass' => 'border-slate-100',
+            ],
+            [
+                'label' => 'Fiches en attente',
+                'value' => $nbFichesObjectifsAttente ?? 0,
+                'meta' => 'En attente de validation',
+                'icon' => 'fas fa-hourglass-half',
+                'valueClass' => 'text-amber-500',
+                'iconClass' => 'bg-amber-50 text-amber-500',
+                'borderClass' => 'border-slate-100',
+            ],
+            [
+                'label' => 'Fiches acceptées',
+                'value' => $nbFichesObjectifsAcceptees ?? 0,
+                'meta' => 'Validées par le DG',
+                'icon' => 'fas fa-check-circle',
+                'valueClass' => 'text-emerald-700',
+                'iconClass' => 'bg-emerald-100 text-emerald-700',
+                'borderClass' => 'border-emerald-100',
+            ],
         ];
     @endphp
 
 
     <div class="relative z-10 -mt-8 bg-[linear-gradient(180deg,#f6f9ff_0%,#fbfdff_100%)] px-4 pb-6 pt-0 lg:px-8">
-        <div class="mb-4">
-            <button onclick="history.back()" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm"><i class="fas fa-arrow-left"></i><span>Retour</span></button>
-        </div>
         <div class="mx-auto max-w-[1500px] space-y-4">
             <section class="rounded-[26px] border border-white bg-white/90 px-5 py-4 shadow-[0_18px_60px_-35px_rgba(148,163,184,0.6)] backdrop-blur">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div>
                         <p class="text-base font-black text-emerald-700">Tableau de bord</p>
                         <div class="mt-1 flex flex-wrap items-center gap-3">
-                            <h1 class="text-3xl font-black tracking-tight text-slate-900">Pilotage administratif de {{ $entite->nom }}</h1>
+                            <h1 class="text-3xl font-black tracking-tight text-slate-900">Pilotage administratif du Directeur Général</h1>
                         </div>
-                        <p class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Synthese du {{ now()->translatedFormat('d F Y') }}</p>
+                        <p class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Synthèse du {{ now()->translatedFormat('d F Y') }}</p>
                     </div>
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
-                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Objectifs entité</p>
-                            <p class="mt-1 text-xl font-black text-slate-900">{{ $objectifsEntiteCount }}</p>
-                        </div>
-                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Objectifs directeurs</p>
-                            <p class="mt-1 text-xl font-black text-slate-900">{{ $objectifsDirecteursCount }}</p>
-                        </div>
-                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Évaluations entité</p>
-                            <p class="mt-1 text-xl font-black text-slate-900">{{ $evaluationsEntiteCount }}</p>
-                        </div>
-                        <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Évaluations directeurs</p>
-                            <p class="mt-1 text-xl font-black text-slate-900">{{ $evaluationsDirecteursCount }}</p>
-                        </div>
+                        @foreach ($overviewCards as $card)
+                            <div class="rounded-2xl bg-slate-50 px-4 py-3 border {{ $card['borderClass'] }}">
+                                <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{{ $card['label'] }}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="mt-1 text-xl font-black {{ $card['valueClass'] }}">{{ $card['value'] }}</span>
+                                    <span class="flex h-7 w-7 items-center justify-center rounded-xl {{ $card['iconClass'] }}"><i class="{{ $card['icon'] }} text-base"></i></span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-[11px] font-bold text-slate-400">{{ $card['meta'] }}</p>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             </section>
@@ -59,56 +77,88 @@
                 </div>
             @endif
 
-            <!-- Les autres sections du dashboard PCA suivent, à harmoniser de la même façon si besoin -->
 
-            <section class="clone-grid">
-                <article class="clone-spot" style="--neo-progress: {{ $progressRate }};">
-                    <p class="clone-spot__title">Taux de suivi</p>
-                    <div class="clone-spot__gauge">{{ $progressRate }}%</div>
-                    <p class="clone-spot__value">{{ number_format($pcaTotal, 0, ',', ' ') }}</p>
-                    <p class="clone-spot__sub">Elements suivis</p>
-                </article>
+            <!-- Charts Row (graphiques) -->
+            <section class="grid grid-cols-1 gap-4 lg:grid-cols-3 mt-8">
+                <!-- Donut: Statut des fiches d'objectifs DG -->
+                <div class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                    <h2 class="text-base font-black tracking-tight text-slate-900">Statut des fiches d'objectifs DG</h2>
+                    <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Répartition acceptées / en attente / refusées</p>
+                    <div id="chart-fiches-dg" class="mt-2"></div>
+                </div>
+                <!-- Bar: Evolution des évaluations DG -->
+                <div class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                    <h2 class="text-base font-black tracking-tight text-slate-900">Évolution des évaluations DG</h2>
+                    <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Par période</p>
+                    <div id="chart-evaluations-dg" class="mt-2"></div>
+                </div>
+                <!-- Area: Alertes DG -->
+                <div class="rounded-[26px] border border-rose-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                    <h2 class="text-base font-black tracking-tight text-rose-600">Alertes DG</h2>
+                    <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">7 derniers jours</p>
+                    <div id="chart-alertes-dg" class="mt-2"></div>
+                </div>
+            </section>
 
-                <article class="clone-panel">
-                    <div class="clone-panel__head">
-                        <div>
-                            <p class="clone-card__label">Indicateurs</p>
-                            <h2 class="clone-panel__title">Aperçu d'activité PCA</h2>
+            <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(340px,0.9fr)] mt-8">
+                <div class="space-y-4">
+                    <!-- Dernières fiches d'objectifs DG -->
+                    <section class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                        <div class="mb-4 flex items-center justify-between">
+                            <div>
+                                <h2 class="text-xl font-black tracking-tight text-slate-900">Dernières fiches d'objectifs DG</h2>
+                                <p class="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Fiches les plus récentes</p>
+                            </div>
                         </div>
-                        <a href="{{ route('pca.objectifs.index') }}" class="ent-btn ent-btn-soft">Voir</a>
-                    </div>
-                    <div class="clone-bars">
-                        @foreach ($pcaBars as $label => $height)
-                            @php($bucket = max(10, min(100, (int) (ceil($height / 10) * 10))))
-                            <span class="neo-bar--{{ $bucket }}" title="{{ $label }}"></span>
-                        @endforeach
-                    </div>
-                    <div class="clone-legend">
-                        @foreach ($pcaBars as $label => $height)
-                            <span>{{ $label }}</span>
-                        @endforeach
-                    </div>
-                </article>
-            </section>
+                        <ul class="divide-y divide-slate-200">
+                            @forelse($dernieresFichesDG ?? [] as $fiche)
+                                <li class="px-4 py-3 flex items-center justify-between">
+                                    <span>{{ $fiche->titre }} ({{ $fiche->annee }})</span>
+                                    <a href="{{ route('dg.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft">Voir</a>
+                                </li>
+                            @empty
+                                <li class="px-4 py-3 text-slate-400">Aucune fiche récente.</li>
+                            @endforelse
+                        </ul>
+                    </section>
 
-            <section class="clone-history">
-                <p class="clone-card__label">Historique</p>
-                <div class="clone-history__row">
-                    <span>Objectifs</span>
-                    <span>{{ $objectifTotal }}</span>
-                    <span>Évaluations</span>
-                    <span>{{ $evaluationTotal }}</span>
-                    <span class="clone-badge">Validé</span>
+                    <!-- Dernières évaluations DG -->
+                    <section class="rounded-[26px] border border-slate-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                        <div class="mb-4 flex items-center justify-between">
+                            <div>
+                                <h2 class="text-xl font-black tracking-tight text-slate-900">Dernières évaluations DG</h2>
+                                <p class="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Évaluations les plus récentes</p>
+                            </div>
+                        </div>
+                        <ul class="divide-y divide-slate-200">
+                            @forelse($dernieresEvaluationsDG ?? [] as $evaluation)
+                                <li class="px-4 py-3 flex items-center justify-between">
+                                    <span>Période : {{ $evaluation->date_debut->format('m/Y') }} - {{ $evaluation->date_fin->format('m/Y') }}</span>
+                                    <a href="{{ route('dg.evaluations.show', $evaluation) }}" class="ent-btn ent-btn-soft">Voir</a>
+                                </li>
+                            @empty
+                                <li class="px-4 py-3 text-slate-400">Aucune évaluation récente.</li>
+                            @endforelse
+                        </ul>
+                    </section>
                 </div>
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <a href="{{ route('pca.objectifs.create') }}" data-open-create-modal data-modal-title="Nouvel objectif" class="ent-btn ent-btn-primary">Nouvel objectif</a>
-                    <a href="{{ route('pca.evaluations.create') }}" data-open-create-modal data-modal-title="Nouvelle evaluation" class="ent-btn ent-btn-soft">Nouvelle évaluation</a>
-                    <a href="{{ route('pca.settings.edit') }}" class="ent-btn ent-btn-soft">Paramètres</a>
-                </div>
-            </section>
+                <!-- Alertes DG -->
+                <section class="rounded-[26px] border border-rose-100 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+                    <h2 class="text-base font-black tracking-tight text-rose-600">Alertes / Notifications DG</h2>
+                    <ul class="list-disc pl-6 text-slate-700 mt-2">
+                        @forelse($alertesDG ?? [] as $alerte)
+                            <li>{{ $alerte }}</li>
+                        @empty
+                            <li class="text-slate-400">Aucune alerte en cours.</li>
+                        @endforelse
+                    </ul>
+                </section>
+            </div>
 
+            <!-- Optionnel : informations institutionnelles globales -->
+            <!--
             <section class="admin-panel px-6 py-6 lg:px-8">
-                <h2 class="text-base font-semibold text-slate-800 mb-4">Informations de l'entité</h2>
+                <h2 class="text-base font-semibold text-slate-800 mb-4">Informations institutionnelles</h2>
                 <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 text-sm">
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Nom</dt>
@@ -118,6 +168,9 @@
                         <dt class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Ville</dt>
                         <dd class="mt-1 text-slate-900">{{ $entite->ville ?: '—' }}</dd>
                     </div>
+                </dl>
+            </section>
+            -->
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Directeur(trice) General(e)</dt>
                         <dd class="mt-1 text-slate-900">
@@ -155,43 +208,71 @@
                 @endif
             </section>
 
+
             @if ($objectifsPendingCount > 0)
-                <div class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
-                    <strong>{{ $objectifsPendingCount }}</strong> objectif(s) en cours de réalisation pour votre entité ou ses directeurs.
-                    <a href="{{ route('pca.objectifs.index') }}" class="ml-2 underline">Voir les objectifs</a>
+                <div class="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-6 py-5 my-4 shadow-sm">
+                    <div class="flex items-center justify-center h-12 w-12 rounded-xl bg-amber-100 text-amber-500">
+                        <i class="fas fa-hourglass-half text-2xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-base font-bold text-amber-800 mb-1">
+                            {{ $objectifsPendingCount }} objectif(s) en cours de réalisation
+                        </div>
+                        <div class="text-xs text-amber-700 mb-2">
+                            Pour votre entité ou ses directeurs, certains objectifs sont toujours en attente de finalisation.
+                        </div>
+                        <a href="{{ route('pca.objectifs.index') }}" class="inline-block rounded bg-amber-500 px-3 py-1 text-xs font-semibold text-white shadow hover:bg-amber-600 transition">Voir les objectifs</a>
+                    </div>
                 </div>
             @endif
 
-            @if ($recentEvaluations->isNotEmpty())
-                <section class="admin-panel px-6 py-6 lg:px-8">
-                    <h2 class="text-base font-semibold text-slate-800 mb-4">Evaluations recentes</h2>
-                    <ul class="space-y-2">
-                        @foreach ($recentEvaluations as $eval)
-                            <li class="flex items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3 text-sm">
-                                <div>
-                                    <span class="font-medium text-slate-900">
-                                        {{ $eval->evaluable instanceof \App\Models\Entite ? $eval->evaluable->nom : ($eval->evaluable->directeur_nom ?? $eval->evaluable->nom ?? '—') }}
-                                    </span>
-                                    <span class="ml-2 text-slate-500">
-                                        {{ $eval->date_debut->format('d/m/Y') }} – {{ $eval->date_fin->format('d/m/Y') }}
-                                    </span>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-                                        @if ($eval->statut === 'valide') bg-emerald-100 text-emerald-700
-                                        @elseif ($eval->statut === 'soumis') bg-amber-100 text-amber-700
-                                        @else bg-slate-100 text-slate-600 @endif">
-                                        {{ ucfirst($eval->statut) }}
-                                    </span>
-                                    <a href="{{ route('pca.evaluations.show', $eval) }}" class="ent-btn ent-btn-soft text-xs">Voir</a>
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
-                </section>
-            @endif
+
 
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<!-- ApexCharts CDN -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Données dynamiques passées depuis le contrôleur (exemple)
+    const fichesStats = @json($fichesStatsDG);
+    const evalLabels = @json($evaluationsDGLabels ?? ['Jan','Fév','Mar']);
+    const evalData = @json($evaluationsDGData ?? [1,2,1]);
+    const alertesLabels = @json($alertesDGLabels ?? ['2026-04-01','2026-04-02','2026-04-03']);
+    const alertesData = @json($alertesDGData ?? [0,1,0]);
+
+    // Donut Statut fiches DG
+    new ApexCharts(document.querySelector('#chart-fiches-dg'), {
+        chart: { type: 'donut', height: 220 },
+        labels: Object.keys(fichesStats),
+        series: Object.values(fichesStats),
+        colors: ['#10b981', '#f59e42', '#ef4444'],
+        legend: { position: 'bottom' },
+        dataLabels: { enabled: true }
+    }).render();
+
+    // Bar Evolution évaluations DG
+    new ApexCharts(document.querySelector('#chart-evaluations-dg'), {
+        chart: { type: 'bar', height: 220 },
+        series: [{ name: 'Évaluations', data: evalData }],
+        xaxis: { categories: evalLabels },
+        colors: ['#6366f1'],
+        dataLabels: { enabled: false }
+    }).render();
+
+    // Area Alertes DG
+    new ApexCharts(document.querySelector('#chart-alertes-dg'), {
+        chart: { type: 'area', height: 220, sparkline: { enabled: false } },
+        series: [{ name: 'Alertes', data: alertesData }],
+        xaxis: { categories: alertesLabels, labels: { rotate: -45 } },
+        colors: ['#ef4444'],
+        dataLabels: { enabled: false },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.1 } }
+    }).render();
+});
+</script>
+@endpush
 

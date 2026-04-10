@@ -47,30 +47,38 @@
         </div>
 
         <!-- Contenu dynamique Objectifs / Evaluations -->
+
         <div id="objectifsPanel" class="rounded-2xl bg-white p-6 shadow-sm mt-6">
             <h2 class="text-base font-semibold text-slate-800 mb-4">Fiches d'objectifs reçues</h2>
+            <div class="mb-4 flex gap-2">
+                <input type="text" id="searchObjectifInput" placeholder="Rechercher un objectif..." class="ent-input flex-1" autocomplete="off" />
+            </div>
             @if($fiches->isEmpty())
                 <p class="text-slate-500">Aucune fiche d'objectifs trouvée.</p>
             @else
-                <ul class="divide-y divide-slate-200">
+                <ul id="objectifsList" class="divide-y divide-slate-200">
                     @foreach($fiches as $fiche)
-                        <li class="py-2 flex items-center justify-between">
-                            <span>{{ $fiche->titre }} ({{ $fiche->annee }})</span>
+                        <li class="py-2 flex items-center justify-between objectif-item">
+                            <span class="objectif-label">{{ $fiche->titre }} ({{ $fiche->annee }})</span>
                             <a href="{{ route('dg.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft">Voir</a>
                         </li>
                     @endforeach
                 </ul>
             @endif
         </div>
+
         <div id="evaluationsPanel" class="rounded-2xl bg-white p-6 shadow-sm mt-6 hidden">
             <h2 class="text-base font-semibold text-slate-800 mb-4">Évaluations reçues</h2>
+            <div class="mb-4 flex gap-2">
+                <input type="text" id="searchEvaluationInput" placeholder="Rechercher une évaluation..." class="ent-input flex-1" autocomplete="off" />
+            </div>
             @if($evaluations->isEmpty())
                 <p class="text-slate-500">Aucune évaluation trouvée.</p>
             @else
-                <ul class="divide-y divide-slate-200">
+                <ul id="evaluationsList" class="divide-y divide-slate-200">
                     @foreach($evaluations as $evaluation)
-                        <li class="py-2 flex items-center justify-between">
-                            <span>Période : {{ $evaluation->date_debut->format('m/Y') }} - {{ $evaluation->date_fin->format('m/Y') }}</span>
+                        <li class="py-2 flex items-center justify-between evaluation-item">
+                            <span class="evaluation-label">Période : {{ $evaluation->date_debut->format('m/Y') }} - {{ $evaluation->date_fin->format('m/Y') }}</span>
                             <a href="{{ route('dg.evaluations.show', $evaluation) }}" class="ent-btn ent-btn-soft">Voir</a>
                         </li>
                     @endforeach
@@ -91,6 +99,30 @@
                 objectifsPanel.classList.add('hidden');
                 evaluationsPanel.classList.remove('hidden');
             });
+
+            // Recherche instantanée Objectifs
+            const searchObjectifInput = document.getElementById('searchObjectifInput');
+            if (searchObjectifInput) {
+                searchObjectifInput.addEventListener('input', function() {
+                    const filter = this.value.toLowerCase();
+                    document.querySelectorAll('#objectifsList .objectif-item').forEach(function(item) {
+                        const label = item.querySelector('.objectif-label').textContent.toLowerCase();
+                        item.style.display = label.includes(filter) ? '' : 'none';
+                    });
+                });
+            }
+
+            // Recherche instantanée Evaluations
+            const searchEvaluationInput = document.getElementById('searchEvaluationInput');
+            if (searchEvaluationInput) {
+                searchEvaluationInput.addEventListener('input', function() {
+                    const filter = this.value.toLowerCase();
+                    document.querySelectorAll('#evaluationsList .evaluation-item').forEach(function(item) {
+                        const label = item.querySelector('.evaluation-label').textContent.toLowerCase();
+                        item.style.display = label.includes(filter) ? '' : 'none';
+                    });
+                });
+            }
         </script>
     </div>
 </div>

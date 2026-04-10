@@ -183,7 +183,7 @@ class PcaObjectifController extends Controller
         return redirect()->route('pca.objectifs.index')->with('status', 'Fiche supprimee.');
     }
 
-    public function edit(Request $request, $id): View
+    public function edit(Request $request, $id): View|RedirectResponse
     {
         $fiche = FicheObjectif::with('objectifs')->findOrFail($id);
 
