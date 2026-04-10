@@ -51,7 +51,9 @@ class PcaObjectifController extends Controller
 
         $search = trim((string) $request->query('search', ''));
 
-        $fiches = FicheObjectif::query()
+        $baseQuery = FicheObjectif::query()
+            ->with('assignable')
+            ->withCount('objectifs')
             ->where(function ($q) use ($entiteId, $directionIds) {
                 $q->where(function ($sub) use ($directionIds) {
                     $sub->where('assignable_type', Direction::class)
@@ -66,14 +68,27 @@ class PcaObjectifController extends Controller
                     $sub->where('titre', 'like', "%{$search}%")
                         ->orWhere('annee', 'like', "%{$search}%");
                 });
-            })
+            });
+
+        $fiches = (clone $baseQuery)
             ->orderByDesc('date')
             ->paginate(10)
             ->withQueryString();
 
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'acceptees' => (clone $baseQuery)->where('statut', 'acceptee')->count(),
+            'en_attente' => (clone $baseQuery)->where(function ($query) {
+                $query->where('statut', 'en_attente')
+                    ->orWhereNull('statut');
+            })->count(),
+            'refusees' => (clone $baseQuery)->where('statut', 'refusee')->count(),
+        ];
+
         return view('pca.objectifs.index', [
             'fiches' => $fiches,
             'filters' => ['search' => $search],
+            'stats' => $stats,
         ]);
     }
 

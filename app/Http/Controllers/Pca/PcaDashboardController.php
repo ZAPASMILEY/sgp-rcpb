@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Pca;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agent;
 use App\Models\Direction;
 use App\Models\Evaluation;
 use App\Models\Objectif;
+use App\Models\Service;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -32,7 +34,41 @@ class PcaDashboardController extends Controller
             ->where('entite_id', $entiteId)
             ->get();
 
+        $directionsRattacheesCount = $directions->count();
         $directionIds = $directions->pluck('id')->all();
+
+        $servicesRattachesCount = Service::query()
+            ->whereIn('direction_id', $directionIds)
+            ->count();
+
+        $serviceIds = Service::query()
+            ->whereIn('direction_id', $directionIds)
+            ->pluck('id')
+            ->all();
+
+        $agentsRattachesCount = Agent::query()
+            ->whereIn('service_id', $serviceIds)
+            ->count();
+
+        $personnelRattache = collect([
+            [
+                'fonction' => 'Directrice generale',
+                'nom' => trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? '')),
+                'icone' => 'fas fa-user-tie',
+            ],
+            [
+                'fonction' => 'Assistante DG',
+                'nom' => trim(($entite->assistante_dg_prenom ?? '').' '.($entite->assistante_dg_nom ?? '')),
+                'icone' => 'fas fa-user',
+            ],
+            [
+                'fonction' => 'DGA',
+                'nom' => trim(($entite->dga_prenom ?? '').' '.($entite->dga_nom ?? '')),
+                'icone' => 'fas fa-user-shield',
+            ],
+        ])->filter(fn (array $personne): bool => $personne['nom'] !== '')->values();
+
+        $personnelRattacheCount = $personnelRattache->count();
 
         $objectifsEntiteCount = Objectif::query()
             ->where('assignable_type', \App\Models\Entite::class)
@@ -87,6 +123,11 @@ class PcaDashboardController extends Controller
         return view('pca.dashboard', compact(
             'entite',
             'directions',
+            'directionsRattacheesCount',
+            'servicesRattachesCount',
+            'agentsRattachesCount',
+            'personnelRattache',
+            'personnelRattacheCount',
             'objectifsEntiteCount',
             'objectifsDirecteursCount',
             'evaluationsEntiteCount',

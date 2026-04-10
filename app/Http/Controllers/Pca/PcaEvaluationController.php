@@ -33,7 +33,7 @@ class PcaEvaluationController extends Controller
         $statut = trim((string) $request->query('statut', ''));
 
         $dgUser = \App\Models\User::where('role', 'dg')->first();
-        $evaluations = Evaluation::query()
+        $baseQuery = Evaluation::query()
             ->with(['evaluable', 'evaluateur'])
             ->where(function ($query) use ($entiteId, $dgUser) {
                 $query->where(function ($q) use ($entiteId) {
@@ -52,14 +52,24 @@ class PcaEvaluationController extends Controller
                     $q->where('nom', 'like', "%{$search}%")->orWhere('name', 'like', "%{$search}%");
                 });
             })
-            ->when($statut !== '', fn ($query) => $query->where('statut', $statut))
+            ->when($statut !== '', fn ($query) => $query->where('statut', $statut));
+
+        $evaluations = (clone $baseQuery)
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'brouillon' => (clone $baseQuery)->where('statut', 'brouillon')->count(),
+            'soumis' => (clone $baseQuery)->where('statut', 'soumis')->count(),
+            'valide' => (clone $baseQuery)->where('statut', 'valide')->count(),
+        ];
+
         return view('pca.evaluations.index', [
             'evaluations' => $evaluations,
             'filters' => ['search' => $search, 'statut' => $statut],
+            'stats' => $stats,
         ]);
     }
 
