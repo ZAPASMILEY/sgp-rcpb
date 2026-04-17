@@ -11,17 +11,20 @@ use App\Models\FicheObjectif;
 use App\Models\SubjectiveCriteriaTemplate;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class PcaEvaluationController extends Controller
 {
     /** @var array<string, array{class: class-string, role: string}> */
     private const TARGET_MAP = [
-        'user'   => ['class' => User::class, 'role' => 'dg'],
+        'user'   => ['class' => User::class, 'role' => 'DG'],
     ];
 
     public function index(Request $request): View
@@ -32,7 +35,7 @@ class PcaEvaluationController extends Controller
         $search = trim((string) $request->query('search', ''));
         $statut = trim((string) $request->query('statut', ''));
 
-        $dgUser = $this->resolveEntiteDgUser($entiteId);
+        $dgUser = $this->getDGOfDirectionGenerale();
         $baseQuery = Evaluation::query()
             ->with(['evaluable', 'evaluateur'])
             ->where('evaluable_type', User::class)
@@ -63,47 +66,93 @@ class PcaEvaluationController extends Controller
         ]);
     }
 
+
     public function create(Request $request): View
     {
-        $entiteId = $request->user()->pca_entite_id;
-        // On récupère le DG (Directeur Général)
-        $dg = $this->resolveEntiteDgUser((int) $entiteId);
+        $entiteFaitiere = $this->getDirectionGeneraleEntite();
+        $directionGenerale = $this->getDirectionGeneraleDirection();
+        $dg = $this->getDGOfDirectionGenerale();
+
+        if (!$entiteFaitiere) {
+            abort(500, "L'entité faîtière est introuvable. Veuillez vérifier la base de données.");
+        }
+
+        $assignmentOptions = [
+            'user' => $dg ? [['id' => $dg->id, 'label' => $dg->name ?? 'Directeur Général']] : [],
+        ];
 
         return view('pca.evaluations.create', [
             'dg' => $dg,
-            'assignmentOptions' => $this->buildAssignmentOptions($entiteId),
-            'targetProfiles' => $this->buildTargetProfiles($entiteId),
-            'objectiveOptions' => $this->buildObjectiveOptions($entiteId),
+            'entiteFaitiere' => $entiteFaitiere,
+            'directionGenerale' => $directionGenerale,
+            'assignmentOptions' => $assignmentOptions,
+            'targetProfiles' => $this->buildTargetProfiles($entiteFaitiere->id),
+            'objectiveOptions' => $this->buildObjectiveOptions($entiteFaitiere->id),
             'subjectiveTemplates' => $this->buildSubjectiveTemplates(),
         ]);
     }
 
+    private function getDirectionGeneraleEntite(): ?Entite
+    {
+        return Entite::query()->latest()->first();
+    }
+
+    private function getDGOfDirectionGenerale(): ?User
+    {
+        $entite = $this->getDirectionGeneraleEntite();
+        if (!$entite) {
+            return null;
+        }
+        return User::query()
+            ->where('role', 'DG')
+            ->where('pca_entite_id', $entite->id)
+            ->first();
+    }
+
+    private function getDirectionGeneraleDirection(): ?Direction
+    {
+        $entite = $this->getDirectionGeneraleEntite();
+        if (!$entite) {
+            return null;
+        }
+        return Direction::query()
+            ->where('nom', 'Direction Générale')
+            ->where('entite_id', $entite->id)
+            ->first();
+    }
+
     public function store(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        $entiteId = $user->pca_entite_id;
+        $entiteDirectionGenerale = $this->getDirectionGeneraleEntite();
+        $dg = $this->getDGOfDirectionGenerale();
         $entiteId = $request->user()->pca_entite_id;
 
         $validated = $request->validate([
             'evaluable_type' => ['required', 'string', 'in:user'],
-            'evaluable_id' => ['required'],
+            // 'evaluable_id' => ['required'], // plus besoin de valider côté formulaire
+            'date_debut' => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
+            'date_fin' => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'date_debut' => ['required', 'regex:/^(0[1-9]|1[0-2])\/(\d{4})$/'],
             'date_fin' => ['required', 'regex:/^(0[1-9]|1[0-2])\/(\d{4})$/'],
             'identification.nom_prenom' => ['nullable', 'string', 'max:255'],
             'identification.semestre' => ['nullable', 'string', 'max:20'],
-            'identification.date_recrutement' => ['nullable', 'date'],
-            'identification.date_evaluation' => ['nullable', 'date'],
-            'identification.date_titularisation' => ['nullable', 'date'],
+            'identification.date_recrutement' => ['nullable', 'string', 'max:20'],
+            'identification.date_evaluation' => ['nullable', 'string', 'max:20'],
+            'identification.date_titularisation' => ['nullable', 'string', 'max:20'],
             'identification.matricule' => ['nullable', 'string', 'max:255'],
             'identification.poste' => ['nullable', 'string', 'max:255'],
             'identification.emploi' => ['nullable', 'string', 'max:255'],
             'identification.niveau' => ['nullable', 'string', 'max:255'],
-            'identification.date_naissance' => ['nullable', 'date'],
+            'identification.date_naissance' => ['nullable', 'string', 'max:20'],
             'identification.direction' => ['nullable', 'string', 'max:255'],
             'identification.direction_service' => ['nullable', 'string', 'max:255'],
-            'identification.date_confirmation' => ['nullable', 'date'],
+            'identification.date_confirmation' => ['nullable', 'string', 'max:20'],
             'identification.categorie' => ['nullable', 'string', 'max:255'],
             'identification.anciennete' => ['nullable', 'string', 'max:255'],
             'identification.sexe' => ['nullable', 'string', 'max:1'],
-            'identification.date_affectation' => ['nullable', 'date'],
+            'identification.date_affectation' => ['nullable', 'string', 'max:20'],
             'identification.formations' => ['nullable', 'array'],
             'identification.formations.*.periode' => ['nullable', 'string', 'max:255'],
             'identification.formations.*.libelle' => ['nullable', 'string', 'max:255'],
@@ -141,15 +190,18 @@ class PcaEvaluationController extends Controller
             ]);
         }
 
+        $validated = $this->normalizePayloadDateFields($validated);
+
         $targetConfig = self::TARGET_MAP[$validated['evaluable_type']];
-        $targetId = (int) $validated['evaluable_id'];
+        $targetId = $dg?->id;
         $this->authorizeTarget($validated['evaluable_type'], $targetId, $entiteId);
 
         $normalizedSubjective = $this->normalizeCriteria(
             (array) $request->input('subjective_criteres', []),
             'subjectif',
             1,
-            5
+            5,
+            false
         );
         $normalizedObjective = $this->normalizeCriteria(
             (array) $request->input('objective_criteres', []),
@@ -246,6 +298,10 @@ class PcaEvaluationController extends Controller
         return redirect()->route('pca.evaluations.show', $evaluation)
             ->with('status', 'Evaluation creee avec succes.');
     }
+    /**
+     * Retourne le DG rattaché à l'entité Direction Générale
+     */
+
 
     public function show(Request $request, Evaluation $evaluation): View
     {
@@ -354,10 +410,10 @@ class PcaEvaluationController extends Controller
         // Autoriser le PCA de l'entité
         // Autoriser le DG à voir ses propres évaluations
         if ($evaluation->evaluable_type === User::class) {
-            $dgUser = $this->resolveEntiteDgUser($entiteId);
+            $dgUser = $this->getDGOfDirectionGenerale();
             if ($dgUser && (int) $evaluation->evaluable_id === $dgUser->id) {
                 // Si l'utilisateur connecté est le DG, il peut voir
-                if (auth()->check() && auth()->user()->id === $dgUser->id) {
+                if (Auth::check() && Auth::user()->id === $dgUser->id) {
                     $allowed = true;
                 }
                 // Ou si c'est le PCA de l'entité
@@ -375,43 +431,29 @@ class PcaEvaluationController extends Controller
     {
         if ($targetType === 'user') {
             // Only allow the DG user of the Faîtière (main entity)
-            $dgUser = $this->resolveEntiteDgUser($entiteId);
+            $dgUser = $this->getDGOfDirectionGenerale();
             if (!$dgUser || $targetId !== $dgUser->id) {
                 abort(403);
             }
-            return;
         }
-        abort(403);
     }
 
-    /** @return array<string, array<int, array{id:int,label:string}>> */
-    private function buildAssignmentOptions(int $entiteId): array
-    {
-        $entite = Entite::query()->findOrFail($entiteId);
-        $dgUser = $this->resolveEntiteDgUser($entiteId);
-        $dgNom = $dgUser ? $dgUser->name : trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? ''));
-
-        return [
-            'user' => $dgUser ? [[
-                'id' => $dgUser->id,
-                'label' => $dgUser->name.' (Directeur Général)',
-            ]] : [],
-        ];
-    }
-
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     private function buildTargetProfiles(int $entiteId): array
     {
         $profiles = [];
-        $entite = Entite::query()->findOrFail($entiteId);
-        $dgUser = $this->resolveEntiteDgUser($entiteId);
+        $entite     = Entite::query()->findOrFail($entiteId);
+        $direction  = $this->getDirectionGeneraleDirection();
+        $dgUser     = $this->getDGOfDirectionGenerale();
         if ($dgUser) {
             $profiles['user:'.$dgUser->id] = [
                 'nom_prenom' => $dgUser->name,
                 'poste' => 'Directeur Général',
                 'emploi' => 'Directeur Général',
                 'direction' => $entite->nom,
-                'direction_service' => $entite->nom,
+                'direction_service' => $direction?->nom ?? 'Direction Générale',
                 'categorie' => 'Direction générale',
                 'sexe' => null,
                 'niveau' => null,
@@ -491,7 +533,7 @@ class PcaEvaluationController extends Controller
         }
 
         // Fiches pour le DG (user)
-        $dgUser = $this->resolveEntiteDgUser($entiteId);
+        $dgUser = $this->getDGOfDirectionGenerale();
         if ($dgUser) {
             $fichesDG = FicheObjectif::query()
                 ->with('objectifs')
@@ -543,9 +585,11 @@ class PcaEvaluationController extends Controller
 
     /**
      * @param array<int, mixed> $criteria
+     * @param bool $strict  When false (subjective mode): empty sub-libelles become '-'
+     *                      and criteria with no subcriteria keep a default placeholder row.
      * @return array<int, array<string, mixed>>
      */
-    private function normalizeCriteria(array $criteria, string $type, int $minNote, int $maxNote): array
+    private function normalizeCriteria(array $criteria, string $type, int $minNote, int $maxNote, bool $strict = true): array
     {
         $normalized = [];
 
@@ -555,6 +599,12 @@ class PcaEvaluationController extends Controller
             }
 
             $title = trim((string) ($criterion['titre'] ?? ''));
+
+            // A criterion with no title is always dropped, regardless of mode.
+            if ($title === '') {
+                continue;
+            }
+
             $subcriteria = [];
 
             foreach (array_values((array) ($criterion['subcriteria'] ?? [])) as $subIndex => $subcriterion) {
@@ -563,36 +613,54 @@ class PcaEvaluationController extends Controller
                 }
 
                 $label = trim((string) ($subcriterion['libelle'] ?? ''));
+
                 if ($label === '') {
-                    continue;
+                    if ($strict) {
+                        // Strict mode: drop subcriteria with empty label.
+                        continue;
+                    }
+                    // Non-strict (subjective): keep with a placeholder label.
+                    $label = '-';
                 }
 
-                $note = (float) ($subcriterion['note'] ?? 0);
+                $note = (float) ($subcriterion['note'] ?? $minNote);
                 $note = max($minNote, min($maxNote, $note));
 
                 $subcriteria[] = [
-                    'ordre' => $subIndex + 1,
-                    'libelle' => $label,
-                    'note' => $note,
+                    'ordre'       => $subIndex + 1,
+                    'libelle'     => $label,
+                    'note'        => $note,
                     'observation' => filled($subcriterion['observation'] ?? null) ? trim((string) $subcriterion['observation']) : null,
                 ];
             }
 
-            if ($title === '' || $subcriteria === []) {
+            if ($strict && $subcriteria === []) {
+                // Strict mode: drop criterion that ended up with no subcriteria.
                 continue;
+            }
+
+            // Non-strict: if still empty (e.g. form sent no subcriteria array at all),
+            // add a single placeholder so the criterion is always persisted.
+            if (! $strict && $subcriteria === []) {
+                $subcriteria = [[
+                    'ordre'       => 1,
+                    'libelle'     => '-',
+                    'note'        => $minNote,
+                    'observation' => null,
+                ]];
             }
 
             $noteGlobale = round(collect($subcriteria)->avg('note') ?? 0, 2);
 
             $normalized[] = [
-                'type' => $type,
-                'ordre' => $criterionIndex + 1,
-                'titre' => $title,
+                'type'        => $type,
+                'ordre'       => $criterionIndex + 1,
+                'titre'       => $title,
                 'description' => filled($criterion['description'] ?? null) ? trim((string) $criterion['description']) : null,
-                'note_globale' => $noteGlobale,
-                'observation' => filled($criterion['observation'] ?? null) ? trim((string) $criterion['observation']) : null,
-                'source_template_id' => isset($criterion['source_template_id']) ? (int) $criterion['source_template_id'] : null,
-                'source_fiche_objectif_id' => isset($criterion['source_fiche_objectif_id']) ? (int) $criterion['source_fiche_objectif_id'] : null,
+                'note_globale'                    => $noteGlobale,
+                'observation'                     => filled($criterion['observation'] ?? null) ? trim((string) $criterion['observation']) : null,
+                'source_template_id'              => isset($criterion['source_template_id']) ? (int) $criterion['source_template_id'] : null,
+                'source_fiche_objectif_id'        => isset($criterion['source_fiche_objectif_id']) ? (int) $criterion['source_fiche_objectif_id'] : null,
                 'source_fiche_objectif_objectif_id' => isset($criterion['source_fiche_objectif_objectif_id']) ? (int) $criterion['source_fiche_objectif_objectif_id'] : null,
                 'subcriteria' => $subcriteria,
             ];
@@ -621,6 +689,72 @@ class PcaEvaluationController extends Controller
             'note_criteres_objectifs' => $noteCriteresObjectifs,
             'note_finale' => $noteFinale,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $validated
+     * @return array<string, mixed>
+     */
+    private function normalizePayloadDateFields(array $validated): array
+    {
+        $errors = [];
+
+        foreach ([
+            'identification.date_recrutement',
+            'identification.date_evaluation',
+            'identification.date_titularisation',
+            'identification.date_naissance',
+            'identification.date_confirmation',
+            'identification.date_affectation',
+            'date_signature_evalue',
+            'date_signature_directeur',
+            'date_signature_evaluateur',
+        ] as $path) {
+            $rawValue = data_get($validated, $path);
+
+            if (blank($rawValue)) {
+                data_set($validated, $path, null);
+                continue;
+            }
+
+            $normalized = $this->normalizeDateValue($rawValue);
+
+            if ($normalized === null) {
+                $errors[$path] = 'Format de date invalide. Utilisez JJ/MM/AAAA ou AAAA-MM-JJ.';
+                continue;
+            }
+
+            data_set($validated, $path, $normalized);
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        return $validated;
+    }
+
+    private function normalizeDateValue(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        foreach (['Y-m-d', 'd/m/Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            if ($date !== false && $date->format($format) === $value) {
+                return $date->toDateString();
+            }
+        }
+
+        return null;
     }
 
     private function mentionFromScore(float $score): string
@@ -678,19 +812,5 @@ class PcaEvaluationController extends Controller
         };
     }
 
-    private function resolveEntiteDgUser(int $entiteId): ?User
-    {
-        $entite = Entite::query()->find($entiteId);
 
-        return User::query()
-            ->where('role', 'dg')
-            ->where(function ($query) use ($entiteId, $entite): void {
-                $query->where('pca_entite_id', $entiteId);
-
-                if ($entite?->directrice_generale_email) {
-                    $query->orWhere('email', $entite->directrice_generale_email);
-                }
-            })
-            ->first();
-    }
 }

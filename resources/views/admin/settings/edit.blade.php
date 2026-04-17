@@ -289,25 +289,35 @@
     </div>
 </div>
 
-{{-- MODALE : SUPPRESSION COMPTE --}}
+{{-- MODALE : SUPPRIMER MON COMPTE --}}
 <div id="delete-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('delete-modal').classList.add('hidden')"></div>
-    <div class="relative w-full max-w-md rounded-[28px] border border-white/70 bg-white p-8 text-center shadow-2xl">
-        <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-500 shadow-sm">
-            <i class="fas fa-user-times text-2xl"></i>
-        </div>
-        <h3 class="text-xl font-black tracking-tight text-slate-800">Supprimer l'acces ?</h3>
-        <p class="mt-2 text-sm text-slate-400">Confirmez votre identite pour proceder a la suppression definitive.</p>
+    <div class="relative w-full max-w-md rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+        <button type="button" onclick="document.getElementById('delete-modal').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
+            <i class="fas fa-times"></i>
+        </button>
 
-        <form method="POST" action="{{ route('admin.settings.account.destroy') }}" class="mt-6 space-y-4">
+        <div class="mb-6">
+            <p class="text-xs font-black uppercase tracking-[0.25em] text-rose-500">Zone de danger</p>
+            <h2 class="mt-2 text-xl font-black tracking-tight text-slate-900">Supprimer mon compte</h2>
+            <p class="mt-1 text-xs text-slate-400">Cette action est irreversible. Confirmez avec votre mot de passe.</p>
+        </div>
+
+        <form method="POST" action="{{ route('admin.settings.account.destroy') }}" class="space-y-4">
             @csrf @method('DELETE')
-            <input name="delete_password" type="password" placeholder="Saisir votre mot de passe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm text-slate-700 shadow-sm focus:border-rose-400 focus:ring-rose-400">
-            <div class="flex gap-3">
-                <button type="button" onclick="document.getElementById('delete-modal').classList.add('hidden')" class="flex-1 rounded-2xl border border-slate-200 bg-white py-3 text-xs font-black uppercase tracking-wider text-slate-500 transition hover:bg-slate-50">
-                    Annuler
+            <div>
+                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Mot de passe de confirmation <span class="text-rose-500">*</span></label>
+                <input name="delete_password" type="password" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-rose-400 focus:ring-rose-400">
+                @error('delete_password')
+                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                @enderror
+            </div>
+            <div class="flex items-center gap-4 pt-2">
+                <button type="submit" class="inline-flex h-11 items-center gap-3 rounded-2xl bg-rose-600 px-8 text-sm font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-rose-700">
+                    <i class="fas fa-trash-alt"></i> Supprimer
                 </button>
-                <button type="submit" class="flex-1 rounded-2xl bg-rose-500 py-3 text-xs font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-rose-600">
-                    Confirmer
+                <button type="button" onclick="document.getElementById('delete-modal').classList.add('hidden')" class="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
+                    Annuler
                 </button>
             </div>
         </form>
@@ -385,16 +395,23 @@
                 <div>
                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Rôle <span class="text-amber-500">*</span></label>
                     <select name="role" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-amber-400 focus:ring-amber-400">
-                        <option value="agent">Agent</option>
-                        <option value="chef">Chef</option>
-                        <option value="directeur">Directeur</option>
-                        <option value="dg">DG</option>
-                        <option value="directeur_adjoint">Directeur Adjoint</option>
-                        <option value="assistant">Assistant</option>
-                        <option value="secretaire">Secrétaire</option>
+                        <option value="PCA">PCA</option>
+                        <option value="DG">DG</option>
+                        <option value="Assistante_Dg">Assistante DG</option>
+                        <option value="DGA">DGA</option>
+                        <option value="Secretaire_assistante">Secrétaire Assistante</option>
+                        <option value="Secretaire_Direction">Secrétaire Direction</option>
+                        <option value="Secretaire_Technique">Secrétaire Technique</option>
+                        <option value="Secretaire_Caisse">Secrétaire Caisse</option>
+                        <option value="Secretaire_Agence">Secrétaire Agence</option>
+                        <option value="Conseillers_Dg">Conseillers DG</option>
+                        <option value="Directeur_Direction">Directeur Direction</option>
+                        <option value="Directeur_Caisse">Directeur Caisse</option>
+                        <option value="Directeur_Tehnique">Directeur Technique</option>
+                        <option value="Chefs de service">Chefs de service</option>
+                        <option value="chef d'agence">Chef d'agence</option>
+                        <option value="Agent">Agent</option>
                         <option value="admin">Administrateur</option>
-                        <option value="pca">PCA</option>
-                        <option value="rh">RH</option>
                     </select>
                 </div>
                 <div class="flex items-center gap-4 pt-2">
@@ -418,10 +435,18 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('[DEBUG] Script paramètres chargé');
     const setupModal = (modalId, openBtnId) => {
         const modal = document.getElementById(modalId);
         const openBtn = document.getElementById(openBtnId);
-        openBtn?.addEventListener('click', () => modal?.classList.remove('hidden'));
+        if (!openBtn) {
+            console.warn('[DEBUG] Bouton non trouvé :', openBtnId);
+        } else {
+            openBtn.addEventListener('click', () => {
+                console.log('[DEBUG] Clic sur', openBtnId);
+                modal?.classList.remove('hidden');
+            });
+        }
     };
     setupModal('password-modal', 'open-password-modal');
     setupModal('delete-modal', 'open-delete-modal');

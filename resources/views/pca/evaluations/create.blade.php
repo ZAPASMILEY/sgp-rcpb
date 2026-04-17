@@ -3,20 +3,25 @@
 @section('title', 'Nouvelle evaluation | '.config('app.name', 'SGP-RCPB'))
 
 @php
-    $displayYear = now()->year;
-    if (old('identification.date_evaluation')) {
-        try {
-            $displayYear = \Carbon\Carbon::parse(old('identification.date_evaluation'))->year;
-        } catch (\Throwable $e) {
-            $displayYear = now()->year;
+    $extractYear = static function (?string $value, string $format): ?int {
+        if (! filled($value)) {
+            return null;
         }
-    } elseif (old('date_debut')) {
+
         try {
-            $displayYear = \Carbon\Carbon::parse(old('date_debut'))->year;
+            return match ($format) {
+                'd/m/Y' => \Carbon\Carbon::createFromFormat('d/m/Y', $value)->year,
+                'm/Y' => (int) substr($value, -4),
+                default => \Carbon\Carbon::parse($value)->year,
+            };
         } catch (\Throwable $e) {
-            $displayYear = now()->year;
+            return null;
         }
-    }
+    };
+
+    $displayYear = $extractYear(old('identification.date_evaluation'), 'd/m/Y')
+        ?? $extractYear(old('date_debut'), 'm/Y')
+        ?? now()->year;
 @endphp
 
 @section('content')
@@ -58,10 +63,9 @@
                                 </select>
                             </div>
                             <div class="space-y-2">
-                                <label for="evaluable_id" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Cible</label>
-                                <select id="evaluable_id" name="evaluable_id" class="ent-select" required data-previous-target="{{ old('evaluable_id') }}">
-                                    <option value="">Selectionner d'abord un type</option>
-                                </select>
+                                <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Cible</label>
+                                <input type="hidden" id="evaluable_id" name="evaluable_id" value="{{ $dg?->id }}" data-previous-target="">
+                                <input type="text" class="ent-input bg-slate-50 text-slate-600" value="{{ $dg?->name ?? 'Aucun DG trouvé' }}" readonly>
                             </div>
                         </div>
 

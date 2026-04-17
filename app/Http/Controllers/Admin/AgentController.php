@@ -99,11 +99,17 @@ class AgentController extends Controller
 
         $validated['photo_path'] = $this->storeSelectedPhoto($request);
 
+        // Attribution automatique du rôle selon la fonction
+        $role = match (strtolower($validated['fonction'] ?? '')) {
+            'chef de service', 'chefs de service' => 'Chefs de service',
+            'chef d\'agence' => "chef d'agence",
+            default => 'Agent',
+        };
         $user = User::create([
             'name'     => $validated['prenom'].' '.$validated['nom'],
             'email'    => $validated['email'],
             'password' => Hash::make($plainPassword),
-            'role'     => 'agent',
+            'role'     => $role,
         ]);
 
         $validated['user_id'] = $user->id;

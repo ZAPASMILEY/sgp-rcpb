@@ -54,6 +54,21 @@
                 <label for="chef_telephone" class="text-xs font-bold text-slate-400 ml-1">Numero de telephone</label>
                 <input id="chef_telephone" name="chef_telephone" type="text" value="{{ old('chef_telephone') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="Ex: +226 70 00 00 00">
             </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label for="chef_sexe" class="text-xs font-bold text-slate-400 ml-1">Sexe du chef de service</label>
+                    <select id="chef_sexe" name="chef_sexe" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
+                        <option value="">Choisir</option>
+                        <option value="Homme" @selected(old('chef_sexe') === 'Homme')>Homme</option>
+                        <option value="Femme" @selected(old('chef_sexe') === 'Femme')>Femme</option>
+                        <option value="Autres" @selected(old('chef_sexe') === 'Autres')>Autres</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label for="chef_date_debut_mois" class="text-xs font-bold text-slate-400 ml-1">Date de prise de fonction</label>
+                    <input id="chef_date_debut_mois" name="chef_date_debut_mois" type="month" value="{{ old('chef_date_debut_mois') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500">
+                </div>
+            </div>
             <div class="bg-cyan-50 rounded-2xl p-4 flex items-center gap-3">
                 <div class="h-6 w-6 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[10px] font-black">i</div>
                 <p class="text-[10px] font-black text-cyan-700 uppercase tracking-tight">L'email du chef servira d'identifiant de connexion</p>

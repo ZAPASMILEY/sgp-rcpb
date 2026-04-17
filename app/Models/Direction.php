@@ -26,11 +26,15 @@ class Direction extends Model
         'directeur_email',
         'directeur_numero',
         'directeur_region',
+        'directeur_sexe',
+        'directeur_date_prise_fonction',
         'secretaire_user_id',
         'secretaire_prenom',
         'secretaire_nom',
         'secretaire_email',
         'secretaire_telephone',
+        'secretaire_sexe',
+        'secretaire_date_prise_fonction',
         'secretariat_telephone',
     ];
 

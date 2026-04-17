@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Direction;
 
 class Caisse extends Model
 {
@@ -33,6 +34,7 @@ class Caisse extends Model
         'secretaire_email',
         'secretaire_telephone',
         'secretaire_date_debut_mois',
+        'superviseur_direction_id',
     ];
 
     public function delegationTechnique(): BelongsTo
@@ -43,6 +45,11 @@ class Caisse extends Model
     public function ville(): BelongsTo
     {
         return $this->belongsTo(Ville::class);
+    }
+
+    public function superviseurDirection(): BelongsTo
+    {
+        return $this->belongsTo(Direction::class, 'superviseur_direction_id');
     }
 
     public function agences(): HasMany

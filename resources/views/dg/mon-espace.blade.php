@@ -58,9 +58,36 @@
             @else
                 <ul id="objectifsList" class="divide-y divide-slate-200">
                     @foreach($fiches as $fiche)
-                        <li class="py-2 flex items-center justify-between objectif-item">
-                            <span class="objectif-label">{{ $fiche->titre }} ({{ $fiche->annee }})</span>
-                            <a href="{{ route('dg.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft">Voir</a>
+                        @php
+                            $fStatut = $fiche->statut ?? 'en_attente';
+                            $fBadge  = match($fStatut) {
+                                'acceptee'  => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                                'refusee'   => 'border-rose-200 bg-rose-50 text-rose-700',
+                                default     => 'border-amber-200 bg-amber-50 text-amber-700',
+                            };
+                            $fLabel  = match($fStatut) {
+                                'acceptee'  => 'Acceptée',
+                                'refusee'   => 'Refusée',
+                                default     => 'En attente',
+                            };
+                        @endphp
+                        <li class="py-3 flex items-center justify-between objectif-item gap-3">
+                            <div class="flex min-w-0 flex-1 items-center gap-3">
+                                <span class="objectif-label truncate font-semibold text-slate-800">{{ $fiche->titre }} ({{ $fiche->annee }})</span>
+                                <span class="shrink-0 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold {{ $fBadge }}">
+                                    {{ $fLabel }}
+                                </span>
+                            </div>
+                            <div class="flex shrink-0 gap-2">
+                                <a href="{{ route('dg.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft">Voir</a>
+                                <form action="{{ route('dg.objectifs.destroy', $fiche) }}" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette fiche d\'objectifs ? Cette action est irréversible.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="ent-btn ent-btn-danger">
+                                        <i class="fas fa-trash-alt"></i> Supprimer
+                                    </button>
+                                </form>
+                            </div>
                         </li>
                     @endforeach
                 </ul>

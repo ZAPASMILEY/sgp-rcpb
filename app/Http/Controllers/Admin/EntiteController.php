@@ -24,6 +24,13 @@ use Illuminate\Validation\Rule;
 class EntiteController extends Controller
 {
     /**
+     * Affiche le formulaire de création d'une faitière.
+     */
+    public function create(): View
+    {
+        return view('admin.entites.create');
+    }
+    /**
      * Enregistre un secretaire depuis la modale de la Faitiere.
      */
     public function storeSecretaire(Request $request): RedirectResponse
@@ -41,7 +48,7 @@ class EntiteController extends Controller
             'name' => $validated['prenom'].' '.$validated['nom'],
             'email' => $validated['email'],
             'password' => Hash::make($password),
-            'role' => 'secretaire',
+            'role' => 'Secretaire_Direction',
         ]);
 
         $direction = Direction::find($validated['direction_id']);
@@ -206,11 +213,17 @@ class EntiteController extends Controller
 
         $plainPassword = Str::random(12);
 
+        // Attribution automatique du rôle selon la fonction
+        $role = match (strtolower($validated['fonction'])) {
+            'chef de service', 'chefs de service' => 'Chefs de service',
+            'chef d\'agence' => "chef d'agence",
+            default => 'Agent',
+        };
         $user = User::create([
             'name'     => $validated['prenom'] . ' ' . $validated['nom'],
             'email'    => $validated['email'],
             'password' => Hash::make($plainPassword),
-            'role'     => 'agent',
+            'role'     => $role,
         ]);
 
         $validated['user_id'] = $user->id;
@@ -444,11 +457,12 @@ class EntiteController extends Controller
 
         $validated = $request->validate([
             'nom' => ['required', 'string', 'max:255', Rule::unique('directions')->where('entite_id', $entite->id)],
-            'directeur_prenom' => 'required|string|max:255',
-            'directeur_nom' => 'required|string|max:255',
-            'directeur_email' => 'required|email|unique:users,email',
-            'directeur_numero' => 'nullable|string',
-            'date_prise_fonction' => 'required|date',
+            'directeur_prenom'              => 'required|string|max:255',
+            'directeur_nom'                 => 'required|string|max:255',
+            'directeur_email'               => 'required|email|unique:users,email',
+            'directeur_numero'              => 'nullable|string',
+            'directeur_sexe'                => 'required|in:Homme,Femme,Autres',
+            'directeur_date_prise_fonction' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
         ]);
 
         $password = Str::random(12);
@@ -456,17 +470,17 @@ class EntiteController extends Controller
 
         DB::transaction(function () use ($validated, $entite, $name, $password) {
             $user = User::create([
-                'name' => $name,
-                'email' => $validated['directeur_email'],
-                'password' => Hash::make($password),
-                'role' => 'directeur',
-                'date_prise_fonction' => $validated['date_prise_fonction'],
+                'name'                => $name,
+                'email'               => $validated['directeur_email'],
+                'password'            => Hash::make($password),
+                'role'                => 'Directeur_Direction',
+                'sexe'                => $validated['directeur_sexe'],
+                'date_prise_fonction' => $validated['directeur_date_prise_fonction'],
             ]);
 
             Direction::create(array_merge($validated, [
-                'user_id' => $user->id,
+                'user_id'   => $user->id,
                 'entite_id' => $entite->id,
-                'date_prise_fonction' => $validated['date_prise_fonction'],
             ]));
         });
 
@@ -481,32 +495,49 @@ class EntiteController extends Controller
             return redirect()->route('admin.entites.index');
         }
 
-        $validated = $this->validateEntite($request);
-        $validated = $this->storeEntitePhotos($request, $validated);
+        $validated = $request->validate([
+            'ville'                    => ['required', 'string', 'max:255'],
+            'region'                   => ['required', 'string', 'max:255'],
+            'secretariat_telephone'    => ['required', 'string', 'max:30'],
+            'pca_prenom'               => ['required', 'string', 'max:255'],
+            'pca_nom'                  => ['required', 'string', 'max:255'],
+            'pca_email'                => ['required', 'email', Rule::unique('users', 'email')],
+            'pca_sexe'                 => ['required', 'in:Homme,Femme,Autres'],
+            'pca_date_prise_fonction'  => ['required', 'date_format:Y-m'],
+            'pca_photo'                => ['nullable', 'image', 'max:2048'],
+        ]);
+
+        if ($request->hasFile('pca_photo')) {
+            $validated['pca_photo_path'] = $request->file('pca_photo')->store('entites', 'public');
+        }
+        unset($validated['pca_photo']);
 
         DB::transaction(function () use ($validated) {
-            $entite = Entite::create($validated);
+            $entite = Entite::create(array_merge($validated, ['nom' => 'Faitiere']));
 
-            $personnels = [
-                ['prenom' => 'directrice_generale_prenom', 'nom' => 'directrice_generale_nom', 'email' => 'directrice_generale_email', 'role' => 'directeur'],
-                ['prenom' => 'dga_prenom', 'nom' => 'dga_nom', 'email' => 'dga_email', 'role' => 'directeur_adjoint'],
-                ['prenom' => 'assistante_dg_prenom', 'nom' => 'assistante_dg_nom', 'email' => 'assistante_dg_email', 'role' => 'assistant'],
-                ['prenom' => 'pca_prenom', 'nom' => 'pca_nom', 'email' => 'pca_email', 'role' => 'pca'],
-            ];
+            $password = Str::random(12);
+            User::create([
+                'name'                => $validated['pca_prenom'].' '.$validated['pca_nom'],
+                'email'               => $validated['pca_email'],
+                'password'            => Hash::make($password),
+                'role'                => 'PCA',
+                'pca_entite_id'       => $entite->id,
+                'sexe'                => $validated['pca_sexe'],
+                'date_prise_fonction' => $validated['pca_date_prise_fonction'],
+            ]);
 
-            foreach ($personnels as $p) {
-                $acc = $this->createPersonnelAccount(
-                    $validated[$p['prenom']].' '.$validated[$p['nom']],
-                    $validated[$p['email']],
-                    $p['role'],
-                    $p['role'] === 'pca' ? ['pca_entite_id' => $entite->id] : []
-                );
-
-                Mail::to($acc['email'])->send(new WelcomeMail($acc['name'], $acc['email'], $acc['plain_password'], $acc['role'], url('/login')));
-            }
+            Mail::to($validated['pca_email'])->send(new WelcomeMail(
+                $validated['pca_prenom'].' '.$validated['pca_nom'],
+                $validated['pca_email'],
+                $password,
+                'PCA',
+                url('/login')
+            ));
         });
 
-        return redirect()->route('admin.entites.index')->with('status', 'Faitiere configuree.');
+        return redirect()
+            ->route('admin.direction-generale.create')
+            ->with('status', 'Faitiere configuree. Configurez maintenant la Direction Generale.');
     }
 
     public function reset(): RedirectResponse
@@ -594,12 +625,39 @@ class EntiteController extends Controller
     {
         $password = Str::random(12);
 
+        // Attribution automatique du rôle pour tout le personnel
+        $roleAuto = match (strtolower($role)) {
+            'dg' => 'DG',
+            'dga' => 'DGA',
+            'assistante_dg' => 'Assistante_Dg',
+            'pca' => 'PCA',
+            'secretaire_direction', 'secretaire' => 'Secretaire_Direction',
+            'secretaire_assistante' => 'Secretaire_assistante',
+            'secretaire_technique' => 'Secretaire_Technique',
+            'secretaire_caisse' => 'Secretaire_Caisse',
+            'secretaire_agence' => 'Secretaire_Agence',
+            'conseillers_dg' => 'Conseillers_Dg',
+            'directeur_direction', 'directeur' => 'Directeur_Direction',
+            'directeur_caisse' => 'Directeur_Caisse',
+            'directeur_tehnique', 'directeur_technique' => 'Directeur_Tehnique',
+            'chefs de service', 'chef de service' => 'Chefs de service',
+            'chef d\'agence' => "chef d'agence",
+            'agent' => 'Agent',
+            default => $role,
+        };
         User::create(array_merge([
             'name' => $name,
             'email' => $email,
             'password' => Hash::make($password),
-            'role' => $role,
+            'role' => $roleAuto,
         ], $extra));
+        
+        return [
+            'name' => $name,
+            'email' => $email,
+            'plain_password' => $password,
+            'role' => $roleAuto,
+        ];
 
         return [
             'name' => $name,

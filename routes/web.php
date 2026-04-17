@@ -39,6 +39,18 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware(['auth', 'admin'])->group(function (): void {
+        // Module Direction Générale
+        Route::get('/admin/direction-generale', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'index'])->name('admin.direction-generale.index');
+        Route::get('/admin/direction-generale/creer', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'create'])->name('admin.direction-generale.create');
+        Route::post('/admin/direction-generale', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'store'])->name('admin.direction-generale.store');
+        // Secrétaires DG
+        Route::get('/admin/direction-generale/secretaires/creer', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'createSecretaire'])->name('admin.direction-generale.secretaires.create');
+        Route::post('/admin/direction-generale/secretaires', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'storeSecretaire'])->name('admin.direction-generale.secretaires.store');
+        Route::delete('/admin/direction-generale/secretaires/{user}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'destroySecretaire'])->name('admin.direction-generale.secretaires.destroy');
+        // Conseillers DG
+        Route::get('/admin/direction-generale/conseillers/creer', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'createConseiller'])->name('admin.direction-generale.conseillers.create');
+        Route::post('/admin/direction-generale/conseillers', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'storeConseiller'])->name('admin.direction-generale.conseillers.store');
+        Route::delete('/admin/direction-generale/conseillers/{user}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'destroyConseiller'])->name('admin.direction-generale.conseillers.destroy');
     // Route pour enregistrer un secrétaire depuis la modale de la Faitière
     Route::post('/admin/secretaires', [EntiteController::class, 'storeSecretaire'])->name('admin.secretaires.store');
     Route::get('/admin/secretaires/{direction}', [EntiteController::class, 'showSecretaire'])->name('admin.secretaires.show');
@@ -211,19 +223,46 @@ Route::middleware('auth')->post('/alertes/lire-tout', [AlerteController::class, 
 Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function (): void {
     Route::post('/logout', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/', \App\Http\Controllers\Dg\DgDashboardController::class)->name('dashboard');
+    Route::get('/objectifs', function () {
+        return view('dg.objectifs');
+    })->name('objectifs');
+    Route::get('/evaluations', function () {
+        return view('dg.evaluations');
+    })->name('evaluations');
     Route::get('/objectifs/creer', [\App\Http\Controllers\Dg\DgObjectifController::class, 'create'])->name('objectifs.create');
     Route::post('/objectifs', [\App\Http\Controllers\Dg\DgObjectifController::class, 'store'])->name('objectifs.store');
     Route::get('/objectifs/{fiche}', [\App\Http\Controllers\Dg\DgObjectifController::class, 'show'])->name('objectifs.show');
     Route::patch('/objectifs/{fiche}/statut', [\App\Http\Controllers\Dg\DgObjectifController::class, 'statut'])->name('objectifs.statut');
     Route::patch('/objectifs/{fiche}/avancement', [\App\Http\Controllers\Dg\DgObjectifController::class, 'avancement'])->name('objectifs.avancement');
+    Route::delete('/objectifs/{fiche}', [\App\Http\Controllers\Dg\DgObjectifController::class, 'destroy'])->name('objectifs.destroy');
     // Route pour afficher une évaluation DG
     Route::get('/evaluations/{evaluation}', [App\Http\Controllers\Dg\EvaluationController::class, 'show'])->name('evaluations.show');
     Route::get('/evaluations/{evaluation}/pdf', [App\Http\Controllers\Dg\EvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
+    Route::get('/subordonne-evaluations/creer',         [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'create'])->name('sub-evaluations.create');
+    Route::post('/subordonne-evaluations',              [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'store'])->name('sub-evaluations.store');
+    Route::get('/subordonne-evaluations/{evaluation}',  [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'show'])->name('sub-evaluations.show');
+    Route::patch('/subordonne-evaluations/{evaluation}/soumettre', [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'submit'])->name('sub-evaluations.submit');
+
+    // Subordonnés du DG
+    Route::get('/dga',                    [\App\Http\Controllers\Dg\DgSubordonneController::class, 'dga'])->name('dga');
+    Route::get('/assistante',             [\App\Http\Controllers\Dg\DgSubordonneController::class, 'assistante'])->name('assistante');
+    Route::get('/conseillers',            [\App\Http\Controllers\Dg\DgSubordonneController::class, 'conseillers'])->name('conseillers');
+    Route::get('/conseillers/{user}',     [\App\Http\Controllers\Dg\DgSubordonneController::class, 'conseiller'])->name('conseillers.show');
 });
 
 // DG - Enregistrer le commentaire de l'évalué
 Route::middleware(['auth'])->group(function () {
     Route::post('/dg/evaluations/{evaluation}/commentaire', [\App\Http\Controllers\Dg\EvaluationController::class, 'commentaire'])->name('dg.evaluations.commentaire');
+});
+// DG - Objectifs et Evaluations subordonnés
+// Routes DG - Objectifs et Evaluations (listes)
+Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function (): void {
+    Route::get('/objectifs', function () {
+        return view('dg.objectifs');
+    })->name('objectifs');
+    Route::get('/evaluations', function () {
+        return view('dg.evaluations');
+    })->name('evaluations');
 });
 
 // DG - Changer le statut de l'évaluation (accepter/refuser)
@@ -231,3 +270,11 @@ Route::middleware(['auth'])->patch('/dg/evaluations/{evaluation}/statut', [\App\
 
 // Espace DG : Mon espace
 Route::middleware(['auth', 'dg'])->get('/dg/mon-espace', \App\Http\Controllers\Dg\MonEspaceController::class)->name('dg.mon-espace');
+
+// Espace Subordonnés (DGA, Assistante_Dg, Conseillers_Dg)
+Route::middleware(['auth', 'subordonne'])->prefix('mon-espace')->name('subordonne.')->group(function (): void {
+    Route::post('/logout',  [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/',         \App\Http\Controllers\Subordonne\SubordonneMonEspaceController::class)->name('mon-espace');
+    Route::get('/evaluations/{evaluation}', [\App\Http\Controllers\Subordonne\SubordonneEvaluationController::class, 'show'])->name('evaluations.show');
+    Route::get('/objectifs/{fiche}',        [\App\Http\Controllers\Subordonne\SubordonneObjectifController::class, 'show'])->name('objectifs.show');
+});

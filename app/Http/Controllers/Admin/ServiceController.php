@@ -145,10 +145,12 @@ class ServiceController extends Controller
         ]);
 
         $user = User::create([
-            'name'     => $validated['chef_prenom'].' '.$validated['chef_nom'],
-            'email'    => $validated['chef_email'],
-            'password' => Hash::make((string) $request->input('password')),
-            'role'     => 'chef',
+            'name'                => $validated['chef_prenom'].' '.$validated['chef_nom'],
+            'email'               => $validated['chef_email'],
+            'password'            => Hash::make((string) $request->input('password')),
+            'role'                => 'Chefs de service',
+            'sexe'                => $validated['chef_sexe'],
+            'date_prise_fonction' => $validated['chef_date_debut_mois'],
         ]);
 
         $validated['user_id'] = $user->id;
@@ -225,11 +227,11 @@ class ServiceController extends Controller
                     ? Rule::unique('services', 'nom')->ignore($service->id)
                     : Rule::unique('services', 'nom'),
             ],
-            'direction_id'     => ['required', 'integer', 'exists:directions,id'],
-            'chef_prenom'      => ['required', 'string', 'max:255'],
-            'chef_nom'         => ['required', 'string', 'max:255'],
-            'chef_email'       => $emailRule,
-            'chef_telephone'   => [
+            'direction_id'         => ['required', 'integer', 'exists:directions,id'],
+            'chef_prenom'          => ['required', 'string', 'max:255'],
+            'chef_nom'             => ['required', 'string', 'max:255'],
+            'chef_email'           => $emailRule,
+            'chef_telephone'       => [
                 'required',
                 'string',
                 'max:30',
@@ -237,6 +239,8 @@ class ServiceController extends Controller
                     ? Rule::unique('services', 'chef_telephone')->ignore($service->id)
                     : Rule::unique('services', 'chef_telephone'),
             ],
+            'chef_sexe'            => ['required', 'in:Homme,Femme,Autres'],
+            'chef_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
         ]);
     }
 }

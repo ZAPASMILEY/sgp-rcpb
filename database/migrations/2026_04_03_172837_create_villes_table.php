@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('villes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('delegation_technique_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('delegation_technique_id')->constrained('delegation_techniques')->cascadeOnDelete();
             $table->string('nom');
             $table->timestamps();
 

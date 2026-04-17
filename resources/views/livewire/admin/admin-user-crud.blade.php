@@ -58,6 +58,14 @@
                     <button type="submit" class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">{{ $isEdit ? 'Mettre à jour' : 'Créer' }}</button>
                 </div>
             </form>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-1">Rôle</label>
+                        <input type="text" class="w-full border rounded px-3 py-2 bg-gray-100" value="{{ $role ?? ($user->role ?? '') }}" readonly>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">{{ $isEdit ? 'Mettre à jour' : 'Créer' }}</button>
+                    </div>
+                </form>
         </div>
     </div>
 </div>

@@ -13,7 +13,7 @@ class DgDashboardController extends Controller
     public function __invoke(Request $request)
     {
         $user = Auth::user();
-        if (!$user || $user->role !== 'dg') {
+        if (!$user || strtolower($user->role) !== 'dg') {
             abort(403, 'Accès réservé au Directeur Général.');
         }
         $entiteId = $user->pca_entite_id;
@@ -28,10 +28,15 @@ class DgDashboardController extends Controller
 
 
         // Fiches et évaluations assignées aux subordonnés (DGA, assistante DG)
-        $dgaId = $user->entite->dga_user_id ?? null;
+        $entite = $user->entite;
+        $dgaId = null;
+        if ($entite && !empty($entite->dga_email)) {
+            $dga = \App\Models\User::where('email', $entite->dga_email)->first();
+            $dgaId = $dga?->id;
+        }
         $assistanteId = null;
-        if (!empty($user->entite->assistante_dg_email)) {
-            $assistante = \App\Models\User::where('email', $user->entite->assistante_dg_email)->first();
+        if ($entite && !empty($entite->assistante_dg_email)) {
+            $assistante = \App\Models\User::where('email', $entite->assistante_dg_email)->first();
             $assistanteId = $assistante?->id;
         }
         $subordonnesIds = collect([$dgaId, $assistanteId])->filter();

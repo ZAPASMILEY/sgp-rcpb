@@ -22,6 +22,8 @@ class User extends Authenticatable{
         'theme_preference',
         'role',
         'pca_entite_id',
+        'sexe',
+        'date_prise_fonction',
     ];
 
     /**
@@ -67,14 +69,18 @@ class User extends Authenticatable{
         return $this->alertes()->wherePivot('lu', false);
     }
 
-    // Subordonnés du DG (DGA, secrétaire)
+    // Subordonnés du DG (DGA, assistante DG)
     public function subordonnes()
     {
         $entite = $this->entite;
         if (!$entite) {
             return collect();
         }
-        $dgaId = $entite->dga_user_id ?? null;
+        $dgaId = null;
+        if (!empty($entite->dga_email)) {
+            $dga = User::where('email', $entite->dga_email)->first();
+            $dgaId = $dga?->id;
+        }
         $assistanteId = null;
         if (!empty($entite->assistante_dg_email)) {
             $assistante = User::where('email', $entite->assistante_dg_email)->first();
@@ -92,23 +98,91 @@ class User extends Authenticatable{
 
     public function isPca(): bool
     {
-        return $this->role === 'pca';
+        return $this->role === 'PCA';
     }
 
     public function isDg(): bool
     {
-        return $this->role === 'dg';
+        return $this->role === 'DG';
+    }
+
+    public function isAssistanteDg(): bool
+    {
+        return $this->role === 'Assistante_Dg';
     }
 
     public function isDga(): bool
     {
-        return $this->role === 'dga';
+        return $this->role === 'DGA';
+    }
+
+    public function isSecretaireAssistante(): bool
+    {
+        return $this->role === 'Secretaire_assistante';
+    }
+
+    public function isSecretaireDirection(): bool
+    {
+        return $this->role === 'Secretaire_Direction';
+    }
+
+    public function isSecretaireTechnique(): bool
+    {
+        return $this->role === 'Secretaire_Technique';
+    }
+
+    public function isSecretaireCaisse(): bool
+    {
+        return $this->role === 'Secretaire_Caisse';
+    }
+
+    public function isSecretaireAgence(): bool
+    {
+        return $this->role === 'Secretaire_Agence';
+    }
+
+    public function isConseillersDg(): bool
+    {
+        return $this->role === 'Conseillers_Dg';
+    }
+
+    public function isDirecteurDirection(): bool
+    {
+        return $this->role === 'Directeur_Direction';
+    }
+
+    public function isDirecteurCaisse(): bool
+    {
+        return $this->role === 'Directeur_Caisse';
+    }
+
+    public function isDirecteurTechnique(): bool
+    {
+        return $this->role === 'Directeur_Tehnique';
+    }
+
+    public function isChefsService(): bool
+    {
+        return $this->role === 'Chefs de service';
+    }
+
+    public function isChefAgence(): bool
+    {
+        return $this->role === "chef d'agence";
+    }
+
+    public function isAgent(): bool
+    {
+        return $this->role === 'Agent';
     }
 
     public function isPersonnel(): bool
     {
         return in_array($this->role, [
-            'agent', 'directeur', 'directeur_adjoint', 'assistante', 'chef', 'secretaire', 'pca', 'rh', 'dg', 'dga'
+            'PCA', 'DG', 'Assistante_Dg', 'DGA', 'Secretaire_assistante', 'Secretaire_Direction',
+            'Secretaire_Technique', 'Secretaire_Caisse', 'Secretaire_Agence', 'Conseillers_Dg',
+            'Directeur_Direction', 'Directeur_Caisse', 'Directeur_Tehnique', 'Chefs de service',
+            "chef d'agence", 'Agent'
         ], true);
     }
 }

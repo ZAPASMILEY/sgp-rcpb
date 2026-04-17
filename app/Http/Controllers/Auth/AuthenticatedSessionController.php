@@ -21,6 +21,9 @@ class AuthenticatedSessionController extends Controller
             if (method_exists($request->user(), 'isDg') && $request->user()->isDg()) {
                 return redirect()->route('dg.dashboard');
             }
+            if (in_array($request->user()->role, ['DGA', 'Assistante_Dg', 'Conseillers_Dg'], true)) {
+                return redirect()->route('subordonne.mon-espace');
+            }
             if ($request->user()->isPersonnel()) {
                 return redirect()->route('personnel.dashboard');
             }
@@ -59,6 +62,9 @@ class AuthenticatedSessionController extends Controller
         }
         if (method_exists($request->user(), 'isDg') && $request->user()->isDg()) {
             return redirect()->intended(route('dg.dashboard'));
+        }
+        if (in_array($request->user()?->role, ['DGA', 'Assistante_Dg', 'Conseillers_Dg'], true)) {
+            return redirect()->intended(route('subordonne.mon-espace'));
         }
         if ($request->user()?->isPersonnel()) {
             return redirect()->intended(route('personnel.dashboard'));

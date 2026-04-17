@@ -112,7 +112,7 @@
                             @forelse($dernieresFichesDG ?? [] as $fiche)
                                 <li class="flex items-center justify-between px-4 py-3">
                                     <span>{{ $fiche->titre }} ({{ $fiche->annee }})</span>
-                                    <a href="{{ route('dg.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft">Voir</a>
+                                    <a href="{{ route('pca.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft">Voir</a>
                                 </li>
                             @empty
                                 <li class="px-4 py-3 text-slate-400">Aucune fiche recente.</li>
@@ -129,7 +129,7 @@
                             @forelse($dernieresEvaluationsDG ?? [] as $evaluation)
                                 <li class="flex items-center justify-between px-4 py-3">
                                     <span>Periode : {{ $evaluation->date_debut->format('m/Y') }} - {{ $evaluation->date_fin->format('m/Y') }}</span>
-                                    <a href="{{ route('dg.evaluations.show', $evaluation) }}" class="ent-btn ent-btn-soft">Voir</a>
+                                    <a href="{{ route('pca.evaluations.show', $evaluation) }}" class="ent-btn ent-btn-soft">Voir</a>
                                 </li>
                             @empty
                                 <li class="px-4 py-3 text-slate-400">Aucune evaluation recente.</li>

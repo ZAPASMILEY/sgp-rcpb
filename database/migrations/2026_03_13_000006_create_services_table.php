@@ -14,11 +14,20 @@ return new class extends Migration
         Schema::create('services', function (Blueprint $table): void {
             $table->id();
             $table->string('nom');
-            $table->foreignId('direction_id')->constrained('directions')->cascadeOnDelete();
+
+            // 1. Rattachements (Flexibilité Direction ou Délégation)
+            // direction_id est maintenant nullable pour permettre un rattachement technique
+            $table->foreignId('direction_id')->nullable()->constrained('directions')->nullOnDelete();
+            $table->foreignId('delegation_technique_id')->nullable()->constrained('delegation_techniques')->nullOnDelete();
+
+            // 2. Bloc Chef de Service (Fusionné avec les nouveaux champs)
             $table->string('chef_prenom');
             $table->string('chef_nom');
+            $table->string('chef_sexe')->nullable();
             $table->string('chef_email');
             $table->string('chef_telephone', 30);
+            $table->string('chef_date_debut_mois')->nullable();
+
             $table->timestamps();
         });
     }

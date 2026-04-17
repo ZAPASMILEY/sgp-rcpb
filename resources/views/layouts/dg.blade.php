@@ -20,6 +20,26 @@
                 ],
             ],
         ],
+        [
+            'title' => 'Mes collaborateurs',
+            'items' => [
+                [
+                    'route' => 'dg.dga',
+                    'icon' => 'fas fa-user-shield',
+                    'label' => 'Mon DGA',
+                ],
+                [
+                    'route' => 'dg.assistante',
+                    'icon' => 'fas fa-user',
+                    'label' => 'Mon Assistante',
+                ],
+                [
+                    'route' => 'dg.conseillers',
+                    'icon' => 'fas fa-users',
+                    'label' => 'Mes Conseillers',
+                ],
+            ],
+        ],
     ];
 @endphp
 
@@ -74,5 +94,6 @@
             @yield('export')
         </main>
     </div>
+    @stack('scripts')
 </body>
 </html>

@@ -12,7 +12,6 @@
     @else
         <script src="https://cdn.tailwindcss.com"></script>
     @endif
-
     <style>
         * { font-family: 'Inter', sans-serif; }
         body { background-color: #050e0a; min-height: 100vh; overflow-x: hidden; color: #f0fdf4; }
@@ -103,7 +102,6 @@
                 Suivez les objectifs, gérez les évaluations et coordonnez les entités du réseau en toute simplicité depuis un tableau de bord centralisé.
             </p>
 
-          
                 <a href="/login" class="btn-sgp text-lg">
                     Accéder à mon espace &nbsp; →
                 </a>

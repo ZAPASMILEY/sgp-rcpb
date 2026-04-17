@@ -6,22 +6,6 @@
 @endphp
 
 
-@section('actions')
-    <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-6">
-        @if($evaluation->statut === null || $evaluation->statut === 'en_attente' || $evaluation->statut === '')
-            <form method="POST" action="{{ route('dg.evaluations.statut', $evaluation) }}" class="flex gap-4">
-                @csrf
-                @method('PATCH')
-                <button name="statut" value="acceptee" class="ent-btn ent-btn-primary">Accepter</button>
-                <button name="statut" value="refusee" class="ent-btn ent-btn-destructive">Refuser</button>
-            </form>
-        @elseif($evaluation->statut === 'acceptee')
-            <span class="inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Acceptée</span>
-        @elseif($evaluation->statut === 'refusee')
-            <span class="inline-block rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">Refusée</span>
-        @endif
-    </div>
-@endsection
 
 
 
@@ -237,7 +221,7 @@
         </section>
 
         <section class="admin-panel px-6 py-6 lg:px-8">
-            <h2 class="text-lg font-black text-slate-900">Plan d'amelioration et signatures</h2>
+            <h2 class="text-lg font-black text-slate-900">Plan d'amelioration</h2>
             <div class="mt-4 grid gap-5 md:grid-cols-2">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Points a ameliorer</p>
@@ -248,25 +232,8 @@
                     <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->strategies_amelioration ?: '-' }}</p>
                 </div>
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Commentaires de l'evalué</p>
-                    @if($evaluation->statut === 'acceptee')
-                        <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->commentaires_evalue ?: '-' }}</p>
-                    @else
-                        <form method="POST" action="{{ route('dg.evaluations.statut', $evaluation) }}" class="mt-2 flex flex-col gap-2">
-                            @csrf
-                            @method('PATCH')
-                            <textarea name="commentaires_evalue" class="ent-input" rows="3" placeholder="Saisir vos commentaires ici...">{{ old('commentaires_evalue', $evaluation->commentaires_evalue) }}</textarea>
-                            <div class="flex gap-4 mt-2">
-                                <button name="statut" value="acceptee" class="ent-btn ent-btn-primary">Accepter</button>
-                                <button name="statut" value="refusee" class="ent-btn ent-btn-destructive">Refuser</button>
-                            </div>
-                        </form>
-                    @endif
-                </div>
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Commentaire de l'évaluateur</p>
-                    <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->commentaire ?? '-' }}</p>
-                </div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Commentaire de l'evaluateur</p>
+                    <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->commentaire ?: '-' }}</p>
                 </div>
             </div>
             <div class="mt-6 grid gap-5 md:grid-cols-2">
@@ -274,21 +241,60 @@
                 <div><span class="text-xs uppercase text-slate-500">Evaluateur</span><p class="mt-1 text-sm text-slate-800">{{ $evaluation->signature_evaluateur_nom ?: '-' }}</p></div>
             </div>
         </section>
+
+        {{-- Section commentaire de l'évalué — éditable par le DG uniquement tant que non validé --}}
+        <section class="admin-panel px-6 py-6 lg:px-8">
+            <h2 class="text-lg font-black text-slate-900">Mes commentaires</h2>
+            <p class="mt-1 text-sm text-slate-500">En tant qu'évalué, vous pouvez saisir vos commentaires sur cette évaluation tant qu'elle n'est pas validée.</p>
+
+            @if (session('status'))
+                <div class="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            @if ($evaluation->statut === 'valide')
+                {{-- Validée : commentaire figé, lecture seule --}}
+                <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Commentaire enregistré (évaluation validée)</p>
+                    <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->commentaires_evalue ?: 'Aucun commentaire saisi.' }}</p>
+                </div>
+            @else
+                {{-- Non validée : formulaire d'édition --}}
+                <form method="POST" action="{{ route('dg.evaluations.commentaire', $evaluation) }}" class="mt-4 space-y-3">
+                    @csrf
+                    <textarea
+                        name="commentaires_evalue"
+                        rows="6"
+                        class="ent-input w-full"
+                        placeholder="Saisissez vos commentaires sur cette évaluation..."
+                    >{{ old('commentaires_evalue', $evaluation->commentaires_evalue) }}</textarea>
+                    <div class="flex justify-end">
+                        <button type="submit" class="ent-btn ent-btn-primary">Enregistrer mon commentaire</button>
+                    </div>
+                </form>
+            @endif
+        </section>
     </div>
 
-    <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-6 mt-10">
-        @if($evaluation->statut === null || $evaluation->statut === 'soumis' || $evaluation->statut === '')
-            <form method="POST" action="{{ route('dg.evaluations.statut', $evaluation) }}" class="flex gap-4">
-                @csrf
-                @method('PATCH')
-                <button name="statut" value="acceptee" class="ent-btn ent-btn-primary">Accepter</button>
-                <button name="statut" value="refusee" class="ent-btn ent-btn-destructive">Refuser</button>
-            </form>
-        @elseif($evaluation->statut === 'acceptee')
-            <span class="inline-block rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">Acceptée</span>
-        @elseif($evaluation->statut === 'refusee')
-            <span class="inline-block rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-700">Refusée</span>
-        @endif
+    <div class="flex flex-wrap items-center justify-between gap-3 mt-6 px-2">
+        <div class="flex items-center gap-2">
+            @php
+                $statutColors = [
+                    'brouillon' => 'bg-slate-100 text-slate-600',
+                    'soumis'    => 'bg-amber-100 text-amber-700',
+                    'valide'    => 'bg-emerald-100 text-emerald-700',
+                ];
+                $statutLabels = [
+                    'brouillon' => 'Brouillon',
+                    'soumis'    => 'Soumise',
+                    'valide'    => 'Validée',
+                ];
+            @endphp
+            <span class="inline-block rounded-full px-3 py-1 text-xs font-bold {{ $statutColors[$evaluation->statut] ?? 'bg-slate-100 text-slate-500' }}">
+                {{ $statutLabels[$evaluation->statut] ?? ucfirst($evaluation->statut ?? 'En attente') }}
+            </span>
+        </div>
         <a href="{{ route('dg.evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">Exporter PDF</a>
     </div>
 

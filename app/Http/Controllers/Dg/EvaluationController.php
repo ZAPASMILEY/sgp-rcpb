@@ -4,50 +4,41 @@ namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
 use App\Models\Evaluation;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class EvaluationController extends Controller
 {
     public function show(Request $request, Evaluation $evaluation)
     {
-        // Le DG peut ouvrir toute évaluation créée par le PCA
+        // Le DG ne peut voir l'évaluation qu'une fois soumise ou validée
+        if ($evaluation->statut === 'brouillon') {
+            abort(403, "Cette évaluation n'a pas encore été soumise.");
+        }
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
         return view('dg.evaluations.show', compact('evaluation'));
     }
 
-    public function statut(Request $request, Evaluation $evaluation)
-    {
-        // Le DG peut accepter/refuser toute évaluation affichée dans son espace
-        $request->validate([
-            'statut' => ['required', 'in:acceptee,refusee'],
-            'commentaires_evalue' => ['nullable', 'string', 'max:2000'],
-        ]);
-        $evaluation->statut = $request->input('statut');
-        // Si le DG accepte, on enregistre le commentaire fourni et on le rend non modifiable
-        if ($request->input('statut') === 'acceptee') {
-            $evaluation->commentaires_evalue = $request->input('commentaires_evalue');
-        }
-        $evaluation->save();
-        return redirect()->route('dg.evaluations.show', $evaluation)
-            ->with('status', 'Statut mis à jour.');
-    }
-
     public function exportPdf(Request $request, Evaluation $evaluation)
     {
-        // Sécurité : vérifier que l'utilisateur connecté est bien le DG concerné
-        if ($evaluation->evaluable_type !== 'App\\Models\\User' && $evaluation->evaluable_type !== \App\Models\User::class) {
+        if ($evaluation->evaluable_type !== User::class) {
             abort(403);
         }
-        if ($evaluation->evaluable_id !== $request->user()->id) {
+        if ((int) $evaluation->evaluable_id !== (int) $request->user()->id) {
             abort(403);
         }
+        // Pas encore soumise : le DG ne peut pas y accéder
+        if ($evaluation->statut === 'brouillon') {
+            abort(403, "Cette évaluation n'a pas encore été soumise.");
+        }
+
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
-        $objectiveCriteria = $evaluation->criteres->where('type', 'objectif')->values();
-        // Attribution de la mention sur 10
-        $mention = $this->mentionFromScore((float) $evaluation->note_finale);
+        $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
+        $mention    = $this->mentionFromScore((float) $evaluation->note_finale);
         $cibleLabel = $evaluation->identification->nom_prenom ?? 'DG';
-        $cibleType = 'Directeur Général';
+        $cibleType  = 'Directeur Général';
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('dg.evaluations.pdf', compact(
             'evaluation',
             'subjectiveCriteria',
@@ -56,30 +47,40 @@ class EvaluationController extends Controller
             'cibleLabel',
             'cibleType'
         ));
+
         return $pdf->download('evaluation-'.$evaluation->id.'-dg.pdf');
     }
 
     public function commentaire(Request $request, Evaluation $evaluation)
     {
-        // Sécurité : vérifier que l'utilisateur connecté est bien le DG concerné
-        if ($evaluation->evaluable_type !== 'App\\Models\\User' && $evaluation->evaluable_type !== \App\Models\User::class) {
+        // Seul le DG évalué peut saisir son commentaire
+        if ($evaluation->evaluable_type !== User::class) {
             abort(403);
         }
-        if ($evaluation->evaluable_id !== $request->user()->id) {
+        if ((int) $evaluation->evaluable_id !== (int) $request->user()->id) {
             abort(403);
         }
+        // Pas encore soumise : le DG ne peut pas y accéder
+        if ($evaluation->statut === 'brouillon') {
+            abort(403, "Cette évaluation n'a pas encore été soumise.");
+        }
+        // Verrouillé une fois l'évaluation validée
+        if ($evaluation->statut === 'valide') {
+            return redirect()->route('dg.evaluations.show', $evaluation)
+                ->with('status', "L'évaluation est validée, le commentaire ne peut plus être modifié.");
+        }
+
         $request->validate([
             'commentaires_evalue' => ['nullable', 'string', 'max:2000'],
         ]);
+
         $evaluation->commentaires_evalue = $request->input('commentaires_evalue');
         $evaluation->save();
+
         return redirect()->route('dg.evaluations.show', $evaluation)
-            ->with('status', 'Commentaire enregistré.');
+            ->with('status', 'Votre commentaire a été enregistré.');
     }
 
-    /**
-     * Attribution d'une mention sur 10
-     */
     private function mentionFromScore(float $score): string
     {
         if ($score < 5) {

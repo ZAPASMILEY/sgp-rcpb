@@ -13,12 +13,44 @@ return new class extends Migration
     {
         Schema::create('entites', function (Blueprint $table): void {
             $table->id();
-            $table->string('nom');
+            $table->string('nom')->unique();
+            
+            // 1. Localisation
             $table->string('ville');
-            $table->string('directeur_general_nom');
-            $table->text('directeur_general_informations')->nullable();
-            $table->string('pca_nom');
-            $table->text('pca_informations')->nullable();
+            $table->string('region')->nullable();
+
+            // 2. Direction Générale (DG)
+            $table->string('directrice_generale_prenom')->nullable();
+            $table->string('directrice_generale_nom')->nullable();
+            $table->string('directrice_generale_email')->nullable()->unique();
+            $table->string('directrice_generale_photo_path')->nullable();
+            $table->string('directrice_generale_sexe', 20)->nullable();
+            $table->string('directrice_generale_date_prise_fonction', 7)->nullable();
+
+            // 3. Direction Générale Adjointe (DGA)
+            $table->string('dga_nom')->nullable();
+            $table->string('dga_prenom')->nullable();
+            $table->string('dga_email')->nullable()->unique();
+            $table->string('dga_photo_path')->nullable();
+            $table->string('dga_sexe', 20)->nullable();
+            $table->string('dga_date_prise_fonction', 7)->nullable();
+
+            // 4. Conseil d'Administration (PCA)
+            $table->string('pca_prenom')->nullable();
+            $table->string('pca_nom')->nullable();
+            $table->string('pca_email')->nullable()->unique();
+            $table->string('pca_photo_path')->nullable();
+            $table->string('pca_sexe', 20)->nullable();
+            $table->string('pca_date_prise_fonction', 7)->nullable();
+
+            // 5. Secrétariat / Assistance
+            $table->string('assistante_dg_nom')->nullable();
+            $table->string('assistante_dg_prenom')->nullable();
+            $table->string('assistante_dg_email')->nullable()->unique();
+            $table->string('assistante_dg_sexe', 20)->nullable();
+            $table->string('assistante_dg_date_prise_fonction', 7)->nullable();
+            $table->string('secretariat_telephone', 30)->nullable()->unique();
+
             $table->timestamps();
         });
     }

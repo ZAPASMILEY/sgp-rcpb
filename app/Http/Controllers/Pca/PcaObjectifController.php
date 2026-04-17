@@ -38,12 +38,33 @@ class PcaObjectifController extends Controller
         return $pdf->download('contrat-objectif-'.$objectif->id.'.pdf');
     }
 
+    private function getDirectionGeneraleDirection(): ?\App\Models\Direction
+    {
+        $entite = \App\Models\Entite::query()->latest()->first();
+        if (!$entite) {
+            return null;
+        }
+        return \App\Models\Direction::query()
+            ->where('nom', 'Direction Générale')
+            ->where('entite_id', $entite->id)
+            ->first();
+    }
+
+    private function getDGOfDirectionGenerale(): ?User
+    {
+        $entite = \App\Models\Entite::query()->latest()->first();
+        if (!$entite) {
+            return null;
+        }
+        return User::query()
+            ->where('role', 'DG')
+            ->where('pca_entite_id', $entite->id)
+            ->first();
+    }
+
     public function index(Request $request): View
     {
-        $user = $request->user();
-        $entiteId = $user->pca_entite_id;
-        $dgUser = $this->resolveEntiteDgUser($entiteId);
-
+        $dgUser = $this->getDGOfDirectionGenerale();
         $search = trim((string) $request->query('search', ''));
 
         $baseQuery = FicheObjectif::query()
@@ -82,8 +103,7 @@ class PcaObjectifController extends Controller
 
     public function create(Request $request): View
     {
-        $dgUser = $this->resolveEntiteDgUser((int) $request->user()->pca_entite_id);
-
+        $dgUser = $this->getDGOfDirectionGenerale();
         return view('pca.objectifs.create', [
             'dgUser' => $dgUser,
             'today' => now()->toDateString(),
@@ -104,12 +124,12 @@ class PcaObjectifController extends Controller
     {
         $entiteId = $request->user()->pca_entite_id;
         $date = now()->toDateString();
-        $dgUser = $this->resolveEntiteDgUser((int) $entiteId);
+        $dgUser = $this->getDGOfDirectionGenerale();
 
         if (! $dgUser) {
             return redirect()
                 ->route('pca.objectifs.index')
-                ->with('status', "Aucun compte DG n'est associe a cette entite.");
+                ->with('status', "Aucun compte DG n'est associe a la Direction Générale.");
         }
 
         $validated = $request->validate([
@@ -214,7 +234,7 @@ class PcaObjectifController extends Controller
     private function authorizeObjectif(FicheObjectifObjectif $objectif, int $entiteId): void
     {
         $fiche = $objectif->ficheObjectif;
-        $dgUser = $this->resolveEntiteDgUser($entiteId);
+        $dgUser = $this->getDGOfDirectionGenerale();
 
         if (! $fiche) {
             abort(403);
@@ -231,7 +251,7 @@ class PcaObjectifController extends Controller
 
     private function authorizeFiche(FicheObjectif $fiche, int $entiteId): void
     {
-        $dgUser = $this->resolveEntiteDgUser($entiteId);
+        $dgUser = $this->getDGOfDirectionGenerale();
 
         $allowed = $dgUser
             && $fiche->assignable_type === User::class
@@ -313,19 +333,5 @@ class PcaObjectifController extends Controller
         return 'RCPB';
     }
 
-    private function resolveEntiteDgUser(int $entiteId): ?User
-    {
-        $entite = Entite::query()->find($entiteId);
 
-        return User::query()
-            ->where('role', 'dg')
-            ->where(function ($query) use ($entiteId, $entite): void {
-                $query->where('pca_entite_id', $entiteId);
-
-                if ($entite?->directrice_generale_email) {
-                    $query->orWhere('email', $entite->directrice_generale_email);
-                }
-            })
-            ->first();
-    }
 }

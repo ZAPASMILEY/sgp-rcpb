@@ -74,6 +74,22 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-1">Sexe</label>
+                        <select name="directeur_sexe" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
+                            <option value="">Choisir</option>
+                            <option value="Homme" @selected(old('directeur_sexe') === 'Homme')>Homme</option>
+                            <option value="Femme" @selected(old('directeur_sexe') === 'Femme')>Femme</option>
+                            <option value="Autres" @selected(old('directeur_sexe') === 'Autres')>Autres</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 ml-1">Date de prise de fonction</label>
+                        <input name="directeur_date_prise_fonction" type="month" value="{{ old('directeur_date_prise_fonction') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                </div>
             </div>
 
             {{-- BANDEAU INFO --}}

@@ -23,6 +23,7 @@ class MonEspaceController extends Controller
             ->get();
 
         $evaluations = Evaluation::query()
+            ->where('statut', '!=', 'brouillon') // masquées jusqu'à soumission par le PCA
             ->when($searchEvaluation, function ($query, $searchEvaluation) {
                 $query->where('date_debut', 'like', "%{$searchEvaluation}%")
                       ->orWhere('date_fin', 'like', "%{$searchEvaluation}%");
