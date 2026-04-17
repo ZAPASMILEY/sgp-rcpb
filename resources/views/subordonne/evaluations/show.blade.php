@@ -40,39 +40,59 @@
             </div>
         </header>
 
-        {{-- Note summary --}}
+        {{-- Score summary --}}
         <section class="admin-panel px-6 py-6 lg:px-8">
-            <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+                <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Periode</p>
-                    <p class="mt-2 text-sm font-black text-slate-900">{{ $periodeLabel }}</p>
+                    <p class="mt-2 text-sm text-slate-800">{{ $evaluation->date_debut->format('d/m/Y') }} - {{ $evaluation->date_fin->format('d/m/Y') }}</p>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Moyenne subjectifs</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900">{{ number_format((float) $evaluation->moyenne_subjectifs, 2, ',', ' ') }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Note subjectifs</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900">{{ number_format((float) $evaluation->note_criteres_subjectifs, 2, ',', ' ') }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Moyenne objectifs</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900">{{ number_format((float) $evaluation->moyenne_objectifs, 2, ',', ' ') }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Note objectifs</p>
+                    <p class="mt-2 text-sm font-semibold text-slate-900">{{ number_format((float) $evaluation->note_criteres_objectifs, 2, ',', ' ') }}</p>
+                </div>
+                <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Note finale</p>
                     <p class="mt-2 text-2xl font-black text-slate-900">{{ number_format($note, 2, ',', ' ') }}<span class="text-sm font-semibold text-slate-500">/10</span></p>
                     <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
                         <div class="h-full rounded-full {{ $noteBarClass }}" style="width: {{ $notePercent }}%"></div>
                     </div>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            </div>
+
+            <div class="mt-6 grid gap-4 md:grid-cols-3">
+                <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Mention</p>
                     <div class="mt-2">
-                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $mentionClass }}">
-                            {{ $mention }}
-                        </span>
+                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $mentionClass }}">{{ $mention }}</span>
                     </div>
                 </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>
                     <div class="mt-2">
-                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statusClass }}">
-                            {{ $statusLabel }}
-                        </span>
+                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statusClass }}">{{ $statusLabel }}</span>
                     </div>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Evaluateur</p>
+                    <p class="mt-2 text-sm text-slate-700">{{ $evaluation->evaluateur?->name ?? '-' }}</p>
                 </div>
             </div>
         </section>
 
+        {{-- Identification --}}
         @if ($ident)
             <section class="admin-panel px-6 py-6 lg:px-8">
                 <h2 class="text-lg font-black text-slate-900">Identification</h2>
@@ -88,71 +108,184 @@
                         <div><p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Entite</p><p class="mt-1 text-sm text-slate-800">{{ $ident->direction }}</p></div>
                     @endif
                 </div>
+
+                <div class="mt-6 grid gap-6 xl:grid-cols-2">
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="min-w-full text-left text-sm text-slate-700">
+                            <thead class="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
+                                <tr>
+                                    <th class="px-3 py-3">Periode</th>
+                                    <th class="px-3 py-3">Formation</th>
+                                    <th class="px-3 py-3">Domaine</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse (($ident->formations ?? []) as $row)
+                                    <tr class="border-t border-slate-200">
+                                        <td class="px-3 py-2">{{ $row['periode'] ?? '-' }}</td>
+                                        <td class="px-3 py-2">{{ $row['libelle'] ?? '-' }}</td>
+                                        <td class="px-3 py-2">{{ $row['domaine'] ?? '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="3" class="px-3 py-3 text-slate-400">Aucune formation renseignee.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="min-w-full text-left text-sm text-slate-700">
+                            <thead class="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
+                                <tr>
+                                    <th class="px-3 py-3">Periode</th>
+                                    <th class="px-3 py-3">Poste ou fonction</th>
+                                    <th class="px-3 py-3">Observations</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse (($ident->experiences ?? []) as $row)
+                                    <tr class="border-t border-slate-200">
+                                        <td class="px-3 py-2">{{ $row['periode'] ?? '-' }}</td>
+                                        <td class="px-3 py-2">{{ $row['poste'] ?? '-' }}</td>
+                                        <td class="px-3 py-2">{{ $row['observations'] ?? '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="3" class="px-3 py-3 text-slate-400">Aucune experience renseignee.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
         @endif
 
+        {{-- Criteres objectifs --}}
         @if ($objectiveCriteria->isNotEmpty())
             <section class="admin-panel px-6 py-6 lg:px-8">
                 <h2 class="text-lg font-black text-slate-900">Criteres objectifs</h2>
-                <div class="mt-4 space-y-3">
+                <div class="mt-4 space-y-4">
                     @foreach ($objectiveCriteria as $criterion)
                         <article class="rounded-2xl border border-slate-200 bg-white p-5">
                             <div class="flex items-start justify-between gap-4">
-                                <h3 class="text-base font-bold text-slate-900">{{ $criterion->titre }}</h3>
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-900">{{ $criterion->titre }}</h3>
+                                    @if ($criterion->observation)
+                                        <p class="mt-1 text-sm text-slate-500">{{ $criterion->observation }}</p>
+                                    @endif
+                                </div>
                                 <span class="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-black text-emerald-700">
-                                    {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}/5
+                                    Note globale {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}
                                 </span>
                             </div>
-                            @if ($criterion->observation)
-                                <p class="mt-2 text-sm text-slate-500">{{ $criterion->observation }}</p>
-                            @endif
-                            @if ($criterion->sousCriteres->isNotEmpty())
-                                <div class="mt-3 space-y-2">
-                                    @foreach ($criterion->sousCriteres as $sub)
-                                        <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm">
-                                            <span class="text-slate-700">{{ $sub->libelle }}</span>
-                                            <span class="font-bold text-slate-900">{{ $sub->note }}/5</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="min-w-full text-left text-sm text-slate-700">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.12em] text-slate-500">
+                                            <th class="py-2 pr-4">Sous-critere</th>
+                                            <th class="py-2 pr-4">Note /5</th>
+                                            <th class="py-2">Observation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($criterion->sousCriteres as $subcriterion)
+                                            <tr class="border-b border-slate-100">
+                                                <td class="py-2 pr-4">{{ $subcriterion->libelle }}</td>
+                                                <td class="py-2 pr-4 font-semibold">{{ number_format((float) $subcriterion->note, 2, ',', ' ') }}</td>
+                                                <td class="py-2">{{ $subcriterion->observation ?: '-' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                         </article>
                     @endforeach
                 </div>
             </section>
         @endif
 
-        @if ($subjectiveCriteria->isNotEmpty())
-            <section class="admin-panel px-6 py-6 lg:px-8">
-                <h2 class="text-lg font-black text-slate-900">Criteres subjectifs</h2>
-                <div class="mt-4 space-y-3">
-                    @foreach ($subjectiveCriteria as $criterion)
-                        <article class="rounded-2xl border border-slate-200 bg-white p-5">
-                            <div class="flex items-start justify-between gap-4">
+        {{-- Criteres subjectifs --}}
+        <section class="admin-panel px-6 py-6 lg:px-8">
+            <h2 class="text-lg font-black text-slate-900">Criteres subjectifs</h2>
+            <div class="mt-4 space-y-4">
+                @forelse ($subjectiveCriteria as $criterion)
+                    <article class="rounded-2xl border border-slate-200 bg-white p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
                                 <h3 class="text-base font-bold text-slate-900">{{ $criterion->titre }}</h3>
-                                <span class="shrink-0 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-black text-slate-700">
-                                    {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}/5
-                                </span>
+                                @if ($criterion->observation)
+                                    <p class="mt-1 text-sm text-slate-500">{{ $criterion->observation }}</p>
+                                @endif
                             </div>
-                            @if ($criterion->observation)
-                                <p class="mt-2 text-sm text-slate-500">{{ $criterion->observation }}</p>
-                            @endif
-                            @if ($criterion->sousCriteres->isNotEmpty())
-                                <div class="mt-3 space-y-2">
-                                    @foreach ($criterion->sousCriteres as $sub)
-                                        <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm">
-                                            <span class="text-slate-700">{{ $sub->libelle }}</span>
-                                            <span class="font-bold text-slate-900">{{ $sub->note }}/5</span>
-                                        </div>
+                            <span class="shrink-0 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-black text-slate-700">
+                                Note globale {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}
+                            </span>
+                        </div>
+                        <div class="mt-4 overflow-x-auto">
+                            <table class="min-w-full text-left text-sm text-slate-700">
+                                <thead>
+                                    <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.12em] text-slate-500">
+                                        <th class="py-2 pr-4">Sous-critere</th>
+                                        <th class="py-2 pr-4">Note /5</th>
+                                        <th class="py-2">Observation</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($criterion->sousCriteres as $subcriterion)
+                                        <tr class="border-b border-slate-100">
+                                            <td class="py-2 pr-4">{{ $subcriterion->libelle }}</td>
+                                            <td class="py-2 pr-4 font-semibold">{{ number_format((float) $subcriterion->note, 2, ',', ' ') }}</td>
+                                            <td class="py-2">{{ $subcriterion->observation ?: '-' }}</td>
+                                        </tr>
                                     @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                @empty
+                    @php
+                        $templates = \App\Models\SubjectiveCriteriaTemplate::query()
+                            ->with('subcriteria')
+                            ->where('is_active', true)
+                            ->orderBy('ordre')
+                            ->get();
+                    @endphp
+                    @foreach ($templates as $template)
+                        <article class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-5">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-700">{{ $template->titre }}</h3>
+                                    @if ($template->description)
+                                        <p class="mt-1 text-sm text-slate-400">{{ $template->description }}</p>
+                                    @endif
                                 </div>
-                            @endif
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-400">Non note</span>
+                            </div>
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="min-w-full text-left text-sm text-slate-500">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.12em] text-slate-400">
+                                            <th class="py-2 pr-4">Sous-critere</th>
+                                            <th class="py-2 pr-4">Note /5</th>
+                                            <th class="py-2">Observation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($template->subcriteria as $sub)
+                                            <tr class="border-b border-slate-100">
+                                                <td class="py-2 pr-4">{{ $sub->libelle }}</td>
+                                                <td class="py-2 pr-4 font-semibold text-slate-300">—</td>
+                                                <td class="py-2 text-slate-300">—</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                         </article>
                     @endforeach
-                </div>
-            </section>
-        @endif
+                @endforelse
+            </div>
+        </section>
 
+        {{-- Synthese et commentaires --}}
         <section class="admin-panel px-6 py-6 lg:px-8">
             <h2 class="text-lg font-black text-slate-900">Synthese et commentaires</h2>
             <div class="mt-4 grid gap-5 md:grid-cols-2">
@@ -166,6 +299,12 @@
                     <div class="space-y-2">
                         <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Strategies d'amelioration</p>
                         <p class="text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->strategies_amelioration }}</p>
+                    </div>
+                @endif
+                @if ($evaluation->commentaires_evalue)
+                    <div class="space-y-2">
+                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Mes commentaires</p>
+                        <p class="text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->commentaires_evalue }}</p>
                     </div>
                 @endif
                 @if ($evaluation->commentaire)

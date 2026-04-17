@@ -168,7 +168,7 @@
         <section class="admin-panel px-6 py-6 lg:px-8">
             <h2 class="text-lg font-black text-slate-900">Criteres subjectifs</h2>
             <div class="mt-4 space-y-4">
-                @foreach ($subjectiveCriteria as $criterion)
+                @forelse ($subjectiveCriteria as $criterion)
                     <article class="rounded-2xl border border-slate-200 bg-white p-5">
                         <div class="flex items-start justify-between gap-4">
                             <div>
@@ -200,7 +200,48 @@
                             </table>
                         </div>
                     </article>
-                @endforeach
+                @empty
+                    @php
+                        $templates = \App\Models\SubjectiveCriteriaTemplate::query()
+                            ->with('subcriteria')
+                            ->where('is_active', true)
+                            ->orderBy('ordre')
+                            ->get();
+                    @endphp
+                    @foreach ($templates as $template)
+                        <article class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-5">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <h3 class="text-base font-bold text-slate-700">{{ $template->titre }}</h3>
+                                    @if ($template->description)
+                                        <p class="mt-1 text-sm text-slate-400">{{ $template->description }}</p>
+                                    @endif
+                                </div>
+                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-400">Non note</span>
+                            </div>
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="min-w-full text-left text-sm text-slate-500">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.12em] text-slate-400">
+                                            <th class="py-2 pr-4">Sous-critere</th>
+                                            <th class="py-2 pr-4">Note /5</th>
+                                            <th class="py-2">Observation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($template->subcriteria as $sub)
+                                            <tr class="border-b border-slate-100">
+                                                <td class="py-2 pr-4">{{ $sub->libelle }}</td>
+                                                <td class="py-2 pr-4 font-semibold text-slate-300">—</td>
+                                                <td class="py-2 text-slate-300">—</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </article>
+                    @endforeach
+                @endforelse
                 <div class="mt-6 flex flex-wrap gap-6 justify-end">
                     <div class="rounded-2xl border border-slate-200 bg-slate-50 px-8 py-4 flex flex-row items-center gap-12">
                         <div class="text-center">

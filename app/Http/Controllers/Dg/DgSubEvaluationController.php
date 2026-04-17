@@ -323,6 +323,37 @@ class DgSubEvaluationController extends Controller
         ));
     }
 
+    public function destroy(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        $user = Auth::user();
+        if (! $user || strtolower((string) $user->role) !== 'dg') {
+            abort(403);
+        }
+        if (
+            $evaluation->evaluable_type !== User::class ||
+            ! in_array($evaluation->evaluable->role ?? '', self::ALLOWED_ROLES, true)
+        ) {
+            abort(403);
+        }
+        if ((int) ($evaluation->evaluable->pca_entite_id ?? 0) !== (int) $user->pca_entite_id) {
+            abort(403);
+        }
+        if ($evaluation->statut === 'valide') {
+            return back()->with('error', 'Une évaluation validée ne peut pas être supprimée.');
+        }
+
+        $subordonne = $evaluation->evaluable;
+        $evaluation->delete();
+
+        $redirect = match ($subordonne->role) {
+            'DGA'           => route('dg.dga').'?tab=evaluations',
+            'Assistante_Dg' => route('dg.assistante').'?tab=evaluations',
+            default         => route('dg.conseillers.show', $subordonne).'?tab=evaluations',
+        };
+
+        return redirect($redirect)->with('status', 'Évaluation supprimée.');
+    }
+
     public function submit(Request $request, Evaluation $evaluation): RedirectResponse
     {
         $user = Auth::user();

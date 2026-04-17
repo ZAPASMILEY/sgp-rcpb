@@ -242,6 +242,7 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::post('/subordonne-evaluations',              [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'store'])->name('sub-evaluations.store');
     Route::get('/subordonne-evaluations/{evaluation}',  [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'show'])->name('sub-evaluations.show');
     Route::patch('/subordonne-evaluations/{evaluation}/soumettre', [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'submit'])->name('sub-evaluations.submit');
+    Route::delete('/subordonne-evaluations/{evaluation}', [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'destroy'])->name('sub-evaluations.destroy');
 
     // Subordonnés du DG
     Route::get('/dga',                    [\App\Http\Controllers\Dg\DgSubordonneController::class, 'dga'])->name('dga');
