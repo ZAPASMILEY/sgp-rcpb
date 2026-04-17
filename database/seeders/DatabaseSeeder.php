@@ -23,5 +23,9 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('111111'),
             'role' => 'admin',
         ]);
+
+        $this->call([
+            SubjectiveCriteriaTemplateSeeder::class,
+        ]);
     }
 }

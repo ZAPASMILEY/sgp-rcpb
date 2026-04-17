@@ -314,20 +314,12 @@
     </div>
 @endsection
 
-@php
-    $objectiveOptionsJson = json_encode($objectiveOptions ?? []);
-    $subjectiveTemplatesJson = json_encode(old('subjective_criteres', $subjectiveTemplates ?? []));
-    $oldObjectiveCriteriaJson = json_encode(old('objective_criteres', []));
-    $oldFormationsJson = json_encode($oldFormations ?? [['periode'=>'','libelle'=>'','domaine'=>'']]);
-    $oldExperiencesJson = json_encode($oldExperiences ?? [['periode'=>'','poste'=>'','observations'=>'']]);
-@endphp
-
 @push('scripts')
-    <script id="dg-eval-objective-options" type="application/json">{{ $objectiveOptionsJson }}</script>
-    <script id="dg-eval-subjective-templates" type="application/json">{{ $subjectiveTemplatesJson }}</script>
-    <script id="dg-eval-objective-old" type="application/json">{{ $oldObjectiveCriteriaJson }}</script>
-    <script id="dg-eval-formations-old" type="application/json">{{ $oldFormationsJson }}</script>
-    <script id="dg-eval-experiences-old" type="application/json">{{ $oldExperiencesJson }}</script>
+    <script id="dg-eval-objective-options" type="application/json">@json($objectiveOptions ?? [])</script>
+    <script id="dg-eval-subjective-templates" type="application/json">@json(old('subjective_criteres', $subjectiveTemplates ?? []))</script>
+    <script id="dg-eval-objective-old" type="application/json">@json(old('objective_criteres', []))</script>
+    <script id="dg-eval-formations-old" type="application/json">@json($oldFormations ?? [['periode'=>'','libelle'=>'','domaine'=>'']])</script>
+    <script id="dg-eval-experiences-old" type="application/json">@json($oldExperiences ?? [['periode'=>'','poste'=>'','observations'=>'']])</script>
 
     <script>
     document.addEventListener('DOMContentLoaded', function () {
