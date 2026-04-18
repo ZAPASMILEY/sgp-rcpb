@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Directeur;
 use App\Http\Controllers\Controller;
 use App\Models\Alerte;
 use App\Models\Annee;
-use App\Models\Direction;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\Service;
@@ -18,37 +17,70 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
+/**
+ * ──────────────────────────────────────────────────────────────────────────────
+ * DirecteurEvaluationController — Évaluations du directeur
+ * ──────────────────────────────────────────────────────────────────────────────
+ *
+ * Gère deux flux d'évaluations distincts :
+ *
+ *  A) Évaluations REÇUES par le directeur
+ *     - Créées par le DG ou la PCA pour l'entité du directeur.
+ *     - evaluable_type = entité (Direction|Caisse|DelegationTechnique)
+ *     - evaluable_role = 'manager'
+ *     - Le directeur peut accepter (valide) ou refuser (refuse) une fiche soumise.
+ *
+ *  B) Évaluations CRÉÉES par le directeur pour ses chefs de service
+ *     - evaluable_type = Service::class
+ *     - evaluable_role = 'manager'
+ *     - evaluateur_id  = Auth::id()
+ *     - Le directeur crée la fiche en brouillon, la soumet ou la supprime.
+ *
+ * Calcul de la note finale :
+ *   note_criteres_objectifs  = moyenne_objectifs  × 0,75
+ *   note_criteres_subjectifs = moyenne_subjectifs × 0,25
+ *   note_finale              = (objectifs + subjectifs) × 2   → sur 10
+ * ──────────────────────────────────────────────────────────────────────────────
+ */
 class DirecteurEvaluationController extends Controller
 {
     // ── Authorization helpers ──────────────────────────────────────────────
 
-    private function getDirection(): Direction
+    /**
+     * Résout et retourne le contexte du directeur connecté.
+     */
+    private function getContext(): DirecteurEntity
     {
-        $direction = Direction::where('user_id', Auth::id())->first();
-        if (! $direction) {
-            abort(403, 'Aucune direction associée à votre compte.');
-        }
-
-        return $direction;
+        return DirecteurEntity::resolveOrFail(Auth::user());
     }
 
-    private function authorizeReceivedEval(Evaluation $evaluation): Direction
+    /**
+     * Vérifie que l'évaluation a bien été reçue (adressée) au directeur connecté.
+     * Contrôle : evaluable_type = entité du directeur, evaluable_id = id de l'entité, role = 'manager'.
+     */
+    private function authorizeReceivedEval(Evaluation $evaluation): DirecteurEntity
     {
-        $direction = $this->getDirection();
+        $ctx = $this->getContext();
+
         if (
-            $evaluation->evaluable_type !== Direction::class ||
-            (int) $evaluation->evaluable_id !== $direction->id ||
+            $evaluation->evaluable_type !== $ctx->modelClass ||
+            (int) $evaluation->evaluable_id !== $ctx->getId() ||
             strtolower((string) ($evaluation->evaluable_role ?? '')) !== 'manager'
         ) {
             abort(403);
         }
 
-        return $direction;
+        return $ctx;
     }
 
-    private function authorizeCreatedEval(Evaluation $evaluation): Direction
+    /**
+     * Vérifie que l'évaluation a été créée par le directeur connecté
+     * pour l'un de ses chefs de service (Service appartenant à son entité).
+     */
+    private function authorizeCreatedEval(Evaluation $evaluation): DirecteurEntity
     {
-        $direction = $this->getDirection();
+        $ctx = $this->getContext();
+
         if (
             $evaluation->evaluable_type !== Service::class ||
             strtolower((string) ($evaluation->evaluable_role ?? '')) !== 'manager' ||
@@ -56,34 +88,48 @@ class DirecteurEvaluationController extends Controller
         ) {
             abort(403);
         }
+
+        // Vérifie que le service évalué appartient bien à l'entité de ce directeur.
         $service = Service::find($evaluation->evaluable_id);
-        if (! $service || (int) $service->direction_id !== $direction->id) {
+        if (! $service || ! $ctx->serviceOwnedBy($service)) {
             abort(403);
         }
 
-        return $direction;
+        return $ctx;
     }
 
     // ── Créer une évaluation pour un chef de service ──────────────────────
 
+    /**
+     * Affiche le formulaire de création d'une évaluation pour un chef de service.
+     *
+     * - Charge la liste des services rattachés à l'entité du directeur.
+     * - Si un service est pré-sélectionné (via ?service_id=X), charge ses fiches
+     *   d'objectifs acceptées et non échues pour pré-remplir les critères objectifs.
+     * - Charge les templates de critères subjectifs actifs (SubjectiveCriteriaTemplate).
+     */
     public function create(Request $request): View
     {
-        $direction = $this->getDirection();
+        $ctx       = $this->getContext();
+        $direction = $ctx->entity;
 
-        $services = Service::where('direction_id', $direction->id)
-            ->orderBy('nom')
-            ->get();
+        // Tous les services rattachés à l'entité du directeur
+        $services = $ctx->getServices();
 
+        // Pré-sélection du service via paramètre URL (ex: depuis la page subordonné)
         $preselectedId   = (int) $request->get('service_id', 0);
         $selectedService = $services->firstWhere('id', $preselectedId);
 
+        // Si l'entité n'a qu'un seul service, on le sélectionne automatiquement
         if (! $selectedService && $services->count() === 1) {
             $selectedService = $services->first();
         }
 
+        // Fiches d'objectifs acceptées pour le service sélectionné (non échues)
+        // Utilisées pour pré-remplir les critères objectifs du formulaire JS
         $objectiveOptions = [];
         if ($selectedService) {
-            $today = now()->toDateString();
+            $today  = now()->toDateString();
             $fiches = FicheObjectif::query()
                 ->with('objectifs')
                 ->where('statut', 'acceptee')
@@ -108,8 +154,10 @@ class DirecteurEvaluationController extends Controller
             }
         }
 
+        // Templates de critères subjectifs actifs, triés par ordre
         $subjectiveTemplates = $this->buildSubjectiveTemplates();
 
+        // Valeurs précédentes pour les tableaux formations/expériences (après erreur de validation)
         $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
         if (! is_array($oldFormations) || $oldFormations === []) {
             $oldFormations = [['periode' => '', 'libelle' => '', 'domaine' => '']];
@@ -120,6 +168,8 @@ class DirecteurEvaluationController extends Controller
             $oldExperiences = [['periode' => '', 'poste' => '', 'observations' => '']];
         }
 
+        $displayYear = now()->year;
+
         return view('directeur.evaluations.create', compact(
             'direction',
             'services',
@@ -128,14 +178,26 @@ class DirecteurEvaluationController extends Controller
             'subjectiveTemplates',
             'oldFormations',
             'oldExperiences',
+            'displayYear',
         ));
     }
 
+    /**
+     * Persiste une nouvelle évaluation pour un chef de service.
+     *
+     * Étapes :
+     *  1. Validation des champs du formulaire.
+     *  2. Vérification que service_id fait partie des services de l'entité.
+     *  3. Conversion des dates MM/AAAA → AAAA-MM-01.
+     *  4. Nettoyage des formations / expériences (suppression des lignes vides).
+     *  5. Normalisation et scoring des critères subjectifs et objectifs.
+     *  6. Persistance en transaction (Evaluation + Identification + Critères + SousCritères).
+     */
     public function store(Request $request): RedirectResponse
     {
-        $direction  = $this->getDirection();
+        $ctx        = $this->getContext();
         $user       = Auth::user();
-        $serviceIds = Service::where('direction_id', $direction->id)->pluck('id')->all();
+        $serviceIds = $ctx->getServiceIds(); // Whitelist des IDs autorisés
 
         $validated = $request->validate([
             'service_id'                       => ['required', 'integer', 'in:'.implode(',', $serviceIds ?: [0])],
@@ -169,6 +231,7 @@ class DirecteurEvaluationController extends Controller
 
         $service = Service::findOrFail($validated['service_id']);
 
+        // Conversion du format MM/AAAA → AAAA-MM-01 (stocké comme date SQL)
         $dateDebut = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_debut']);
         $dateFin   = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_fin']);
 
@@ -176,6 +239,7 @@ class DirecteurEvaluationController extends Controller
             return back()->withInput()->withErrors(['date_fin' => 'La date de fin doit être postérieure à la date de début.']);
         }
 
+        // Normalisation de la date d'évaluation dans la section identification
         $identification = $validated['identification'] ?? [];
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
@@ -186,6 +250,7 @@ class DirecteurEvaluationController extends Controller
             $identification['date_evaluation'] = $normalized;
         }
 
+        // Nettoyage : suppression des lignes de formation entièrement vides
         $identification['formations'] = collect($identification['formations'] ?? [])
             ->map(fn ($row) => [
                 'periode' => trim((string) ($row['periode'] ?? '')),
@@ -195,6 +260,7 @@ class DirecteurEvaluationController extends Controller
             ->filter(fn ($row) => $row['periode'] !== '' || $row['libelle'] !== '' || $row['domaine'] !== '')
             ->values()->all();
 
+        // Nettoyage : suppression des lignes d'expérience entièrement vides
         $identification['experiences'] = collect($identification['experiences'] ?? [])
             ->map(fn ($row) => [
                 'periode'      => trim((string) ($row['periode'] ?? '')),
@@ -204,6 +270,9 @@ class DirecteurEvaluationController extends Controller
             ->filter(fn ($row) => $row['periode'] !== '' || $row['poste'] !== '' || $row['observations'] !== '')
             ->values()->all();
 
+        // Normalisation des critères :
+        //   - subjectifs : strict=false → les lignes sans libellé de sous-critère sont gardées (libellé = '-')
+        //   - objectifs  : strict=true  → les lignes sans sous-critère noté sont ignorées
         $normalizedSubjective = $this->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
         $normalizedObjective  = $this->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
 
@@ -211,14 +280,17 @@ class DirecteurEvaluationController extends Controller
             return back()->withInput()->withErrors(['subjective_criteres' => 'Les critères subjectifs et objectifs doivent contenir au moins une ligne notée.']);
         }
 
+        // Calcul des scores (pondération 75 % objectifs / 25 % subjectifs × 2 = note /10)
         $scores = $this->computeScores($normalizedSubjective, $normalizedObjective);
 
+        // Résolution de l'année de notation (table annees)
         try {
             $anneeId = Annee::resolveIdForDate($dateDebut);
         } catch (\Throwable) {
             $anneeId = null;
         }
 
+        // Transaction : Evaluation → Identification → Critères → SousCritères
         $evaluation = DB::transaction(function () use (
             $user, $service, $dateDebut, $dateFin, $anneeId,
             $scores, $validated, $identification,
@@ -247,8 +319,10 @@ class DirecteurEvaluationController extends Controller
                 'statut'                    => 'brouillon',
             ]);
 
+            // Section identification (fiche de renseignements du chef de service)
             $evaluation->identification()->create($identification);
 
+            // Critères subjectifs puis objectifs (fusionnés dans la boucle)
             foreach (array_merge($normalizedSubjective, $normalizedObjective) as $criterion) {
                 $critere = $evaluation->criteres()->create([
                     'type'                              => $criterion['type'],
@@ -261,6 +335,7 @@ class DirecteurEvaluationController extends Controller
                     'source_fiche_objectif_id'          => $criterion['source_fiche_objectif_id'],
                     'source_fiche_objectif_objectif_id' => $criterion['source_fiche_objectif_objectif_id'],
                 ]);
+                // Sous-critères du critère courant
                 foreach ($criterion['subcriteria'] as $sub) {
                     $critere->sousCriteres()->create([
                         'ordre'       => $sub['ordre'],
@@ -279,14 +354,25 @@ class DirecteurEvaluationController extends Controller
             ->with('status', "Évaluation créée pour le chef du service « {$service->nom} ».");
     }
 
+    /**
+     * Affiche le détail d'une évaluation (reçue ou créée).
+     *
+     * La même route sert les deux sens :
+     *  - Évaluation reçue ($isReceived = true) : le directeur est l'évalué.
+     *  - Évaluation créée ($isCreated = true)  : le directeur est l'évaluateur.
+     * Les deux variables sont passées à la vue pour adapter l'affichage et les actions.
+     */
     public function show(Evaluation $evaluation): View
     {
-        $direction = $this->getDirection();
+        $ctx       = $this->getContext();
+        $direction = $ctx->entity;
 
-        $isReceived = $evaluation->evaluable_type === Direction::class
-            && (int) $evaluation->evaluable_id === $direction->id
+        // Déterminer si l'évaluation est reçue par ce directeur
+        $isReceived = $evaluation->evaluable_type === $ctx->modelClass
+            && (int) $evaluation->evaluable_id === $ctx->getId()
             && strtolower((string) ($evaluation->evaluable_role ?? '')) === 'manager';
 
+        // Déterminer si l'évaluation a été créée par ce directeur pour un de ses services
         $isCreated = $evaluation->evaluable_type === Service::class
             && strtolower((string) ($evaluation->evaluable_role ?? '')) === 'manager'
             && (int) $evaluation->evaluateur_id === Auth::id();
@@ -295,31 +381,37 @@ class DirecteurEvaluationController extends Controller
             abort(403);
         }
 
+        // Pour une évaluation créée, vérifier que le service cible appartient à l'entité
         if ($isCreated) {
             $service = Service::find($evaluation->evaluable_id);
-            if (! $service || (int) $service->direction_id !== $direction->id) {
+            if (! $service || ! $ctx->serviceOwnedBy($service)) {
                 abort(403);
             }
         }
 
+        // Chargement eager des relations pour éviter les N+1
         $evaluation->load(['evaluateur', 'evaluable', 'identification', 'criteres.sousCriteres']);
 
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
 
-        $note       = (float) $evaluation->note_finale;
-        $mention    = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
+        $note    = (float) $evaluation->note_finale;
+        $mention = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
+
+        // Libellé et type de la cible selon le sens de l'évaluation
         $cibleLabel = $evaluation->identification?->nom_prenom
             ?? ($isReceived
-                ? trim($direction->directeur_prenom.' '.$direction->directeur_nom)
+                ? $ctx->getDirecteurNomPrenom()
                 : ($evaluation->evaluable?->nom ?? '-'));
-        $cibleType  = $isReceived ? 'Directeur' : 'Chef de service — '.$evaluation->evaluable?->nom;
+        $cibleType  = $isReceived
+            ? $ctx->getRoleLabel()
+            : 'Chef de service — '.($evaluation->evaluable?->nom ?? '-');
 
+        // Badge de statut
         $statusClass = match ($evaluation->statut) {
             'valide'    => 'border-emerald-200 bg-emerald-50 text-emerald-700',
             'soumis'    => 'border-amber-200 bg-amber-50 text-amber-700',
             'refuse'    => 'border-rose-200 bg-rose-50 text-rose-700',
-            'brouillon' => 'border-slate-200 bg-slate-100 text-slate-700',
             default     => 'border-slate-200 bg-slate-100 text-slate-700',
         };
         $statusLabel = match ($evaluation->statut) {
@@ -349,6 +441,12 @@ class DirecteurEvaluationController extends Controller
         ));
     }
 
+    /**
+     * Accepte ou refuse une évaluation reçue (soumise par le DG/PCA).
+     *
+     * Seule une évaluation au statut 'soumis' peut être traitée.
+     * Une notification est envoyée à l'évaluateur (DG/PCA) après l'action.
+     */
     public function statut(Request $request, Evaluation $evaluation): RedirectResponse
     {
         $this->authorizeReceivedEval($evaluation);
@@ -359,10 +457,11 @@ class DirecteurEvaluationController extends Controller
 
         $request->validate(['action' => ['required', 'in:accepter,refuser']]);
 
-        $action            = $request->input('action');
+        $action             = $request->input('action');
         $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
         $evaluation->save();
 
+        // Notifie l'évaluateur (DG/PCA) du résultat
         if ($evaluation->evaluateur_id) {
             $directeur   = Auth::user();
             $actionLabel = $action === 'accepter' ? 'accepté' : 'refusé';
@@ -379,6 +478,12 @@ class DirecteurEvaluationController extends Controller
         return redirect()->route('directeur.evaluations.show', $evaluation)->with('status', $msg);
     }
 
+    /**
+     * Soumet une évaluation brouillon (créée par le directeur pour un chef de service).
+     *
+     * Passe le statut de 'brouillon' à 'soumis'.
+     * Seule une évaluation en brouillon peut être soumise.
+     */
     public function submit(Evaluation $evaluation): RedirectResponse
     {
         $this->authorizeCreatedEval($evaluation);
@@ -395,6 +500,11 @@ class DirecteurEvaluationController extends Controller
             ->with('status', 'Évaluation soumise au chef de service.');
     }
 
+    /**
+     * Supprime une évaluation créée par le directeur.
+     *
+     * Une évaluation validée ne peut pas être supprimée.
+     */
     public function destroy(Evaluation $evaluation): RedirectResponse
     {
         $this->authorizeCreatedEval($evaluation);
@@ -410,12 +520,20 @@ class DirecteurEvaluationController extends Controller
             ->with('status', 'Évaluation supprimée.');
     }
 
+    /**
+     * Génère et télécharge le PDF d'une évaluation (reçue ou créée).
+     *
+     * Réutilise la vue PDF de l'espace DG pour une cohérence visuelle.
+     */
     public function exportPdf(Evaluation $evaluation)
     {
-        $direction = $this->getDirection();
+        $ctx = $this->getContext();
 
-        $isReceived = $evaluation->evaluable_type === Direction::class && (int) $evaluation->evaluable_id === $direction->id;
-        $isCreated  = $evaluation->evaluable_type === Service::class && (int) $evaluation->evaluateur_id === Auth::id();
+        // Vérifie les droits d'accès (reçue ou créée par ce directeur)
+        $isReceived = $evaluation->evaluable_type === $ctx->modelClass
+            && (int) $evaluation->evaluable_id === $ctx->getId();
+        $isCreated  = $evaluation->evaluable_type === Service::class
+            && (int) $evaluation->evaluateur_id === Auth::id();
 
         if (! $isReceived && ! $isCreated) {
             abort(403);
@@ -428,7 +546,7 @@ class DirecteurEvaluationController extends Controller
         $note               = (float) $evaluation->note_finale;
         $mention            = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
         $cibleLabel         = $evaluation->identification?->nom_prenom ?? '-';
-        $cibleType          = $isReceived ? 'Directeur' : 'Chef de service';
+        $cibleType          = $isReceived ? $ctx->getRoleLabel() : 'Chef de service';
 
         $pdf = Pdf::loadView('dg.evaluations.pdf', compact(
             'evaluation', 'subjectiveCriteria', 'objectiveCriteria', 'mention', 'cibleLabel', 'cibleType'
@@ -439,6 +557,10 @@ class DirecteurEvaluationController extends Controller
 
     // ── Private helpers ────────────────────────────────────────────────────
 
+    /**
+     * Charge tous les templates de critères subjectifs actifs depuis la base.
+     * Retourne un tableau PHP brut (encodé en JSON dans la vue pour le moteur JS).
+     */
     private function buildSubjectiveTemplates(): array
     {
         return SubjectiveCriteriaTemplate::query()
@@ -460,31 +582,34 @@ class DirecteurEvaluationController extends Controller
             ->all();
     }
 
+    /**
+     * Normalise et valide les critères soumis par le formulaire JS.
+     *
+     * @param  array   $criteria  Tableau de critères bruts (depuis request)
+     * @param  string  $type      'subjectif' ou 'objectif'
+     * @param  int     $minNote   Note minimale autorisée (1 pour les deux types)
+     * @param  int     $maxNote   Note maximale autorisée (5 pour les deux types)
+     * @param  bool    $strict    Si true, les critères sans sous-critères sont ignorés.
+     *                            Si false (subjectifs), un sous-critère par défaut '-' est injecté.
+     * @return array   Critères normalisés prêts à être persistés
+     */
     private function normalizeCriteria(array $criteria, string $type, int $minNote, int $maxNote, bool $strict = true): array
     {
         $normalized = [];
         foreach (array_values($criteria) as $idx => $criterion) {
-            if (! is_array($criterion)) {
-                continue;
-            }
+            if (! is_array($criterion)) continue;
             $title = trim((string) ($criterion['titre'] ?? ''));
-            if ($title === '') {
-                continue;
-            }
+            if ($title === '') continue;
 
             $subcriteria = [];
             foreach (array_values((array) ($criterion['subcriteria'] ?? [])) as $subIdx => $sub) {
-                if (! is_array($sub)) {
-                    continue;
-                }
+                if (! is_array($sub)) continue;
                 $label = trim((string) ($sub['libelle'] ?? ''));
                 if ($label === '') {
-                    if ($strict) {
-                        continue;
-                    }
+                    if ($strict) continue;
                     $label = '-';
                 }
-                $note        = max($minNote, min($maxNote, (float) ($sub['note'] ?? $minNote)));
+                $note          = max($minNote, min($maxNote, (float) ($sub['note'] ?? $minNote)));
                 $subcriteria[] = [
                     'ordre'       => $subIdx + 1,
                     'libelle'     => $label,
@@ -493,9 +618,7 @@ class DirecteurEvaluationController extends Controller
                 ];
             }
 
-            if ($strict && $subcriteria === []) {
-                continue;
-            }
+            if ($strict && $subcriteria === []) continue;
             if (! $strict && $subcriteria === []) {
                 $subcriteria = [['ordre' => 1, 'libelle' => '-', 'note' => $minNote, 'observation' => null]];
             }
@@ -517,6 +640,14 @@ class DirecteurEvaluationController extends Controller
         return $normalized;
     }
 
+    /**
+     * Calcule les scores pondérés à partir des critères normalisés.
+     *
+     * Pondération :
+     *   objectifs  × 0,75 = note_criteres_objectifs   (sur 3,75)
+     *   subjectifs × 0,25 = note_criteres_subjectifs  (sur 1,25)
+     *   note_finale = (objectifs + subjectifs) × 2    (ramène sur 10)
+     */
     private function computeScores(array $subjectiveCriteria, array $objectiveCriteria): array
     {
         $moyObj  = round(collect($objectiveCriteria)->avg('note_globale') ?? 0, 2);
@@ -533,20 +664,20 @@ class DirecteurEvaluationController extends Controller
         ];
     }
 
+    /**
+     * Tente de parser une date saisie librement (JJ/MM/AAAA ou AAAA-MM-JJ)
+     * et la retourne au format AAAA-MM-JJ (stockage SQL).
+     * Retourne null si le format ne correspond à aucun des deux attendus.
+     */
     private function normalizeDateValue(mixed $value): ?string
     {
         $value = trim((string) $value);
-        if ($value === '') {
-            return null;
-        }
+        if ($value === '') return null;
         foreach (['Y-m-d', 'd/m/Y'] as $format) {
             try {
                 $date = Carbon::createFromFormat($format, $value);
-                if ($date && $date->format($format) === $value) {
-                    return $date->toDateString();
-                }
-            } catch (\Throwable) {
-            }
+                if ($date && $date->format($format) === $value) return $date->toDateString();
+            } catch (\Throwable) {}
         }
 
         return null;

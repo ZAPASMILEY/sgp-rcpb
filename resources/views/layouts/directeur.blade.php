@@ -5,20 +5,21 @@
             'title' => 'Mon espace',
             'items' => [
                 ['route' => 'directeur.mon-espace', 'icon' => 'fas fa-house', 'label' => 'Tableau de bord'],
+                ['route' => 'directeur.mon-espace', 'query' => 'tab=evaluations', 'icon' => 'fas fa-star-half-stroke', 'label' => 'Mes évaluations reçues'],
+                ['route' => 'directeur.mon-espace', 'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye',          'label' => 'Mes objectifs reçus'],
             ],
         ],
         [
-            'title' => 'Mon dossier',
+            'title' => 'Subordonnés',
             'items' => [
-                ['route' => 'directeur.mon-espace', 'query' => 'tab=evaluations', 'icon' => 'fas fa-star',    'label' => 'Mes évaluations'],
-                ['route' => 'directeur.mon-espace', 'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye', 'label' => 'Mes objectifs'],
+                ['route' => 'directeur.subordonnes',           'icon' => 'fas fa-users-between-lines', 'label' => 'Vue d\'ensemble'],
+                ['route' => 'directeur.evaluations.create',    'icon' => 'fas fa-pen-to-square',       'label' => 'Nouvelle évaluation'],
             ],
         ],
         [
-            'title' => 'Ma direction',
+            'title' => 'Personnel',
             'items' => [
-                ['route' => 'directeur.mon-espace', 'query' => 'tab=dashboard', 'icon' => 'fas fa-users',      'label' => 'Mes chefs de service'],
-                ['route' => 'directeur.evaluations.create',                     'icon' => 'fas fa-pen-to-square','label' => 'Nouvelle évaluation'],
+                ['route' => 'directeur.personnel', 'icon' => 'fas fa-id-card-clip', 'label' => 'Personnel de ma direction'],
             ],
         ],
     ];
@@ -119,7 +120,16 @@
                 {{ strtoupper(substr($user?->name ?? 'D', 0, 1)) }}
             </div>
             <h5 class="mt-3 text-base font-black text-white leading-tight">{{ $user?->name }}</h5>
-            <p class="mt-1 text-[11px] font-semibold uppercase tracking-widest text-white/60">Directeur de Direction</p>
+            <p class="mt-1 text-[11px] font-semibold uppercase tracking-widest text-white/60">
+                @php
+                    $roleLabel = match($user?->role) {
+                        'Directeur_Caisse'   => 'Directeur de Caisse',
+                        'Directeur_Tehnique' => 'Directeur Technique',
+                        default              => 'Directeur de Direction',
+                    };
+                @endphp
+                {{ $roleLabel }}
+            </p>
         </div>
 
         <div class="flex flex-1 flex-col mt-1">
@@ -127,9 +137,19 @@
                 <div class="sidebar-label">{{ $section['title'] }}</div>
                 @foreach($section['items'] as $item)
                     @php
-                        $isActive = request()->routeIs($item['route'].'*');
-                        $query    = $item['query'] ?? null;
-                        $link     = route($item['route']) . ($query ? '?'.$query : '');
+                        $query  = $item['query'] ?? null;
+                        $link   = route($item['route']) . ($query ? '?'.$query : '');
+                        $routeActive = request()->routeIs($item['route']);
+                        if ($query) {
+                            parse_str($query, $qArr);
+                            $isActive = $routeActive && collect($qArr)->every(fn($v,$k) => request()->query($k) === $v);
+                        } else {
+                            $isActive = $routeActive && !request()->query('tab');
+                        }
+                        // Special: non-mon-espace routes are always just route-matched
+                        if ($item['route'] !== 'directeur.mon-espace') {
+                            $isActive = request()->routeIs($item['route'].'*');
+                        }
                     @endphp
                     <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                         <i class="{{ $item['icon'] }}"></i>
