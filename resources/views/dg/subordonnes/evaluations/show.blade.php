@@ -185,8 +185,9 @@
                                 <div class="flex items-start justify-between gap-4">
                                     <div>
                                         <h3 class="text-base font-bold text-slate-900">{{ $criterion->titre }}</h3>
-                                        @if ($criterion->observation)
-                                            <p class="mt-1 text-sm text-slate-500">{{ $criterion->observation }}</p>
+                                        @php $criterionObs = $criterion->observation; @endphp
+                                        @if ($criterionObs)
+                                            <p class="mt-1 text-sm text-slate-500">{{ $criterionObs }}</p>
                                         @endif
                                     </div>
                                     <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">Note globale {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}</span>
@@ -213,7 +214,8 @@
                                 </div>
                             </article>
                         @endforeach
-                    @else
+                    @endif
+                    @if ($subjectiveCriteria->isEmpty())
                         @php
                             $templates = \App\Models\SubjectiveCriteriaTemplate::query()
                                 ->with('subcriteria')
@@ -226,8 +228,9 @@
                                 <div class="flex items-start justify-between gap-4">
                                     <div>
                                         <h3 class="text-base font-bold text-slate-700">{{ $template->titre }}</h3>
-                                        @if ($template->description)
-                                            <p class="mt-1 text-sm text-slate-400">{{ $template->description }}</p>
+                                        @php $tplDesc = $template->description; @endphp
+                                        @if ($tplDesc)
+                                            <p class="mt-1 text-sm text-slate-400">{{ $tplDesc }}</p>
                                         @endif
                                     </div>
                                     <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-400">Non note</span>
