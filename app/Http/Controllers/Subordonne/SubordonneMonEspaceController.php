@@ -29,12 +29,14 @@ class SubordonneMonEspaceController extends Controller
 
         // ── Evaluations (je suis l'evalue) ──────────────────────────────────
         $baseE = fn () => Evaluation::where('evaluable_type', User::class)
-            ->where('evaluable_id', $user->id);
+            ->where('evaluable_id', $user->id)
+            ->where('statut', '!=', 'brouillon');
 
         $evalsQ = Evaluation::query()
             ->with(['evaluateur', 'identification'])
             ->where('evaluable_type', User::class)
             ->where('evaluable_id', $user->id)
+            ->where('statut', '!=', 'brouillon')
             ->orderByDesc('date_debut');
 
         if ($statut && $tab === 'evaluations') {
@@ -42,10 +44,9 @@ class SubordonneMonEspaceController extends Controller
         }
 
         $evaluationsStats = [
-            'total'     => $baseE()->count(),
-            'brouillon' => $baseE()->where('statut', 'brouillon')->count(),
-            'soumis'    => $baseE()->where('statut', 'soumis')->count(),
-            'valide'    => $baseE()->where('statut', 'valide')->count(),
+            'total'  => $baseE()->count(),
+            'soumis' => $baseE()->where('statut', 'soumis')->count(),
+            'valide' => $baseE()->where('statut', 'valide')->count(),
         ];
 
         $evaluations = $evalsQ->paginate(10)->withQueryString();

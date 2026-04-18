@@ -96,13 +96,12 @@
             @if ($tab === 'evaluations')
 
                 {{-- Stats evaluations --}}
-                <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div class="mb-5 grid grid-cols-3 gap-3">
                     @php
                     $evalCards = [
-                        ['label'=>'Total',     'value'=>$evaluationsStats['total'],    'icon'=>'fas fa-clipboard-list','tone'=>'border-slate-100 bg-white text-slate-900',          'iconWrap'=>'bg-slate-100 text-slate-600'],
-                        ['label'=>'Brouillons','value'=>$evaluationsStats['brouillon'],'icon'=>'fas fa-file-pen',      'tone'=>'border-slate-100 bg-slate-50/80 text-slate-900',    'iconWrap'=>'bg-white text-slate-500'],
-                        ['label'=>'Soumises',  'value'=>$evaluationsStats['soumis'],   'icon'=>'fas fa-paper-plane',   'tone'=>'border-amber-100 bg-amber-50/80 text-amber-900',    'iconWrap'=>'bg-white text-amber-600'],
-                        ['label'=>'Validees',  'value'=>$evaluationsStats['valide'],   'icon'=>'fas fa-circle-check',  'tone'=>'border-emerald-100 bg-emerald-50/80 text-emerald-900','iconWrap'=>'bg-white text-emerald-600'],
+                        ['label'=>'Total',    'value'=>$evaluationsStats['total'],  'icon'=>'fas fa-clipboard-list','tone'=>'border-slate-100 bg-white text-slate-900',            'iconWrap'=>'bg-slate-100 text-slate-600'],
+                        ['label'=>'Soumises', 'value'=>$evaluationsStats['soumis'], 'icon'=>'fas fa-paper-plane',   'tone'=>'border-amber-100 bg-amber-50/80 text-amber-900',      'iconWrap'=>'bg-white text-amber-600'],
+                        ['label'=>'Validees', 'value'=>$evaluationsStats['valide'], 'icon'=>'fas fa-circle-check',  'tone'=>'border-emerald-100 bg-emerald-50/80 text-emerald-900','iconWrap'=>'bg-white text-emerald-600'],
                     ];
                     @endphp
                     @foreach ($evalCards as $card)

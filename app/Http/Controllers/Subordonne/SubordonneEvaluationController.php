@@ -29,6 +29,11 @@ class SubordonneEvaluationController extends Controller
     public function show(Evaluation $evaluation): View
     {
         $this->authorize($evaluation);
+
+        if ($evaluation->statut === 'brouillon') {
+            abort(403, 'Cette évaluation n\'est pas encore disponible.');
+        }
+
         $user = Auth::user();
 
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
