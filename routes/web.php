@@ -222,6 +222,7 @@ Route::middleware('auth')->post('/alertes/lire-tout', [AlerteController::class, 
 // Routes DG
 Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function (): void {
     Route::post('/logout', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/logout', fn () => redirect()->route('login'));
     Route::get('/', \App\Http\Controllers\Dg\DgDashboardController::class)->name('dashboard');
     Route::get('/objectifs', function () {
         return view('dg.objectifs');
