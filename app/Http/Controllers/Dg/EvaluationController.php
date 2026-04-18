@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
+use App\Models\Alerte;
 use App\Models\Evaluation;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class EvaluationController extends Controller
@@ -49,6 +51,41 @@ class EvaluationController extends Controller
         ));
 
         return $pdf->download('evaluation-'.$evaluation->id.'-dg.pdf');
+    }
+
+    public function statut(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        if ($evaluation->evaluable_type !== User::class) {
+            abort(403);
+        }
+        if ((int) $evaluation->evaluable_id !== (int) $request->user()->id) {
+            abort(403);
+        }
+        if ($evaluation->statut !== 'soumis') {
+            return back()->with('error', 'Cette action n\'est possible que sur une évaluation soumise.');
+        }
+
+        $request->validate(['action' => ['required', 'in:accepter,refuser']]);
+
+        $action = $request->input('action');
+        $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
+        $evaluation->save();
+
+        // Notifier le PCA (évaluateur)
+        if ($evaluation->evaluateur_id) {
+            $dg = Auth::user();
+            $actionLabel = $action === 'accepter' ? 'accepté' : 'refusé';
+            Alerte::notifier(
+                (int) $evaluation->evaluateur_id,
+                "Fiche d'évaluation {$actionLabel}e par le DG",
+                "Le DG {$dg?->name} a {$actionLabel} la fiche d'évaluation que vous lui avez soumise.",
+                $action === 'accepter' ? 'moyenne' : 'haute'
+            );
+        }
+
+        $msg = $action === 'accepter' ? 'Évaluation acceptée.' : 'Évaluation refusée.';
+
+        return redirect()->route('dg.evaluations.show', $evaluation)->with('status', $msg);
     }
 
     public function commentaire(Request $request, Evaluation $evaluation)

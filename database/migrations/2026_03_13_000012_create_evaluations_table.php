@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::create('evaluations', function (Blueprint $table): void {
             $table->id();
 
@@ -58,6 +59,7 @@ return new class extends Migration
 
             $table->timestamps();
         });
+        Schema::enableForeignKeyConstraints();
     }
 
     /**

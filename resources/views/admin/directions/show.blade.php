@@ -5,7 +5,7 @@
 @section('content')
     @php $isFaitiereDirection = is_null($direction->delegation_technique_id); @endphp
     <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-4xl flex-col gap-6">
+        <div class="w-full flex flex-col gap-6">
             <header class="admin-panel p-6 sm:p-8">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>

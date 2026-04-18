@@ -109,11 +109,11 @@
                             <option value="">Choisissez d'abord une delegation</option>
                             @foreach ($caisses as $caisse)
                                 <option value="{{ $caisse->id }}"
-                                    data-delegation-id="{{ $caisse->superviseur?->delegation_technique_id }}"
+                                    data-delegation-id="{{ $caisse->delegation_technique_id }}"
                                     @selected((string) old('superviseur_caisse_id') === (string) $caisse->id)>
                                     {{ $caisse->nom }} - {{ $caisse->directeur_nom }}
-                                    @if ($caisse->superviseur && $caisse->superviseur->delegationTechnique)
-                                        - {{ $caisse->superviseur->delegationTechnique->region }} / {{ $caisse->superviseur->delegationTechnique->ville }}
+                                    @if ($caisse->delegationTechnique)
+                                        - {{ $caisse->delegationTechnique->region }} / {{ $caisse->delegationTechnique->ville }}
                                     @endif
                                 </option>
                             @endforeach

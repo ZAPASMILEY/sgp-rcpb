@@ -18,7 +18,7 @@
 @endphp
 
 <div class="relative z-10 -mt-8 bg-[linear-gradient(180deg,#f6f9ff_0%,#fbfdff_100%)] px-4 pb-10 pt-0 lg:px-8">
-    <div class="mx-auto max-w-4xl space-y-5">
+    <div class="w-full space-y-5">
 
         {{-- En-tête --}}
         <section class="rounded-[26px] border border-white bg-white/90 px-6 py-5 shadow-[0_18px_60px_-35px_rgba(148,163,184,0.6)] backdrop-blur">

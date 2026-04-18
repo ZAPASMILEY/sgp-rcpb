@@ -3,7 +3,7 @@
 
 @section('content')
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
-    <div class="mx-auto max-w-6xl flex flex-col gap-6">
+    <div class="w-full flex flex-col gap-6">
 
         <header class="admin-panel px-6 py-6 lg:px-8">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -63,6 +63,7 @@
                                 <th class="px-4 py-3">Caisse</th>
                                 <th class="px-4 py-3">Chef de guichet</th>
                                 <th class="px-4 py-3">Téléphone</th>
+                                <th class="px-4 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -76,6 +77,11 @@
                                         <p class="text-xs text-slate-400">{{ $guichet->chef_email ?? '' }}</p>
                                     </td>
                                     <td class="px-4 py-3 text-slate-500">{{ $guichet->chef_telephone ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <a href="{{ route('dg.guichets.show', $guichet) }}" class="ent-btn ent-btn-soft py-1 px-3 text-xs">
+                                            <i class="fas fa-eye mr-1"></i>Voir
+                                        </a>
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

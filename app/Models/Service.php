@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Models\Caisse;
 
 class Service extends Model
 {
@@ -19,6 +20,7 @@ class Service extends Model
         'nom',
         'direction_id',
         'delegation_technique_id',
+        'caisse_id',
         'chef_prenom',
         'chef_nom',
         'chef_sexe',
@@ -35,6 +37,11 @@ class Service extends Model
     public function direction(): BelongsTo
     {
         return $this->belongsTo(Direction::class);
+    }
+
+    public function caisse(): BelongsTo
+    {
+        return $this->belongsTo(Caisse::class);
     }
 
     public function agents(): HasMany

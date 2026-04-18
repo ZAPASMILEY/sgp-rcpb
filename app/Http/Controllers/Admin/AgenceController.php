@@ -49,7 +49,7 @@ class AgenceController extends Controller
                 ->orderBy('ville')
                 ->get(),
             'caisses' => Caisse::query()
-                ->with('superviseur.delegationTechnique')
+                ->with('agences')
                 ->orderBy('nom')
                 ->get(),
         ]);

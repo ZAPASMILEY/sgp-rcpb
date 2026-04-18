@@ -11,14 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::create('services', function (Blueprint $table): void {
             $table->id();
             $table->string('nom');
 
-            // 1. Rattachements (Flexibilité Direction ou Délégation)
-            // direction_id est maintenant nullable pour permettre un rattachement technique
+            // 1. Rattachements (Flexibilité Direction, Délégation ou Caisse)
             $table->foreignId('direction_id')->nullable()->constrained('directions')->nullOnDelete();
             $table->foreignId('delegation_technique_id')->nullable()->constrained('delegation_techniques')->nullOnDelete();
+            $table->foreignId('caisse_id')->nullable()->constrained('caisses')->nullOnDelete();
 
             // 2. Bloc Chef de Service (Fusionné avec les nouveaux champs)
             $table->string('chef_prenom');
@@ -30,6 +31,7 @@ return new class extends Migration
 
             $table->timestamps();
         });
+        Schema::enableForeignKeyConstraints();
     }
 
     /**

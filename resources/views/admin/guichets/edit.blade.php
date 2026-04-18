@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-8 pt-4 lg:px-8">
-    <div class="mx-auto max-w-3xl space-y-6">
+    <div class="w-full space-y-6">
         <a href="{{ route('admin.guichets.index') }}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-700">
             <i class="fas fa-arrow-left text-xs"></i> Retour aux guichets
         </a>

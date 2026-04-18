@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto max-w-6xl space-y-6">
+        <div class="w-full space-y-6">
             <section class="admin-panel p-6">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>

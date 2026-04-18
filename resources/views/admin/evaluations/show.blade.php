@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-6xl flex-col gap-6">
+        <div class="w-full flex flex-col gap-6">
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -14,7 +14,13 @@
                             {{ $cibleType }} : {{ $cibleLabel }}
                         </p>
                     </div>
-                    <a href="{{ route('admin.evaluations.index') }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <div class="flex shrink-0 flex-wrap items-center gap-2">
+                        <a href="{{ route('admin.evaluations.pdf', $evaluation) }}"
+                           class="ent-btn ent-btn-soft">
+                            <i class="fas fa-file-pdf mr-2"></i>Télécharger PDF
+                        </a>
+                        <a href="{{ route('admin.evaluations.index') }}" class="ent-btn ent-btn-soft">Retour</a>
+                    </div>
                 </div>
             </header>
 

@@ -10,7 +10,7 @@
                     <span>Retour</span>
                 </a>
             </div>
-            <div class="mx-auto max-w-3xl">
+            <div class="w-full">
                 <section class="admin-panel p-6 sm:p-8">
                     <div class="flex items-start justify-between gap-4">
                         <div>

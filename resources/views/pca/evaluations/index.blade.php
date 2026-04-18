@@ -177,7 +177,7 @@
                                 @forelse ($evaluations as $evaluation)
                                     @php
                                         $evaluable = $evaluation->evaluable;
-                                        $role = $evaluation->evaluable_role ?? 'entity';
+                                        $role = strtolower($evaluation->evaluable_role ?? 'entity');
 
                                         if ($evaluation->evaluable_type === \App\Models\User::class && $role === 'dg') {
                                             $typeLabel = 'Direction générale';

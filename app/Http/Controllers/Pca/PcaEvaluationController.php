@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pca;
 
 use App\Http\Controllers\Controller;
+use App\Models\Alerte;
 use App\Models\Annee;
 use App\Models\Direction;
 use App\Models\Entite;
@@ -137,7 +138,7 @@ class PcaEvaluationController extends Controller
             'date_debut' => ['required', 'regex:/^(0[1-9]|1[0-2])\/(\d{4})$/'],
             'date_fin' => ['required', 'regex:/^(0[1-9]|1[0-2])\/(\d{4})$/'],
             'identification.nom_prenom' => ['nullable', 'string', 'max:255'],
-            'identification.semestre' => ['nullable', 'string', 'max:20'],
+            'identification.semestre' => ['required', 'in:1,2'],
             'identification.date_recrutement' => ['nullable', 'string', 'max:20'],
             'identification.date_evaluation' => ['nullable', 'string', 'max:20'],
             'identification.date_titularisation' => ['nullable', 'string', 'max:20'],
@@ -369,6 +370,16 @@ class PcaEvaluationController extends Controller
         }
 
         $evaluation->update(['statut' => 'soumis']);
+
+        // Notifier l'évalué (DG)
+        if ($evaluation->evaluable_type === User::class && $evaluation->evaluable_id) {
+            Alerte::notifier(
+                (int) $evaluation->evaluable_id,
+                'Nouvelle fiche d\'évaluation reçue',
+                'Une fiche d\'évaluation vous a été soumise par le PCA. Connectez-vous pour la consulter.',
+                'haute'
+            );
+        }
 
         return redirect()->route('pca.evaluations.show', $evaluation)
             ->with('status', 'Evaluation soumise avec succes.');
@@ -776,6 +787,8 @@ class PcaEvaluationController extends Controller
 
     private function evaluableLabel(mixed $evaluable, string $role): string
     {
+        $role = strtolower($role);
+
         if ($evaluable instanceof User && $role === 'dg') {
             return $evaluable->name;
         }
@@ -797,6 +810,8 @@ class PcaEvaluationController extends Controller
 
     private function evaluableTypeLabel(string $evaluableType, string $role): string
     {
+        $role = strtolower($role);
+
         if ($evaluableType === User::class && $role === 'dg') {
             return 'Directeur General';
         }

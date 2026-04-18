@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dga;
 
 use App\Http\Controllers\Controller;
+use App\Models\Alerte;
 use App\Models\Entite;
 use App\Models\FicheObjectif;
 use App\Models\User;
@@ -55,10 +56,24 @@ class DgaObjectifController extends Controller
 
         $request->validate(['action' => ['required', 'in:accepter,refuser']]);
 
-        $fiche->statut = $request->input('action') === 'accepter' ? 'acceptee' : 'refusee';
+        $action = $request->input('action');
+        $fiche->statut = $action === 'accepter' ? 'acceptee' : 'refusee';
         $fiche->save();
 
-        $msg = $request->input('action') === 'accepter' ? 'Fiche d\'objectifs acceptée.' : 'Fiche d\'objectifs refusée.';
+        // Notifier le DG (créateur de la fiche)
+        $dga = Auth::user();
+        $dgUser = User::where('role', 'DG')->where('pca_entite_id', $dga?->pca_entite_id)->first();
+        if ($dgUser) {
+            $actionLabel = $action === 'accepter' ? 'accepté' : 'refusé';
+            Alerte::notifier(
+                $dgUser->id,
+                "Fiche d'objectifs {$actionLabel}e par le DGA",
+                "Le DGA {$dga?->name} a {$actionLabel} la fiche d'objectifs « {$fiche->titre} » que vous lui avez assignée.",
+                $action === 'accepter' ? 'moyenne' : 'haute'
+            );
+        }
+
+        $msg = $action === 'accepter' ? 'Fiche d\'objectifs acceptée.' : 'Fiche d\'objectifs refusée.';
 
         return redirect()->route('dga.objectifs.show', $fiche)->with('status', $msg);
     }

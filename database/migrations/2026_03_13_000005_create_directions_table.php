@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::create('directions', function (Blueprint $table): void {
             $table->id();
             $table->string('nom');
@@ -43,6 +44,7 @@ return new class extends Migration
 
             $table->timestamps();
         });
+        Schema::enableForeignKeyConstraints();
     }
 
     /**

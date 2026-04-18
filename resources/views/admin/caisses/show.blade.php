@@ -4,7 +4,7 @@
 
 @section('content')
     <main class="min-h-screen bg-[#f1f5f9] px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto max-w-6xl">
+        <div class="w-full">
             <div class="mb-4">
                 <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
                     <i class="fas fa-arrow-left"></i>

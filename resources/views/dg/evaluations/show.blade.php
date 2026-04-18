@@ -15,7 +15,7 @@
 
 @section('content')
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-8 pt-4 lg:px-8">
-    <div class="mx-auto max-w-6xl flex flex-col gap-6">
+    <div class="w-full flex flex-col gap-6">
         <header class="admin-panel px-6 py-6 lg:px-8">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -23,7 +23,13 @@
                     <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Evaluation</h1>
                     <p class="mt-2 text-sm text-slate-600">{{ $cibleLabel }} | Période {{ $evaluation->date_debut->format('m/Y') }} - {{ $evaluation->date_fin->format('m/Y') }}</p>
                 </div>
-                <a href="{{ route('dg.mon-espace') }}" class="ent-btn ent-btn-soft">Retour</a>
+                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                    <a href="{{ route('dg.evaluations.pdf', $evaluation) }}"
+                       class="ent-btn ent-btn-soft">
+                        <i class="fas fa-file-pdf mr-2"></i>Télécharger PDF
+                    </a>
+                    <a href="{{ route('dg.mon-espace') }}" class="ent-btn ent-btn-soft">Retour</a>
+                </div>
             </div>
         </header>
 
@@ -320,30 +326,53 @@
 
     <section class="admin-panel px-6 py-6 lg:px-8">
         <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
+            <div>
                 @php
                     $statutColors = [
-                        'brouillon' => 'bg-slate-100 text-slate-600',
-                        'soumis'    => 'bg-amber-100 text-amber-700',
-                        'valide'    => 'bg-emerald-100 text-emerald-700',
-                        'refuse'    => 'bg-rose-100 text-rose-700',
+                        'brouillon' => 'border-slate-200 bg-slate-100 text-slate-600',
+                        'soumis'    => 'border-amber-200 bg-amber-50 text-amber-700',
+                        'valide'    => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                        'refuse'    => 'border-rose-200 bg-rose-50 text-rose-700',
                     ];
                     $statutLabels = [
                         'brouillon' => 'Brouillon',
                         'soumis'    => 'Soumise',
-                        'valide'    => 'Validée',
+                        'valide'    => 'Acceptée',
                         'refuse'    => 'Refusée',
                     ];
                 @endphp
-                <span class="inline-block rounded-full px-3 py-1 text-xs font-bold {{ $statutColors[$evaluation->statut] ?? 'bg-slate-100 text-slate-500' }}">
+                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut de l'évaluation</p>
+                <span class="mt-1 inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statutColors[$evaluation->statut] ?? 'bg-slate-100 text-slate-500' }}">
                     {{ $statutLabels[$evaluation->statut] ?? ucfirst($evaluation->statut ?? 'En attente') }}
                 </span>
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
                 <a href="{{ route('dg.evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">Exporter PDF</a>
+
+                @if ($evaluation->statut === 'soumis')
+                    <form method="POST" action="{{ route('dg.evaluations.statut', $evaluation) }}">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="action" value="accepter">
+                        <button type="submit" class="ent-btn ent-btn-primary">
+                            <i class="fas fa-check mr-2"></i>Accepter l'évaluation
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('dg.evaluations.statut', $evaluation) }}"
+                          onsubmit="return confirm('Confirmer le refus de cette évaluation ?')">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="action" value="refuser">
+                        <button type="submit" class="ent-btn bg-rose-600 text-white hover:bg-rose-700">
+                            <i class="fas fa-times mr-2"></i>Refuser l'évaluation
+                        </button>
+                    </form>
+                @endif
             </div>
         </div>
     </section>
 
+    </div>
+</div>
 @endsection

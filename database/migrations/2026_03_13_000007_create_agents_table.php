@@ -11,11 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::create('agents', function (Blueprint $table): void {
             $table->id();
 
             // 1. Liaison Compte Utilisateur (Fusion du add personnel)
-            $table->foreignId('user_id')->nullable()->after('id')->constrained('users')->nullOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
 
             // 2. Rattachements structurels (Flexibilité SGP-RCPB)
             $table->foreignId('delegation_technique_id')->nullable()->constrained('delegation_techniques')->nullOnDelete();
@@ -38,6 +39,7 @@ return new class extends Migration
             
             $table->timestamps();
         });
+        Schema::enableForeignKeyConstraints();
     }
 
     /**

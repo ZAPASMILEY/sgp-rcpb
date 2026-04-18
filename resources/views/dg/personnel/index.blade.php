@@ -3,7 +3,7 @@
 
 @section('content')
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
-    <div class="mx-auto max-w-7xl flex flex-col gap-6">
+    <div class="w-full flex flex-col gap-6">
 
         {{-- Header --}}
         <header class="admin-panel px-6 py-6 lg:px-8">
@@ -13,9 +13,11 @@
                     <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Personnel évalué</h1>
                     <p class="mt-1 text-sm text-slate-500">{{ $evaluations->total() }} fiche(s) — réseau complet RCPB</p>
                 </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm">
-                    <i class="fas fa-users text-xl"></i>
-                </div>
+                <a href="{{ route('dg.personnel.pdf', request()->query()) }}"
+                   class="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800">
+                    <i class="fas fa-file-pdf"></i>
+                    Télécharger PDF
+                </a>
             </div>
         </header>
 

@@ -10,7 +10,7 @@
         </a>
     </div>
     <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto max-w-3xl">
+        <div class="w-full">
             <section class="admin-panel p-6 sm:p-8">
                 <div class="flex items-start justify-between gap-4">
                     <div>

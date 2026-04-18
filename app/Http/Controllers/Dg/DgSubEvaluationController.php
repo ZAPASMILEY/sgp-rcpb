@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
+use App\Models\Alerte;
 use App\Models\Annee;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
@@ -397,6 +398,17 @@ class DgSubEvaluationController extends Controller
         $evaluation->save();
 
         $subordonne = $evaluation->evaluable;
+
+        // Notifier le subordonné évalué
+        if ($subordonne) {
+            Alerte::notifier(
+                $subordonne->id,
+                'Nouvelle fiche d\'évaluation reçue',
+                'Le Directeur Général vous a soumis une fiche d\'évaluation. Connectez-vous pour la consulter.',
+                'haute'
+            );
+        }
+
         $redirect   = match ($subordonne->role) {
             'DGA'           => route('dg.dga').'?tab=evaluations',
             'Assistante_Dg' => route('dg.assistante').'?tab=evaluations',

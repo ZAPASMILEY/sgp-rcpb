@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="min-h-screen bg-[#f1f5f9] px-4 py-8 lg:px-8">
-    <div class="mx-auto max-w-2xl space-y-6">
+    <div class="w-full space-y-6">
         <div class="rounded-2xl bg-white p-6 shadow-sm">
             <h1 class="text-2xl font-black tracking-tight text-slate-900 mb-2">Nouveau Contrat d'Objectifs</h1>
             <form method="POST" action="{{ route('contrats.store') }}" class="space-y-6">

@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-8 pt-4 lg:px-8">
-    <div class="mx-auto max-w-7xl space-y-6">
+    <div class="w-full space-y-6">
 
         @if (session('status'))
             <div id="agence-status-message" class="fixed right-6 top-6 z-50 flex items-center gap-4 rounded-2xl border border-emerald-100 bg-white px-5 py-4 shadow-2xl shadow-emerald-100/60">

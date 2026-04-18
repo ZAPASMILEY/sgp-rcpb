@@ -29,7 +29,7 @@
 
 @section('content')
 <div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
-    <div class="mx-auto flex max-w-5xl flex-col gap-6">
+    <div class="w-full flex-col gap-6">
 
         <header class="admin-panel px-6 py-6 lg:px-8">
             <div class="flex items-start justify-between gap-4">

@@ -49,4 +49,20 @@ class Alerte extends Model
             $userIds->mapWithKeys(fn ($id) => [$id => ['lu' => false]])->all()
         );
     }
+
+    /**
+     * Créer une notification système et l'envoyer à un utilisateur précis.
+     */
+    public static function notifier(int $userId, string $titre, string $message, string $priorite = 'moyenne'): void
+    {
+        $alerte = static::create([
+            'type'       => 'systeme',
+            'priorite'   => $priorite,
+            'titre'      => $titre,
+            'message'    => $message,
+            'statut'     => 'active',
+            'created_by' => null,
+        ]);
+        $alerte->destinataires()->attach($userId, ['lu' => false]);
+    }
 }

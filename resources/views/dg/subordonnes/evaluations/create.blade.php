@@ -27,7 +27,7 @@
 
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-6xl flex-col gap-6">
+        <div class="w-full flex-col gap-6">
 
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

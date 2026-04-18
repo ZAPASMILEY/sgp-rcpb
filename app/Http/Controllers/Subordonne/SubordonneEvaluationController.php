@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Subordonne;
 
 use App\Http\Controllers\Controller;
+use App\Models\Alerte;
 use App\Models\Evaluation;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -86,10 +87,23 @@ class SubordonneEvaluationController extends Controller
 
         $request->validate(['action' => ['required', 'in:accepter,refuser']]);
 
-        $evaluation->statut = $request->input('action') === 'accepter' ? 'valide' : 'refuse';
+        $action = $request->input('action');
+        $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
         $evaluation->save();
 
-        $msg = $request->input('action') === 'accepter' ? 'Évaluation acceptée.' : 'Évaluation refusée.';
+        // Notifier l'évaluateur (DG)
+        if ($evaluation->evaluateur_id) {
+            $subordonneUser = Auth::user();
+            $actionLabel = $action === 'accepter' ? 'accepté' : 'refusé';
+            Alerte::notifier(
+                (int) $evaluation->evaluateur_id,
+                "Fiche d'évaluation {$actionLabel}e",
+                "{$subordonneUser?->name} a {$actionLabel} la fiche d'évaluation que vous lui avez soumise.",
+                $action === 'accepter' ? 'moyenne' : 'haute'
+            );
+        }
+
+        $msg = $action === 'accepter' ? 'Évaluation acceptée.' : 'Évaluation refusée.';
 
         return redirect()->route('subordonne.evaluations.show', $evaluation)->with('status', $msg);
     }

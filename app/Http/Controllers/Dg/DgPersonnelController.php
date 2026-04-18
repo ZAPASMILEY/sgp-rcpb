@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Annee;
 use App\Models\Evaluation;
 use App\Models\EvaluationIdentification;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -138,5 +140,98 @@ class DgPersonnelController extends Controller
             'structures',
             'filters',
         ));
+    }
+
+    public function pdf(Request $request): Response
+    {
+        $this->checkDg();
+
+        $search       = trim((string) $request->get('search', ''));
+        $anneeId      = (int) $request->get('annee', 0);
+        $semestre     = trim((string) $request->get('semestre', ''));
+        $appreciation = trim((string) $request->get('appreciation', ''));
+        $statut       = trim((string) $request->get('statut', ''));
+        $emploi       = trim((string) $request->get('emploi', ''));
+        $structure    = trim((string) $request->get('structure', ''));
+        $sort         = $request->get('sort', 'note_desc');
+
+        $query = Evaluation::query()
+            ->with(['identification', 'evaluateur', 'annee'])
+            ->where('statut', '!=', 'brouillon')
+            ->whereHas('identification');
+
+        if ($anneeId) {
+            $query->where('annee_id', $anneeId);
+        }
+
+        if ($statut) {
+            $query->where('statut', $statut);
+        }
+
+        match ($appreciation) {
+            'excellent'   => $query->where('note_finale', '>=', 8.5),
+            'bien'        => $query->whereBetween('note_finale', [7, 8.4999]),
+            'passable'    => $query->whereBetween('note_finale', [5, 6.9999]),
+            'insuffisant' => $query->where('note_finale', '<', 5),
+            default       => null,
+        };
+
+        if ($search !== '' || $emploi !== '' || $structure !== '' || $semestre !== '') {
+            $query->whereHas('identification', function ($q) use ($search, $emploi, $structure, $semestre) {
+                if ($search !== '') {
+                    $q->where(fn ($s) => $s
+                        ->where('nom_prenom', 'like', "%{$search}%")
+                        ->orWhere('emploi', 'like', "%{$search}%")
+                        ->orWhere('matricule', 'like', "%{$search}%")
+                    );
+                }
+                if ($emploi !== '') {
+                    $q->where('emploi', 'like', "%{$emploi}%");
+                }
+                if ($structure !== '') {
+                    $q->where(fn ($s) => $s
+                        ->where('direction', 'like', "%{$structure}%")
+                        ->orWhere('direction_service', 'like', "%{$structure}%")
+                    );
+                }
+                if ($semestre !== '') {
+                    $q->where('semestre', $semestre);
+                }
+            });
+        }
+
+        match ($sort) {
+            'note_asc'  => $query->orderBy('note_finale', 'asc'),
+            'note_desc' => $query->orderByDesc('note_finale'),
+            'nom_asc'   => $query->orderBy(
+                               EvaluationIdentification::select('nom_prenom')
+                                   ->whereColumn('evaluation_id', 'evaluations.id')
+                                   ->limit(1),
+                               'asc'
+                           ),
+            'date_desc' => $query->orderByDesc('date_fin'),
+            'date_asc'  => $query->orderBy('date_fin'),
+            default     => $query->orderByDesc('note_finale'),
+        };
+
+        $evaluations = $query->get();
+
+        // Stats sur les résultats filtrés
+        $total = $evaluations->count();
+        $stats = [
+            'total'       => $total,
+            'excellent'   => $evaluations->where('note_finale', '>=', 8.5)->count(),
+            'bien'        => $evaluations->filter(fn ($e) => $e->note_finale >= 7 && $e->note_finale < 8.5)->count(),
+            'passable'    => $evaluations->filter(fn ($e) => $e->note_finale >= 5 && $e->note_finale < 7)->count(),
+            'insuffisant' => $evaluations->where('note_finale', '<', 5)->count(),
+            'moyenne'     => $total > 0 ? round($evaluations->avg('note_finale'), 2) : 0,
+        ];
+
+        $filters = compact('search', 'anneeId', 'semestre', 'appreciation', 'statut', 'emploi', 'structure', 'sort');
+
+        $pdf = Pdf::loadView('dg.personnel.pdf', compact('evaluations', 'stats', 'filters'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download('personnel-rcpb-'.now()->format('Y-m-d').'.pdf');
     }
 }

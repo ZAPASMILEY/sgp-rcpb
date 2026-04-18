@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Pca;
 
 use App\Http\Controllers\Controller;
+use App\Models\Alerte;
 use App\Models\FicheObjectif;
 use App\Models\FicheObjectifObjectif;
 use App\Models\Entite;
@@ -162,6 +163,16 @@ class PcaObjectifController extends Controller
             $dgName = trim(($entite->directrice_generale_prenom ?? '') . ' ' . ($entite->directrice_generale_nom ?? ''));
             Mail::to($entite->directrice_generale_email)
                 ->send(new FicheObjectifAssigneeMail($fiche, $dgName));
+        }
+
+        // Notification in-app au DG
+        if ($dgUser) {
+            Alerte::notifier(
+                $dgUser->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Une fiche d'objectifs « {$fiche->titre} » vous a été assignée par le PCA. Consultez votre espace pour l'examiner.",
+                'haute'
+            );
         }
 
         return redirect()

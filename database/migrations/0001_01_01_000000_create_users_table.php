@@ -19,7 +19,7 @@ return new class extends Migration
             // 1. Rôles et Autorisations (Fusion des adds)
             // On utilise string au lieu d'enum pour plus de souplesse (SGP-RCPB)
             $table->string('role', 30)->default('admin');
-            $table->foreignId('pca_entite_id')->nullable()->constrained('entites')->nullOnDelete();
+            $table->unsignedBigInteger('pca_entite_id')->nullable();
 
             // Identité personnelle
             $table->string('sexe', 20)->nullable();

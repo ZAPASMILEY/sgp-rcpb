@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
+use App\Models\Alerte;
 use App\Models\Entite;
 use App\Models\FicheObjectif;
 use App\Models\User;
@@ -100,8 +101,16 @@ class DgObjectifController extends Controller
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        // Redirection vers la page du subordonné dans l'interface DG
+        // Notifier le subordonné assigné
         $subordonne = User::findOrFail($validated['subordonne_id']);
+        Alerte::notifier(
+            $subordonne->id,
+            'Nouvelle fiche d\'objectifs reçue',
+            "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ». Connectez-vous pour l'examiner.",
+            'haute'
+        );
+
+        // Redirection vers la page du subordonné dans l'interface DG
         $redirect   = match ($subordonne->role) {
             'DGA'          => route('dg.dga').'?tab=objectifs',
             'Assistante_Dg'=> route('dg.assistante').'?tab=objectifs',

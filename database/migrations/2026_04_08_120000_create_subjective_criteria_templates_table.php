@@ -21,7 +21,7 @@ return new class extends Migration
         Schema::create('subjective_subcriteria_templates', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('subjective_criteria_template_id')
-                ->constrained('subjective_criteria_templates')
+                ->constrained('subjective_criteria_templates', 'id', 'subcriterion_template_fk')
                 ->cascadeOnDelete();
             $table->unsignedInteger('ordre')->default(0);
             $table->string('libelle');

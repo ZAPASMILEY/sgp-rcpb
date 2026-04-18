@@ -7,7 +7,7 @@
         <div class="mb-4">
             <button onclick="history.back()" class="ent-btn ent-btn-soft"><i class="fas fa-arrow-left mr-2"></i>Retour</button>
         </div>
-        <div class="mx-auto flex max-w-5xl flex-col gap-5">
+        <div class="w-full flex flex-col gap-5">
             <header class="admin-panel px-6 py-5 lg:px-8">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Espace PCA / Parametres</p>
                 <div class="mt-2 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">

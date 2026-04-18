@@ -11,7 +11,7 @@
             </a>
         </div>
 
-        <div class="mx-auto max-w-2xl">
+        <div class="w-full">
             <section class="admin-panel ent-window p-6 sm:p-8">
                 <div class="ent-window__bar" aria-hidden="true">
                     <span class="ent-window__dot ent-window__dot--danger"></span>

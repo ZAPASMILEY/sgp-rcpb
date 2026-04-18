@@ -24,15 +24,6 @@
 
         {{-- CORPS DU FORMULAIRE --}}
         <form method="POST" action="{{ route('admin.entites.directions.store') }}" target="_top" class="p-8 lg:p-12 space-y-8">
-            <div class="space-y-4">
-                <label class="text-xs font-bold text-slate-400 ml-1">Délégation technique</label>
-                <select name="delegation_technique_id" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
-                    <option value="">Sélectionner une délégation</option>
-                    @foreach($delegations as $delegation)
-                        <option value="{{ $delegation->id }}">{{ $delegation->region }} / {{ $delegation->ville }}</option>
-                    @endforeach
-                </select>
-            </div>
             @csrf
 
             {{-- Section : Détails --}}

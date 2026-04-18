@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-4xl flex-col gap-6">
+        <div class="w-full flex flex-col gap-6">
             <header class="admin-panel ent-window px-6 py-6 lg:px-8">
                 <div class="ent-window__bar" aria-hidden="true">
                     <span class="ent-window__dot ent-window__dot--danger"></span>

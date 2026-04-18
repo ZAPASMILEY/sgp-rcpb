@@ -53,6 +53,11 @@ return new class extends Migration
 
             $table->timestamps();
         });
+
+        // Ajouter la FK users.pca_entite_id → entites.id (maintenant que entites existe)
+        Schema::table('users', function (Blueprint $table): void {
+            $table->foreign('pca_entite_id')->references('id')->on('entites')->nullOnDelete();
+        });
     }
 
     /**
@@ -60,6 +65,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('users', function (Blueprint $table): void {
+            $table->dropForeign(['pca_entite_id']);
+        });
         Schema::dropIfExists('entites');
     }
 };

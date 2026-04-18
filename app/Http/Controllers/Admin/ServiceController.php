@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeMail;
+use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
 use App\Models\Service;
@@ -117,7 +118,9 @@ class ServiceController extends Controller
     public function create(): View
     {
         return view('admin.services.create', [
-            'directions' => Direction::query()->with('entite')->orderBy('nom')->get(['id', 'nom', 'entite_id']),
+            'faitiereDirections' => Direction::query()->whereNull('delegation_technique_id')->orderBy('nom')->get(['id', 'nom']),
+            'delegations'        => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
+            'caisses'            => Caisse::query()->with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
         ]);
     }
 
@@ -218,8 +221,19 @@ class ServiceController extends Controller
             $emailRule[] = Rule::unique('users', 'email')->ignore($service->user_id);
         }
 
-        return $request->validate([
-            'nom'              => [
+        // Infer parent_type if not submitted (e.g. from the edit form)
+        if (! $request->has('parent_type')) {
+            if ($request->filled('caisse_id')) {
+                $request->merge(['parent_type' => 'caisse']);
+            } elseif ($request->filled('delegation_technique_id')) {
+                $request->merge(['parent_type' => 'delegation']);
+            } else {
+                $request->merge(['parent_type' => 'faitiere']);
+            }
+        }
+
+        $validated = $request->validate([
+            'nom' => [
                 'required',
                 'string',
                 'max:255',
@@ -227,7 +241,10 @@ class ServiceController extends Controller
                     ? Rule::unique('services', 'nom')->ignore($service->id)
                     : Rule::unique('services', 'nom'),
             ],
-            'direction_id'         => ['required', 'integer', 'exists:directions,id'],
+            'parent_type'              => ['required', 'in:faitiere,delegation,caisse'],
+            'direction_id'             => ['required_if:parent_type,faitiere', 'nullable', 'integer', 'exists:directions,id'],
+            'delegation_technique_id'  => ['required_if:parent_type,delegation', 'nullable', 'integer', 'exists:delegation_techniques,id'],
+            'caisse_id'                => ['required_if:parent_type,caisse', 'nullable', 'integer', 'exists:caisses,id'],
             'chef_prenom'          => ['required', 'string', 'max:255'],
             'chef_nom'             => ['required', 'string', 'max:255'],
             'chef_email'           => $emailRule,
@@ -242,5 +259,23 @@ class ServiceController extends Controller
             'chef_sexe'            => ['required', 'in:Homme,Femme,Autres'],
             'chef_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
         ]);
+
+        // Normalize: clear non-relevant parent FK columns
+        $parentType = $validated['parent_type'];
+        unset($validated['parent_type']);
+
+        if ($parentType === 'faitiere') {
+            $validated['delegation_technique_id'] = null;
+            $validated['caisse_id'] = null;
+        } elseif ($parentType === 'delegation') {
+            $validated['direction_id'] = null;
+            $validated['caisse_id'] = null;
+        } else {
+            // caisse
+            $validated['direction_id'] = null;
+            $validated['delegation_technique_id'] = null;
+        }
+
+        return $validated;
     }
 }

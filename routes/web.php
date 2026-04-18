@@ -238,6 +238,7 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::delete('/objectifs/{fiche}', [\App\Http\Controllers\Dg\DgObjectifController::class, 'destroy'])->name('objectifs.destroy');
     // Route pour afficher une évaluation DG
     Route::get('/evaluations/{evaluation}', [App\Http\Controllers\Dg\EvaluationController::class, 'show'])->name('evaluations.show');
+    Route::patch('/evaluations/{evaluation}/statut', [App\Http\Controllers\Dg\EvaluationController::class, 'statut'])->name('evaluations.statut');
     Route::get('/evaluations/{evaluation}/pdf', [App\Http\Controllers\Dg\EvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
     Route::get('/subordonne-evaluations/creer',         [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'create'])->name('sub-evaluations.create');
     Route::post('/subordonne-evaluations',              [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'store'])->name('sub-evaluations.store');
@@ -254,16 +255,22 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/conseillers/{user}',     [\App\Http\Controllers\Dg\DgSubordonneController::class, 'conseiller'])->name('conseillers.show');
 
     // Personnel du réseau
+    Route::get('/personnel/pdf', [\App\Http\Controllers\Dg\DgPersonnelController::class, 'pdf'])->name('personnel.pdf');
     Route::get('/personnel', \App\Http\Controllers\Dg\DgPersonnelController::class)->name('personnel');
 
     // Réseau RCPB
-    Route::get('/delegations',                    [\App\Http\Controllers\Dg\DgReseauController::class, 'delegations'])->name('delegations');
-    Route::get('/delegations/{delegation}',       [\App\Http\Controllers\Dg\DgReseauController::class, 'delegation'])->name('delegations.show');
-    Route::get('/caisses',                        [\App\Http\Controllers\Dg\DgReseauController::class, 'caisses'])->name('caisses');
-    Route::get('/caisses/{caisse}',               [\App\Http\Controllers\Dg\DgReseauController::class, 'caisse'])->name('caisses.show');
-    Route::get('/agences',                        [\App\Http\Controllers\Dg\DgReseauController::class, 'agences'])->name('agences');
-    Route::get('/agences/{agence}',               [\App\Http\Controllers\Dg\DgReseauController::class, 'agence'])->name('agences.show');
-    Route::get('/guichets',                       [\App\Http\Controllers\Dg\DgReseauController::class, 'guichets'])->name('guichets');
+    Route::get('/delegations',                        [\App\Http\Controllers\Dg\DgReseauController::class, 'delegations'])->name('delegations');
+    Route::get('/delegations/{delegation}/pdf',       [\App\Http\Controllers\Dg\DgReseauController::class, 'delegationPdf'])->name('delegations.pdf');
+    Route::get('/delegations/{delegation}',           [\App\Http\Controllers\Dg\DgReseauController::class, 'delegation'])->name('delegations.show');
+    Route::get('/caisses',                            [\App\Http\Controllers\Dg\DgReseauController::class, 'caisses'])->name('caisses');
+    Route::get('/caisses/{caisse}/pdf',               [\App\Http\Controllers\Dg\DgReseauController::class, 'caissePdf'])->name('caisses.pdf');
+    Route::get('/caisses/{caisse}',                   [\App\Http\Controllers\Dg\DgReseauController::class, 'caisse'])->name('caisses.show');
+    Route::get('/agences',                            [\App\Http\Controllers\Dg\DgReseauController::class, 'agences'])->name('agences');
+    Route::get('/agences/{agence}/pdf',               [\App\Http\Controllers\Dg\DgReseauController::class, 'agencePdf'])->name('agences.pdf');
+    Route::get('/agences/{agence}',                   [\App\Http\Controllers\Dg\DgReseauController::class, 'agence'])->name('agences.show');
+    Route::get('/guichets',                           [\App\Http\Controllers\Dg\DgReseauController::class, 'guichets'])->name('guichets');
+    Route::get('/guichets/{guichet}/pdf',             [\App\Http\Controllers\Dg\DgReseauController::class, 'guichetPdf'])->name('guichets.pdf');
+    Route::get('/guichets/{guichet}',                 [\App\Http\Controllers\Dg\DgReseauController::class, 'guichet'])->name('guichets.show');
 });
 
 // DG - Enregistrer le commentaire de l'évalué

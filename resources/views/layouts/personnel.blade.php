@@ -157,10 +157,12 @@
     </nav>
 
     <div class="main-content">
-        <header class="flex h-12 shrink-0 items-center px-4 lg:hidden">
-            <button class="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm" id="btnToggleSidebar" type="button">
+        <header class="flex h-12 shrink-0 items-center justify-between border-b border-slate-100 bg-white/80 px-4 backdrop-blur-sm">
+            <button class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 text-slate-500 shadow-sm lg:hidden" id="btnToggleSidebar" type="button">
                 <i class="fas fa-bars"></i>
             </button>
+            <span class="hidden text-sm font-black text-slate-400 lg:block">Mon Espace</span>
+            @include('layouts._notif_bell', ['bellId' => 'pers'])
         </header>
 
         <div class="flex-1 w-full overflow-visible">

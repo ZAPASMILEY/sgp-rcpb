@@ -26,7 +26,7 @@
 
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-6xl flex-col gap-6">
+        <div class="w-full flex flex-col gap-6">
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -92,7 +92,7 @@
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_semestre" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Semestre</label>
-                                <select id="identification_semestre" name="identification[semestre]" class="ent-select">
+                                <select id="identification_semestre" name="identification[semestre]" required class="ent-select">
                                     <option value="">Selectionner</option>
                                     <option value="1" @selected(old('identification.semestre') === '1')>Semestre 1</option>
                                     <option value="2" @selected(old('identification.semestre') === '2')>Semestre 2</option>

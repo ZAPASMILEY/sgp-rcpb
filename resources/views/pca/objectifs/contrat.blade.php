@@ -9,7 +9,7 @@
         <a href="{{ route('pca.objectifs.contrat.download', $contrat) }}" class="ent-btn ent-btn-primary">Telecharger le PDF</a>
     </div>
 
-    <div class="mx-auto max-w-3xl rounded-xl border border-slate-300 bg-white p-8 shadow print:border-0 print:p-0 print:shadow-none">
+    <div class="w-full rounded-xl border border-slate-300 bg-white p-8 shadow print:border-0 print:p-0 print:shadow-none">
         <div class="mb-6 flex items-start gap-4 border-b pb-4">
             <img src="/img/logo-rcpb.png" alt="Logo {{ $institution_sigle }}" class="h-20 w-20 object-contain border border-slate-400 bg-white p-1">
             <div class="flex-1">

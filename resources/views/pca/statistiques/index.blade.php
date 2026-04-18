@@ -17,7 +17,7 @@
         <div class="mb-4">
             <button onclick="history.back()" class="ent-btn ent-btn-soft"><i class="fas fa-arrow-left mr-2"></i>Retour</button>
         </div>
-        <div class="mx-auto max-w-6xl space-y-6">
+        <div class="w-full space-y-6">
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>

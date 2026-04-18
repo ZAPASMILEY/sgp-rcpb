@@ -10,7 +10,7 @@
         </a>
     </div>
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto max-w-6xl flex flex-col gap-6">
+        <div class="w-full flex flex-col gap-6">
             <h1 class="text-3xl font-black tracking-tight text-slate-900 mb-6">Services de la caisse : {{ $caisse->nom }}</h1>
             <div class="ent-table-wrap overflow-x-auto">
                 <table class="ent-table text-left text-sm text-slate-700">

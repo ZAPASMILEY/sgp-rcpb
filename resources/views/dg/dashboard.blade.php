@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
-    <div class="mx-auto max-w-7xl flex flex-col gap-6">
+    <div class="w-full flex flex-col gap-6">
 
         {{-- Header --}}
         <header class="admin-panel px-6 py-6 lg:px-8">
