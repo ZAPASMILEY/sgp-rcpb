@@ -169,6 +169,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::post('/admin/alertes', [AlerteController::class, 'store'])->name('admin.alertes.store');
     Route::patch('/admin/alertes/{alerte}/statut', [AlerteController::class, 'updateStatut'])->name('admin.alertes.statut');
     Route::delete('/admin/alertes/{alerte}', [AlerteController::class, 'destroy'])->name('admin.alertes.destroy');
+    Route::delete('/admin/alertes', [AlerteController::class, 'destroyAll'])->name('admin.alertes.destroy-all');
     Route::post('/admin/alertes/lire-tout', [AlerteController::class, 'lireTout'])->name('admin.alertes.lire-tout');
 
     Route::get('/admin/parametres', [SettingsController::class, 'edit'])->name('admin.settings.edit');

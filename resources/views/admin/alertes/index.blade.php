@@ -24,6 +24,16 @@
                     <p class="mt-1 text-sm text-slate-400">Suivi des alertes de sécurité et des alertes personnalisées du système.</p>
                 </div>
                 <div class="flex items-center gap-3">
+                    @if ($counts['toutes'] > 0)
+                        <form method="POST" action="{{ route('admin.alertes.destroy-all') }}"
+                              onsubmit="return confirm('Supprimer TOUTES les alertes ? Cette action est irréversible.');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-100">
+                                <i class="fas fa-trash text-xs"></i> Tout supprimer
+                            </button>
+                        </form>
+                    @endif
                     <button onclick="document.getElementById('modal-create-alerte').classList.remove('hidden')" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
                         <i class="fas fa-plus text-xs"></i> Nouvelle alerte
                     </button>
@@ -203,38 +213,35 @@
                                 <td class="whitespace-nowrap px-3 py-3">{{ $alerte['auteur'] }}</td>
                                 <td class="whitespace-nowrap px-3 py-3 text-slate-500">{{ optional($alerte['date'])->format('d/m/Y H:i') }}</td>
                                 <td class="whitespace-nowrap px-3 py-3 text-right">
-                                    @if ($alerte['type'] === 'personnalisee')
-                                        <div class="flex items-center justify-end gap-1">
-                                            {{-- Résoudre --}}
-                                            @if ($alerte['statut'] === 'active')
-                                                <form method="POST" action="{{ route('admin.alertes.statut', $alerte['id']) }}" class="inline-flex">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <input type="hidden" name="statut" value="resolue">
-                                                    <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Résoudre">
-                                                        <i class="fas fa-check text-xs"></i>
-                                                    </button>
-                                                </form>
-                                                <form method="POST" action="{{ route('admin.alertes.statut', $alerte['id']) }}" class="inline-flex">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <input type="hidden" name="statut" value="ignoree">
-                                                    <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-amber-50 hover:text-amber-500" title="Ignorer">
-                                                        <i class="fas fa-eye-slash text-xs"></i>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                            <form method="POST" action="{{ route('admin.alertes.destroy', $alerte['id']) }}" onsubmit="return confirm('Supprimer cette alerte ?');" class="inline-flex">
+                                    <div class="flex items-center justify-end gap-1">
+                                        {{-- Résoudre / Ignorer (uniquement alertes actives) --}}
+                                        @if ($alerte['statut'] === 'active')
+                                            <form method="POST" action="{{ route('admin.alertes.statut', $alerte['id']) }}" class="inline-flex">
                                                 @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer">
-                                                    <i class="fas fa-trash text-xs"></i>
+                                                @method('PATCH')
+                                                <input type="hidden" name="statut" value="resolue">
+                                                <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Résoudre">
+                                                    <i class="fas fa-check text-xs"></i>
                                                 </button>
                                             </form>
-                                        </div>
-                                    @else
-                                        <span class="text-[11px] text-slate-300">Auto</span>
-                                    @endif
+                                            <form method="POST" action="{{ route('admin.alertes.statut', $alerte['id']) }}" class="inline-flex">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="statut" value="ignoree">
+                                                <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-amber-50 hover:text-amber-500" title="Ignorer">
+                                                    <i class="fas fa-eye-slash text-xs"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                        {{-- Supprimer (tous types) --}}
+                                        <form method="POST" action="{{ route('admin.alertes.destroy', $alerte['id']) }}" onsubmit="return confirm('Supprimer cette alerte ?');" class="inline-flex">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer">
+                                                <i class="fas fa-trash text-xs"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

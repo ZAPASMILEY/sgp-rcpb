@@ -214,6 +214,14 @@ class AlerteController extends Controller
             ->with('status', 'Alerte supprimée.');
     }
 
+    public function destroyAll(): RedirectResponse
+    {
+        Alerte::query()->delete();
+
+        return redirect()->route('admin.alertes.index')
+            ->with('status', 'Toutes les alertes ont été supprimées.');
+    }
+
     public function lireTout(Request $request): RedirectResponse
     {
         $request->user()->alertesNonLues()->update(['lu' => true, 'lu_at' => now()]);
