@@ -20,6 +20,15 @@
                 ['route' => 'dg.conseillers','icon' => 'fas fa-users',       'label' => 'Mes Conseillers'],
             ],
         ],
+        [
+            'title' => 'Réseau RCPB',
+            'items' => [
+                ['route' => 'dg.delegations', 'icon' => 'fas fa-sitemap',           'label' => 'Délégations Techniques'],
+                ['route' => 'dg.caisses',     'icon' => 'fas fa-building-columns',  'label' => 'Caisses'],
+                ['route' => 'dg.agences',     'icon' => 'fas fa-store',             'label' => 'Agences'],
+                ['route' => 'dg.guichets',    'icon' => 'fas fa-cash-register',     'label' => 'Guichets'],
+            ],
+        ],
     ];
 @endphp
 

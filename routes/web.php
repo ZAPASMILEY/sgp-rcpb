@@ -252,6 +252,15 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/assistante',             [\App\Http\Controllers\Dg\DgSubordonneController::class, 'assistante'])->name('assistante');
     Route::get('/conseillers',            [\App\Http\Controllers\Dg\DgSubordonneController::class, 'conseillers'])->name('conseillers');
     Route::get('/conseillers/{user}',     [\App\Http\Controllers\Dg\DgSubordonneController::class, 'conseiller'])->name('conseillers.show');
+
+    // Réseau RCPB
+    Route::get('/delegations',                    [\App\Http\Controllers\Dg\DgReseauController::class, 'delegations'])->name('delegations');
+    Route::get('/delegations/{delegation}',       [\App\Http\Controllers\Dg\DgReseauController::class, 'delegation'])->name('delegations.show');
+    Route::get('/caisses',                        [\App\Http\Controllers\Dg\DgReseauController::class, 'caisses'])->name('caisses');
+    Route::get('/caisses/{caisse}',               [\App\Http\Controllers\Dg\DgReseauController::class, 'caisse'])->name('caisses.show');
+    Route::get('/agences',                        [\App\Http\Controllers\Dg\DgReseauController::class, 'agences'])->name('agences');
+    Route::get('/agences/{agence}',               [\App\Http\Controllers\Dg\DgReseauController::class, 'agence'])->name('agences.show');
+    Route::get('/guichets',                       [\App\Http\Controllers\Dg\DgReseauController::class, 'guichets'])->name('guichets');
 });
 
 // DG - Enregistrer le commentaire de l'évalué
