@@ -21,6 +21,12 @@
             ],
         ],
         [
+            'title' => 'Directions',
+            'items' => [
+                ['route' => 'dg.directions', 'icon' => 'fas fa-building', 'label' => 'Directions'],
+            ],
+        ],
+        [
             'title' => 'Réseau RCPB',
             'items' => [
                 ['route' => 'dg.personnel',   'icon' => 'fas fa-users',             'label' => 'Personnel'],

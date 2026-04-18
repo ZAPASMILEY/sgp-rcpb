@@ -272,6 +272,20 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/guichets',                           [\App\Http\Controllers\Dg\DgReseauController::class, 'guichets'])->name('guichets');
     Route::get('/guichets/{guichet}/pdf',             [\App\Http\Controllers\Dg\DgReseauController::class, 'guichetPdf'])->name('guichets.pdf');
     Route::get('/guichets/{guichet}',                 [\App\Http\Controllers\Dg\DgReseauController::class, 'guichet'])->name('guichets.show');
+
+    // Directions de la faitière
+    Route::get('/directions',                                         [\App\Http\Controllers\Dg\DgDirectionController::class, 'index'])->name('directions');
+    Route::get('/directions/{direction}',                             [\App\Http\Controllers\Dg\DgDirectionController::class, 'show'])->name('directions.show');
+    Route::get('/directions/{direction}/objectifs/creer',             [\App\Http\Controllers\Dg\DgDirectionController::class, 'createObjectif'])->name('directions.objectifs.create');
+    Route::post('/directions/objectifs',                              [\App\Http\Controllers\Dg\DgDirectionController::class, 'storeObjectif'])->name('directions.objectifs.store');
+    Route::get('/directions/objectifs/{fiche}',                       [\App\Http\Controllers\Dg\DgDirectionController::class, 'showObjectif'])->name('directions.objectifs.show');
+    Route::delete('/directions/objectifs/{fiche}',                    [\App\Http\Controllers\Dg\DgDirectionController::class, 'destroyObjectif'])->name('directions.objectifs.destroy');
+    Route::get('/directions/{direction}/evaluations/creer',           [\App\Http\Controllers\Dg\DgDirectionController::class, 'createEvaluation'])->name('directions.evaluations.create');
+    Route::post('/directions/evaluations',                            [\App\Http\Controllers\Dg\DgDirectionController::class, 'storeEvaluation'])->name('directions.evaluations.store');
+    Route::get('/directions/evaluations/{evaluation}',                [\App\Http\Controllers\Dg\DgDirectionController::class, 'showEvaluation'])->name('directions.evaluations.show');
+    Route::get('/directions/evaluations/{evaluation}/pdf',            [\App\Http\Controllers\Dg\DgDirectionController::class, 'exportEvaluationPdf'])->name('directions.evaluations.pdf');
+    Route::patch('/directions/evaluations/{evaluation}/soumettre',    [\App\Http\Controllers\Dg\DgDirectionController::class, 'submitEvaluation'])->name('directions.evaluations.submit');
+    Route::delete('/directions/evaluations/{evaluation}',             [\App\Http\Controllers\Dg\DgDirectionController::class, 'destroyEvaluation'])->name('directions.evaluations.destroy');
 });
 
 // DG - Enregistrer le commentaire de l'évalué
