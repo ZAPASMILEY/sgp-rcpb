@@ -79,7 +79,7 @@
                                 </span>
                             </div>
                             <div class="flex shrink-0 gap-2">
-                                <a href="{{ route('dg.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft">Voir</a>
+                                <a href="{{ route('dg.objectifs.show', ['fiche' => $fiche->id]) }}">Voir l'objectif</a>
                                 <form action="{{ route('dg.objectifs.destroy', $fiche) }}" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette fiche d\'objectifs ? Cette action est irréversible.');">
                                     @csrf
                                     @method('DELETE')

@@ -1,4 +1,4 @@
-@extends('layouts.subordonne')
+@extends('layouts.dga')
 
 @section('title', 'Mon evaluation | '.config('app.name', 'SGP-RCPB'))
 
@@ -9,18 +9,6 @@
         'Bien'      => 'border-sky-200 bg-sky-50 text-sky-700',
         'Passable'  => 'border-amber-200 bg-amber-50 text-amber-700',
         default     => 'border-rose-200 bg-rose-50 text-rose-700',
-    };
-    $statusClass = match ($evaluation->statut) {
-        'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-        'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-        'refuse' => 'border-rose-200 bg-rose-50 text-rose-700',
-        default  => 'border-slate-200 bg-slate-100 text-slate-700',
-    };
-    $statusLabel = match ($evaluation->statut) {
-        'valide' => 'Acceptee',
-        'soumis' => 'Soumise',
-        'refuse' => 'Refusee',
-        default  => 'Brouillon',
     };
     $note = (float) $evaluation->note_finale;
     $notePercent = max(0, min(100, ($note / 10) * 100));
@@ -34,18 +22,29 @@
         <header class="admin-panel px-6 py-6 lg:px-8">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mon Espace / Mes evaluations</p>
+                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mon Espace DGA / Mes evaluations</p>
                     <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Evaluation — {{ $periodeLabel }}</h1>
                     <p class="mt-2 text-sm text-slate-600">Evaluateur : {{ $evaluation->evaluateur?->name ?? '-' }}</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('subordonne.evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">
+                    <a href="{{ route('dga.evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">
                         <i class="fas fa-file-pdf mr-2"></i>Telecharger PDF
                     </a>
-                    <a href="{{ route('subordonne.mon-espace') }}?tab=evaluations" class="ent-btn ent-btn-soft">Retour</a>
+                    <a href="{{ route('dga.mon-espace') }}?tab=evaluations" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
             </div>
         </header>
+
+        @if (session('status'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {{ session('status') }}
+            </div>
+        @endif
+        @if (session('error'))
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {{ session('error') }}
+            </div>
+        @endif
 
         {{-- Score summary --}}
         <section class="admin-panel px-6 py-6 lg:px-8">
@@ -345,7 +344,7 @@
                     <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->commentaires_evalue ?: 'Aucun commentaire saisi.' }}</p>
                 </div>
             @else
-                <form method="POST" action="{{ route('subordonne.evaluations.commentaire', $evaluation) }}" class="mt-4 space-y-3">
+                <form method="POST" action="{{ route('dga.evaluations.commentaire', $evaluation) }}" class="mt-4 space-y-3">
                     @csrf
                     <textarea
                         name="commentaires_evalue"
@@ -371,7 +370,7 @@
                 </div>
                 @if ($evaluation->statut === 'soumis')
                     <div class="flex flex-wrap gap-3">
-                        <form method="POST" action="{{ route('subordonne.evaluations.statut', $evaluation) }}">
+                        <form method="POST" action="{{ route('dga.evaluations.statut', $evaluation) }}">
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="action" value="accepter">
@@ -379,7 +378,7 @@
                                 <i class="fas fa-check mr-2"></i>Accepter l'evaluation
                             </button>
                         </form>
-                        <form method="POST" action="{{ route('subordonne.evaluations.statut', $evaluation) }}"
+                        <form method="POST" action="{{ route('dga.evaluations.statut', $evaluation) }}"
                               onsubmit="return confirm('Confirmer le refus de cette evaluation ?')">
                             @csrf
                             @method('PATCH')

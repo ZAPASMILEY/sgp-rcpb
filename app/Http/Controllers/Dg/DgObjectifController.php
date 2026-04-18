@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
+use App\Models\Entite;
 use App\Models\FicheObjectif;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -146,6 +148,44 @@ class DgObjectifController extends Controller
         $fiche->save();
 
         return redirect()->route('dg.objectifs.show', $fiche)->with('status', 'Avancement mis à jour.');
+    }
+
+    public function exportPdf($ficheId)
+    {
+        $user = Auth::user();
+        if (! $user || strtolower((string) $user->role) !== 'dg') {
+            abort(403);
+        }
+
+        $fiche      = FicheObjectif::with('objectifs', 'assignable')->findOrFail($ficheId);
+        $assignable = $fiche->assignable;
+        $entite     = Entite::find($user->pca_entite_id);
+
+        $roleLabels = [
+            'DGA'            => 'Directeur General Adjoint',
+            'Assistante_Dg'  => 'Assistante DG',
+            'Conseillers_Dg' => 'Conseiller DG',
+        ];
+
+        $nom = strtolower(trim((string) ($entite?->nom ?? '')));
+        $institutionSigle = ($nom !== '' && (str_contains($nom, 'faitiere') || str_contains($nom, 'fcpb'))) ? 'FCPB' : 'RCPB';
+
+        $pdf = Pdf::loadView('pdf.contrat-objectif', [
+            'contrat'                => $fiche,
+            'partieCollaborateur'    => (object) [
+                'name' => $assignable?->name ?? '-',
+                'role' => $roleLabels[$assignable?->role ?? ''] ?? ($assignable?->role ?? '-'),
+            ],
+            'partieFaitiere'         => $entite,
+            'partieFaitiereNomComplet' => $user->name,
+            'partieFaitiereRole'     => 'Directeur General',
+            'objectifs'              => $fiche->objectifs,
+            'dateDebut'              => $fiche->date,
+            'dateFin'                => $fiche->date_echeance,
+            'institution_sigle'      => $institutionSigle,
+        ]);
+
+        return $pdf->download('contrat-objectifs-'.$fiche->id.'.pdf');
     }
 
     public function destroy($fiche): RedirectResponse

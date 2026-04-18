@@ -12,7 +12,12 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Evaluation de {{ $cibleLabel }}</h1>
                         <p class="mt-2 text-sm text-slate-600">{{ $periodeLabel }}</p>
                     </div>
-                    <a href="{{ $backUrl }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <div class="flex items-center gap-3">
+                        <a href="{{ route('dg.sub-evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">
+                            <i class="fas fa-file-pdf mr-2"></i>PDF
+                        </a>
+                        <a href="{{ $backUrl }}" class="ent-btn ent-btn-soft">Retour</a>
+                    </div>
                 </div>
             </header>
 

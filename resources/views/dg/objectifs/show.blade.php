@@ -1,90 +1,91 @@
 @extends('layouts.dg')
 
-@section('title', 'Fiche d\'objectifs')
+@section('title', 'Fiche d\'objectifs | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="max-w-2xl mx-auto mt-12 bg-white rounded-3xl shadow-xl p-10 border border-slate-100">
-    <div class="flex items-center gap-4 mb-6">
-        <div class="flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white text-3xl">
-            <i class="fas fa-bullseye"></i>
-        </div>
-        <div>
-            <h1 class="text-2xl font-black text-slate-900">Fiche d'objectifs</h1>
-            <div class="text-sm text-slate-400">Detail et validation de la fiche</div>
-        </div>
+<div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
+    <div class="mx-auto flex max-w-4xl flex-col gap-6">
+
+        <header class="admin-panel px-6 py-6 lg:px-8">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Espace DG / Fiche d'objectifs</p>
+                    <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $fiche->titre }}</h1>
+                    <p class="mt-2 text-sm text-slate-600">Annee {{ $fiche->annee }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{{ route('dg.objectifs.pdf', $fiche) }}" class="ent-btn ent-btn-soft">
+                        <i class="fas fa-file-pdf mr-2"></i>Telecharger PDF
+                    </a>
+                    <a href="{{ route('dg.mon-espace') }}" class="ent-btn ent-btn-soft">Retour</a>
+                </div>
+            </div>
+        </header>
+
+        @if (session('status'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        <section class="admin-panel px-6 py-6 lg:px-8">
+            <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date d'assignation</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ \Carbon\Carbon::parse($fiche->date)->format('d/m/Y') }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Echeance</p>
+                    <p class="mt-2 text-sm font-black text-slate-900">{{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Avancement</p>
+                    @php
+                        $avancement = (int) ($fiche->avancement_percentage ?? 0);
+                        $avancementColor = $avancement >= 80 ? 'bg-emerald-500' : ($avancement >= 50 ? 'bg-sky-500' : ($avancement >= 25 ? 'bg-amber-400' : 'bg-slate-300'));
+                    @endphp
+                    <p class="mt-2 text-2xl font-black text-slate-900">{{ $avancement }}<span class="text-sm font-semibold text-slate-500">%</span></p>
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                        <div class="h-full rounded-full {{ $avancementColor }}" style="width: {{ $avancement }}%"></div>
+                    </div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>
+                    @php
+                        $statClass = match ($fiche->statut ?? 'en_attente') {
+                            'acceptee' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                            'refusee'  => 'border-rose-200 bg-rose-50 text-rose-700',
+                            default    => 'border-amber-200 bg-amber-50 text-amber-700',
+                        };
+                        $statLabel = match ($fiche->statut ?? 'en_attente') {
+                            'acceptee' => 'Acceptee',
+                            'refusee'  => 'Refusee',
+                            default    => 'En attente',
+                        };
+                    @endphp
+                    <div class="mt-2">
+                        <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statClass }}">
+                            {{ $statLabel }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="admin-panel px-6 py-6 lg:px-8">
+            <h2 class="text-lg font-black text-slate-900">Objectifs assignes</h2>
+            <div class="mt-4 space-y-3">
+                @foreach($fiche->objectifs as $objectif)
+                    <div class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4">
+                        <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                            <i class="fas fa-check text-[10px]"></i>
+                        </div>
+                        <p class="text-sm text-slate-700">{{ $objectif->description }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+
     </div>
-
-    <div class="grid grid-cols-2 gap-4 mb-6">
-        <div>
-            <div class="text-xs text-slate-400 font-bold uppercase">Titre</div>
-            <div class="text-base font-semibold text-slate-800">{{ $fiche->titre }}</div>
-        </div>
-        <div>
-            <div class="text-xs text-slate-400 font-bold uppercase">Année</div>
-            <div class="text-base font-semibold text-slate-800">{{ $fiche->annee }}</div>
-        </div>
-        <div>
-            <div class="text-xs text-slate-400 font-bold uppercase">Date</div>
-            <div class="text-base text-slate-700">{{ $fiche->date }}</div>
-        </div>
-        <div>
-            <div class="text-xs text-slate-400 font-bold uppercase">Échéance</div>
-            <div class="text-base text-slate-700">{{ $fiche->date_echeance }}</div>
-        </div>
-        <div class="col-span-2">
-            <div class="text-xs text-slate-400 font-bold uppercase">Statut</div>
-            <span class="inline-block mt-1 px-3 py-1 rounded-full text-xs font-bold
-                @if($fiche->statut=='acceptee') bg-emerald-100 text-emerald-700
-                @elseif($fiche->statut=='refusee') bg-red-100 text-red-700
-                @else bg-gray-100 text-gray-700 @endif">
-                {{ ucfirst($fiche->statut) }}
-            </span>
-        </div>
-    </div>
-
-
-    <div class="mb-8">
-        <div class="text-xs text-slate-400 font-bold uppercase mb-2">Objectifs</div>
-        <ul class="space-y-2">
-            @foreach($fiche->objectifs as $objectif)
-                <li class="flex items-start gap-2">
-                    <span class="mt-1 text-emerald-500"><i class="fas fa-check-circle"></i></span>
-                    <span class="text-slate-800">{{ $objectif->description }}</span>
-                </li>
-            @endforeach
-        </ul>
-    </div>
-
-    <div class="mb-8">
-        <div class="text-xs text-slate-400 font-bold uppercase mb-2">Avancement global</div>
-        <div class="flex items-center gap-4">
-            <form method="POST" action="{{ route('dg.objectifs.avancement', $fiche) }}">
-                @csrf
-                @method('PATCH')
-                <input type="hidden" name="avancement_percentage" value="{{ max(0, $fiche->avancement_percentage - 5) }}">
-                <button type="submit" @disabled($fiche->avancement_percentage <= 0) class="rounded-lg bg-slate-200 px-4 py-2 font-bold text-slate-700 shadow hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-50">-5</button>
-            </form>
-
-            <span class="min-w-[64px] text-center text-lg font-bold text-emerald-700">{{ $fiche->avancement_percentage }}%</span>
-
-            <form method="POST" action="{{ route('dg.objectifs.avancement', $fiche) }}">
-                @csrf
-                @method('PATCH')
-                <input type="hidden" name="avancement_percentage" value="{{ min(100, $fiche->avancement_percentage + 5) }}">
-                <button type="submit" @disabled($fiche->avancement_percentage >= 100) class="rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white shadow hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">+5</button>
-            </form>
-        </div>
-    </div>
-
-    @if($fiche->statut === 'en_attente')
-    <form method="POST" action="{{ route('dg.objectifs.statut', $fiche) }}" class="flex gap-4">
-        @csrf
-        @method('PATCH')
-        <button name="statut" value="acceptee" class="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow">Accepter</button>
-        <button name="statut" value="refusee" class="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 shadow">Refuser</button>
-    </form>
-    @endif
-
-    <a href="{{ route('dg.mon-espace') }}" class="inline-block mt-8 text-emerald-700 font-bold hover:underline">&larr; Retour à la liste</a>
 </div>
 @endsection

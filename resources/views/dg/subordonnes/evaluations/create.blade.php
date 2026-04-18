@@ -106,7 +106,7 @@
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_semestre" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Semestre</label>
-                                <select id="identification_semestre" name="identification[semestre]" class="ent-select">
+                                <select id="identification_semestre" name="identification[semestre]" required class="ent-select">
                                     <option value="">Selectionner</option>
                                     <option value="1" @selected(old('identification.semestre') === '1')>Semestre 1</option>
                                     <option value="2" @selected(old('identification.semestre') === '2')>Semestre 2</option>

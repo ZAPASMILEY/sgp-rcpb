@@ -240,9 +240,11 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/evaluations/{evaluation}/pdf', [App\Http\Controllers\Dg\EvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
     Route::get('/subordonne-evaluations/creer',         [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'create'])->name('sub-evaluations.create');
     Route::post('/subordonne-evaluations',              [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'store'])->name('sub-evaluations.store');
-    Route::get('/subordonne-evaluations/{evaluation}',  [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'show'])->name('sub-evaluations.show');
+    Route::get('/subordonne-evaluations/{evaluation}',      [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'show'])->name('sub-evaluations.show');
+    Route::get('/subordonne-evaluations/{evaluation}/pdf',  [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'exportPdf'])->name('sub-evaluations.pdf');
     Route::patch('/subordonne-evaluations/{evaluation}/soumettre', [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'submit'])->name('sub-evaluations.submit');
-    Route::delete('/subordonne-evaluations/{evaluation}', [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'destroy'])->name('sub-evaluations.destroy');
+    Route::delete('/subordonne-evaluations/{evaluation}',   [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'destroy'])->name('sub-evaluations.destroy');
+    Route::get('/objectifs/{fiche}/pdf',                    [\App\Http\Controllers\Dg\DgObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
 
     // Subordonnés du DG
     Route::get('/dga',                    [\App\Http\Controllers\Dg\DgSubordonneController::class, 'dga'])->name('dga');
@@ -266,16 +268,34 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     })->name('evaluations');
 });
 
-// DG - Changer le statut de l'évaluation (accepter/refuser)
-Route::middleware(['auth'])->patch('/dg/evaluations/{evaluation}/statut', [\App\Http\Controllers\Dg\EvaluationController::class, 'statut'])->name('dg.evaluations.statut');
 
 // Espace DG : Mon espace
 Route::middleware(['auth', 'dg'])->get('/dg/mon-espace', \App\Http\Controllers\Dg\MonEspaceController::class)->name('dg.mon-espace');
 
-// Espace Subordonnés (DGA, Assistante_Dg, Conseillers_Dg)
+// Espace DGA (Directeur General Adjoint)
+Route::middleware(['auth', 'dga_espace'])->prefix('espace-dga')->name('dga.')->group(function (): void {
+    Route::post('/logout',                                    [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/',                                           \App\Http\Controllers\Dga\DgaMonEspaceController::class)->name('mon-espace');
+    Route::get('/evaluations/{evaluation}',                   [\App\Http\Controllers\Dga\DgaEvaluationController::class, 'show'])->name('evaluations.show');
+    Route::patch('/evaluations/{evaluation}/statut',          [\App\Http\Controllers\Dga\DgaEvaluationController::class, 'statut'])->name('evaluations.statut');
+    Route::get('/evaluations/{evaluation}/pdf',               [\App\Http\Controllers\Dga\DgaEvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
+    Route::post('/evaluations/{evaluation}/commentaire',      [\App\Http\Controllers\Dga\DgaEvaluationController::class, 'commentaire'])->name('evaluations.commentaire');
+    Route::get('/objectifs/{fiche}',                          [\App\Http\Controllers\Dga\DgaObjectifController::class, 'show'])->name('objectifs.show');
+    Route::patch('/objectifs/{fiche}/statut',                 [\App\Http\Controllers\Dga\DgaObjectifController::class, 'statut'])->name('objectifs.statut');
+    Route::patch('/objectifs/{fiche}/avancement',             [\App\Http\Controllers\Dga\DgaObjectifController::class, 'avancement'])->name('objectifs.avancement');
+    Route::get('/objectifs/{fiche}/pdf',                      [\App\Http\Controllers\Dga\DgaObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
+});
+
+// Espace Subordonnés (Assistante_Dg, Conseillers_Dg)
 Route::middleware(['auth', 'subordonne'])->prefix('mon-espace')->name('subordonne.')->group(function (): void {
     Route::post('/logout',  [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/',         \App\Http\Controllers\Subordonne\SubordonneMonEspaceController::class)->name('mon-espace');
-    Route::get('/evaluations/{evaluation}', [\App\Http\Controllers\Subordonne\SubordonneEvaluationController::class, 'show'])->name('evaluations.show');
-    Route::get('/objectifs/{fiche}',        [\App\Http\Controllers\Subordonne\SubordonneObjectifController::class, 'show'])->name('objectifs.show');
+    Route::get('/evaluations/{evaluation}',            [\App\Http\Controllers\Subordonne\SubordonneEvaluationController::class, 'show'])->name('evaluations.show');
+    Route::patch('/evaluations/{evaluation}/statut',   [\App\Http\Controllers\Subordonne\SubordonneEvaluationController::class, 'statut'])->name('evaluations.statut');
+    Route::get('/evaluations/{evaluation}/pdf',        [\App\Http\Controllers\Subordonne\SubordonneEvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
+    Route::post('/evaluations/{evaluation}/commentaire', [\App\Http\Controllers\Subordonne\SubordonneEvaluationController::class, 'commentaire'])->name('evaluations.commentaire');
+    Route::get('/objectifs/{fiche}',                   [\App\Http\Controllers\Subordonne\SubordonneObjectifController::class, 'show'])->name('objectifs.show');
+    Route::patch('/objectifs/{fiche}/statut',          [\App\Http\Controllers\Subordonne\SubordonneObjectifController::class, 'statut'])->name('objectifs.statut');
+    Route::patch('/objectifs/{fiche}/avancement',      [\App\Http\Controllers\Subordonne\SubordonneObjectifController::class, 'avancement'])->name('objectifs.avancement');
+    Route::get('/objectifs/{fiche}/pdf',               [\App\Http\Controllers\Subordonne\SubordonneObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
 });

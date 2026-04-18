@@ -1,4 +1,4 @@
-@extends('layouts.subordonne')
+@extends('layouts.dga')
 
 @section('title', 'Ma fiche d\'objectifs | '.config('app.name', 'SGP-RCPB'))
 
@@ -9,18 +9,29 @@
         <header class="admin-panel px-6 py-6 lg:px-8">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mon Espace / Mes objectifs</p>
+                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mon Espace DGA / Mes objectifs</p>
                     <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $fiche->titre }}</h1>
                     <p class="mt-2 text-sm text-slate-600">Annee {{ $fiche->annee }}</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('subordonne.objectifs.pdf', $fiche) }}" class="ent-btn ent-btn-soft">
+                    <a href="{{ route('dga.objectifs.pdf', $fiche) }}" class="ent-btn ent-btn-soft">
                         <i class="fas fa-file-pdf mr-2"></i>Telecharger PDF
                     </a>
-                    <a href="{{ route('subordonne.mon-espace') }}?tab=objectifs" class="ent-btn ent-btn-soft">Retour</a>
+                    <a href="{{ route('dga.mon-espace') }}?tab=objectifs" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
             </div>
         </header>
+
+        @if (session('status'))
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {{ session('status') }}
+            </div>
+        @endif
+        @if (session('error'))
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {{ session('error') }}
+            </div>
+        @endif
 
         <section class="admin-panel px-6 py-6 lg:px-8">
             <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
@@ -59,7 +70,7 @@
             <div class="mt-4 space-y-3">
                 @forelse ($fiche->objectifs as $objectif)
                     <div class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                        <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
+                        <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700">
                             <i class="fas fa-check text-[10px]"></i>
                         </div>
                         <p class="text-sm text-slate-700">{{ $objectif->description }}</p>
@@ -78,7 +89,7 @@
             <h2 class="text-lg font-black text-slate-900">Mettre a jour l'avancement</h2>
             @php $pct = (int)($fiche->avancement_percentage ?? 0); @endphp
             <div class="mt-4 flex items-center gap-5">
-                <form method="POST" action="{{ route('subordonne.objectifs.avancement', $fiche) }}">
+                <form method="POST" action="{{ route('dga.objectifs.avancement', $fiche) }}">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="avancement_percentage" value="{{ max(0, $pct - 5) }}">
@@ -93,7 +104,7 @@
                         <div class="h-full rounded-full {{ $barColor }}" style="width: {{ $pct }}%"></div>
                     </div>
                 </div>
-                <form method="POST" action="{{ route('subordonne.objectifs.avancement', $fiche) }}">
+                <form method="POST" action="{{ route('dga.objectifs.avancement', $fiche) }}">
                     @csrf
                     @method('PATCH')
                     <input type="hidden" name="avancement_percentage" value="{{ min(100, $pct + 5) }}">
@@ -116,7 +127,7 @@
                 </div>
                 @if (($fiche->statut ?? 'en_attente') === 'en_attente')
                     <div class="flex flex-wrap gap-3">
-                        <form method="POST" action="{{ route('subordonne.objectifs.statut', $fiche) }}">
+                        <form method="POST" action="{{ route('dga.objectifs.statut', $fiche) }}">
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="action" value="accepter">
@@ -124,7 +135,7 @@
                                 <i class="fas fa-check mr-2"></i>Accepter la fiche
                             </button>
                         </form>
-                        <form method="POST" action="{{ route('subordonne.objectifs.statut', $fiche) }}"
+                        <form method="POST" action="{{ route('dga.objectifs.statut', $fiche) }}"
                               onsubmit="return confirm('Confirmer le refus de cette fiche d\'objectifs ?')">
                             @csrf
                             @method('PATCH')

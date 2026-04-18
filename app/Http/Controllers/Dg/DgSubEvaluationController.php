@@ -8,6 +8,7 @@ use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\SubjectiveCriteriaTemplate;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -124,7 +125,7 @@ class DgSubEvaluationController extends Controller
             'date_debut'                      => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'date_fin'                        => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'identification.nom_prenom'       => ['nullable', 'string', 'max:255'],
-            'identification.semestre'         => ['nullable', 'string', 'max:20'],
+            'identification.semestre'         => ['required', 'in:1,2'],
             'identification.date_evaluation'  => ['nullable', 'string', 'max:20'],
             'identification.matricule'        => ['nullable', 'string', 'max:255'],
             'identification.emploi'           => ['nullable', 'string', 'max:255'],
@@ -321,6 +322,35 @@ class DgSubEvaluationController extends Controller
             'objectiveCriteria',
             'subjectiveCriteria'
         ));
+    }
+
+    public function exportPdf(Evaluation $evaluation)
+    {
+        $user = Auth::user();
+        if (! $user || strtolower((string) $user->role) !== 'dg') {
+            abort(403);
+        }
+
+        $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres', 'evaluable']);
+        $evaluable = $evaluation->evaluable;
+
+        $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
+        $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
+        $note       = (float) $evaluation->note_finale;
+        $mention    = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
+        $cibleLabel = $evaluation->identification->nom_prenom ?? ($evaluable?->name ?? 'Subordonné');
+        $roleLabels = [
+            'DGA'            => 'Directeur Général Adjoint',
+            'Assistante_Dg'  => 'Assistante DG',
+            'Conseillers_Dg' => 'Conseiller DG',
+        ];
+        $cibleType = $roleLabels[$evaluable?->role ?? ''] ?? ($evaluable?->role ?? 'Subordonné');
+
+        $pdf = Pdf::loadView('dg.evaluations.pdf', compact(
+            'evaluation', 'subjectiveCriteria', 'objectiveCriteria', 'mention', 'cibleLabel', 'cibleType'
+        ));
+
+        return $pdf->download('evaluation-'.$evaluation->id.'-sub.pdf');
     }
 
     public function destroy(Request $request, Evaluation $evaluation): RedirectResponse

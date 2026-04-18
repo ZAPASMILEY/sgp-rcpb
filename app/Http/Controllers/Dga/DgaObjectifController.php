@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Subordonne;
+namespace App\Http\Controllers\Dga;
 
 use App\Http\Controllers\Controller;
 use App\Models\Entite;
@@ -12,14 +12,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
-class SubordonneObjectifController extends Controller
+class DgaObjectifController extends Controller
 {
-    private const ALLOWED_ROLES = ['Assistante_Dg', 'Conseillers_Dg'];
-
     private function authorize(FicheObjectif $fiche): void
     {
         $user = Auth::user();
-        if (! $user || ! in_array($user->role, self::ALLOWED_ROLES, true)) {
+        if (! $user || $user->role !== 'DGA') {
             abort(403);
         }
         if ($fiche->assignable_type !== User::class || (int) $fiche->assignable_id !== $user->id) {
@@ -44,7 +42,7 @@ class SubordonneObjectifController extends Controller
             default    => 'En attente',
         };
 
-        return view('subordonne.objectifs.show', compact('fiche', 'user', 'statutClass', 'statutLabel'));
+        return view('dga.objectifs.show', compact('fiche', 'user', 'statutClass', 'statutLabel'));
     }
 
     public function statut(Request $request, FicheObjectif $fiche): RedirectResponse
@@ -62,7 +60,7 @@ class SubordonneObjectifController extends Controller
 
         $msg = $request->input('action') === 'accepter' ? 'Fiche d\'objectifs acceptée.' : 'Fiche d\'objectifs refusée.';
 
-        return redirect()->route('subordonne.objectifs.show', $fiche)->with('status', $msg);
+        return redirect()->route('dga.objectifs.show', $fiche)->with('status', $msg);
     }
 
     public function avancement(Request $request, FicheObjectif $fiche): RedirectResponse
@@ -79,7 +77,7 @@ class SubordonneObjectifController extends Controller
         $fiche->avancement_percentage = $pct;
         $fiche->save();
 
-        return redirect()->route('subordonne.objectifs.show', $fiche)->with('status', 'Avancement mis à jour.');
+        return redirect()->route('dga.objectifs.show', $fiche)->with('status', 'Avancement mis à jour.');
     }
 
     public function exportPdf(FicheObjectif $fiche)
@@ -92,11 +90,9 @@ class SubordonneObjectifController extends Controller
         $dgUser = User::where('role', 'DG')->where('pca_entite_id', $user->pca_entite_id)->first();
         $institutionSigle = $this->resolveInstitutionSigle($entite);
 
-        $roleLabels = ['Assistante_Dg' => 'Assistante DG', 'Conseillers_Dg' => 'Conseiller DG'];
-
         $pdf = Pdf::loadView('pdf.contrat-objectif', [
             'contrat'                => $fiche,
-            'partieCollaborateur'    => (object) ['name' => $user->name, 'role' => $roleLabels[$user->role] ?? $user->role],
+            'partieCollaborateur'    => (object) ['name' => $user->name, 'role' => 'Directeur General Adjoint'],
             'partieFaitiere'         => $entite,
             'partieFaitiereNomComplet' => $dgUser?->name ?? '',
             'partieFaitiereRole'     => 'Directeur General',
@@ -106,7 +102,7 @@ class SubordonneObjectifController extends Controller
             'institution_sigle'      => $institutionSigle,
         ]);
 
-        return $pdf->download('contrat-objectifs-'.$fiche->id.'.pdf');
+        return $pdf->download('contrat-objectifs-'.$fiche->id.'-dga.pdf');
     }
 
     private function resolveInstitutionSigle(?Entite $entite): string

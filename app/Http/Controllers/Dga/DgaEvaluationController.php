@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Subordonne;
+namespace App\Http\Controllers\Dga;
 
 use App\Http\Controllers\Controller;
 use App\Models\Evaluation;
@@ -11,14 +11,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
-class SubordonneEvaluationController extends Controller
+class DgaEvaluationController extends Controller
 {
-    private const ALLOWED_ROLES = ['Assistante_Dg', 'Conseillers_Dg'];
-
     private function authorize(Evaluation $evaluation): void
     {
         $user = Auth::user();
-        if (! $user || ! in_array($user->role, self::ALLOWED_ROLES, true)) {
+        if (! $user || $user->role !== 'DGA') {
             abort(403);
         }
         if ($evaluation->evaluable_type !== User::class || (int) $evaluation->evaluable_id !== $user->id) {
@@ -33,16 +31,16 @@ class SubordonneEvaluationController extends Controller
 
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
 
-        $note     = (float) $evaluation->note_finale;
-        $mention  = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
+        $note    = (float) $evaluation->note_finale;
+        $mention = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
 
-        $identification  = $evaluation->identification;
-        $anneeEval       = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');
-        $semestreEval    = trim((string) ($identification?->semestre ?? ''));
+        $identification = $evaluation->identification;
+        $anneeEval      = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');
+        $semestreEval   = trim((string) ($identification?->semestre ?? ''));
         if ($semestreEval === '') {
             $semestreEval = $evaluation->date_debut->month <= 6 ? '1' : '2';
         }
-        $periodeLabel    = $anneeEval.' - Semestre '.$semestreEval;
+        $periodeLabel       = $anneeEval.' - Semestre '.$semestreEval;
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
 
@@ -59,7 +57,7 @@ class SubordonneEvaluationController extends Controller
             default  => 'Brouillon',
         };
 
-        return view('subordonne.evaluations.show', compact(
+        return view('dga.evaluations.show', compact(
             'evaluation',
             'user',
             'mention',
@@ -86,7 +84,7 @@ class SubordonneEvaluationController extends Controller
 
         $msg = $request->input('action') === 'accepter' ? 'Évaluation acceptée.' : 'Évaluation refusée.';
 
-        return redirect()->route('subordonne.evaluations.show', $evaluation)->with('status', $msg);
+        return redirect()->route('dga.evaluations.show', $evaluation)->with('status', $msg);
     }
 
     public function commentaire(Request $request, Evaluation $evaluation): RedirectResponse
@@ -94,7 +92,7 @@ class SubordonneEvaluationController extends Controller
         $this->authorize($evaluation);
 
         if ($evaluation->statut === 'valide') {
-            return redirect()->route('subordonne.evaluations.show', $evaluation)
+            return redirect()->route('dga.evaluations.show', $evaluation)
                 ->with('status', "L'évaluation est validée, le commentaire ne peut plus être modifié.");
         }
 
@@ -105,7 +103,7 @@ class SubordonneEvaluationController extends Controller
         $evaluation->commentaires_evalue = $request->input('commentaires_evalue');
         $evaluation->save();
 
-        return redirect()->route('subordonne.evaluations.show', $evaluation)
+        return redirect()->route('dga.evaluations.show', $evaluation)
             ->with('status', 'Votre commentaire a été enregistré.');
     }
 
@@ -120,13 +118,12 @@ class SubordonneEvaluationController extends Controller
         $note       = (float) $evaluation->note_finale;
         $mention    = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
         $cibleLabel = $evaluation->identification->nom_prenom ?? $user->name;
-        $roleLabels = ['Assistante_Dg' => 'Assistante DG', 'Conseillers_Dg' => 'Conseiller DG'];
-        $cibleType  = $roleLabels[$user->role] ?? $user->role;
+        $cibleType  = 'Directeur Général Adjoint';
 
         $pdf = Pdf::loadView('dg.evaluations.pdf', compact(
             'evaluation', 'subjectiveCriteria', 'objectiveCriteria', 'mention', 'cibleLabel', 'cibleType'
         ));
 
-        return $pdf->download('evaluation-'.$evaluation->id.'.pdf');
+        return $pdf->download('evaluation-'.$evaluation->id.'-dga.pdf');
     }
 }

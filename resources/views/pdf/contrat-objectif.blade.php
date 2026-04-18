@@ -185,7 +185,7 @@
         <p class="paragraph">
             La Faitiere des Caisses Populaires du Burkina (FCPB), representee par
             <strong>{{ $partieFaitiereNomComplet !== '' ? $partieFaitiereNomComplet : 'President du Conseil d Administration' }}</strong>,
-            agissant en qualite de President du Conseil d Administration.
+            agissant en qualite de {{ $partieFaitiereRole ?? 'President du Conseil d Administration' }}.
         </p>
 
         <div class="label">ET</div>

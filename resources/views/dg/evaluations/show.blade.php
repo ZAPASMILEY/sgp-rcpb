@@ -318,25 +318,32 @@
         </section>
     </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3 mt-6 px-2">
-        <div class="flex items-center gap-2">
-            @php
-                $statutColors = [
-                    'brouillon' => 'bg-slate-100 text-slate-600',
-                    'soumis'    => 'bg-amber-100 text-amber-700',
-                    'valide'    => 'bg-emerald-100 text-emerald-700',
-                ];
-                $statutLabels = [
-                    'brouillon' => 'Brouillon',
-                    'soumis'    => 'Soumise',
-                    'valide'    => 'Validée',
-                ];
-            @endphp
-            <span class="inline-block rounded-full px-3 py-1 text-xs font-bold {{ $statutColors[$evaluation->statut] ?? 'bg-slate-100 text-slate-500' }}">
-                {{ $statutLabels[$evaluation->statut] ?? ucfirst($evaluation->statut ?? 'En attente') }}
-            </span>
+    <section class="admin-panel px-6 py-6 lg:px-8">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                @php
+                    $statutColors = [
+                        'brouillon' => 'bg-slate-100 text-slate-600',
+                        'soumis'    => 'bg-amber-100 text-amber-700',
+                        'valide'    => 'bg-emerald-100 text-emerald-700',
+                        'refuse'    => 'bg-rose-100 text-rose-700',
+                    ];
+                    $statutLabels = [
+                        'brouillon' => 'Brouillon',
+                        'soumis'    => 'Soumise',
+                        'valide'    => 'Validée',
+                        'refuse'    => 'Refusée',
+                    ];
+                @endphp
+                <span class="inline-block rounded-full px-3 py-1 text-xs font-bold {{ $statutColors[$evaluation->statut] ?? 'bg-slate-100 text-slate-500' }}">
+                    {{ $statutLabels[$evaluation->statut] ?? ucfirst($evaluation->statut ?? 'En attente') }}
+                </span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ route('dg.evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">Exporter PDF</a>
+            </div>
         </div>
-        <a href="{{ route('dg.evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">Exporter PDF</a>
-    </div>
+    </section>
 
 @endsection
