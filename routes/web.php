@@ -320,3 +320,22 @@ Route::middleware(['auth', 'subordonne'])->prefix('mon-espace')->name('subordonn
     Route::patch('/objectifs/{fiche}/avancement',      [\App\Http\Controllers\Subordonne\SubordonneObjectifController::class, 'avancement'])->name('objectifs.avancement');
     Route::get('/objectifs/{fiche}/pdf',               [\App\Http\Controllers\Subordonne\SubordonneObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
 });
+
+// ── Espace Directeur de Direction ─────────────────────────────────────────────
+Route::middleware(['auth', 'directeur_espace'])->prefix('espace-directeur')->name('directeur.')->group(function (): void {
+    Route::post('/logout', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/',        \App\Http\Controllers\Directeur\DirecteurMonEspaceController::class)->name('mon-espace');
+
+    // Évaluations reçues (direction = évalué) + créées (chef de service = évalué)
+    Route::get('/evaluations/creer',                    [\App\Http\Controllers\Directeur\DirecteurEvaluationController::class, 'create'])->name('evaluations.create');
+    Route::post('/evaluations',                          [\App\Http\Controllers\Directeur\DirecteurEvaluationController::class, 'store'])->name('evaluations.store');
+    Route::get('/evaluations/{evaluation}',              [\App\Http\Controllers\Directeur\DirecteurEvaluationController::class, 'show'])->name('evaluations.show');
+    Route::get('/evaluations/{evaluation}/pdf',          [\App\Http\Controllers\Directeur\DirecteurEvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
+    Route::patch('/evaluations/{evaluation}/statut',     [\App\Http\Controllers\Directeur\DirecteurEvaluationController::class, 'statut'])->name('evaluations.statut');
+    Route::patch('/evaluations/{evaluation}/soumettre',  [\App\Http\Controllers\Directeur\DirecteurEvaluationController::class, 'submit'])->name('evaluations.submit');
+    Route::delete('/evaluations/{evaluation}',           [\App\Http\Controllers\Directeur\DirecteurEvaluationController::class, 'destroy'])->name('evaluations.destroy');
+
+    // Objectifs reçus
+    Route::get('/objectifs/{fiche}',             [\App\Http\Controllers\Directeur\DirecteurObjectifController::class, 'show'])->name('objectifs.show');
+    Route::patch('/objectifs/{fiche}/statut',    [\App\Http\Controllers\Directeur\DirecteurObjectifController::class, 'statut'])->name('objectifs.statut');
+});

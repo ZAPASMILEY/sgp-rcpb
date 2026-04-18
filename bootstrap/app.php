@@ -17,7 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'personnel'    => \App\Http\Middleware\EnsurePersonnel::class,
             'dg'           => \App\Http\Middleware\EnsureDg::class,
             'subordonne'   => \App\Http\Middleware\EnsureIsSubordonne::class,
-            'dga_espace'   => \App\Http\Middleware\EnsureIsDga::class,
+            'dga_espace'       => \App\Http\Middleware\EnsureIsDga::class,
+            'directeur_espace' => \App\Http\Middleware\EnsureIsDirecteur::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
