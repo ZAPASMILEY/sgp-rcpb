@@ -256,9 +256,9 @@
                 </div>
             </section>
 
-            {{-- Plan d'amelioration et signatures --}}
+            {{-- Plan d'amelioration --}}
             <section class="admin-panel px-6 py-6 lg:px-8">
-                <h2 class="text-lg font-black text-slate-900">Plan d'amelioration et signatures</h2>
+                <h2 class="text-lg font-black text-slate-900">Plan d'amelioration</h2>
                 <div class="mt-4 grid gap-5 md:grid-cols-2">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Points a ameliorer</p>
@@ -267,10 +267,6 @@
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Strategies d'amelioration</p>
                         <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->strategies_amelioration ?: '-' }}</p>
-                    </div>
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Commentaires de l'evalue</p>
-                        <p class="mt-2 text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->commentaires_evalue ?: '-' }}</p>
                     </div>
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Commentaire de l'evaluateur</p>
@@ -299,6 +295,15 @@
                             <button type="submit" class="ent-btn ent-btn-destructive">Supprimer</button>
                         </form>
                     @endif
+                </div>
+            </section>
+
+            {{-- Commentaire de l'évalué (lecture seule pour le DG) --}}
+            <section class="admin-panel px-6 py-6 lg:px-8">
+                <h2 class="text-lg font-black text-slate-900">Commentaire de l'évalué</h2>
+                <p class="mt-1 text-sm text-slate-500">Commentaire saisi par {{ $cibleLabel }} sur cette évaluation.</p>
+                <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="text-sm text-slate-700 whitespace-pre-line">{{ $evaluation->commentaires_evalue ?: 'Aucun commentaire saisi par l\'évalué.' }}</p>
                 </div>
             </section>
         </div>
