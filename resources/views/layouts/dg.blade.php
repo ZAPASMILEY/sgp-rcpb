@@ -78,7 +78,7 @@
         .sidebar .nav-link.active { background: #fff !important; color: var(--sidebar-color) !important; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
         /* ── Main content ── */
-        .main-content { margin-left: var(--sidebar-width); min-height: 100vh; transition: margin 0.3s ease; display: flex; flex-direction: column; }
+        .main-content { margin-left: var(--sidebar-width); min-height: 100vh; width: calc(100% - var(--sidebar-width)); transition: margin 0.3s ease, width 0.3s ease; display: flex; flex-direction: column; }
 
         /* ── Collapsed state ── */
         body.sidebar-collapsed .sidebar { width: 62px; overflow: visible; }
@@ -88,7 +88,7 @@
         body.sidebar-collapsed .sidebar .sidebar-user-info { display: none; }
         body.sidebar-collapsed .sidebar .nav-link { justify-content: center; margin: 0.15rem 0.5rem; padding: 0.65rem; }
         body.sidebar-collapsed .sidebar .nav-link i { margin-right: 0; font-size: 1.1rem; }
-        body.sidebar-collapsed .main-content { margin-left: 62px; }
+        body.sidebar-collapsed .main-content { margin-left: 62px; width: calc(100% - 62px); }
         body.sidebar-collapsed .sidebar .sidebar-user-compact { justify-content: center; }
         body.sidebar-collapsed .sidebar .sidebar-user-compact .user-avatar { margin: 0 auto; }
 
@@ -108,7 +108,7 @@
         @media (max-width: 992px) {
             .sidebar { transform: translateX(-100%); width: var(--sidebar-width) !important; }
             .sidebar.show { transform: translateX(0); }
-            .main-content { margin-left: 0 !important; }
+            .main-content { margin-left: 0 !important; width: 100% !important; }
             .sidebar-collapse-btn { display: none !important; }
         }
     </style>
@@ -164,8 +164,8 @@
     </nav>
 
     <div class="main-content">
-        <header class="flex h-12 shrink-0 items-center px-6 pt-2 lg:px-8">
-            <button class="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm lg:hidden" id="btnToggleSidebar" type="button">
+        <header class="flex h-12 shrink-0 items-center px-4 lg:hidden">
+            <button class="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm" id="btnToggleSidebar" type="button">
                 <i class="fas fa-bars"></i>
             </button>
         </header>

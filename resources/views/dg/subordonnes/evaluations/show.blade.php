@@ -179,39 +179,41 @@
             <section class="admin-panel px-6 py-6 lg:px-8">
                 <h2 class="text-lg font-black text-slate-900">Criteres subjectifs</h2>
                 <div class="mt-4 space-y-4">
-                    @forelse ($subjectiveCriteria as $criterion)
-                        <article class="rounded-2xl border border-slate-200 bg-white p-5">
-                            <div class="flex items-start justify-between gap-4">
-                                <div>
-                                    <h3 class="text-base font-bold text-slate-900">{{ $criterion->titre }}</h3>
-                                    @if ($criterion->observation)
-                                        <p class="mt-1 text-sm text-slate-500">{{ $criterion->observation }}</p>
-                                    @endif
+                    @if ($subjectiveCriteria->isNotEmpty())
+                        @foreach ($subjectiveCriteria as $criterion)
+                            <article class="rounded-2xl border border-slate-200 bg-white p-5">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <h3 class="text-base font-bold text-slate-900">{{ $criterion->titre }}</h3>
+                                        @if ($criterion->observation)
+                                            <p class="mt-1 text-sm text-slate-500">{{ $criterion->observation }}</p>
+                                        @endif
+                                    </div>
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">Note globale {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}</span>
                                 </div>
-                                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">Note globale {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}</span>
-                            </div>
-                            <div class="mt-4 overflow-x-auto">
-                                <table class="min-w-full text-left text-sm text-slate-700">
-                                    <thead>
-                                        <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.12em] text-slate-500">
-                                            <th class="py-2 pr-4">Sous-critere</th>
-                                            <th class="py-2 pr-4">Note /5</th>
-                                            <th class="py-2">Observation</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($criterion->sousCriteres as $subcriterion)
-                                            <tr class="border-b border-slate-100">
-                                                <td class="py-2 pr-4">{{ $subcriterion->libelle }}</td>
-                                                <td class="py-2 pr-4 font-semibold">{{ number_format((float) $subcriterion->note, 2, ',', ' ') }}</td>
-                                                <td class="py-2">{{ $subcriterion->observation ?: '-' }}</td>
+                                <div class="mt-4 overflow-x-auto">
+                                    <table class="min-w-full text-left text-sm text-slate-700">
+                                        <thead>
+                                            <tr class="border-b border-slate-200 text-xs uppercase tracking-[0.12em] text-slate-500">
+                                                <th class="py-2 pr-4">Sous-critere</th>
+                                                <th class="py-2 pr-4">Note /5</th>
+                                                <th class="py-2">Observation</th>
                                             </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </article>
-                    @empty
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($criterion->sousCriteres as $subcriterion)
+                                                <tr class="border-b border-slate-100">
+                                                    <td class="py-2 pr-4">{{ $subcriterion->libelle }}</td>
+                                                    <td class="py-2 pr-4 font-semibold">{{ number_format((float) $subcriterion->note, 2, ',', ' ') }}</td>
+                                                    <td class="py-2">{{ $subcriterion->observation ?: '-' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </article>
+                        @endforeach
+                    @else
                         @php
                             $templates = \App\Models\SubjectiveCriteriaTemplate::query()
                                 ->with('subcriteria')
@@ -252,7 +254,7 @@
                                 </div>
                             </article>
                         @endforeach
-                    @endforelse
+                    @endif
                 </div>
             </section>
 
