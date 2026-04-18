@@ -253,6 +253,9 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/conseillers',            [\App\Http\Controllers\Dg\DgSubordonneController::class, 'conseillers'])->name('conseillers');
     Route::get('/conseillers/{user}',     [\App\Http\Controllers\Dg\DgSubordonneController::class, 'conseiller'])->name('conseillers.show');
 
+    // Personnel du réseau
+    Route::get('/personnel', \App\Http\Controllers\Dg\DgPersonnelController::class)->name('personnel');
+
     // Réseau RCPB
     Route::get('/delegations',                    [\App\Http\Controllers\Dg\DgReseauController::class, 'delegations'])->name('delegations');
     Route::get('/delegations/{delegation}',       [\App\Http\Controllers\Dg\DgReseauController::class, 'delegation'])->name('delegations.show');
