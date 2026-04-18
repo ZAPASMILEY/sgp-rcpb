@@ -76,13 +76,7 @@ class AgenceController extends Controller
             'superviseur_caisse_id' => [
                 'required',
                 'integer',
-                Rule::exists('caisses', 'id')->where(function (Builder $query) use ($request): void {
-                    $query->whereIn('superviseur_direction_id', function ($subQuery) use ($request): void {
-                        $subQuery->select('id')
-                            ->from('directions')
-                            ->where('delegation_technique_id', $request->integer('delegation_technique_id'));
-                    });
-                }),
+                Rule::exists('caisses', 'id')->where('delegation_technique_id', $request->integer('delegation_technique_id')),
             ],
         ], [
             'nom.unique' => 'Cette agence existe deja pour la delegation technique selectionnee.',
@@ -94,6 +88,8 @@ class AgenceController extends Controller
             'secretaire_email.different' => 'Le mail du secretaire doit etre different de celui du chef.',
             'chef_telephone.different' => 'Le telephone du chef doit etre different de celui du secretaire.',
             'secretaire_telephone.different' => 'Le telephone du secretaire doit etre different de celui du chef.',
+            'superviseur_caisse_id.required' => 'Veuillez choisir un directeur de caisse superviseur.',
+            'superviseur_caisse_id.exists' => 'La caisse choisie n\'appartient pas a la delegation technique selectionnee.',
         ]);
 
         Agence::query()->create($validated);
