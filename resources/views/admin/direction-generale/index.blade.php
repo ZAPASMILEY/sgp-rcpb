@@ -38,12 +38,18 @@
                                 default => ucfirst(strtolower(str_replace('_', ' ', $role))),
                             };
                         @endphp
-                        <div class="flex flex-col items-center">
+                        <div class="flex flex-col items-center gap-1">
                             <div class="w-20 h-20 flex items-center justify-center rounded-full text-white font-black text-lg shadow {{ $color }} mb-2">
                                 {{ $role }}
                             </div>
                             <div class="text-base font-black text-slate-800">{{ $membre->name }}</div>
                             <div class="text-xs text-slate-400 text-center leading-tight">{{ $fonction }}</div>
+                            @if(in_array($membre->role, ['DG', 'DGA', 'Assistante_Dg']))
+                                <a href="{{ route('admin.direction-generale.membres.edit', $membre) }}"
+                                   class="mt-1 inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 transition">
+                                    <i class="fas fa-pen text-[10px]"></i> Modifier
+                                </a>
+                            @endif
                         </div>
                     @endforeach
                 </div>

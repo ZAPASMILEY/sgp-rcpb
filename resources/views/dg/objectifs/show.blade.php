@@ -48,6 +48,17 @@
                     <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
                         <div class="h-full rounded-full {{ $avancementColor }}" style="width: {{ $avancement }}%"></div>
                     </div>
+                    {{-- Formulaire de mise à jour de l'avancement (multiples de 5) --}}
+                    <form method="POST" action="{{ route('dg.objectifs.avancement', $fiche) }}" class="mt-3 flex items-center gap-2">
+                        @csrf @method('PATCH')
+                        <select name="avancement_percentage"
+                                class="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                                onchange="this.form.submit()">
+                            @for ($p = 0; $p <= 100; $p += 5)
+                                <option value="{{ $p }}" @selected($avancement === $p)>{{ $p }}%</option>
+                            @endfor
+                        </select>
+                    </form>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>

@@ -51,6 +51,9 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
         Route::get('/admin/direction-generale/conseillers/creer', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'createConseiller'])->name('admin.direction-generale.conseillers.create');
         Route::post('/admin/direction-generale/conseillers', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'storeConseiller'])->name('admin.direction-generale.conseillers.store');
         Route::delete('/admin/direction-generale/conseillers/{user}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'destroyConseiller'])->name('admin.direction-generale.conseillers.destroy');
+        // Modification des membres principaux (DG, DGA, Assistante)
+        Route::get('/admin/direction-generale/membres/{user}/modifier', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'editMembre'])->name('admin.direction-generale.membres.edit');
+        Route::put('/admin/direction-generale/membres/{user}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'updateMembre'])->name('admin.direction-generale.membres.update');
     // Route pour enregistrer un secrétaire depuis la modale de la Faitière
     Route::post('/admin/secretaires', [EntiteController::class, 'storeSecretaire'])->name('admin.secretaires.store');
     Route::get('/admin/secretaires/{direction}', [EntiteController::class, 'showSecretaire'])->name('admin.secretaires.show');
@@ -279,6 +282,7 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/directions/{direction}/objectifs/creer',             [\App\Http\Controllers\Dg\DgDirectionController::class, 'createObjectif'])->name('directions.objectifs.create');
     Route::post('/directions/objectifs',                              [\App\Http\Controllers\Dg\DgDirectionController::class, 'storeObjectif'])->name('directions.objectifs.store');
     Route::get('/directions/objectifs/{fiche}',                       [\App\Http\Controllers\Dg\DgDirectionController::class, 'showObjectif'])->name('directions.objectifs.show');
+    Route::patch('/directions/objectifs/{fiche}/avancement',          [\App\Http\Controllers\Dg\DgDirectionController::class, 'avancements'])->name('directions.objectifs.avancement');
     Route::delete('/directions/objectifs/{fiche}',                    [\App\Http\Controllers\Dg\DgDirectionController::class, 'destroyObjectif'])->name('directions.objectifs.destroy');
     Route::get('/directions/{direction}/evaluations/creer',           [\App\Http\Controllers\Dg\DgDirectionController::class, 'createEvaluation'])->name('directions.evaluations.create');
     Route::post('/directions/evaluations',                            [\App\Http\Controllers\Dg\DgDirectionController::class, 'storeEvaluation'])->name('directions.evaluations.store');
@@ -350,8 +354,9 @@ Route::middleware(['auth', 'directeur_espace'])->prefix('espace-directeur')->nam
     Route::delete('/evaluations/{evaluation}',           [\App\Http\Controllers\Directeur\DirecteurEvaluationController::class, 'destroy'])->name('evaluations.destroy');
 
     // Objectifs reçus
-    Route::get('/objectifs/{fiche}',             [\App\Http\Controllers\Directeur\DirecteurObjectifController::class, 'show'])->name('objectifs.show');
-    Route::patch('/objectifs/{fiche}/statut',    [\App\Http\Controllers\Directeur\DirecteurObjectifController::class, 'statut'])->name('objectifs.statut');
+    Route::get('/objectifs/{fiche}',              [\App\Http\Controllers\Directeur\DirecteurObjectifController::class, 'show'])->name('objectifs.show');
+    Route::patch('/objectifs/{fiche}/statut',     [\App\Http\Controllers\Directeur\DirecteurObjectifController::class, 'statut'])->name('objectifs.statut');
+    Route::patch('/objectifs/{fiche}/avancement', [\App\Http\Controllers\Directeur\DirecteurObjectifController::class, 'avancement'])->name('objectifs.avancement');
 
     // ── Subordonnés ───────────────────────────────────────────────────────────
     Route::get('/subordonnes',                   [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'index'])->name('subordonnes');

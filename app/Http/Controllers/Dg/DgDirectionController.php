@@ -28,7 +28,10 @@ class DgDirectionController extends Controller
 
     private function getDirections(): \Illuminate\Support\Collection
     {
+        // On exclut la Direction Générale : le DG ne s'évalue pas lui-même via ce module.
+        // Le filtre porte sur user_id pour être robuste même si le nom de la direction change.
         return Direction::where('entite_id', $this->getEntiteId())
+            ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', '!=', Auth::id()))
             ->with(['user', 'services'])
             ->orderBy('nom')
             ->get();
@@ -82,6 +85,33 @@ class DgDirectionController extends Controller
         $directions = $this->getDirections();
 
         return view('dg.directions.index', compact('directions'));
+    }
+
+    // ── Avancement objectif direction ──────────────────────────────────────
+
+    /**
+     * Met à jour le pourcentage d'avancement d'une fiche d'objectifs d'un directeur.
+     * L'avancement doit être un multiple de 5 (0, 5, 10, … 100).
+     */
+    public function avancements(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorizeObjectif($fiche);
+
+        $request->validate([
+            'avancement_percentage' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $val = (int) $request->avancement_percentage;
+        if ($val % 5 !== 0) {
+            return back()->with('error', "L'avancement doit être un multiple de 5.");
+        }
+
+        $fiche->avancement_percentage = $val;
+        $fiche->save();
+
+        return redirect()
+            ->route('dg.directions.objectifs.show', $fiche)
+            ->with('status', 'Avancement mis à jour.');
     }
 
     // ── Show direction ─────────────────────────────────────────────────────

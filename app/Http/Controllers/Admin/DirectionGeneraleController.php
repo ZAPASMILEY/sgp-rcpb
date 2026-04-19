@@ -193,6 +193,89 @@ class DirectionGeneraleController extends Controller
             ->with('status', 'Direction Generale configuree avec succes.');
     }
 
+    /**
+     * Affiche le formulaire de modification d'un membre de la Direction Générale
+     * (DG, DGA ou Assistante_Dg).
+     */
+    public function editMembre(User $user): View|RedirectResponse
+    {
+        $entite = Entite::latest()->first();
+        if (! $entite) {
+            return redirect()->route('admin.direction-generale.index');
+        }
+
+        // Sécurité : seuls les membres de l'entite courante peuvent être édités
+        if ((int) $user->pca_entite_id !== $entite->id || ! in_array($user->role, ['DG', 'DGA', 'Assistante_Dg'], true)) {
+            abort(403);
+        }
+
+        return view('admin.direction-generale.edit-membre', compact('user', 'entite'));
+    }
+
+    /**
+     * Met à jour le compte d'un membre principal (DG, DGA ou Assistante_Dg).
+     *
+     * Met également à jour les champs correspondants sur l'entite (directrice_generale_nom, etc.)
+     * pour que l'affichage admin reste cohérent avec les comptes utilisateurs.
+     */
+    public function updateMembre(Request $request, User $user): RedirectResponse
+    {
+        $entite = Entite::latest()->first();
+        if (! $entite || (int) $user->pca_entite_id !== $entite->id || ! in_array($user->role, ['DG', 'DGA', 'Assistante_Dg'], true)) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'prenom'              => ['required', 'string', 'max:255'],
+            'nom'                 => ['required', 'string', 'max:255'],
+            'email'               => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'sexe'                => ['required', 'in:Homme,Femme,Autres'],
+            'date_prise_fonction' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+        ]);
+
+        // Mise à jour du compte utilisateur
+        $user->update([
+            'name'                => $validated['prenom'].' '.$validated['nom'],
+            'email'               => $validated['email'],
+            'sexe'                => $validated['sexe'],
+            'date_prise_fonction' => $validated['date_prise_fonction'],
+        ]);
+
+        // Mise à jour des champs miroirs sur l'entite selon le rôle
+        $entiteFields = match ($user->role) {
+            'DG' => [
+                'directrice_generale_prenom'              => $validated['prenom'],
+                'directrice_generale_nom'                 => $validated['nom'],
+                'directrice_generale_email'               => $validated['email'],
+                'directrice_generale_sexe'                => $validated['sexe'],
+                'directrice_generale_date_prise_fonction' => $validated['date_prise_fonction'],
+            ],
+            'DGA' => [
+                'dga_prenom'              => $validated['prenom'],
+                'dga_nom'                 => $validated['nom'],
+                'dga_email'               => $validated['email'],
+                'dga_sexe'                => $validated['sexe'],
+                'dga_date_prise_fonction' => $validated['date_prise_fonction'],
+            ],
+            'Assistante_Dg' => [
+                'assistante_dg_prenom'              => $validated['prenom'],
+                'assistante_dg_nom'                 => $validated['nom'],
+                'assistante_dg_email'               => $validated['email'],
+                'assistante_dg_sexe'                => $validated['sexe'],
+                'assistante_dg_date_prise_fonction'  => $validated['date_prise_fonction'],
+            ],
+            default => [],
+        };
+
+        if ($entiteFields) {
+            $entite->update($entiteFields);
+        }
+
+        return redirect()
+            ->route('admin.direction-generale.index')
+            ->with('status', 'Membre mis à jour avec succès.');
+    }
+
     public function createSecretaire(): View|RedirectResponse
     {
         $entite = Entite::latest()->first();

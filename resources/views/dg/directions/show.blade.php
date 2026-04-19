@@ -176,21 +176,43 @@
                                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                                     <i class="fas fa-bullseye text-sm"></i>
                                 </div>
-                                <div class="min-w-0 flex-1">
+                                    <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-bold text-slate-900">{{ $fiche->titre }}</p>
                                     <p class="text-xs text-slate-500">
                                         {{ $fiche->objectifs_count }} objectif(s) —
                                         Échéance {{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}
                                     </p>
+                                    @php
+                                        $av = (int) ($fiche->avancement_percentage ?? 0);
+                                        $avColor = $av >= 80 ? 'bg-emerald-500' : ($av >= 50 ? 'bg-sky-500' : ($av >= 25 ? 'bg-amber-400' : 'bg-slate-300'));
+                                    @endphp
+                                    <div class="mt-1.5 flex items-center gap-2">
+                                        <div class="h-1.5 flex-1 rounded-full bg-slate-100">
+                                            <div class="h-full rounded-full {{ $avColor }}" style="width: {{ $av }}%"></div>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-500">{{ $av }}%</span>
+                                    </div>
                                 </div>
                                 <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black {{ $statutColors[$fiche->statut ?? 'en_attente'] ?? 'bg-slate-100 text-slate-500' }}">
                                     {{ $statutLabels[$fiche->statut ?? 'en_attente'] ?? ucfirst($fiche->statut ?? 'En attente') }}
                                 </span>
-                                <div class="flex shrink-0 items-center gap-2">
+                                    <div class="flex shrink-0 items-center gap-2">
                                     <a href="{{ route('dg.directions.objectifs.show', $fiche) }}"
                                        class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
                                         Voir
                                     </a>
+                                    {{-- Mise à jour rapide de l'avancement --}}
+                                    <form method="POST" action="{{ route('dg.directions.objectifs.avancement', $fiche) }}"
+                                          class="flex items-center gap-1">
+                                        @csrf @method('PATCH')
+                                        <select name="avancement_percentage"
+                                                class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                                                onchange="this.form.submit()">
+                                            @for ($p = 0; $p <= 100; $p += 5)
+                                                <option value="{{ $p }}" @selected((int)$fiche->avancement_percentage === $p)>{{ $p }}%</option>
+                                            @endfor
+                                        </select>
+                                    </form>
                                     <form method="POST" action="{{ route('dg.directions.objectifs.destroy', $fiche) }}"
                                           onsubmit="return confirm('Supprimer cette fiche ?')">
                                         @csrf @method('DELETE')

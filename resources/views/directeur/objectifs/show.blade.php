@@ -31,7 +31,7 @@
 
         {{-- Méta de la fiche --}}
         <section class="admin-panel px-6 py-6 lg:px-8">
-            <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date d'assignation</p>
                     <p class="mt-2 text-sm font-black text-slate-900">{{ \Carbon\Carbon::parse($fiche->date)->format('d/m/Y') }}</p>
@@ -39,6 +39,29 @@
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Échéance</p>
                     <p class="mt-2 text-sm font-black text-slate-900">{{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Avancement</p>
+                    @php
+                        $avancement = (int) ($fiche->avancement_percentage ?? 0);
+                        $avancementColor = $avancement >= 80 ? 'bg-emerald-500' : ($avancement >= 50 ? 'bg-sky-500' : ($avancement >= 25 ? 'bg-amber-400' : 'bg-slate-300'));
+                    @endphp
+                    <p class="mt-2 text-2xl font-black text-slate-900">{{ $avancement }}<span class="text-sm font-semibold text-slate-500">%</span></p>
+                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                        <div class="h-full rounded-full {{ $avancementColor }}" style="width: {{ $avancement }}%"></div>
+                    </div>
+                    @if ($fiche->statut === 'acceptee')
+                        <form method="POST" action="{{ route('directeur.objectifs.avancement', $fiche) }}" class="mt-3 flex items-center gap-2">
+                            @csrf @method('PATCH')
+                            <select name="avancement_percentage"
+                                    class="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                    onchange="this.form.submit()">
+                                @for ($p = 0; $p <= 100; $p += 5)
+                                    <option value="{{ $p }}" @selected($avancement === $p)>{{ $p }}%</option>
+                                @endfor
+                            </select>
+                        </form>
+                    @endif
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>

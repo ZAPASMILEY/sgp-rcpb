@@ -88,6 +88,8 @@
         body.sidebar-collapsed .sidebar .nav-link { justify-content: center; margin: 0.15rem 0.5rem; padding: 0.65rem; }
         body.sidebar-collapsed .sidebar .nav-link i { margin-right: 0; font-size: 1.1rem; }
         body.sidebar-collapsed .main-content { margin-left: 62px; width: calc(100% - 62px); }
+        body.sidebar-collapsed .sidebar .sidebar-user-compact { justify-content: center; }
+        body.sidebar-collapsed .sidebar .sidebar-user-compact .user-avatar { margin: 0 auto; }
 
         .sidebar-collapse-btn {
             position: absolute; right: -14px; top: 28px; z-index: 1060;
@@ -160,8 +162,8 @@
         </div>
 
         <div class="mt-auto border-t border-white/10 p-3">
-            <div class="flex items-center gap-3 rounded-xl bg-white/10 px-3 py-3">
-                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-black text-blue-700">
+            <div class="sidebar-user-compact flex items-center gap-3 rounded-xl bg-white/10 px-3 py-3">
+                <div class="user-avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-xs font-black text-blue-700">
                     {{ strtoupper(substr($user?->name ?? 'D', 0, 1)) }}
                 </div>
                 <div class="sidebar-user-info min-w-0 flex-1">
@@ -189,6 +191,8 @@
 
         <div class="flex-1 w-full overflow-visible">
             @yield('content')
+            @yield('actions')
+            @yield('export')
         </div>
     </div>
 

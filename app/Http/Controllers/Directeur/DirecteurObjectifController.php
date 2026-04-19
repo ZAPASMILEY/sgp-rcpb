@@ -84,6 +84,38 @@ class DirecteurObjectifController extends Controller
     }
 
     /**
+     * Met à jour le pourcentage d'avancement d'une fiche d'objectifs reçue.
+     * L'avancement doit être un multiple de 5 (0, 5, 10, … 100).
+     */
+    public function avancement(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        $ctx = $this->getContext();
+
+        if (
+            $fiche->assignable_type !== $ctx->modelClass ||
+            (int) $fiche->assignable_id !== $ctx->getId()
+        ) {
+            abort(403);
+        }
+
+        $request->validate([
+            'avancement_percentage' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $val = (int) $request->avancement_percentage;
+        if ($val % 5 !== 0) {
+            return back()->with('error', "L'avancement doit être un multiple de 5.");
+        }
+
+        $fiche->avancement_percentage = $val;
+        $fiche->save();
+
+        return redirect()
+            ->route('directeur.objectifs.show', $fiche)
+            ->with('status', 'Avancement mis à jour.');
+    }
+
+    /**
      * Traite l'action d'acceptation ou de refus d'une fiche d'objectifs.
      *
      * Règles métier :
