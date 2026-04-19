@@ -102,7 +102,7 @@
                     @if ($evaluation->statut === 'brouillon')
                         <form method="POST" action="{{ route('pca.evaluations.submit', $evaluation) }}">
                             @csrf
-                            <button type="submit" class="ent-btn ent-btn-primary">Soumettre au PCA</button>
+                            <button type="submit" class="ent-btn ent-btn-primary">Soumettre au DG</button>
                         </form>
                     @endif
 

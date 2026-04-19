@@ -127,18 +127,21 @@ class DgObjectifController extends Controller
         return view('dg.objectifs.show', compact('fiche'));
     }
 
-    public function statut(Request $request, $fiche): RedirectResponse
+ public function statut(Request $request, $fiche): RedirectResponse
     {
         $fiche = FicheObjectif::findOrFail($fiche);
 
-        $request->validate(['statut' => ['required', 'in:acceptee,refusee']]);
+        $request->validate([
+            'statut' => ['required', 'in:acceptee,refusee'],
+        ]);
 
         $fiche->statut = $request->statut;
         $fiche->save();
 
-        return redirect()->route('dg.objectifs.show', $fiche)->with('status', 'Statut mis à jour.');
+        return redirect()
+            ->route('dg.objectifs.show', $fiche)
+            ->with('status', 'Statut mis a jour.');
     }
-
     public function avancement(Request $request, $fiche): RedirectResponse
     {
         $fiche = FicheObjectif::findOrFail($fiche);

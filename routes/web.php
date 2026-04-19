@@ -20,6 +20,7 @@ use App\Http\Controllers\Pca\PcaEvaluationController;
 use App\Http\Controllers\Pca\PcaObjectifController;
 use App\Http\Controllers\Pca\PcaStatistiqueController;
 use App\Http\Controllers\Pca\PcaSettingsController;
+use App\Http\Controllers\Dg\DgObjectifController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('welcome');
@@ -231,6 +232,11 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/objectifs', function () {
         return view('dg.objectifs');
     })->name('objectifs');
+    // Route pour afficher la fiche d'objectifs
+Route::get('/objectifs/{fiche}', [DgObjectifController::class, 'show'])->name('objectifs.show');
+
+// Route pour ACCEPTER ou REFUSER (C'est celle-ci qui manquait)
+Route::patch('/objectifs/{fiche}/statut', [DgObjectifController::class, 'statut'])->name('objectifs.statut');
     Route::get('/evaluations', function () {
         return view('dg.evaluations');
     })->name('evaluations');
