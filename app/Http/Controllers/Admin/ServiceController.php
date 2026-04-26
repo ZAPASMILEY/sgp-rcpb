@@ -3,19 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\WelcomeMail;
+use App\Models\Agent;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
 use App\Models\Service;
-use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class ServiceController extends Controller
 {
@@ -24,9 +20,7 @@ class ServiceController extends Controller
      */
     public function caisseServices($caisseId): View
     {
-        $services = Service::whereHas('direction', function ($q) use ($caisseId) {
-            $q->where('caisse_id', $caisseId);
-        })->with('direction')->latest()->get();
+        $services = Service::where('caisse_id', $caisseId)->with('direction')->latest()->get();
         $caisse = \App\Models\Caisse::findOrFail($caisseId);
         return view('admin.services.caisse', compact('services', 'caisse'));
     }
@@ -36,9 +30,12 @@ class ServiceController extends Controller
      */
     public function faitiereServices(): View
     {
-        $services = Service::whereHas('direction', function ($q) {
-            $q->whereNull('delegation_technique_id');
-        })->with('direction')->latest()->get();
+        $services = Service::whereNotNull('direction_id')
+            ->whereNull('delegation_technique_id')
+            ->whereNull('caisse_id')
+            ->with('direction')
+            ->latest()
+            ->get();
         return view('admin.services.faitiere', compact('services'));
     }
     public function index(Request $request): View
@@ -52,28 +49,25 @@ class ServiceController extends Controller
         $servicesQuery = Service::query()
             ->with(['direction.entite'])
             ->when($source === 'faitiere', function ($query): void {
-                $query->whereHas('direction', function ($q): void {
-                    $q->whereNull('delegation_technique_id');
-                });
+                $query->whereNotNull('direction_id')
+                      ->whereNull('delegation_technique_id')
+                      ->whereNull('caisse_id');
             })
             ->when($delegationId !== '', function ($query) use ($delegationId): void {
-                $query->whereHas('direction', function ($q) use ($delegationId): void {
-                    $q->where('delegation_technique_id', $delegationId);
-                });
+                $query->where('delegation_technique_id', $delegationId);
             })
             ->when($caisseId !== '', function ($query) use ($caisseId): void {
-                $query->whereHas('direction', function ($q) use ($caisseId): void {
-                    $q->where('caisse_id', $caisseId);
-                });
+                $query->where('caisse_id', $caisseId);
             })
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($subQuery) use ($search): void {
                     $subQuery
                         ->where('nom', 'like', "%{$search}%")
-                        ->orWhere('chef_prenom', 'like', "%{$search}%")
-                        ->orWhere('chef_nom', 'like', "%{$search}%")
-                        ->orWhere('chef_email', 'like', "%{$search}%")
-                        ->orWhere('chef_telephone', 'like', "%{$search}%")
+                        ->orWhereHas('chef', function ($chefQuery) use ($search): void {
+                            $chefQuery->where('nom', 'like', "%{$search}%")
+                                      ->orWhere('prenom', 'like', "%{$search}%")
+                                      ->orWhere('email', 'like', "%{$search}%");
+                        })
                         ->orWhereHas('direction', function ($directionQuery) use ($search): void {
                             $directionQuery
                                 ->where('nom', 'like', "%{$search}%")
@@ -98,7 +92,6 @@ class ServiceController extends Controller
                 'caisse_id' => $caisseId,
             ],
             'directions' => Direction::query()->with('entite')
-                ->when($source === 'faitiere', fn ($q) => $q->whereNull('delegation_technique_id'))
                 ->orderBy('nom')->get(['id', 'nom', 'entite_id']),
             'stats' => [
                 'total' => Service::count(),
@@ -107,7 +100,7 @@ class ServiceController extends Controller
                     ->get()
                     ->map(function ($d) {
                         $d->services_count = Service::query()
-                            ->whereHas('direction', fn ($q) => $q->where('delegation_technique_id', $d->id))
+                            ->where('delegation_technique_id', $d->id)
                             ->count();
                         return $d;
                     }),
@@ -117,11 +110,7 @@ class ServiceController extends Controller
 
     public function create(): View
     {
-        return view('admin.services.create', [
-            'faitiereDirections' => Direction::query()->whereNull('delegation_technique_id')->orderBy('nom')->get(['id', 'nom']),
-            'delegations'        => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
-            'caisses'            => Caisse::query()->with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
-        ]);
+        return view('admin.services.create', $this->formData());
     }
 
     public function show(Service $service): View
@@ -133,40 +122,27 @@ class ServiceController extends Controller
 
     public function edit(Service $service): View
     {
-        return view('admin.services.edit', [
-            'service' => $service,
-            'directions' => Direction::query()->with('entite')->orderBy('nom')->get(['id', 'nom', 'entite_id']),
-        ]);
+        return view('admin.services.edit', array_merge(
+            $this->formData(),
+            ['service' => $service->load('chef')]
+        ));
+    }
+
+    private function formData(): array
+    {
+        return [
+            'faitiereDirections' => Direction::query()->orderBy('nom')->get(['id', 'nom']),
+            'delegations'        => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
+            'caisses'            => Caisse::query()->with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
+            'directions'         => Direction::query()->with('entite')->orderBy('nom')->get(['id', 'nom', 'entite_id']),
+            'chefs'              => Agent::query()->where('fonction', 'Chef de Service')->orderBy('nom')->orderBy('prenom')->get(),
+        ];
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateService($request);
-
-        $request->validate([
-            'password' => ['required', 'confirmed', Password::min(8)],
-        ]);
-
-        $user = User::create([
-            'name'                => $validated['chef_prenom'].' '.$validated['chef_nom'],
-            'email'               => $validated['chef_email'],
-            'password'            => Hash::make((string) $request->input('password')),
-            'role'                => 'Chefs de service',
-            'sexe'                => $validated['chef_sexe'],
-            'date_prise_fonction' => $validated['chef_date_debut_mois'],
-        ]);
-
-        $validated['user_id'] = $user->id;
         Service::query()->create($validated);
-
-        $plainPassword = (string) $request->input('password');
-        Mail::to($user->email)->send(new WelcomeMail(
-            recipientName:  $user->name,
-            recipientEmail: $user->email,
-            plainPassword:  $plainPassword,
-            role:           'chef',
-            loginUrl:       rtrim((string) config('app.url'), '/').'/login',
-        ));
 
         return redirect()
             ->route('admin.services.index')
@@ -176,22 +152,6 @@ class ServiceController extends Controller
     public function update(Request $request, Service $service): RedirectResponse
     {
         $validated = $this->validateService($request, $service);
-
-        $request->validate([
-            'password' => ['nullable', 'confirmed', Password::min(8)],
-        ]);
-
-        if ($service->user) {
-            $userData = [
-                'name'  => $validated['chef_prenom'].' '.$validated['chef_nom'],
-                'email' => $validated['chef_email'],
-            ];
-            if ($request->filled('password')) {
-                $userData['password'] = Hash::make((string) $request->input('password'));
-            }
-            $service->user->update($userData);
-        }
-
         $service->update($validated);
 
         return redirect()
@@ -201,7 +161,6 @@ class ServiceController extends Controller
 
     public function destroy(Service $service): RedirectResponse
     {
-        $service->user?->delete();
         $service->delete();
 
         return redirect()
@@ -214,14 +173,7 @@ class ServiceController extends Controller
      */
     private function validateService(Request $request, ?Service $service = null): array
     {
-        $emailRule = ['required', 'email', 'max:255'];
-        if ($service === null) {
-            $emailRule[] = Rule::unique('users', 'email');
-        } else {
-            $emailRule[] = Rule::unique('users', 'email')->ignore($service->user_id);
-        }
-
-        // Infer parent_type if not submitted (e.g. from the edit form)
+        // Infer parent_type if not submitted
         if (! $request->has('parent_type')) {
             if ($request->filled('caisse_id')) {
                 $request->merge(['parent_type' => 'caisse']);
@@ -241,26 +193,13 @@ class ServiceController extends Controller
                     ? Rule::unique('services', 'nom')->ignore($service->id)
                     : Rule::unique('services', 'nom'),
             ],
-            'parent_type'              => ['required', 'in:faitiere,delegation,caisse'],
-            'direction_id'             => ['required_if:parent_type,faitiere', 'nullable', 'integer', 'exists:directions,id'],
-            'delegation_technique_id'  => ['required_if:parent_type,delegation', 'nullable', 'integer', 'exists:delegation_techniques,id'],
-            'caisse_id'                => ['required_if:parent_type,caisse', 'nullable', 'integer', 'exists:caisses,id'],
-            'chef_prenom'          => ['required', 'string', 'max:255'],
-            'chef_nom'             => ['required', 'string', 'max:255'],
-            'chef_email'           => $emailRule,
-            'chef_telephone'       => [
-                'required',
-                'string',
-                'max:30',
-                $service
-                    ? Rule::unique('services', 'chef_telephone')->ignore($service->id)
-                    : Rule::unique('services', 'chef_telephone'),
-            ],
-            'chef_sexe'            => ['required', 'in:Homme,Femme,Autres'],
-            'chef_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'parent_type'             => ['required', 'in:faitiere,delegation,caisse'],
+            'direction_id'            => ['required_if:parent_type,faitiere', 'nullable', 'integer', 'exists:directions,id'],
+            'delegation_technique_id' => ['required_if:parent_type,delegation', 'nullable', 'integer', 'exists:delegation_techniques,id'],
+            'caisse_id'               => ['required_if:parent_type,caisse', 'nullable', 'integer', 'exists:caisses,id'],
+            'chef_agent_id'           => ['nullable', 'integer', 'exists:agents,id'],
         ]);
 
-        // Normalize: clear non-relevant parent FK columns
         $parentType = $validated['parent_type'];
         unset($validated['parent_type']);
 
@@ -271,7 +210,6 @@ class ServiceController extends Controller
             $validated['direction_id'] = null;
             $validated['caisse_id'] = null;
         } else {
-            // caisse
             $validated['direction_id'] = null;
             $validated['delegation_technique_id'] = null;
         }

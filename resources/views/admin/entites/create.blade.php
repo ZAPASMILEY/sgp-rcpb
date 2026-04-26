@@ -52,12 +52,16 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('admin.entites.store') }}" enctype="multipart/form-data" class="mt-6 grid gap-5">
+                <form method="POST" action="{{ route('admin.entites.store') }}" class="mt-6 grid gap-5">
                     @csrf
 
                     {{-- Localisation --}}
                     <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Localisation du siege</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Informations de la faitiere</p>
+                        <div class="space-y-2">
+                            <label for="nom" class="text-sm font-semibold text-slate-700">Nom de la faitiere <span class="text-rose-500">*</span></label>
+                            <input id="nom" name="nom" type="text" value="{{ old('nom') }}" required class="ent-input" placeholder="Ex: RCPB">
+                        </div>
                         <div class="ent-form-grid">
                             <div class="space-y-2">
                                 <label for="ville" class="text-sm font-semibold text-slate-700">Ville</label>
@@ -65,57 +69,29 @@
                             </div>
                             <div class="space-y-2">
                                 <label for="region" class="text-sm font-semibold text-slate-700">Region</label>
-                                <input id="region" name="region" type="text" value="{{ old('region') }}" required class="ent-input" placeholder="Ex: Centre">
+                                <input id="region" name="region" type="text" value="{{ old('region') }}" class="ent-input" placeholder="Ex: Centre">
                             </div>
                         </div>
                         <div class="space-y-2">
                             <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Numero du secretariat</label>
-                            <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone') }}" required class="ent-input" placeholder="Ex: +226 25 00 00 00">
+                            <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone') }}" class="ent-input" placeholder="Ex: +226 25 00 00 00">
                         </div>
                     </div>
 
                     {{-- PCA --}}
                     <div class="ent-card space-y-4">
                         <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">President du Conseil d'Administration (PCA)</p>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="pca_prenom" class="text-sm font-semibold text-slate-700">Prenom</label>
-                                <input id="pca_prenom" name="pca_prenom" type="text" value="{{ old('pca_prenom') }}" required class="ent-input" placeholder="Prenom">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="pca_nom" class="text-sm font-semibold text-slate-700">Nom</label>
-                                <input id="pca_nom" name="pca_nom" type="text" value="{{ old('pca_nom') }}" required class="ent-input" placeholder="Nom">
-                            </div>
-                        </div>
                         <div class="space-y-2">
-                            <label for="pca_email" class="text-sm font-semibold text-slate-700">Email</label>
-                            <input id="pca_email" name="pca_email" type="email" value="{{ old('pca_email') }}" required class="ent-input" placeholder="pca@rcpb.bf">
+                            <label for="pca_agent_id" class="text-sm font-semibold text-slate-700">Choisir un agent</label>
+                            <select id="pca_agent_id" name="pca_agent_id" class="ent-select">
+                                <option value="">— Aucun PCA pour l'instant —</option>
+                                @foreach ($pca_agents as $agent)
+                                    <option value="{{ $agent->id }}" @selected(old('pca_agent_id') == $agent->id)>
+                                        {{ $agent->nom }} {{ $agent->prenom }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="pca_sexe" class="text-sm font-semibold text-slate-700">Sexe</label>
-                                <select id="pca_sexe" name="pca_sexe" required class="ent-input">
-                                    <option value="">Choisir</option>
-                                    <option value="Homme" @selected(old('pca_sexe') === 'Homme')>Homme</option>
-                                    <option value="Femme" @selected(old('pca_sexe') === 'Femme')>Femme</option>
-                                    <option value="Autres" @selected(old('pca_sexe') === 'Autres')>Autres</option>
-                                </select>
-                            </div>
-                            <div class="space-y-2">
-                                <label for="pca_date_prise_fonction" class="text-sm font-semibold text-slate-700">Date de prise de fonction</label>
-                                <input id="pca_date_prise_fonction" name="pca_date_prise_fonction" type="month" value="{{ old('pca_date_prise_fonction') }}" required class="ent-input">
-                            </div>
-                        </div>
-                        <div class="space-y-2">
-                            <label for="pca_photo" class="text-sm font-semibold text-slate-700">Photo <span class="text-slate-400 font-normal">(optionnel)</span></label>
-                            <input id="pca_photo" name="pca_photo" type="file" accept="image/*" class="ent-input">
-                        </div>
-                    </div>
-
-                    {{-- Info comptes --}}
-                    <div class="rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm text-cyan-700">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Un compte de connexion sera genere automatiquement et envoye par email au PCA. Le DG, DGA et Assistante seront configures a l'etape suivante.
                     </div>
 
                     <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">

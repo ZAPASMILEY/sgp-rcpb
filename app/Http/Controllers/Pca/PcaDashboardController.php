@@ -19,14 +19,13 @@ class PcaDashboardController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        $entite = $request->user()->entite()->with('objectifs')->firstOrFail();
+        $entite = $request->user()->entite()->with(['objectifs', 'dg', 'dga', 'assistante'])->firstOrFail();
         $entiteId = $entite->id;
 
-        // Find the DG user linked to this entite
-        $dgUser = User::query()
-            ->where('role', 'DG')
-            ->where('pca_entite_id', $entiteId)
-            ->first();
+        // Find the DG user : entites.dg_agent_id → agents.id ← users.agent_id
+        $dgUser = $entite->dg_agent_id
+            ? User::query()->where('role', 'DG')->where('agent_id', $entite->dg_agent_id)->first()
+            : null;
 
         $dgUserId = $dgUser?->id;
 
@@ -123,19 +122,19 @@ class PcaDashboardController extends Controller
 
         $personnelRattache = collect([
             [
-                'fonction' => 'Directrice generale',
-                'nom' => trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? '')),
-                'icone' => 'fas fa-user-tie',
+                'fonction' => 'Directeur(trice) Général(e)',
+                'nom'      => $entite->dg       ? trim($entite->dg->prenom.' '.$entite->dg->nom)             : '',
+                'icone'    => 'fas fa-user-tie',
             ],
             [
                 'fonction' => 'Assistante DG',
-                'nom' => trim(($entite->assistante_dg_prenom ?? '').' '.($entite->assistante_dg_nom ?? '')),
-                'icone' => 'fas fa-user',
+                'nom'      => $entite->assistante ? trim($entite->assistante->prenom.' '.$entite->assistante->nom) : '',
+                'icone'    => 'fas fa-user',
             ],
             [
                 'fonction' => 'DGA',
-                'nom' => trim(($entite->dga_prenom ?? '').' '.($entite->dga_nom ?? '')),
-                'icone' => 'fas fa-user-shield',
+                'nom'      => $entite->dga      ? trim($entite->dga->prenom.' '.$entite->dga->nom)           : '',
+                'icone'    => 'fas fa-user-shield',
             ],
         ])->filter(fn (array $personne): bool => $personne['nom'] !== '')->values();
 

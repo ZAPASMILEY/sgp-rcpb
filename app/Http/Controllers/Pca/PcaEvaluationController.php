@@ -101,12 +101,14 @@ class PcaEvaluationController extends Controller
     private function getDGOfDirectionGenerale(): ?User
     {
         $entite = $this->getDirectionGeneraleEntite();
-        if (!$entite) {
+        if (!$entite || !$entite->dg_agent_id) {
             return null;
         }
+        // Le DG est l'agent référencé dans entites.dg_agent_id
+        // dont le compte utilisateur est lié via users.agent_id
         return User::query()
             ->where('role', 'DG')
-            ->where('pca_entite_id', $entite->id)
+            ->where('agent_id', $entite->dg_agent_id)
             ->first();
     }
 

@@ -11,10 +11,13 @@ return new class extends Migration
         Schema::create('guichets', function (Blueprint $table): void {
             $table->id();
             $table->string('nom');
-            $table->string('chef_nom');
-            $table->string('chef_email');
-            $table->string('chef_telephone', 30);
+
+            // Rattachement hiérarchique
             $table->foreignId('agence_id')->constrained('agences')->cascadeOnDelete();
+
+            // Responsable : FK vers agent
+            $table->foreignId('chef_agent_id')->nullable()->constrained('agents')->nullOnDelete();
+
             $table->timestamps();
         });
     }

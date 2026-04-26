@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,49 +12,31 @@ class Direction extends Model
 {
     use HasFactory;
 
-    /**
-     * @var list<string>
-     */
     protected $fillable = [
-        'user_id',
         'nom',
         'entite_id',
-        'delegation_technique_id',
-        'directeur_prenom',
-        'directeur_nom',
-        'directeur_email',
-        'directeur_numero',
-        'directeur_region',
-        'directeur_sexe',
-        'directeur_date_prise_fonction',
-        'secretaire_user_id',
-        'secretaire_prenom',
-        'secretaire_nom',
-        'secretaire_email',
-        'secretaire_telephone',
-        'secretaire_sexe',
-        'secretaire_date_prise_fonction',
-        'secretariat_telephone',
+        // Responsables : FK vers agents
+        'directeur_agent_id',
+        'secretaire_agent_id',
     ];
 
-    public function user(): BelongsTo
+    // ── Responsables ───────────────────────────────────────────────────────
+
+    public function directeur(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Agent::class, 'directeur_agent_id');
     }
 
-    public function secretaireUser(): BelongsTo
+    public function secretaire(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'secretaire_user_id');
+        return $this->belongsTo(Agent::class, 'secretaire_agent_id');
     }
+
+    // ── Hiérarchie ─────────────────────────────────────────────────────────
 
     public function entite(): BelongsTo
     {
         return $this->belongsTo(Entite::class);
-    }
-
-    public function delegationTechnique(): BelongsTo
-    {
-        return $this->belongsTo(DelegationTechnique::class);
     }
 
     public function services(): HasMany

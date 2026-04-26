@@ -20,13 +20,7 @@ class EnsurePca
         }
 
         if ($request->user()->pca_entite_id === null) {
-            Auth::guard('web')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            return redirect()->route('login')->withErrors([
-                'email' => 'Votre compte PCA n\'est pas encore associe a une entite.',
-            ]);
+            return redirect()->route('pca.pending');
         }
 
         return $next($request);

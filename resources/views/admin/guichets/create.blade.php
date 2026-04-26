@@ -36,22 +36,22 @@
                         <input id="nom" name="nom" type="text" value="{{ old('nom') }}" required class="ent-input" placeholder="Ex: Guichet principal">
                     </div>
 
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Chef de guichet</p>
-                        <div class="space-y-2">
-                            <label for="chef_nom" class="text-sm font-semibold text-slate-700">Nom complet</label>
-                            <input id="chef_nom" name="chef_nom" type="text" value="{{ old('chef_nom') }}" required class="ent-input" placeholder="Nom et prenom du chef de guichet">
-                        </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="chef_email" class="text-sm font-semibold text-slate-700">Email</label>
-                                <input id="chef_email" name="chef_email" type="email" value="{{ old('chef_email') }}" required class="ent-input" placeholder="chef.guichet@rcpb.org">
+                    <div class="space-y-2">
+                        <label for="chef_agent_id" class="text-sm font-semibold text-slate-700">Chef de guichet</label>
+                        @if($chefs->isEmpty())
+                            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Chef de Guichet</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                             </div>
-                            <div class="space-y-2">
-                                <label for="chef_telephone" class="text-sm font-semibold text-slate-700">Telephone</label>
-                                <input id="chef_telephone" name="chef_telephone" type="text" value="{{ old('chef_telephone') }}" required class="ent-input" placeholder="+226 70 00 00 00">
-                            </div>
-                        </div>
+                        @endif
+                        <select id="chef_agent_id" name="chef_agent_id" class="ent-select">
+                            <option value="">— Aucun chef pour l'instant —</option>
+                            @foreach ($chefs as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('chef_agent_id') == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="space-y-2">

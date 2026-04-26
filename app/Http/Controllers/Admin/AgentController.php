@@ -3,125 +3,79 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\WelcomeMail;
-use App\Models\Agence;
 use App\Models\Agent;
-use App\Models\DelegationTechnique;
-use App\Models\Entite;
-use App\Models\Service;
-use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rules\In;
 
 class AgentController extends Controller
 {
     public function index(Request $request): View
     {
-        $tab = (string) $request->query('tab', 'faitiere');
-        $validTabs = ['faitiere', 'delegations', 'caisses', 'agences', 'guichets'];
-        if (! in_array($tab, $validTabs, true)) {
-            $tab = 'faitiere';
-        }
+        $fonction = (string) $request->query('fonction', '');
+        $search   = trim((string) $request->query('search', ''));
 
-        $agentsQuery = Agent::query()->with(['service.direction.delegationTechnique', 'agence.delegationTechnique', 'agence.superviseurCaisse', 'delegationTechnique']);
+        $agents = Agent::query()
+            ->with(['user'])
+            ->when($fonction !== '', fn ($q) => $q->where('fonction', $fonction))
+            ->when($search !== '', function ($q) use ($search): void {
+                $q->where(function ($sub) use ($search): void {
+                    $sub->where('nom',    'like', "%{$search}%")
+                        ->orWhere('prenom',  'like', "%{$search}%")
+                        ->orWhere('email',   'like', "%{$search}%")
+                        ->orWhere('fonction','like', "%{$search}%");
+                });
+            })
+            ->orderBy('nom')
+            ->orderBy('prenom')
+            ->get();
 
-        match ($tab) {
-            'faitiere' => $agentsQuery->whereHas('service.direction', function ($q): void {
-                $q->whereNull('delegation_technique_id');
-            }),
-            'delegations' => $agentsQuery->whereNotNull('delegation_technique_id'),
-            'caisses' => $agentsQuery->whereHas('agence', function ($q): void {
-                $q->whereNotNull('superviseur_caisse_id');
-            }),
-            'agences' => $agentsQuery->whereNotNull('agence_id'),
-            'guichets' => $agentsQuery->whereNotNull('agence_id')->whereHas('agence.guichets'),
-        };
-
-        $agents = $agentsQuery->latest()->get();
-
-        $counts = [
-            'faitiere' => Agent::whereHas('service.direction', fn ($q) => $q->whereNull('delegation_technique_id'))->count(),
-            'delegations' => Agent::whereNotNull('delegation_technique_id')->count(),
-            'caisses' => Agent::whereHas('agence', fn ($q) => $q->whereNotNull('superviseur_caisse_id'))->count(),
-            'agences' => Agent::whereNotNull('agence_id')->count(),
-            'guichets' => Agent::whereNotNull('agence_id')->whereHas('agence.guichets')->count(),
-        ];
+        // Compteur par fonction pour les badges du filtre
+        $countsByFonction = Agent::query()
+            ->selectRaw('fonction, count(*) as total')
+            ->groupBy('fonction')
+            ->pluck('total', 'fonction');
 
         return view('admin.agents.index', [
-            'agents' => $agents,
-            'tab' => $tab,
-            'counts' => $counts,
-            'stats' => [
-                'total' => Agent::count(),
-                'par_delegation' => DelegationTechnique::query()
-                    ->withCount('agents')
-                    ->orderBy('region')
-                    ->get(),
-            ],
-            'services' => Service::query()->with('direction.entite')->orderBy('nom')->get(['id', 'nom', 'direction_id']),
+            'agents'           => $agents,
+            'fonctionActive'   => $fonction,
+            'search'           => $search,
+            'fonctions'        => Agent::FONCTIONS,
+            'countsByFonction' => $countsByFonction,
+            'totalAgents'      => Agent::count(),
         ]);
     }
 
     public function create(): View
     {
-        return view('admin.agents.create', [
-            'services' => Service::query()->with('direction.entite')->orderBy('nom')->get(['id', 'nom', 'direction_id']),
-        ]);
+        return view('admin.agents.create', $this->formData());
     }
 
     public function show(Agent $agent): View
     {
         return view('admin.agents.show', [
-            'agent' => $agent->load('service.direction.entite'),
+            'agent' => $agent->load(['service.direction.entite', 'service.delegationTechnique', 'service.caisse', 'delegationTechnique', 'caisse', 'agence', 'guichet', 'user']),
         ]);
     }
 
     public function edit(Agent $agent): View
     {
-        return view('admin.agents.edit', [
-            'agent' => $agent,
-            'services' => Service::query()->with('direction.entite')->orderBy('nom')->get(['id', 'nom', 'direction_id']),
-        ]);
+        return view('admin.agents.edit', array_merge(
+            $this->formData(),
+            ['agent' => $agent]
+        ));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateAgent($request);
-        $plainPassword = Str::random(12);
-
         $validated['photo_path'] = $this->storeSelectedPhoto($request);
 
-        // Attribution automatique du rôle selon la fonction
-        $role = match (strtolower($validated['fonction'] ?? '')) {
-            'chef de service', 'chefs de service' => 'Chefs de service',
-            'chef d\'agence' => "chef d'agence",
-            default => 'Agent',
-        };
-        $user = User::create([
-            'name'     => $validated['prenom'].' '.$validated['nom'],
-            'email'    => $validated['email'],
-            'password' => Hash::make($plainPassword),
-            'role'     => $role,
-        ]);
-
-        $validated['user_id'] = $user->id;
         Agent::query()->create($validated);
-
-        Mail::to($user->email)->send(new WelcomeMail(
-            recipientName:  $user->name,
-            recipientEmail: $user->email,
-            plainPassword:  $plainPassword,
-            role:           'agent',
-            loginUrl:       rtrim((string) config('app.url'), '/').'/login',
-        ));
 
         return redirect()
             ->route('admin.agents.index')
@@ -131,27 +85,14 @@ class AgentController extends Controller
     public function update(Request $request, Agent $agent): RedirectResponse
     {
         $validated = $this->validateAgent($request, $agent);
-        $this->validatePasswordUpdate($request);
 
         $photo = $this->storeSelectedPhoto($request);
-
         if ($photo !== null) {
             $this->deletePhoto($agent->photo_path);
             $validated['photo_path'] = $photo;
         } elseif ($request->boolean('remove_photo')) {
             $this->deletePhoto($agent->photo_path);
             $validated['photo_path'] = null;
-        }
-
-        if ($agent->user) {
-            $userData = [
-                'name'  => $validated['prenom'].' '.$validated['nom'],
-                'email' => $validated['email'],
-            ];
-            if ($request->filled('password')) {
-                $userData['password'] = Hash::make((string) $request->input('password'));
-            }
-            $agent->user->update($userData);
         }
 
         $agent->update($validated);
@@ -164,7 +105,6 @@ class AgentController extends Controller
     public function destroy(Request $request, Agent $agent): RedirectResponse
     {
         $this->deletePhoto($agent->photo_path);
-        $agent->user?->delete();
         $agent->delete();
 
         $redirectTo = (string) $request->input('redirect_to', '');
@@ -179,44 +119,62 @@ class AgentController extends Controller
             ->with('status', 'Agent supprime avec succes.');
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formData(): array
+    {
+        return [];
+    }
+
     /**
      * @return array<string, mixed>
      */
     private function validateAgent(Request $request, ?Agent $agent = null): array
     {
-        $emailRule = ['required', 'email', 'max:255'];
+        $emailRule = ['required', 'email', 'max:191'];
         if ($agent === null) {
-            $emailRule[] = Rule::unique('users', 'email');
+            $emailRule[] = Rule::unique('agents', 'email');
         } else {
-            $emailRule[] = Rule::unique('users', 'email')->ignore($agent->user_id);
+            $emailRule[] = Rule::unique('agents', 'email')->ignore($agent->id);
         }
 
         return $request->validate([
-            'service_id'       => ['required', 'integer', 'exists:services,id'],
-            'nom'              => ['required', 'string', 'max:255'],
-            'prenom'           => ['required', 'string', 'max:255'],
-            'sexe'             => ['required', 'in:homme,femme'],
-            'fonction'         => ['required', 'string', 'max:255'],
-            'date_debut_fonction' => ['required', 'date'],
+            // Données personnelles
+            'nom'              => ['required', 'string', 'max:100'],
+            'prenom'           => ['required', 'string', 'max:100'],
+            'sexe'             => ['nullable', 'in:homme,femme'],
+            'email'            => $emailRule,
             'numero_telephone' => [
-                'required',
+                'nullable',
                 'string',
                 'max:30',
                 $agent
                     ? Rule::unique('agents', 'numero_telephone')->ignore($agent->id)
                     : Rule::unique('agents', 'numero_telephone'),
             ],
-            'email'            => $emailRule,
             'photo_import'     => ['nullable', 'image', 'max:3072'],
             'photo_camera'     => ['nullable', 'image', 'max:3072'],
             'remove_photo'     => ['nullable', 'boolean'],
-        ]);
-    }
 
-    private function validatePasswordUpdate(Request $request): void
-    {
-        $request->validate([
-            'password' => ['nullable', 'confirmed', Password::min(8)],
+            // Données professionnelles
+            'fonction'            => ['required', 'string', Rule::in(array_keys(Agent::FONCTIONS))],
+            'date_debut_fonction' => ['nullable', 'date'],
+        ], [
+            'nom.required'              => 'Le nom est obligatoire.',
+            'prenom.required'           => 'Le prénom est obligatoire.',
+            'email.required'            => "L'email est obligatoire.",
+            'email.email'               => "L'email n'est pas valide.",
+            'email.unique'              => 'Cet email est déjà utilisé par un autre agent.',
+            'numero_telephone.unique'   => 'Ce numéro de téléphone est déjà utilisé par un autre agent.',
+            'fonction.required'         => 'La fonction est obligatoire.',
+            'fonction.in'               => 'La fonction sélectionnée est invalide.',
+            'photo_import.image'        => 'Le fichier doit être une image.',
+            'photo_import.max'          => 'La photo ne doit pas dépasser 3 Mo.',
+            'photo_camera.image'        => 'Le fichier doit être une image.',
+            'photo_camera.max'          => 'La photo ne doit pas dépasser 3 Mo.',
         ]);
     }
 

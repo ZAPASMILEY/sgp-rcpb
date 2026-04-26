@@ -10,7 +10,7 @@ class EnsureDg
     public function handle(Request $request, Closure $next)
     {
         $user = Auth::user();
-        if (!$user || strtolower($user->role) !== 'dg') {
+        if (!$user || $user->role !== 'DG') {
             abort(403, 'Accès réservé au Directeur Général.');
         }
         return $next($request);

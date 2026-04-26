@@ -78,7 +78,7 @@
                     <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Créer une Délégation Technique</h2>
                 </div>
 
-                <form method="POST" action="{{ route('admin.delegations-techniques.store') }}" enctype="multipart/form-data" class="space-y-8">
+                <form method="POST" action="{{ route('admin.delegations-techniques.store') }}" class="space-y-8">
                     @csrf
 
                     {{-- Info delegation --}}
@@ -109,40 +109,20 @@
                             <i class="fas fa-user-tie text-sky-500"></i>
                             Directeur Régional
                         </h3>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Prénom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="directeur_prenom" value="{{ old('directeur_prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
+                        @if($directeurs->isEmpty())
+                            <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Directeur Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                             </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="directeur_nom" value="{{ old('directeur_nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Sexe <span class="text-rose-500">*</span></label>
-                                <select name="directeur_sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                                    <option value="">-- Choisir --</option>
-                                    <option value="Masculin" {{ old('directeur_sexe') === 'Masculin' ? 'selected' : '' }}>Masculin</option>
-                                    <option value="Feminin" {{ old('directeur_sexe') === 'Feminin' ? 'selected' : '' }}>Féminin</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                                <input type="email" name="directeur_email" value="{{ old('directeur_email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone</label>
-                                <input type="text" name="directeur_telephone" value="{{ old('directeur_telephone') }}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Date début (mois) <span class="text-rose-500">*</span></label>
-                                <input type="month" name="directeur_date_debut_mois" value="{{ old('directeur_date_debut_mois') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                            </div>
-                            <div class="md:col-span-3">
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Photo du directeur</label>
-                                <input type="file" name="directeur_photo" accept="image/*" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm file:mr-4 file:rounded-xl file:border-0 file:bg-cyan-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-cyan-700 hover:file:bg-cyan-100">
-                            </div>
-                        </div>
+                        @endif
+                        <select name="directeur_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
+                            <option value="">— Aucun directeur pour l'instant —</option>
+                            @foreach ($directeurs as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('directeur_agent_id') == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     {{-- Secretaire --}}
@@ -151,36 +131,20 @@
                             <i class="fas fa-user-pen text-fuchsia-500"></i>
                             Secrétaire de la Direction Régionale
                         </h3>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Prénom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="secretaire_prenom" value="{{ old('secretaire_prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
+                        @if($secretaires->isEmpty())
+                            <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Secrétaire Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                             </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="secretaire_nom" value="{{ old('secretaire_nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Sexe <span class="text-rose-500">*</span></label>
-                                <select name="secretaire_sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                                    <option value="">-- Choisir --</option>
-                                    <option value="Masculin" {{ old('secretaire_sexe') === 'Masculin' ? 'selected' : '' }}>Masculin</option>
-                                    <option value="Feminin" {{ old('secretaire_sexe') === 'Feminin' ? 'selected' : '' }}>Féminin</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                                <input type="email" name="secretaire_email" value="{{ old('secretaire_email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone</label>
-                                <input type="text" name="secretaire_telephone" value="{{ old('secretaire_telephone') }}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Date début (mois) <span class="text-rose-500">*</span></label>
-                                <input type="month" name="secretaire_date_debut_mois" value="{{ old('secretaire_date_debut_mois') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
-                            </div>
-                        </div>
+                        @endif
+                        <select name="secretaire_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
+                            <option value="">— Aucune secrétaire pour l'instant —</option>
+                            @foreach ($secretaires as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('secretaire_agent_id') == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="flex items-center gap-4 pt-2">
@@ -261,36 +225,20 @@
                             <i class="fas fa-user-tie text-sky-500"></i>
                             Directeur de Caisse
                         </h3>
-                        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Prénom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="directeur_prenom" value="{{ old('directeur_prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                        @if($directeurs_caisse->isEmpty())
+                            <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Directeur de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                             </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="directeur_nom" value="{{ old('directeur_nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Sexe <span class="text-rose-500">*</span></label>
-                                <select name="directeur_sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                                    <option value="">-- Choisir --</option>
-                                    <option value="Masculin" {{ old('directeur_sexe') === 'Masculin' ? 'selected' : '' }}>Masculin</option>
-                                    <option value="Feminin" {{ old('directeur_sexe') === 'Feminin' ? 'selected' : '' }}>Féminin</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                                <input type="email" name="directeur_email" value="{{ old('directeur_email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone <span class="text-rose-500">*</span></label>
-                                <input type="text" name="directeur_telephone" value="{{ old('directeur_telephone') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Début fonction (mois) <span class="text-rose-500">*</span></label>
-                                <input type="month" name="directeur_date_debut_mois" value="{{ old('directeur_date_debut_mois') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            </div>
-                        </div>
+                        @endif
+                        <select name="directeur_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                            <option value="">— Aucun directeur pour l'instant —</option>
+                            @foreach ($directeurs_caisse as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('directeur_agent_id') == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div>
@@ -298,36 +246,20 @@
                             <i class="fas fa-user-pen text-fuchsia-500"></i>
                             Secrétaire du Directeur
                         </h3>
-                        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Prénom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="secretaire_prenom" value="{{ old('secretaire_prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                        @if($secretaires_caisse->isEmpty())
+                            <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Secrétaire de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                             </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="secretaire_nom" value="{{ old('secretaire_nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Sexe <span class="text-rose-500">*</span></label>
-                                <select name="secretaire_sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                                    <option value="">-- Choisir --</option>
-                                    <option value="Masculin" {{ old('secretaire_sexe') === 'Masculin' ? 'selected' : '' }}>Masculin</option>
-                                    <option value="Feminin" {{ old('secretaire_sexe') === 'Feminin' ? 'selected' : '' }}>Féminin</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                                <input type="email" name="secretaire_email" value="{{ old('secretaire_email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone</label>
-                                <input type="text" name="secretaire_telephone" value="{{ old('secretaire_telephone') }}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Début fonction (mois) <span class="text-rose-500">*</span></label>
-                                <input type="month" name="secretaire_date_debut_mois" value="{{ old('secretaire_date_debut_mois') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            </div>
-                        </div>
+                        @endif
+                        <select name="secretaire_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                            <option value="">— Aucune secrétaire pour l'instant —</option>
+                            @foreach ($secretaires_caisse as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('secretaire_agent_id') == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="flex items-center gap-4 pt-2">
@@ -468,36 +400,14 @@
                             <i class="fas fa-user-tie text-blue-500"></i>
                             Chef de Service
                         </h3>
-                        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Prénom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="chef_prenom" value="{{ old('chef_prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom <span class="text-rose-500">*</span></label>
-                                <input type="text" name="chef_nom" value="{{ old('chef_nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Sexe <span class="text-rose-500">*</span></label>
-                                <select name="chef_sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
-                                    <option value="">-- Choisir --</option>
-                                    <option value="Masculin" {{ old('chef_sexe') === 'Masculin' ? 'selected' : '' }}>Masculin</option>
-                                    <option value="Feminin" {{ old('chef_sexe') === 'Feminin' ? 'selected' : '' }}>Féminin</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                                <input type="email" name="chef_email" value="{{ old('chef_email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone <span class="text-rose-500">*</span></label>
-                                <input type="text" name="chef_telephone" value="{{ old('chef_telephone') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
-                            </div>
-                            <div>
-                                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Début fonction (mois) <span class="text-rose-500">*</span></label>
-                                <input type="month" name="chef_date_debut_mois" value="{{ old('chef_date_debut_mois') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
-                            </div>
-                        </div>
+                        <select name="chef_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
+                            <option value="">— Aucun chef pour l'instant —</option>
+                            @foreach ($chefs_service as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('chef_agent_id') == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="flex items-center gap-4 pt-2">

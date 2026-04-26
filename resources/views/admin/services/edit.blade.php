@@ -48,42 +48,22 @@
                         </select>
                     </div>
 
-                    <div class="ent-form-grid">
-                        <div class="space-y-2">
-                            <label for="chef_prenom" class="text-sm font-semibold text-slate-700">Prenom du chef de service</label>
-                            <input id="chef_prenom" name="chef_prenom" type="text" value="{{ old('chef_prenom', $service->chef_prenom) }}" required class="ent-input">
-                        </div>
-                        <div class="space-y-2">
-                            <label for="chef_nom" class="text-sm font-semibold text-slate-700">Nom du chef de service</label>
-                            <input id="chef_nom" name="chef_nom" type="text" value="{{ old('chef_nom', $service->chef_nom) }}" required class="ent-input">
-                        </div>
-                    </div>
-
                     <div class="space-y-2">
-                        <label for="chef_email" class="text-sm font-semibold text-slate-700">Email du chef de service</label>
-                        <input id="chef_email" name="chef_email" type="email" value="{{ old('chef_email', $service->chef_email) }}" required class="ent-input">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="chef_telephone" class="text-sm font-semibold text-slate-700">Numero de telephone</label>
-                        <input id="chef_telephone" name="chef_telephone" type="text" value="{{ old('chef_telephone', $service->chef_telephone) }}" required class="ent-input">
-                    </div>
-
-                    <div class="ent-card space-y-4">
-                        <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Compte de connexion du chef de service</p>
-                            <p class="mt-1 text-xs text-slate-500">Laissez vide pour ne pas modifier le mot de passe. L'email sert d'identifiant.</p>
-                        </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="password" class="text-sm font-semibold text-slate-700">Nouveau mot de passe</label>
-                                <input id="password" name="password" type="password" class="ent-input" placeholder="Laisser vide pour ne pas changer" autocomplete="new-password">
+                        <label for="chef_agent_id" class="text-sm font-semibold text-slate-700">Chef de service</label>
+                        @if($chefs->isEmpty())
+                            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Chef de Service</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                             </div>
-                            <div class="space-y-2">
-                                <label for="password_confirmation" class="text-sm font-semibold text-slate-700">Confirmer le mot de passe</label>
-                                <input id="password_confirmation" name="password_confirmation" type="password" class="ent-input" placeholder="Retaper le nouveau mot de passe" autocomplete="new-password">
-                            </div>
-                        </div>
+                        @endif
+                        <select id="chef_agent_id" name="chef_agent_id" class="ent-select">
+                            <option value="">— Aucun chef pour l'instant —</option>
+                            @foreach ($chefs as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('chef_agent_id', $service->chef_agent_id) == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">

@@ -59,7 +59,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('admin.direction-generale.store') }}" enctype="multipart/form-data" class="mt-6 grid gap-5">
+                <form method="POST" action="{{ route('admin.direction-generale.store') }}" class="mt-6 grid gap-5">
                     @csrf
 
                     {{-- Directeur General --}}
@@ -68,38 +68,16 @@
                             <span class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">DG</span>
                             <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Directeur General</p>
                         </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="directrice_generale_prenom" class="text-sm font-semibold text-slate-700">Prenom</label>
-                                <input id="directrice_generale_prenom" name="directrice_generale_prenom" type="text" value="{{ old('directrice_generale_prenom') }}" required class="ent-input" placeholder="Prenom">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="directrice_generale_nom" class="text-sm font-semibold text-slate-700">Nom</label>
-                                <input id="directrice_generale_nom" name="directrice_generale_nom" type="text" value="{{ old('directrice_generale_nom') }}" required class="ent-input" placeholder="Nom">
-                            </div>
-                        </div>
                         <div class="space-y-2">
-                            <label for="directrice_generale_email" class="text-sm font-semibold text-slate-700">Email</label>
-                            <input id="directrice_generale_email" name="directrice_generale_email" type="email" value="{{ old('directrice_generale_email') }}" required class="ent-input" placeholder="dg@rcpb.bf">
-                        </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="directrice_generale_sexe" class="text-sm font-semibold text-slate-700">Sexe</label>
-                                <select id="directrice_generale_sexe" name="directrice_generale_sexe" required class="ent-input">
-                                    <option value="">Choisir</option>
-                                    <option value="Homme" @selected(old('directrice_generale_sexe') === 'Homme')>Homme</option>
-                                    <option value="Femme" @selected(old('directrice_generale_sexe') === 'Femme')>Femme</option>
-                                    <option value="Autres" @selected(old('directrice_generale_sexe') === 'Autres')>Autres</option>
-                                </select>
-                            </div>
-                            <div class="space-y-2">
-                                <label for="directrice_generale_date_prise_fonction" class="text-sm font-semibold text-slate-700">Date de prise de fonction</label>
-                                <input id="directrice_generale_date_prise_fonction" name="directrice_generale_date_prise_fonction" type="month" value="{{ old('directrice_generale_date_prise_fonction') }}" required class="ent-input">
-                            </div>
-                        </div>
-                        <div class="space-y-2">
-                            <label for="directrice_generale_photo" class="text-sm font-semibold text-slate-700">Photo <span class="text-slate-400 font-normal">(optionnel)</span></label>
-                            <input id="directrice_generale_photo" name="directrice_generale_photo" type="file" accept="image/*" class="ent-input">
+                            <label for="dg_agent_id" class="text-sm font-semibold text-slate-700">Choisir un agent</label>
+                            <select id="dg_agent_id" name="dg_agent_id" class="ent-select">
+                                <option value="">— Aucun DG pour l'instant —</option>
+                                @foreach ($dg_agents as $agent)
+                                    <option value="{{ $agent->id }}" @selected(old('dg_agent_id') == $agent->id)>
+                                        {{ $agent->nom }} {{ $agent->prenom }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
 
@@ -109,38 +87,16 @@
                             <span class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-600 text-xs font-bold text-white">DGA</span>
                             <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Directeur General Adjoint</p>
                         </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="dga_prenom" class="text-sm font-semibold text-slate-700">Prenom</label>
-                                <input id="dga_prenom" name="dga_prenom" type="text" value="{{ old('dga_prenom') }}" required class="ent-input" placeholder="Prenom">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="dga_nom" class="text-sm font-semibold text-slate-700">Nom</label>
-                                <input id="dga_nom" name="dga_nom" type="text" value="{{ old('dga_nom') }}" required class="ent-input" placeholder="Nom">
-                            </div>
-                        </div>
                         <div class="space-y-2">
-                            <label for="dga_email" class="text-sm font-semibold text-slate-700">Email</label>
-                            <input id="dga_email" name="dga_email" type="email" value="{{ old('dga_email') }}" required class="ent-input" placeholder="dga@rcpb.bf">
-                        </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="dga_sexe" class="text-sm font-semibold text-slate-700">Sexe</label>
-                                <select id="dga_sexe" name="dga_sexe" required class="ent-input">
-                                    <option value="">Choisir</option>
-                                    <option value="Homme" @selected(old('dga_sexe') === 'Homme')>Homme</option>
-                                    <option value="Femme" @selected(old('dga_sexe') === 'Femme')>Femme</option>
-                                    <option value="Autres" @selected(old('dga_sexe') === 'Autres')>Autres</option>
-                                </select>
-                            </div>
-                            <div class="space-y-2">
-                                <label for="dga_date_prise_fonction" class="text-sm font-semibold text-slate-700">Date de prise de fonction</label>
-                                <input id="dga_date_prise_fonction" name="dga_date_prise_fonction" type="month" value="{{ old('dga_date_prise_fonction') }}" required class="ent-input">
-                            </div>
-                        </div>
-                        <div class="space-y-2">
-                            <label for="dga_photo" class="text-sm font-semibold text-slate-700">Photo <span class="text-slate-400 font-normal">(optionnel)</span></label>
-                            <input id="dga_photo" name="dga_photo" type="file" accept="image/*" class="ent-input">
+                            <label for="dga_agent_id" class="text-sm font-semibold text-slate-700">Choisir un agent</label>
+                            <select id="dga_agent_id" name="dga_agent_id" class="ent-select">
+                                <option value="">— Aucun DGA pour l'instant —</option>
+                                @foreach ($dga_agents as $agent)
+                                    <option value="{{ $agent->id }}" @selected(old('dga_agent_id') == $agent->id)>
+                                        {{ $agent->nom }} {{ $agent->prenom }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
 
@@ -150,41 +106,17 @@
                             <span class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-400 text-xs font-bold text-white">ASS</span>
                             <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Assistante du Directeur General</p>
                         </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="assistante_dg_prenom" class="text-sm font-semibold text-slate-700">Prenom</label>
-                                <input id="assistante_dg_prenom" name="assistante_dg_prenom" type="text" value="{{ old('assistante_dg_prenom') }}" required class="ent-input" placeholder="Prenom">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="assistante_dg_nom" class="text-sm font-semibold text-slate-700">Nom</label>
-                                <input id="assistante_dg_nom" name="assistante_dg_nom" type="text" value="{{ old('assistante_dg_nom') }}" required class="ent-input" placeholder="Nom">
-                            </div>
-                        </div>
                         <div class="space-y-2">
-                            <label for="assistante_dg_email" class="text-sm font-semibold text-slate-700">Email</label>
-                            <input id="assistante_dg_email" name="assistante_dg_email" type="email" value="{{ old('assistante_dg_email') }}" required class="ent-input" placeholder="assistante.dg@rcpb.bf">
+                            <label for="assistante_agent_id" class="text-sm font-semibold text-slate-700">Choisir un agent</label>
+                            <select id="assistante_agent_id" name="assistante_agent_id" class="ent-select">
+                                <option value="">— Aucune assistante pour l'instant —</option>
+                                @foreach ($assistantes as $agent)
+                                    <option value="{{ $agent->id }}" @selected(old('assistante_agent_id') == $agent->id)>
+                                        {{ $agent->nom }} {{ $agent->prenom }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="assistante_dg_sexe" class="text-sm font-semibold text-slate-700">Sexe</label>
-                                <select id="assistante_dg_sexe" name="assistante_dg_sexe" required class="ent-input">
-                                    <option value="">Choisir</option>
-                                    <option value="Homme" @selected(old('assistante_dg_sexe') === 'Homme')>Homme</option>
-                                    <option value="Femme" @selected(old('assistante_dg_sexe') === 'Femme')>Femme</option>
-                                    <option value="Autres" @selected(old('assistante_dg_sexe') === 'Autres')>Autres</option>
-                                </select>
-                            </div>
-                            <div class="space-y-2">
-                                <label for="assistante_dg_date_prise_fonction" class="text-sm font-semibold text-slate-700">Date de prise de fonction</label>
-                                <input id="assistante_dg_date_prise_fonction" name="assistante_dg_date_prise_fonction" type="month" value="{{ old('assistante_dg_date_prise_fonction') }}" required class="ent-input">
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Info comptes --}}
-                    <div class="rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm text-cyan-700">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Les comptes de connexion du DG, DGA et de l'Assistante seront generes automatiquement et envoyes par email. Les Conseillers et Secretaires seront ajoutes separement.
                     </div>
 
                     <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">

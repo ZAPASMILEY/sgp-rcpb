@@ -40,43 +40,39 @@
                 </div>
 
                 <div>
-                    <h3 class="flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-slate-700 mb-3">
-                        <i class="fas fa-user-tie text-emerald-500"></i> Chef d'agence
-                    </h3>
-                    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom complet <span class="text-rose-500">*</span></label>
-                            <input type="text" name="chef_nom" value="{{ old('chef_nom', $agence->chef_nom) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Chef d'agence</label>
+                    @if($chefs->isEmpty())
+                        <div class="mb-1 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun agent avec la fonction <strong>Chef d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                         </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                            <input type="email" name="chef_email" value="{{ old('chef_email', $agence->chef_email) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone <span class="text-rose-500">*</span></label>
-                            <input type="text" name="chef_telephone" value="{{ old('chef_telephone', $agence->chef_telephone) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                    </div>
+                    @endif
+                    <select name="chef_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                        <option value="">— Aucun chef pour l'instant —</option>
+                        @foreach ($chefs as $agent)
+                            <option value="{{ $agent->id }}" @selected(old('chef_agent_id', $agence->chef_agent_id) == $agent->id)>
+                                {{ $agent->nom }} {{ $agent->prenom }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div>
-                    <h3 class="flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-slate-700 mb-3">
-                        <i class="fas fa-user-check text-violet-500"></i> Secrétaire
-                    </h3>
-                    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom complet <span class="text-rose-500">*</span></label>
-                            <input type="text" name="secretaire_nom" value="{{ old('secretaire_nom', $agence->secretaire_nom) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Secretaire d'agence</label>
+                    @if($secretaires->isEmpty())
+                        <div class="mb-1 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun agent avec la fonction <strong>Secrétaire d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                         </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                            <input type="email" name="secretaire_email" value="{{ old('secretaire_email', $agence->secretaire_email) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone <span class="text-rose-500">*</span></label>
-                            <input type="text" name="secretaire_telephone" value="{{ old('secretaire_telephone', $agence->secretaire_telephone) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                    </div>
+                    @endif
+                    <select name="secretaire_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                        <option value="">— Aucune secretaire pour l'instant —</option>
+                        @foreach ($secretaires as $agent)
+                            <option value="{{ $agent->id }}" @selected(old('secretaire_agent_id', $agence->secretaire_agent_id) == $agent->id)>
+                                {{ $agent->nom }} {{ $agent->prenom }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div>

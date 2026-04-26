@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\WelcomeMail;
 use App\Models\Agent;
 use App\Models\Direction;
 use App\Models\Entite;
@@ -28,7 +27,9 @@ class EntiteController extends Controller
      */
     public function create(): View
     {
-        return view('admin.entites.create');
+        return view('admin.entites.create', [
+            'pca_agents' => Agent::query()->where('fonction', 'PCA')->orderBy('nom')->orderBy('prenom')->get(),
+        ]);
     }
     /**
      * Enregistre un secretaire depuis la modale de la Faitiere.
@@ -36,29 +37,12 @@ class EntiteController extends Controller
     public function storeSecretaire(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'prenom' => 'required|string|max:255',
-            'nom' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'direction_id' => 'required|exists:directions,id',
-            'date_prise_fonction' => 'required|date',
-        ]);
-
-        $password = Str::random(10);
-        $user = User::create([
-            'name' => $validated['prenom'].' '.$validated['nom'],
-            'email' => $validated['email'],
-            'password' => Hash::make($password),
-            'role' => 'Secretaire_Direction',
+            'direction_id'        => 'required|exists:directions,id',
+            'secretaire_agent_id' => 'required|integer|exists:agents,id',
         ]);
 
         $direction = Direction::find($validated['direction_id']);
-        $direction->update([
-            'secretaire_user_id' => $user->id,
-            'secretaire_prenom' => $validated['prenom'],
-            'secretaire_nom' => $validated['nom'],
-            'secretaire_email' => $validated['email'],
-            'date_prise_fonction' => $validated['date_prise_fonction'],
-        ]);
+        $direction->update(['secretaire_agent_id' => $validated['secretaire_agent_id']]);
 
         return redirect()->route('admin.entites.index')->with('status', 'Secretaire ajoute avec succes.');
     }
@@ -86,33 +70,34 @@ class EntiteController extends Controller
             ]);
         }
 
-        $directionsQuery = Direction::where('entite_id', $entite->id)
-            ->whereNull('delegation_technique_id');
+        $directionsQuery = Direction::where('entite_id', $entite->id);
 
         $servicesQuery = Service::whereHas('direction', function ($q) use ($entite) {
-            $q->where('entite_id', $entite->id)->whereNull('delegation_technique_id');
+            $q->where('entite_id', $entite->id);
         });
 
         $agentsQuery = Agent::whereHas('service.direction', function ($q) use ($entite) {
-            $q->where('entite_id', $entite->id)->whereNull('delegation_technique_id');
+            $q->where('entite_id', $entite->id);
         });
 
         $secretairesQuery = Direction::query()
             ->where('entite_id', $entite->id)
-            ->whereNull('delegation_technique_id')
-            ->where(function ($query) {
-                $query->whereNotNull('secretaire_nom')
-                    ->orWhereNotNull('secretaire_prenom')
-                    ->orWhereNotNull('secretaire_email');
-            });
+            ->whereNotNull('secretaire_agent_id');
 
         $dirIds = (clone $directionsQuery)->pluck('id');
         $serIds = (clone $servicesQuery)->pluck('id');
         $ageIds = (clone $agentsQuery)->pluck('id');
         $secIds = (clone $secretairesQuery)->pluck('id');
 
+        $directeurs_direction  = Agent::query()->where('fonction', 'Directeur de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']);
+        $secretaires_direction = Agent::query()->where('fonction', 'Secrétaire de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']);
+        $agents_disponibles    = Agent::query()->whereNull('service_id')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+
         return view('admin.entites.index', [
             'entite' => $entite,
+            'directeurs_direction'  => $directeurs_direction,
+            'secretaires_direction' => $secretaires_direction,
+            'agents_disponibles'    => $agents_disponibles,
             'stats' => [
                 'directions' => $directionsQuery->count(),
                 'services' => $servicesQuery->count(),
@@ -201,45 +186,19 @@ class EntiteController extends Controller
     public function storeFaitiereAgent(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'service_id'          => ['required', 'integer', 'exists:services,id'],
-            'prenom'              => ['required', 'string', 'max:255'],
-            'nom'                 => ['required', 'string', 'max:255'],
-            'sexe'                => ['required', 'in:Masculin,Feminin'],
-            'fonction'            => ['required', 'string', 'max:255'],
-            'email'               => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
-            'numero_telephone'    => ['nullable', 'string', 'max:30', Rule::unique('agents', 'numero_telephone')],
-            'date_debut_fonction' => ['nullable', 'date'],
+            'agent_id'   => ['required', 'integer', 'exists:agents,id'],
+            'service_id' => ['required', 'integer', 'exists:services,id'],
+        ], [
+            'agent_id.required'   => 'Veuillez sélectionner un agent.',
+            'service_id.required' => 'Veuillez sélectionner un service.',
         ]);
 
-        $plainPassword = Str::random(12);
-
-        // Attribution automatique du rôle selon la fonction
-        $role = match (strtolower($validated['fonction'])) {
-            'chef de service', 'chefs de service' => 'Chefs de service',
-            'chef d\'agence' => "chef d'agence",
-            default => 'Agent',
-        };
-        $user = User::create([
-            'name'     => $validated['prenom'] . ' ' . $validated['nom'],
-            'email'    => $validated['email'],
-            'password' => Hash::make($plainPassword),
-            'role'     => $role,
-        ]);
-
-        $validated['user_id'] = $user->id;
-        Agent::query()->create($validated);
-
-        Mail::to($user->email)->send(new WelcomeMail(
-            recipientName:  $user->name,
-            recipientEmail: $user->email,
-            plainPassword:  $plainPassword,
-            role:           'agent',
-            loginUrl:       rtrim((string) config('app.url'), '/') . '/login',
-        ));
+        $agent = Agent::findOrFail($validated['agent_id']);
+        $agent->update(['service_id' => $validated['service_id']]);
 
         return redirect()
             ->route('admin.entites.index')
-            ->with('success', 'Agent créé avec succès.');
+            ->with('status', $agent->prenom.' '.$agent->nom.' affecté(e) au service avec succès.');
     }
 
     public function updatePhone(Request $request, Entite $entite): RedirectResponse
@@ -267,7 +226,7 @@ class EntiteController extends Controller
         if ($model) {
             $name = $nameField
                 ? $model->$nameField
-                : trim(($model->prenom ?? $model->directeur_prenom ?? '').' '.($model->nom ?? $model->directeur_nom ?? ''));
+                : trim(($model->prenom ?? '').' '.($model->nom ?? ''));
         }
 
         return ['name' => $name, 'note' => $eval?->note_finale];
@@ -280,12 +239,13 @@ class EntiteController extends Controller
         $sort = trim((string) $request->query('sort', ''));
 
         $directionsBuilder = Direction::query()
-            ->whereNull('delegation_technique_id')
             ->when($entite, fn ($q) => $q->where('entite_id', $entite->id))
             ->when($search !== '', fn ($q) => $q->where(function ($sub) use ($search) {
                 $sub->where('nom', 'like', "%{$search}%")
-                    ->orWhere('directeur_prenom', 'like', "%{$search}%")
-                    ->orWhere('directeur_nom', 'like', "%{$search}%");
+                    ->orWhereHas('directeur', fn ($dq) => $dq
+                        ->where('nom', 'like', "%{$search}%")
+                        ->orWhere('prenom', 'like', "%{$search}%")
+                    );
             }))
             ->withCount('services');
 
@@ -372,7 +332,7 @@ class EntiteController extends Controller
             ->with('service.direction')
             ->when($entite, function ($query) use ($entite): void {
                 $query->whereHas('service.direction', function ($q) use ($entite): void {
-                    $q->where('entite_id', $entite->id)->whereNull('delegation_technique_id');
+                    $q->where('entite_id', $entite->id);
                 });
             })
             ->when($search !== '', function ($query) use ($search): void {
@@ -404,26 +364,22 @@ class EntiteController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $directions = Direction::query()
-            ->whereNull('delegation_technique_id')
             ->when($entite, fn ($query) => $query->where('entite_id', $entite->id))
             ->orderBy('nom')
             ->get();
 
         $secretaires = Direction::query()
-            ->whereNull('delegation_technique_id')
             ->when($entite, fn ($query) => $query->where('entite_id', $entite->id))
-            ->where(function ($query) {
-                $query->whereNotNull('secretaire_nom')
-                    ->orWhereNotNull('secretaire_prenom')
-                    ->orWhereNotNull('secretaire_email');
-            })
+            ->whereNotNull('secretaire_agent_id')
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($subQuery) use ($search): void {
                     $subQuery
                         ->where('nom', 'like', "%{$search}%")
-                        ->orWhere('secretaire_prenom', 'like', "%{$search}%")
-                        ->orWhere('secretaire_nom', 'like', "%{$search}%")
-                        ->orWhere('secretaire_email', 'like', "%{$search}%");
+                        ->orWhereHas('secretaire', fn ($sq) => $sq
+                            ->where('nom', 'like', "%{$search}%")
+                            ->orWhere('prenom', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                        );
                 });
             })
             ->latest()
@@ -456,35 +412,12 @@ class EntiteController extends Controller
         }
 
         $validated = $request->validate([
-            'nom' => ['required', 'string', 'max:255', Rule::unique('directions')->where('entite_id', $entite->id)],
-            'directeur_prenom'              => 'required|string|max:255',
-            'directeur_nom'                 => 'required|string|max:255',
-            'directeur_email'               => 'required|email|unique:users,email',
-            'directeur_numero'              => 'nullable|string',
-            'directeur_sexe'                => 'required|in:Homme,Femme,Autres',
-            'directeur_date_prise_fonction' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'nom'                 => ['required', 'string', 'max:255', Rule::unique('directions')->where('entite_id', $entite->id)],
+            'directeur_agent_id'  => ['nullable', 'integer', 'exists:agents,id'],
+            'secretaire_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ]);
 
-        $password = Str::random(12);
-        $name = $validated['directeur_prenom'].' '.$validated['directeur_nom'];
-
-        DB::transaction(function () use ($validated, $entite, $name, $password) {
-            $user = User::create([
-                'name'                => $name,
-                'email'               => $validated['directeur_email'],
-                'password'            => Hash::make($password),
-                'role'                => 'Directeur_Direction',
-                'sexe'                => $validated['directeur_sexe'],
-                'date_prise_fonction' => $validated['directeur_date_prise_fonction'],
-            ]);
-
-            Direction::create(array_merge($validated, [
-                'user_id'   => $user->id,
-                'entite_id' => $entite->id,
-            ]));
-        });
-
-        Mail::to($validated['directeur_email'])->send(new WelcomeMail($name, $validated['directeur_email'], $password, 'directeur', url('/login')));
+        Direction::create(array_merge($validated, ['entite_id' => $entite->id]));
 
         return redirect()->route('admin.entites.index')->with('status', 'Direction creee.');
     }
@@ -496,44 +429,14 @@ class EntiteController extends Controller
         }
 
         $validated = $request->validate([
-            'ville'                    => ['required', 'string', 'max:255'],
-            'region'                   => ['required', 'string', 'max:255'],
-            'secretariat_telephone'    => ['required', 'string', 'max:30'],
-            'pca_prenom'               => ['required', 'string', 'max:255'],
-            'pca_nom'                  => ['required', 'string', 'max:255'],
-            'pca_email'                => ['required', 'email', Rule::unique('users', 'email')],
-            'pca_sexe'                 => ['required', 'in:Homme,Femme,Autres'],
-            'pca_date_prise_fonction'  => ['required', 'date_format:Y-m'],
-            'pca_photo'                => ['nullable', 'image', 'max:2048'],
+            'nom'                   => ['required', 'string', 'max:255'],
+            'ville'                 => ['required', 'string', 'max:255'],
+            'region'                => ['nullable', 'string', 'max:255'],
+            'secretariat_telephone' => ['nullable', 'string', 'max:30'],
+            'pca_agent_id'          => ['nullable', 'integer', 'exists:agents,id'],
         ]);
 
-        if ($request->hasFile('pca_photo')) {
-            $validated['pca_photo_path'] = $request->file('pca_photo')->store('entites', 'public');
-        }
-        unset($validated['pca_photo']);
-
-        DB::transaction(function () use ($validated) {
-            $entite = Entite::create(array_merge($validated, ['nom' => 'Faitiere']));
-
-            $password = Str::random(12);
-            User::create([
-                'name'                => $validated['pca_prenom'].' '.$validated['pca_nom'],
-                'email'               => $validated['pca_email'],
-                'password'            => Hash::make($password),
-                'role'                => 'PCA',
-                'pca_entite_id'       => $entite->id,
-                'sexe'                => $validated['pca_sexe'],
-                'date_prise_fonction' => $validated['pca_date_prise_fonction'],
-            ]);
-
-            Mail::to($validated['pca_email'])->send(new WelcomeMail(
-                $validated['pca_prenom'].' '.$validated['pca_nom'],
-                $validated['pca_email'],
-                $password,
-                'PCA',
-                url('/login')
-            ));
-        });
+        Entite::create($validated);
 
         return redirect()
             ->route('admin.direction-generale.create')
@@ -694,9 +597,10 @@ class EntiteController extends Controller
         }
 
         return view('admin.directions.create', [
-            'entite' => $entite,
-            'delegations' => collect(),
-            'faitiere' => true,
+            'entite'     => $entite,
+            'faitiere'   => true,
+            'directeurs' => Agent::query()->where('fonction', 'Directeur de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
+            'secretaires'=> Agent::query()->where('fonction', 'Secrétaire de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
         ]);
     }
 
@@ -721,12 +625,7 @@ class EntiteController extends Controller
      */
     public function destroySecretaire(Direction $direction): RedirectResponse
     {
-        $direction->update([
-            'secretaire_user_id' => null,
-            'secretaire_prenom' => null,
-            'secretaire_nom' => null,
-            'secretaire_email' => null,
-        ]);
+        $direction->update(['secretaire_agent_id' => null]);
 
         return redirect()->route('admin.entites.index')->with('status', 'Secretaire supprime avec succes.');
     }

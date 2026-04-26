@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agent;
 use App\Models\Agence;
 use App\Models\DelegationTechnique;
 use App\Models\Guichet;
@@ -37,22 +38,15 @@ class GuichetController extends Controller
 
     public function create(): View
     {
-        return view('admin.guichets.create', [
-            'agences' => Agence::query()
-                ->with('delegationTechnique')
-                ->orderBy('nom')
-                ->get(),
-        ]);
+        return view('admin.guichets.create', $this->formData());
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nom' => ['required', 'string', 'max:255', Rule::unique('guichets', 'nom')],
-            'chef_nom' => ['required', 'string', 'max:255'],
-            'chef_email' => ['required', 'email', 'max:255', Rule::unique('guichets', 'chef_email')],
-            'chef_telephone' => ['required', 'string', 'max:30', Rule::unique('guichets', 'chef_telephone')],
-            'agence_id' => ['required', 'integer', 'exists:agences,id'],
+            'nom'           => ['required', 'string', 'max:255', Rule::unique('guichets', 'nom')],
+            'agence_id'     => ['required', 'integer', 'exists:agences,id'],
+            'chef_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ]);
 
         Guichet::query()->create($validated);
@@ -64,20 +58,26 @@ class GuichetController extends Controller
 
     public function edit(Guichet $guichet): View
     {
-        return view('admin.guichets.edit', [
-            'guichet' => $guichet->load('agence'),
+        return view('admin.guichets.edit', array_merge(
+            $this->formData(),
+            ['guichet' => $guichet->load(['agence', 'chef'])]
+        ));
+    }
+
+    private function formData(): array
+    {
+        return [
             'agences' => Agence::query()->with('delegationTechnique')->orderBy('nom')->get(),
-        ]);
+            'chefs'   => Agent::query()->where('fonction', 'Chef de Guichet')->orderBy('nom')->orderBy('prenom')->get(),
+        ];
     }
 
     public function update(Request $request, Guichet $guichet): RedirectResponse
     {
         $validated = $request->validate([
-            'nom' => ['required', 'string', 'max:255', Rule::unique('guichets', 'nom')->ignore($guichet->id)],
-            'chef_nom' => ['required', 'string', 'max:255'],
-            'chef_email' => ['required', 'email', 'max:255', Rule::unique('guichets', 'chef_email')->ignore($guichet->id)],
-            'chef_telephone' => ['required', 'string', 'max:30', Rule::unique('guichets', 'chef_telephone')->ignore($guichet->id)],
-            'agence_id' => ['required', 'integer', 'exists:agences,id'],
+            'nom'           => ['required', 'string', 'max:255', Rule::unique('guichets', 'nom')->ignore($guichet->id)],
+            'agence_id'     => ['required', 'integer', 'exists:agences,id'],
+            'chef_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ]);
 
         $guichet->update($validated);

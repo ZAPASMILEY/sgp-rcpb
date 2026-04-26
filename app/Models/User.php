@@ -6,7 +6,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Agent;
 class User extends Authenticatable{
     use HasFactory, Notifiable;
 
@@ -16,14 +18,15 @@ class User extends Authenticatable{
      * @var array<int, string>
      */
     protected $fillable = [
+        'agent_id',
         'name',
         'email',
         'password',
-        'theme_preference',
         'role',
+        'manager_id',
         'pca_entite_id',
-        'sexe',
-        'date_prise_fonction',
+        'must_change_password',
+        'theme_preference',
     ];
 
     /**
@@ -46,7 +49,23 @@ class User extends Authenticatable{
         'password' => 'hashed',
     ];
 
-    // Relations
+    // ── Relations ─────────────────────────────────────────────────────────────
+
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class);
+    }
+
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    public function subordonnesDirects(): HasMany
+    {
+        return $this->hasMany(User::class, 'manager_id');
+    }
+
     public function entite(): BelongsTo
     {
         return $this->belongsTo(Entite::class, 'pca_entite_id');
@@ -68,7 +87,33 @@ class User extends Authenticatable{
     {
         return $this->alertes()->wherePivot('lu', false);
     }
+// Relation avec les logs d'audit (Bloc 5)
+public function activites(): HasMany
+{
+    return $this->hasMany(Activite::class);
+}
 
+// Relation N:N vers les rôles
+public function roles(): BelongsToMany
+{
+    return $this->belongsToMany(Role::class, 'role_user')->withTimestamps();
+}
+
+public function hasRole(string $roleSlug): bool
+{
+    return $this->roles()->where('slug', $roleSlug)->exists();
+}
+
+// Relation N:N vers les permissions
+public function permissions(): BelongsToMany
+{
+    return $this->belongsToMany(Permission::class, 'permission_user')->withTimestamps();
+}
+
+public function hasPermission(string $permissionName): bool
+{
+    return $this->permissions()->where('name', $permissionName)->exists();
+}
     // Subordonnés du DG (DGA, assistante DG)
     public function subordonnes()
     {

@@ -6,54 +6,51 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::disableForeignKeyConstraints();
         Schema::create('evaluations', function (Blueprint $table): void {
             $table->id();
 
-            // 1. Système Polymorphique (Flexibilité totale)
-            $table->morphs('evaluable'); 
-            $table->string('evaluable_role')->default('entity');
-            
-            // L'utilisateur qui effectue l'évaluation
+            // 1. Destinataire et Évaluateur (Cardinalités 17, 19, 20)
+            // On ajoute agent_id pour la clarté des stats
+            $table->foreignId('agent_id')->constrained('agents')->cascadeOnDelete();
             $table->foreignId('evaluateur_id')->constrained('users')->cascadeOnDelete();
+            
+            // On garde ta flexibilité morphique si tu veux évaluer des "entités"
+            $table->morphs('evaluable'); 
+            $table->string('evaluable_role')->default('agent');
+            
+            // 2. Lien avec le travail effectué (Indispensable pour le calcul)
+            $table->foreignId('fiche_objectif_id')->nullable()->constrained('fiche_objectifs')->nullOnDelete();
 
-            // 2. Période et Exercice (Fusion des besoins annuels)
+            // 3. Période et Exercice
             $table->foreignId('annee_id')->nullable()->constrained('annees')->nullOnDelete();
             $table->date('date_debut');
             $table->date('date_fin');
 
-            // 3. Calculs et Moyennes (Précision décimale SGP)
+            // 4. Calculs et Moyennes (Précision SGP)
             $table->decimal('moyenne_subjectifs', 8, 2)->nullable();
-            $table->decimal('note_criteres_subjectifs', 8, 2)->nullable();
             $table->decimal('moyenne_objectifs', 8, 2)->nullable();
-            $table->decimal('note_criteres_objectifs', 8, 2)->nullable();
-            
-            // Notes de synthèse
-            $table->unsignedTinyInteger('note_objectifs')->default(0)->comment('Moyenne avancement objectifs');
-            $table->unsignedTinyInteger('note_manuelle')->nullable()->comment('Ajustement évaluateur');
-            $table->unsignedTinyInteger('note_finale')->default(0)->comment('Note résultante calculée');
+            $table->decimal('note_criteres_subjectifs', 8, 2)->default(0);
+            $table->decimal('note_criteres_objectifs', 8, 2)->default(0);
+            $table->unsignedTinyInteger('note_objectifs')->default(0);
+            $table->unsignedTinyInteger('note_manuelle')->nullable();
+            $table->decimal('note_finale', 8, 2)->default(0);
 
-            // 4. Feedback et Développement
+            // 5. Feedback
             $table->text('commentaire')->nullable();
             $table->text('points_a_ameliorer')->nullable();
             $table->text('strategies_amelioration')->nullable();
             $table->text('commentaires_evalue')->nullable();
 
-            // 5. Workflow et Statut
             $table->enum('statut', ['brouillon', 'soumis', 'valide'])->default('brouillon');
 
-            // 6. Bloc des Signatures (Validation réseau RCPB)
+            // 6. Bloc des Signatures
             $table->string('signature_evalue_nom')->nullable();
             $table->date('date_signature_evalue')->nullable();
-            
             $table->string('signature_evaluateur_nom')->nullable();
             $table->date('date_signature_evaluateur')->nullable();
-            
             $table->string('signature_directeur_nom')->nullable();
             $table->date('date_signature_directeur')->nullable();
 
@@ -62,9 +59,6 @@ return new class extends Migration
         Schema::enableForeignKeyConstraints();
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('evaluations');

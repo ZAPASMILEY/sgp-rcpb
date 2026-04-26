@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Agent;
+use App\Models\User; // <--- VÉRIFIE que ce use est présent
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 

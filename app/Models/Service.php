@@ -7,36 +7,37 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use App\Models\Caisse;
 
 class Service extends Model
 {
     use HasFactory;
 
-    /**
-     * @var list<string>
-     */
     protected $fillable = [
         'nom',
         'direction_id',
         'delegation_technique_id',
         'caisse_id',
-        'chef_prenom',
-        'chef_nom',
-        'chef_sexe',
-        'chef_email',
-        'chef_telephone',
-        'chef_date_debut_mois',
+        // Responsable : FK vers agent
+        'chef_agent_id',
     ];
 
-    public function delegationTechnique(): BelongsTo
+    // ── Responsable ────────────────────────────────────────────────────────
+
+    public function chef(): BelongsTo
     {
-        return $this->belongsTo(DelegationTechnique::class);
+        return $this->belongsTo(Agent::class, 'chef_agent_id');
     }
+
+    // ── Rattachements ──────────────────────────────────────────────────────
 
     public function direction(): BelongsTo
     {
         return $this->belongsTo(Direction::class);
+    }
+
+    public function delegationTechnique(): BelongsTo
+    {
+        return $this->belongsTo(DelegationTechnique::class);
     }
 
     public function caisse(): BelongsTo

@@ -67,40 +67,40 @@
                         <p class="text-xs text-slate-500">Le directeur de caisse superviseur sera filtre selon cette delegation.</p>
                     </div>
 
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Chef d'agence</p>
-                        <div class="space-y-2">
-                            <label for="chef_nom" class="text-sm font-semibold text-slate-700">Nom complet</label>
-                            <input id="chef_nom" name="chef_nom" type="text" value="{{ old('chef_nom') }}" required class="ent-input" placeholder="Nom et prenom du chef d'agence">
-                        </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="chef_email" class="text-sm font-semibold text-slate-700">Email</label>
-                                <input id="chef_email" name="chef_email" type="email" value="{{ old('chef_email') }}" required class="ent-input" placeholder="chef.agence@rcpb.org">
+                    <div class="space-y-2">
+                        <label for="chef_agent_id" class="text-sm font-semibold text-slate-700">Chef d'agence</label>
+                        @if($chefs->isEmpty())
+                            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Chef d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                             </div>
-                            <div class="space-y-2">
-                                <label for="chef_telephone" class="text-sm font-semibold text-slate-700">Telephone</label>
-                                <input id="chef_telephone" name="chef_telephone" type="text" value="{{ old('chef_telephone') }}" required class="ent-input" placeholder="+226 70 00 00 00">
-                            </div>
-                        </div>
+                        @endif
+                        <select id="chef_agent_id" name="chef_agent_id" class="ent-select">
+                            <option value="">— Aucun chef pour l'instant —</option>
+                            @foreach ($chefs as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('chef_agent_id') == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Secretaire d'agence</p>
-                        <div class="space-y-2">
-                            <label for="secretaire_nom" class="text-sm font-semibold text-slate-700">Nom complet</label>
-                            <input id="secretaire_nom" name="secretaire_nom" type="text" value="{{ old('secretaire_nom') }}" required class="ent-input" placeholder="Nom et prenom de la secretaire">
-                        </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="secretaire_email" class="text-sm font-semibold text-slate-700">Email</label>
-                                <input id="secretaire_email" name="secretaire_email" type="email" value="{{ old('secretaire_email') }}" required class="ent-input" placeholder="secretaire.agence@rcpb.org">
+                    <div class="space-y-2">
+                        <label for="secretaire_agent_id" class="text-sm font-semibold text-slate-700">Secretaire d'agence</label>
+                        @if($secretaires->isEmpty())
+                            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Secrétaire d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
                             </div>
-                            <div class="space-y-2">
-                                <label for="secretaire_telephone" class="text-sm font-semibold text-slate-700">Telephone</label>
-                                <input id="secretaire_telephone" name="secretaire_telephone" type="text" value="{{ old('secretaire_telephone') }}" required class="ent-input" placeholder="+226 70 00 00 00">
-                            </div>
-                        </div>
+                        @endif
+                        <select id="secretaire_agent_id" name="secretaire_agent_id" class="ent-select">
+                            <option value="">— Aucune secretaire pour l'instant —</option>
+                            @foreach ($secretaires as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('secretaire_agent_id') == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="space-y-2">
@@ -111,7 +111,7 @@
                                 <option value="{{ $caisse->id }}"
                                     data-delegation-id="{{ $caisse->delegation_technique_id }}"
                                     @selected((string) old('superviseur_caisse_id') === (string) $caisse->id)>
-                                    {{ $caisse->nom }} - {{ $caisse->directeur_nom }}
+                                    {{ $caisse->nom }}{{ $caisse->directeur ? ' — '.$caisse->directeur->nom.' '.$caisse->directeur->prenom : '' }}
                                     @if ($caisse->delegationTechnique)
                                         - {{ $caisse->delegationTechnique->region }} / {{ $caisse->delegationTechnique->ville }}
                                     @endif

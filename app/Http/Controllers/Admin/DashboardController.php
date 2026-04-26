@@ -21,31 +21,30 @@ class DashboardController extends Controller
     {
         $delegations = DelegationTechnique::query()
             ->withCount(['agences', 'caisses'])
-            ->with(['directions' => fn ($q) => $q->select('id', 'delegation_technique_id', 'directeur_prenom', 'directeur_nom')->limit(1)])
             ->latest()
             ->take(6)
             ->get();
 
         $recentServices = Service::query()
-            ->with('direction.delegationTechnique')
+            ->with('direction.entite')
             ->latest()
             ->take(6)
             ->get();
 
         $recentAgents = Agent::query()
-            ->with(['service.direction.delegationTechnique'])
+            ->with(['service.direction.entite'])
             ->latest()
             ->take(6)
             ->get();
 
         $recentDirections = Direction::query()
-            ->with(['delegationTechnique', 'services'])
+            ->with(['entite', 'directeur', 'services'])
             ->latest()
             ->take(6)
             ->get();
 
-        $faitiereDirectionsCount = Direction::query()->whereNull('delegation_technique_id')->count();
-        $delegationDirectionsCount = Direction::query()->whereNotNull('delegation_technique_id')->count();
+        $faitiereDirectionsCount = Direction::query()->count();
+        $delegationDirectionsCount = 0;
         $servicesWithoutDirection = Service::query()->whereNull('direction_id')->count();
         $agentsWithoutService = Agent::query()->whereNull('service_id')->count();
         $secretairesCount = User::query()->where('role', 'secretaire')->count();

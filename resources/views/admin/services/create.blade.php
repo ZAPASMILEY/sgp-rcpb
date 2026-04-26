@@ -78,52 +78,22 @@
                     @endforeach
                 </select>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                    <label for="chef_prenom" class="text-xs font-bold text-slate-400 ml-1">Prenom du chef de service</label>
-                    <input id="chef_prenom" name="chef_prenom" type="text" value="{{ old('chef_prenom') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="Prenom">
-                </div>
-                <div class="space-y-2">
-                    <label for="chef_nom" class="text-xs font-bold text-slate-400 ml-1">Nom du chef de service</label>
-                    <input id="chef_nom" name="chef_nom" type="text" value="{{ old('chef_nom') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="Nom">
-                </div>
-            </div>
             <div class="space-y-4">
-                <label for="chef_email" class="text-xs font-bold text-slate-400 ml-1">Email du chef de service</label>
-                <input id="chef_email" name="chef_email" type="email" value="{{ old('chef_email') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="chef.service@entreprise.com">
-            </div>
-            <div class="space-y-4">
-                <label for="chef_telephone" class="text-xs font-bold text-slate-400 ml-1">Numero de telephone</label>
-                <input id="chef_telephone" name="chef_telephone" type="text" value="{{ old('chef_telephone') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="Ex: +226 70 00 00 00">
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                    <label for="chef_sexe" class="text-xs font-bold text-slate-400 ml-1">Sexe du chef de service</label>
-                    <select id="chef_sexe" name="chef_sexe" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
-                        <option value="">Choisir</option>
-                        <option value="Homme" @selected(old('chef_sexe') === 'Homme')>Homme</option>
-                        <option value="Femme" @selected(old('chef_sexe') === 'Femme')>Femme</option>
-                        <option value="Autres" @selected(old('chef_sexe') === 'Autres')>Autres</option>
-                    </select>
-                </div>
-                <div class="space-y-2">
-                    <label for="chef_date_debut_mois" class="text-xs font-bold text-slate-400 ml-1">Date de prise de fonction</label>
-                    <input id="chef_date_debut_mois" name="chef_date_debut_mois" type="month" value="{{ old('chef_date_debut_mois') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500">
-                </div>
-            </div>
-            <div class="bg-cyan-50 rounded-2xl p-4 flex items-center gap-3">
-                <div class="h-6 w-6 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[10px] font-black">i</div>
-                <p class="text-[10px] font-black text-cyan-700 uppercase tracking-tight">L'email du chef servira d'identifiant de connexion</p>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                    <label for="password" class="text-xs font-bold text-slate-400 ml-1">Mot de passe</label>
-                    <input id="password" name="password" type="password" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="Min. 8 caracteres" autocomplete="new-password">
-                </div>
-                <div class="space-y-2">
-                    <label for="password_confirmation" class="text-xs font-bold text-slate-400 ml-1">Confirmer le mot de passe</label>
-                    <input id="password_confirmation" name="password_confirmation" type="password" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="Retaper le mot de passe" autocomplete="new-password">
-                </div>
+                <label for="chef_agent_id" class="text-xs font-bold text-slate-400 ml-1">Chef de service</label>
+                @if($chefs->isEmpty())
+                    <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                        <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                        <span>Aucun agent avec la fonction <strong>Chef de Service</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                    </div>
+                @endif
+                <select id="chef_agent_id" name="chef_agent_id" class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
+                    <option value="">— Aucun chef pour l'instant —</option>
+                    @foreach ($chefs as $agent)
+                        <option value="{{ $agent->id }}" @selected(old('chef_agent_id') == $agent->id)>
+                            {{ $agent->nom }} {{ $agent->prenom }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
             <div class="flex flex-col sm:flex-row items-center gap-4 pt-6">
                 <button type="submit" class="w-full sm:flex-[2] py-5 bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white rounded-full text-sm font-black uppercase tracking-widest shadow-xl shadow-cyan-200 hover:scale-[1.02] transition-all">

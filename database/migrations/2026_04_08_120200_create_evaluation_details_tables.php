@@ -10,53 +10,48 @@ return new class extends Migration
     {
         Schema::create('evaluation_identifications', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('evaluation_id')->constrained('evaluations')->cascadeOnDelete();
-            
-            // Identification & Période
+            // Lien 1:1 avec l'évaluation
+            $table->foreignId('evaluation_id')->unique()->constrained('evaluations')->cascadeOnDelete();
+
             $table->string('nom_prenom')->nullable();
-            $table->string('semestre', 20)->nullable(); // Fusionné
-            $table->date('date_evaluation')->nullable(); // Fusionné
-            
-            // Dates RH
-            $table->date('date_recrutement')->nullable();
-            $table->date('date_titularisation')->nullable();
-            $table->string('matricule')->nullable(); // Fusionné
-            
-            // Poste et Structure
+            $table->string('semestre', 20)->nullable();
+            $table->date('date_evaluation')->nullable();
+            $table->string('matricule')->nullable();
             $table->string('poste')->nullable();
-            $table->string('emploi')->nullable(); // Fusionné
+            $table->string('emploi')->nullable();
             $table->string('niveau')->nullable();
-            $table->date('date_naissance')->nullable();
             $table->string('direction')->nullable();
-            $table->string('direction_service')->nullable(); // Fusionné
-            
-            // Autres infos
+            $table->string('direction_service')->nullable();
             $table->date('date_confirmation')->nullable();
             $table->string('categorie')->nullable();
             $table->string('anciennete')->nullable();
             $table->string('sexe', 1)->nullable();
-            $table->date('date_affectation')->nullable();
 
-            // Sections dynamiques (JSON) pour coller à la fiche papier
-            $table->json('formations')->nullable(); // Fusionné
-            $table->json('experiences')->nullable(); // Fusionné
-            
+            // Dates RH historiques
+            $table->date('date_recrutement')->nullable();
+            $table->date('date_titularisation')->nullable();
+            $table->date('date_affectation')->nullable();
+            $table->date('date_naissance')->nullable();
+
+            // Sections dynamiques JSON
+            $table->json('formations')->nullable();
+            $table->json('experiences')->nullable();
+
             $table->timestamps();
         });
 
-        // Les autres tables restent inchangées dans le même fichier
         Schema::create('evaluation_criteres', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('evaluation_id')->constrained('evaluations')->cascadeOnDelete();
-            $table->string('type', 20);
+            $table->string('type', 20); // 'objectif' ou 'subjectif'
             $table->unsignedInteger('ordre')->default(0);
             $table->string('titre');
             $table->text('description')->nullable();
             $table->decimal('note_globale', 8, 2)->default(0);
             $table->text('observation')->nullable();
-            $table->unsignedBigInteger('source_template_id')->nullable();
             $table->foreignId('source_fiche_objectif_id')->nullable()->constrained('fiche_objectifs')->nullOnDelete();
             $table->foreignId('source_fiche_objectif_objectif_id')->nullable()->constrained('fiche_objectif_objectifs')->nullOnDelete();
+            $table->foreignId('source_template_id')->nullable()->constrained('subjective_criteria_templates')->nullOnDelete();
             $table->timestamps();
         });
 

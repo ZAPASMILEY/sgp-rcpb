@@ -43,7 +43,7 @@
             ],
         ];
 
-        $directeurGeneral = trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? ''));
+        $directeurGeneral = $entite->dg ? trim($entite->dg->prenom.' '.$entite->dg->nom) : '';
         $dgInitial = strtoupper(substr($directeurGeneral ?: 'D', 0, 1));
     @endphp
 
@@ -202,7 +202,7 @@
                         <dl class="mt-5 grid gap-3 sm:grid-cols-2">
                             <div class="rounded-2xl border border-white bg-white px-4 py-3 shadow-sm">
                                 <dt class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Email DG</dt>
-                                <dd class="mt-2 break-all text-sm font-bold text-slate-800">{{ $entite->directrice_generale_email ?: 'Non renseigne' }}</dd>
+                                <dd class="mt-2 break-all text-sm font-bold text-slate-800">{{ $entite->dg?->email ?: 'Non renseigne' }}</dd>
                             </div>
                             <div class="rounded-2xl border border-white bg-white px-4 py-3 shadow-sm">
                                 <dt class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Secretariat</dt>

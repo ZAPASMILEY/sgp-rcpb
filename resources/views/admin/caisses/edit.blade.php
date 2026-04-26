@@ -59,46 +59,68 @@
                         <input id="nom" name="nom" type="text" value="{{ old('nom', $caisse->nom) }}" required class="ent-input" placeholder="Ex: Caisse de Ouagadougou Centre">
                     </div>
 
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Directeur de caisse</p>
+                    <div class="ent-form-grid">
                         <div class="space-y-2">
-                            <label for="directeur_nom" class="text-sm font-semibold text-slate-700">Nom complet</label>
-                            <input id="directeur_nom" name="directeur_nom" type="text" value="{{ old('directeur_nom', $caisse->directeur_nom) }}" required class="ent-input" placeholder="Nom et prenom du directeur de caisse">
+                            <label for="annee_ouverture" class="text-sm font-semibold text-slate-700">Année d'ouverture <span class="text-rose-500">*</span></label>
+                            <input id="annee_ouverture" name="annee_ouverture" type="text" value="{{ old('annee_ouverture', $caisse->annee_ouverture) }}" required maxlength="4" class="ent-input" placeholder="Ex: 2010">
                         </div>
-                        <div class="ent-form-grid">
-                            <div class="space-y-2">
-                                <label for="directeur_email" class="text-sm font-semibold text-slate-700">Email</label>
-                                <input id="directeur_email" name="directeur_email" type="email" value="{{ old('directeur_email', $caisse->directeur_email) }}" required class="ent-input" placeholder="directeur.caisse@rcpb.org">
-                            </div>
-                            <div class="space-y-2">
-                                <label for="directeur_telephone" class="text-sm font-semibold text-slate-700">Telephone</label>
-                                <input id="directeur_telephone" name="directeur_telephone" type="text" value="{{ old('directeur_telephone', $caisse->directeur_telephone) }}" required class="ent-input" placeholder="+226 70 00 00 00">
-                            </div>
+                        <div class="space-y-2">
+                            <label for="quartier" class="text-sm font-semibold text-slate-700">Quartier</label>
+                            <input id="quartier" name="quartier" type="text" value="{{ old('quartier', $caisse->quartier) }}" class="ent-input" placeholder="Ex: Secteur 5">
                         </div>
                     </div>
 
-                    <div class="ent-form-grid">
-                        <div class="space-y-2">
-                            <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Numero du secretariat</label>
-                            <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone', $caisse->secretariat_telephone) }}" required class="ent-input" placeholder="+226 25 00 00 00">
-                        </div>
-                        <div class="space-y-2">
-                            <label for="superviseur_direction_id" class="text-sm font-semibold text-slate-700">Directeur technique superviseur</label>
-                            <select id="superviseur_direction_id" name="superviseur_direction_id" required class="ent-select">
-                                <option value="">Choisissez d'abord une delegation</option>
-                                @php
-                                    $selectedSuperviseurId = (string) old('superviseur_direction_id', $caisse->superviseur_direction_id);
-                                @endphp
-                                @foreach ($directions as $direction)
-                                    <option value="{{ $direction->id }}" data-delegation-id="{{ $direction->delegation_technique_id }}" @selected($selectedSuperviseurId === (string) $direction->id)>
-                                        {{ $direction->directeur_prenom }} {{ $direction->directeur_nom }}
-                                        @if ($direction->delegationTechnique)
-                                            - {{ $direction->delegationTechnique->region }} / {{ $direction->delegationTechnique->ville }}
-                                        @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+                    <div class="space-y-2">
+                        <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Numero du secretariat</label>
+                        <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone', $caisse->secretariat_telephone) }}" class="ent-input" placeholder="+226 25 00 00 00">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="directeur_agent_id" class="text-sm font-semibold text-slate-700">Directeur de caisse</label>
+                        @if($directeurs->isEmpty())
+                            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Directeur de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                            </div>
+                        @endif
+                        <select id="directeur_agent_id" name="directeur_agent_id" class="ent-select">
+                            <option value="">— Aucun directeur pour l'instant —</option>
+                            @foreach ($directeurs as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('directeur_agent_id', $caisse->directeur_agent_id) == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="secretaire_agent_id" class="text-sm font-semibold text-slate-700">Secrétaire de caisse</label>
+                        @if($secretaires->isEmpty())
+                            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec la fonction <strong>Secrétaire de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                            </div>
+                        @endif
+                        <select id="secretaire_agent_id" name="secretaire_agent_id" class="ent-select">
+                            <option value="">— Aucune secrétaire pour l'instant —</option>
+                            @foreach ($secretaires as $agent)
+                                <option value="{{ $agent->id }}" @selected(old('secretaire_agent_id', $caisse->secretaire_agent_id) == $agent->id)>
+                                    {{ $agent->nom }} {{ $agent->prenom }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="superviseur_direction_id" class="text-sm font-semibold text-slate-700">Direction superviseur</label>
+                        <select id="superviseur_direction_id" name="superviseur_direction_id" class="ent-select">
+                            <option value="">— Aucune direction superviseur —</option>
+                            @foreach ($directions as $direction)
+                                <option value="{{ $direction->id }}" @selected(old('superviseur_direction_id', $caisse->superviseur_direction_id) == $direction->id)>
+                                    {{ $direction->nom }}{{ $direction->directeur ? ' — '.$direction->directeur->nom.' '.$direction->directeur->prenom : '' }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">
@@ -110,42 +132,3 @@
     </main>
 @endsection
 
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var delegationSelect = document.getElementById('delegation_technique_id');
-            var superviseurSelect = document.getElementById('superviseur_direction_id');
-
-            if (!delegationSelect || !superviseurSelect) {
-                return;
-            }
-
-            function filterSuperviseursByDelegation() {
-                var delegationId = delegationSelect.value;
-                var hasMatch = false;
-
-                Array.from(superviseurSelect.options).forEach(function (option) {
-                    if (!option.value) {
-                        option.textContent = delegationId ? 'Selectionner un superviseur' : "Choisissez d'abord une delegation";
-                        option.hidden = false;
-                        option.disabled = false;
-                        return;
-                    }
-
-                    var isMatch = option.getAttribute('data-delegation-id') === delegationId;
-                    option.hidden = !isMatch;
-                    option.disabled = !isMatch;
-
-                    if (isMatch) {
-                        hasMatch = true;
-                    }
-                });
-
-                superviseurSelect.disabled = !delegationId || !hasMatch;
-            }
-
-            delegationSelect.addEventListener('change', filterSuperviseursByDelegation);
-            filterSuperviseursByDelegation();
-        });
-    </script>
-@endpush

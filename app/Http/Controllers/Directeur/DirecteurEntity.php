@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Directeur;
 
+use App\Models\Agent;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
@@ -14,48 +15,31 @@ use Illuminate\Database\Eloquent\Collection;
  * DirecteurEntity — Contexte d'un directeur connecté
  * ──────────────────────────────────────────────────────────────────────────────
  *
- * Le système reconnaît trois types de directeurs, chacun gérant une entité
- * organisationnelle différente :
+ * Tout le personnel est Agent. Un directeur est un Agent dont le compte User
+ * est lié à une structure via directeur_agent_id.
  *
- *  • Directeur_Direction  → gère une Direction (faîtière)
- *  • Directeur_Caisse     → gère une Caisse
- *  • Directeur_Tehnique   → gère une DelegationTechnique (région)
+ * Résolution :
+ *  1. On retrouve l'Agent lié au User connecté (agents.user_id = auth user id)
+ *  2. On cherche quelle structure a cet agent comme directeur_agent_id
  *
- * Cette classe résout l'entité associée au compte connecté et expose une
- * interface uniforme utilisée par tous les controllers du namespace Directeur,
- * quel que soit le type de directeur.
- *
- * USAGE TYPE dans un controller :
- *   $ctx = DirecteurEntity::resolveOrFail(Auth::user());
- *   $ctx->entity        // Direction|Caisse|DelegationTechnique
- *   $ctx->modelClass    // FQCN de l'entité (pour les relations polymorphiques)
- *   $ctx->getId()       // id de l'entité
- *   $ctx->getServices() // services rattachés à l'entité
+ * Types de directeurs :
+ *  • Directeur_Direction → Direction.directeur_agent_id
+ *  • Directeur_Caisse    → Caisse.directeur_agent_id
+ *  • Directeur_Tehnique  → DelegationTechnique.directeur_agent_id
  * ──────────────────────────────────────────────────────────────────────────────
  */
 class DirecteurEntity
 {
-    /**
-     * @param  Direction|Caisse|DelegationTechnique  $entity       Entité résolue
-     * @param  'direction'|'caisse'|'delegation'     $type         Type court
-     * @param  string                                $modelClass   FQCN (pour les champs polymorphiques evaluable_type / assignable_type)
-     * @param  string                                $serviceField Nom de la FK sur la table `services` qui pointe vers cette entité
-     *                                                             ex: 'direction_id', 'caisse_id', 'delegation_technique_id'
-     */
     public function __construct(
         public readonly mixed  $entity,
         public readonly string $type,
         public readonly string $modelClass,
         public readonly string $serviceField,
+        public readonly ?Agent $agent = null,
     ) {}
 
     // ── Factory ────────────────────────────────────────────────────────────
 
-    /**
-     * Tente de résoudre l'entité associée au rôle de l'utilisateur.
-     * Retourne null si l'utilisateur n'est pas un directeur ou si aucune
-     * entité n'est liée à son compte (user_id non renseigné dans la table).
-     */
     public static function resolve(?User $user): ?static
     {
         if (! $user) {
@@ -70,10 +54,6 @@ class DirecteurEntity
         };
     }
 
-    /**
-     * Comme resolve() mais déclenche une erreur 403 si aucune entité n'est trouvée.
-     * À utiliser dans les controllers pour garantir qu'une entité est bien présente.
-     */
     public static function resolveOrFail(?User $user): static
     {
         $ctx = static::resolve($user);
@@ -84,52 +64,60 @@ class DirecteurEntity
         return $ctx;
     }
 
-    /** Résolution pour un Directeur_Direction : cherche la Direction dont user_id = $userId */
+    /**
+     * Résolution : trouve l'Agent du User, puis la Direction dont il est directeur.
+     */
     private static function fromDirection(int $userId): ?static
     {
-        $e = Direction::where('user_id', $userId)->first();
+        $agent = Agent::where('user_id', $userId)->first();
+        if (! $agent) {
+            return null;
+        }
 
-        return $e ? new static($e, 'direction', Direction::class, 'direction_id') : null;
+        $e = Direction::where('directeur_agent_id', $agent->id)->first();
+
+        return $e ? new static($e, 'direction', Direction::class, 'direction_id', $agent) : null;
     }
 
-    /** Résolution pour un Directeur_Caisse : cherche la Caisse dont user_id = $userId */
     private static function fromCaisse(int $userId): ?static
     {
-        $e = Caisse::where('user_id', $userId)->first();
+        $agent = Agent::where('user_id', $userId)->first();
+        if (! $agent) {
+            return null;
+        }
 
-        return $e ? new static($e, 'caisse', Caisse::class, 'caisse_id') : null;
+        $e = Caisse::where('directeur_agent_id', $agent->id)->first();
+
+        return $e ? new static($e, 'caisse', Caisse::class, 'caisse_id', $agent) : null;
     }
 
-    /** Résolution pour un Directeur_Tehnique : cherche la DelegationTechnique dont user_id = $userId */
     private static function fromDelegation(int $userId): ?static
     {
-        $e = DelegationTechnique::where('user_id', $userId)->first();
+        $agent = Agent::where('user_id', $userId)->first();
+        if (! $agent) {
+            return null;
+        }
 
-        return $e ? new static($e, 'delegation', DelegationTechnique::class, 'delegation_technique_id') : null;
+        $e = DelegationTechnique::where('directeur_agent_id', $agent->id)->first();
+
+        return $e ? new static($e, 'delegation', DelegationTechnique::class, 'delegation_technique_id', $agent) : null;
     }
 
     // ── Accessors ──────────────────────────────────────────────────────────
 
-    /** Retourne l'id de l'entité (Direction, Caisse ou DelegationTechnique). */
     public function getId(): int
     {
         return $this->entity->id;
     }
 
-    /**
-     * Retourne le nom lisible de l'entité.
-     * Pour une DelegationTechnique (qui n'a pas de champ `nom`),
-     * on concatène région et ville : "Région — Ville".
-     */
     public function getNom(): string
     {
         return match ($this->type) {
-            'delegation' => trim($this->entity->region.' — '.($this->entity->ville ?? '')),
+            'delegation' => trim($this->entity->region . ' — ' . ($this->entity->ville ?? '')),
             default      => (string) $this->entity->nom,
         };
     }
 
-    /** Retourne le libellé du type d'entité pour l'affichage (ex: "Caisse"). */
     public function getTypeLabel(): string
     {
         return match ($this->type) {
@@ -139,7 +127,6 @@ class DirecteurEntity
         };
     }
 
-    /** Retourne le libellé du rôle du directeur pour l'affichage dans les évaluations. */
     public function getRoleLabel(): string
     {
         return match ($this->type) {
@@ -151,27 +138,41 @@ class DirecteurEntity
 
     /**
      * Retourne l'id User de la secrétaire liée à l'entité, ou null.
-     * Utilisé pour autoriser les actions sur les évaluations / objectifs de la secrétaire.
+     * On passe par l'Agent secrétaire pour retrouver son compte User.
      */
     public function getSecretaireUserId(): ?int
     {
-        $v = $this->entity->secretaire_user_id ?? null;
+        $agentId = $this->entity->secretaire_agent_id ?? null;
+        if (! $agentId) {
+            return null;
+        }
 
-        return $v ? (int) $v : null;
+        $agent = Agent::find($agentId);
+
+        return $agent?->user_id;
     }
 
-    /** Retourne le nom complet du directeur (champs directeur_prenom + directeur_nom). */
+    /**
+     * Retourne le nom complet du directeur depuis son enregistrement Agent.
+     */
     public function getDirecteurNomPrenom(): string
     {
-        return trim(($this->entity->directeur_prenom ?? '').' '.($this->entity->directeur_nom ?? ''));
+        if ($this->agent) {
+            return trim(($this->agent->prenom ?? '') . ' ' . ($this->agent->nom ?? ''));
+        }
+
+        $agentId = $this->entity->directeur_agent_id ?? null;
+        if (! $agentId) {
+            return '';
+        }
+
+        $agent = Agent::find($agentId);
+
+        return trim(($agent?->prenom ?? '') . ' ' . ($agent?->nom ?? ''));
     }
 
     // ── Services ───────────────────────────────────────────────────────────
 
-    /**
-     * Retourne tous les services rattachés à l'entité, triés par nom.
-     * La requête utilise $serviceField comme colonne de filtre (FK vers l'entité).
-     */
     public function getServices(): Collection
     {
         return Service::where($this->serviceField, $this->entity->id)
@@ -179,10 +180,6 @@ class DirecteurEntity
             ->get();
     }
 
-    /**
-     * Comme getServices() mais charge également les agents de chaque service
-     * (relation eager-loading) pour éviter les N+1 queries.
-     */
     public function getServicesWithAgents(): Collection
     {
         return Service::where($this->serviceField, $this->entity->id)
@@ -191,11 +188,6 @@ class DirecteurEntity
             ->get();
     }
 
-    /**
-     * Retourne un tableau d'IDs de services appartenant à l'entité.
-     * Utilisé pour valider que le service_id soumis dans un formulaire
-     * appartient bien à ce directeur.
-     */
     public function getServiceIds(): array
     {
         return Service::where($this->serviceField, $this->entity->id)
@@ -203,12 +195,6 @@ class DirecteurEntity
             ->all();
     }
 
-    /**
-     * Vérifie qu'un service appartient à l'entité de ce directeur.
-     * Utilisé dans les guards d'autorisation avant toute action sur un service.
-     *
-     * Ex: if (!$ctx->serviceOwnedBy($service)) abort(403);
-     */
     public function serviceOwnedBy(Service $service): bool
     {
         return (int) $service->{$this->serviceField} === $this->entity->id;

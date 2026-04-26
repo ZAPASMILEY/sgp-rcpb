@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -15,10 +17,42 @@ class SettingsController extends Controller
 {
     public function edit(Request $request): View
     {
+        $permissions    = Permission::orderBy('name')->get();
+        $allRoles       = UserController::ROLES;
+
+        // Onglet Rôles — chargement dynamique selon ?role=slug
+        $selectedRoleSlug = $request->query('role');
+        $selectedRole     = null;
+        $rolePermissions  = collect();
+        if ($selectedRoleSlug && isset($allRoles[$selectedRoleSlug])) {
+            $selectedRole    = Role::with('permissions')->firstOrCreate(
+                ['slug' => $selectedRoleSlug],
+                ['name' => $allRoles[$selectedRoleSlug], 'description' => '']
+            );
+            $rolePermissions = $selectedRole->permissions->pluck('id');
+        }
+
+        // Onglet Droits individuels — chargement selon ?user_id=id
+        $selectedUserId  = $request->query('user_id');
+        $selectedUser    = null;
+        $userPermissions = collect();
+        if ($selectedUserId) {
+            $selectedUser    = User::with('permissions')->find($selectedUserId);
+            $userPermissions = $selectedUser?->permissions->pluck('id') ?? collect();
+        }
+
         return view('admin.settings.edit', [
-            'theme' => $request->user()->theme_preference ?? 'reference',
+            'theme'            => $request->user()->theme_preference ?? 'reference',
             'maxLoginAttempts' => (int) $request->session()->get('admin_security.max_login_attempts', 3),
-            'lockoutTime' => (int) $request->session()->get('admin_security.lockout_time', 30),
+            'lockoutTime'      => (int) $request->session()->get('admin_security.lockout_time', 30),
+            'allRoles'         => $allRoles,
+            'permissions'      => $permissions,
+            'selectedRoleSlug' => $selectedRoleSlug,
+            'selectedRole'     => $selectedRole,
+            'rolePermissions'  => $rolePermissions,
+            'allUsers'         => User::query()->orderBy('name')->get(['id', 'name', 'email', 'role']),
+            'selectedUser'     => $selectedUser,
+            'userPermissions'  => $userPermissions,
         ]);
     }
 
@@ -156,5 +190,74 @@ class SettingsController extends Controller
         return redirect()
             ->route('admin.settings.edit')
             ->with('status', 'Rôle de ' . $user->name . ' mis à jour avec succès.');
+    }
+
+    // ── Permissions catalogue ─────────────────────────────────────────────────
+
+    public function storePermission(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name'        => ['required', 'string', 'max:100', 'regex:/^[a-z0-9\-]+$/', 'unique:permissions,name'],
+            'slug'        => ['required', 'string', 'max:150'],
+            'description' => ['nullable', 'string', 'max:255'],
+        ], [
+            'name.regex'  => 'Le code technique ne doit contenir que des minuscules, chiffres et tirets.',
+            'name.unique' => 'Ce code de permission existe déjà.',
+        ]);
+
+        Permission::create($validated);
+
+        return redirect()
+            ->route('admin.settings.edit', ['tab' => 'catalogue'])
+            ->with('status', 'Permission « '.$validated['slug'].' » créée.');
+    }
+
+    public function destroyPermission(Permission $permission): RedirectResponse
+    {
+        $permission->delete();
+
+        return redirect()
+            ->route('admin.settings.edit', ['tab' => 'catalogue'])
+            ->with('status', 'Permission supprimée.');
+    }
+
+    // ── Permissions par rôle ──────────────────────────────────────────────────
+
+    public function syncRolePermissions(Request $request, string $roleSlug): RedirectResponse
+    {
+        $allRoles = UserController::ROLES;
+        abort_unless(isset($allRoles[$roleSlug]), 404, 'Rôle inconnu.');
+
+        $validated = $request->validate([
+            'permissions'   => ['nullable', 'array'],
+            'permissions.*' => ['integer', 'exists:permissions,id'],
+        ]);
+
+        $role = Role::firstOrCreate(
+            ['slug' => $roleSlug],
+            ['name' => $allRoles[$roleSlug], 'description' => '']
+        );
+
+        $role->permissions()->sync($validated['permissions'] ?? []);
+
+        return redirect()
+            ->route('admin.settings.edit', ['tab' => 'roles', 'role' => $roleSlug])
+            ->with('status', 'Permissions du rôle « '.$allRoles[$roleSlug].' » mises à jour.');
+    }
+
+    // ── Permissions individuelles utilisateur ─────────────────────────────────
+
+    public function syncUserPermissions(Request $request, User $user): RedirectResponse
+    {
+        $validated = $request->validate([
+            'permissions'   => ['nullable', 'array'],
+            'permissions.*' => ['integer', 'exists:permissions,id'],
+        ]);
+
+        $user->permissions()->sync($validated['permissions'] ?? []);
+
+        return redirect()
+            ->route('admin.settings.edit', ['tab' => 'droits', 'user_id' => $user->id])
+            ->with('status', 'Permissions de '.$user->name.' mises à jour.');
     }
 }

@@ -6,42 +6,55 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('users', function (Blueprint $table): void {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            
-            // 1. Rôles et Autorisations (Fusion des adds)
-            // On utilise string au lieu d'enum pour plus de souplesse (SGP-RCPB)
-            $table->string('role', 30)->default('admin');
-            $table->unsignedBigInteger('pca_entite_id')->nullable();
 
-            // Identité personnelle
-            $table->string('sexe', 20)->nullable();
-            $table->string('date_prise_fonction', 7)->nullable(); // format Y-m
+            /**
+             * Lien vers la personne physique.
+             * La FK (→ agents) est ajoutée dans la migration create_agents_table,
+             * car la table agents n'existe pas encore à ce stade.
+             */
+            $table->unsignedBigInteger('agent_id')->nullable()->unique()
+                  ->comment('Lien vers la fiche Agent de cet utilisateur');
 
-            $table->timestamp('email_verified_at')->nullable();
+            // ── Authentification ──────────────────────────────────────────────
+            $table->string('name', 191)
+                  ->comment('Nom complet affiché (sync depuis agent.nom + agent.prenom)');
+            $table->string('email', 191)->unique();
             $table->string('password');
-
-            // 2. Préférences Interface (Fusion du add theme)
-            $table->string('theme_preference')->default('reference');
-
+            $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
+            $table->boolean('must_change_password')->default(true)
+                  ->comment('Force le changement de mot de passe à la première connexion');
+
+            // ── Profil système ────────────────────────────────────────────────
+            $table->string('role', 50)->default('Agent')
+                  ->comment('Rôle système : DG | DGA | Directeur_Caisse | Chef_Service | Agent …');
+            $table->string('theme_preference', 50)->default('reference');
+
+            // ── Hiérarchie de validation N+1 ──────────────────────────────────
+            $table->foreignId('manager_id')
+                  ->nullable()
+                  ->constrained('users')
+                  ->nullOnDelete()
+                  ->comment('Supérieur direct pour la chaîne de validation des évaluations');
+
+            // ── Rattachement faîtière (héritage – sera dérivé via agent→structure) ──
+            $table->unsignedBigInteger('pca_entite_id')->nullable()
+                  ->comment('Entité de rattachement (legacy – à migrer vers agent→entite)');
+
             $table->timestamps();
         });
 
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
+        Schema::create('password_reset_tokens', function (Blueprint $table): void {
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
 
-        Schema::create('sessions', function (Blueprint $table) {
+        Schema::create('sessions', function (Blueprint $table): void {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
@@ -51,13 +64,10 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };

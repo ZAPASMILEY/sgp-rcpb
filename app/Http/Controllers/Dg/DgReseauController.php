@@ -94,15 +94,17 @@ class DgReseauController extends Controller
 
         $search = trim((string) $request->get('search', ''));
 
-        $query = DelegationTechnique::withCount(['caisses', 'agences', 'directions'])
+        $query = DelegationTechnique::withCount(['caisses', 'agences'])
             ->orderBy('region');
 
         if ($search !== '') {
             $query->where(fn ($q) => $q
                 ->where('region', 'like', "%{$search}%")
                 ->orWhere('ville', 'like', "%{$search}%")
-                ->orWhere('directeur_nom', 'like', "%{$search}%")
-                ->orWhere('directeur_prenom', 'like', "%{$search}%")
+                ->orWhereHas('directeur', fn ($dq) => $dq
+                    ->where('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%")
+                )
             );
         }
 
@@ -115,7 +117,7 @@ class DgReseauController extends Controller
     {
         $this->checkDg();
 
-        $delegation->load(['caisses.agences', 'directions.services']);
+        $delegation->load(['caisses.agences']);
 
         $agentIds = Agent::where('delegation_technique_id', $delegation->id)->pluck('id')->all();
 
@@ -149,9 +151,11 @@ class DgReseauController extends Controller
         if ($search !== '') {
             $query->where(fn ($q) => $q
                 ->where('nom', 'like', "%{$search}%")
-                ->orWhere('directeur_nom', 'like', "%{$search}%")
-                ->orWhere('directeur_prenom', 'like', "%{$search}%")
                 ->orWhere('quartier', 'like', "%{$search}%")
+                ->orWhereHas('directeur', fn ($dq) => $dq
+                    ->where('nom', 'like', "%{$search}%")
+                    ->orWhere('prenom', 'like', "%{$search}%")
+                )
             );
         }
 
@@ -204,7 +208,7 @@ class DgReseauController extends Controller
         if ($search !== '') {
             $query->where(fn ($q) => $q
                 ->where('nom', 'like', "%{$search}%")
-                ->orWhere('chef_nom', 'like', "%{$search}%")
+                ->orWhereHas('chef', fn ($cq) => $cq->where('nom', 'like', "%{$search}%"))
             );
         }
 
@@ -255,7 +259,7 @@ class DgReseauController extends Controller
         if ($search !== '') {
             $query->where(fn ($q) => $q
                 ->where('nom', 'like', "%{$search}%")
-                ->orWhere('chef_nom', 'like', "%{$search}%")
+                ->orWhereHas('chef', fn ($cq) => $cq->where('nom', 'like', "%{$search}%"))
             );
         }
 

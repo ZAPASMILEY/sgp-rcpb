@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agence;
+use App\Models\Agent;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
@@ -28,10 +29,11 @@ class CaisseController extends Controller
                     $query->where(function (EloquentBuilder $subQuery) use ($search): void {
                         $subQuery
                             ->where('nom', 'like', "%{$search}%")
-                            ->orWhere('directeur_nom', 'like', "%{$search}%")
-                            ->orWhere('directeur_email', 'like', "%{$search}%")
-                            ->orWhere('directeur_telephone', 'like', "%{$search}%")
                             ->orWhere('secretariat_telephone', 'like', "%{$search}%")
+                            ->orWhereHas('directeur', function (EloquentBuilder $dq) use ($search): void {
+                                $dq->where('nom', 'like', "%{$search}%")
+                                   ->orWhere('email', 'like', "%{$search}%");
+                            })
                             ->orWhereHas('delegationTechnique', function (EloquentBuilder $delegationQuery) use ($search): void {
                                 $delegationQuery
                                     ->where('region', 'like', "%{$search}%")
@@ -56,17 +58,7 @@ class CaisseController extends Controller
 
     public function create(): View
     {
-        return view('admin.caisses.create', [
-            'delegations' => DelegationTechnique::query()
-                ->orderBy('region')
-                ->orderBy('ville')
-                ->get(),
-            'directions' => Direction::query()
-                ->with('delegationTechnique')
-                ->orderBy('directeur_nom')
-                ->orderBy('directeur_prenom')
-                ->get(),
-        ]);
+        return view('admin.caisses.create', $this->formData());
     }
 
     public function show(Caisse $caisse): View
@@ -94,18 +86,10 @@ class CaisseController extends Controller
 
     public function edit(Caisse $caisse): View
     {
-        return view('admin.caisses.edit', [
-            'caisse' => $caisse->load('delegationTechnique'),
-            'delegations' => DelegationTechnique::query()
-                ->orderBy('region')
-                ->orderBy('ville')
-                ->get(),
-            'directions' => Direction::query()
-                ->with('delegationTechnique')
-                ->orderBy('directeur_nom')
-                ->orderBy('directeur_prenom')
-                ->get(),
-        ]);
+        return view('admin.caisses.edit', array_merge(
+            $this->formData(),
+            ['caisse' => $caisse->load(['delegationTechnique', 'directeur', 'secretaire'])]
+        ));
     }
 
     public function store(Request $request): RedirectResponse
@@ -139,11 +123,21 @@ class CaisseController extends Controller
             ->with('status', 'Caisse supprimee avec succes.');
     }
 
+    private function formData(): array
+    {
+        return [
+            'delegations' => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
+            'directions'  => Direction::query()->with('directeur')->orderBy('nom')->get(),
+            'directeurs'  => Agent::query()->where('fonction', 'Directeur de Caisse')->orderBy('nom')->orderBy('prenom')->get(),
+            'secretaires' => Agent::query()->where('fonction', 'Secrétaire de Caisse')->orderBy('nom')->orderBy('prenom')->get(),
+        ];
+    }
+
     private function validateCaisse(Request $request, ?Caisse $caisse = null): array
     {
         return $request->validate([
-            'delegation_technique_id'   => ['required', 'integer', 'exists:delegation_techniques,id'],
-            'nom'                       => [
+            'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
+            'nom'                     => [
                 'required',
                 'string',
                 'max:255',
@@ -151,49 +145,11 @@ class CaisseController extends Controller
                     ? Rule::unique('caisses', 'nom')->ignore($caisse->id)
                     : Rule::unique('caisses', 'nom'),
             ],
-            'annee_ouverture'           => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
-            'quartier'                  => ['required', 'string', 'max:255'],
-            'directeur_prenom'          => ['required', 'string', 'max:255'],
-            'directeur_nom'             => ['required', 'string', 'max:255'],
-            'directeur_sexe'            => ['required', 'in:Masculin,Feminin'],
-            'directeur_email'           => [
-                'required',
-                'email',
-                'max:255',
-                $caisse
-                    ? Rule::unique('caisses', 'directeur_email')->ignore($caisse->id)
-                    : Rule::unique('caisses', 'directeur_email'),
-            ],
-            'directeur_telephone'       => [
-                'required',
-                'string',
-                'max:30',
-                $caisse
-                    ? Rule::unique('caisses', 'directeur_telephone')->ignore($caisse->id)
-                    : Rule::unique('caisses', 'directeur_telephone'),
-            ],
-            'directeur_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
-            'secretariat_telephone'     => ['required', 'string', 'max:30'],
-            'secretaire_prenom'         => ['required', 'string', 'max:255'],
-            'secretaire_nom'            => ['required', 'string', 'max:255'],
-            'secretaire_sexe'           => ['required', 'in:Masculin,Feminin'],
-            'secretaire_email'          => [
-                'required',
-                'email',
-                'max:255',
-                $caisse
-                    ? Rule::unique('caisses', 'secretaire_email')->ignore($caisse->id)
-                    : Rule::unique('caisses', 'secretaire_email'),
-            ],
-            'secretaire_telephone'      => [
-                'nullable',
-                'string',
-                'max:30',
-                $caisse
-                    ? Rule::unique('caisses', 'secretaire_telephone')->ignore($caisse->id)
-                    : Rule::unique('caisses', 'secretaire_telephone'),
-            ],
-            'secretaire_date_debut_mois' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
+            'annee_ouverture'         => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
+            'quartier'                => ['nullable', 'string', 'max:255'],
+            'secretariat_telephone'   => ['nullable', 'string', 'max:30'],
+            'directeur_agent_id'      => ['nullable', 'integer', 'exists:agents,id'],
+            'secretaire_agent_id'     => ['nullable', 'integer', 'exists:agents,id'],
         ]);
     }
 }

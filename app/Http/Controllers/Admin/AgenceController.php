@@ -3,20 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\WelcomeMail;
 use App\Models\Agence;
 use App\Models\Agent;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
-use App\Models\Guichet;
-use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class AgenceController extends Controller
@@ -43,16 +37,7 @@ class AgenceController extends Controller
 
     public function create(): View
     {
-        return view('admin.agences.create', [
-            'delegations' => DelegationTechnique::query()
-                ->orderBy('region')
-                ->orderBy('ville')
-                ->get(),
-            'caisses' => Caisse::query()
-                ->with('agences')
-                ->orderBy('nom')
-                ->get(),
-        ]);
+        return view('admin.agences.create', $this->formData());
     }
 
     public function store(Request $request): RedirectResponse
@@ -66,29 +51,17 @@ class AgenceController extends Controller
                     $query->where('delegation_technique_id', $request->integer('delegation_technique_id'));
                 }),
             ],
-            'chef_nom' => ['required', 'string', 'max:255'],
-            'chef_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'chef_email'), 'different:secretaire_email'],
-            'chef_telephone' => ['required', 'string', 'max:30', Rule::unique('agences', 'chef_telephone'), 'different:secretaire_telephone'],
-            'secretaire_nom' => ['required', 'string', 'max:255'],
-            'secretaire_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'secretaire_email'), 'different:chef_email'],
-            'secretaire_telephone' => ['required', 'string', 'max:30', Rule::unique('agences', 'secretaire_telephone'), 'different:chef_telephone'],
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
-            'superviseur_caisse_id' => [
+            'superviseur_caisse_id'   => [
                 'required',
                 'integer',
                 Rule::exists('caisses', 'id')->where('delegation_technique_id', $request->integer('delegation_technique_id')),
             ],
+            'chef_agent_id'       => ['nullable', 'integer', 'exists:agents,id'],
+            'secretaire_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ], [
             'nom.unique' => 'Cette agence existe deja pour la delegation technique selectionnee.',
-            'chef_email.unique' => 'Cet email du chef est deja utilise.',
-            'secretaire_email.unique' => 'Cet email du secretaire est deja utilise.',
-            'chef_telephone.unique' => 'Ce telephone du chef est deja utilise.',
-            'secretaire_telephone.unique' => 'Ce telephone du secretaire est deja utilise.',
-            'chef_email.different' => 'Le mail du chef doit etre different de celui du secretaire.',
-            'secretaire_email.different' => 'Le mail du secretaire doit etre different de celui du chef.',
-            'chef_telephone.different' => 'Le telephone du chef doit etre different de celui du secretaire.',
-            'secretaire_telephone.different' => 'Le telephone du secretaire doit etre different de celui du chef.',
-            'superviseur_caisse_id.required' => 'Veuillez choisir un directeur de caisse superviseur.',
+            'superviseur_caisse_id.required' => 'Veuillez choisir une caisse superviseur.',
             'superviseur_caisse_id.exists' => 'La caisse choisie n\'appartient pas a la delegation technique selectionnee.',
         ]);
 
@@ -108,11 +81,20 @@ class AgenceController extends Controller
 
     public function edit(Agence $agence): View
     {
-        return view('admin.agences.edit', [
-            'agence' => $agence,
+        return view('admin.agences.edit', array_merge(
+            $this->formData(),
+            ['agence' => $agence]
+        ));
+    }
+
+    private function formData(): array
+    {
+        return [
             'delegations' => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
-            'caisses' => Caisse::query()->with('superviseur.delegationTechnique')->orderBy('nom')->get(),
-        ]);
+            'caisses'     => Caisse::query()->with('agences')->orderBy('nom')->get(),
+            'chefs'       => Agent::query()->where('fonction', "Chef d'Agence")->orderBy('nom')->orderBy('prenom')->get(),
+            'secretaires' => Agent::query()->where('fonction', "Secrétaire d'Agence")->orderBy('nom')->orderBy('prenom')->get(),
+        ];
     }
 
     public function update(Request $request, Agence $agence): RedirectResponse
@@ -126,14 +108,10 @@ class AgenceController extends Controller
                     $query->where('delegation_technique_id', $request->integer('delegation_technique_id'));
                 })->ignore($agence->id),
             ],
-            'chef_nom' => ['required', 'string', 'max:255'],
-            'chef_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'chef_email')->ignore($agence->id), 'different:secretaire_email'],
-            'chef_telephone' => ['required', 'string', 'max:30', Rule::unique('agences', 'chef_telephone')->ignore($agence->id), 'different:secretaire_telephone'],
-            'secretaire_nom' => ['required', 'string', 'max:255'],
-            'secretaire_email' => ['required', 'email', 'max:255', Rule::unique('agences', 'secretaire_email')->ignore($agence->id), 'different:chef_email'],
-            'secretaire_telephone' => ['required', 'string', 'max:30', Rule::unique('agences', 'secretaire_telephone')->ignore($agence->id), 'different:chef_telephone'],
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
-            'superviseur_caisse_id' => ['required', 'integer', 'exists:caisses,id'],
+            'superviseur_caisse_id'   => ['required', 'integer', 'exists:caisses,id'],
+            'chef_agent_id'           => ['nullable', 'integer', 'exists:agents,id'],
+            'secretaire_agent_id'     => ['nullable', 'integer', 'exists:agents,id'],
         ]);
 
         $agence->update($validated);
@@ -167,54 +145,27 @@ class AgenceController extends Controller
     {
         return view('admin.agences.agents.create', [
             'agence' => $agence->load(['delegationTechnique', 'superviseurCaisse']),
+            'agents' => Agent::query()
+                ->whereNull('agence_id')
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'fonction']),
         ]);
     }
 
     public function storeAgent(Request $request, Agence $agence): RedirectResponse
     {
         $validated = $request->validate([
-            'nom' => ['required', 'string', 'max:255'],
-            'prenom' => ['required', 'string', 'max:255'],
-            'sexe' => ['required', 'in:homme,femme'],
-            'fonction' => ['required', 'string', 'max:255'],
-            'date_debut_fonction' => ['required', 'date'],
-            'numero_telephone' => ['required', 'string', 'max:30', Rule::unique('agents', 'numero_telephone')],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'agent_id' => ['required', 'integer', 'exists:agents,id'],
+        ], [
+            'agent_id.required' => 'Veuillez sélectionner un agent.',
+            'agent_id.exists'   => 'Agent introuvable.',
         ]);
 
-        $plainPassword = Str::random(12);
-
-        $user = User::query()->create([
-            'name' => trim($validated['prenom'].' '.$validated['nom']),
-            'email' => $validated['email'],
-            'password' => Hash::make($plainPassword),
-            'role' => 'agent',
-        ]);
-
-        Agent::query()->create([
-            'user_id' => $user->id,
-            'agence_id' => $agence->id,
-            'service_id' => null,
-            'nom' => $validated['nom'],
-            'prenom' => $validated['prenom'],
-            'sexe' => $validated['sexe'],
-            'fonction' => $validated['fonction'],
-            'date_debut_fonction' => $validated['date_debut_fonction'],
-            'numero_telephone' => $validated['numero_telephone'],
-            'email' => $validated['email'],
-            'photo_path' => null,
-        ]);
-
-        Mail::to($user->email)->send(new WelcomeMail(
-            recipientName: $user->name,
-            recipientEmail: $user->email,
-            plainPassword: $plainPassword,
-            role: 'agent',
-            loginUrl: rtrim((string) config('app.url'), '/').'/login',
-        ));
+        $agent = Agent::findOrFail($validated['agent_id']);
+        $agent->update(['agence_id' => $agence->id]);
 
         return redirect()
             ->route('admin.agences.agents.index', $agence)
-            ->with('status', 'Agent cree avec succes pour cette agence.');
+            ->with('status', $agent->prenom.' '.$agent->nom.' affecté(e) à '.$agence->nom.'.');
     }
 }

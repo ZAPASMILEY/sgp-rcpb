@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AgentController;
 use App\Http\Controllers\Admin\AgenceController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\AlerteController;
 use App\Http\Controllers\Admin\CaisseController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -114,6 +115,15 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::put('/admin/services/{service}', [ServiceController::class, 'update'])->name('admin.services.update');
     Route::delete('/admin/services/{service}', [ServiceController::class, 'destroy'])->name('admin.services.destroy');
 
+    // Gestion des comptes utilisateurs
+    Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
+    Route::get('/admin/users/creer', [UserController::class, 'create'])->name('admin.users.create');
+    Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
+    Route::get('/admin/users/{user}/modifier', [UserController::class, 'edit'])->name('admin.users.edit');
+    Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
+    Route::post('/admin/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
+    Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+
     Route::get('/admin/agents', [AgentController::class, 'index'])->name('admin.agents.index');
     Route::get('/admin/agents/creer', [AgentController::class, 'create'])->name('admin.agents.create');
     Route::post('/admin/agents', [AgentController::class, 'store'])->name('admin.agents.store');
@@ -184,7 +194,19 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/parametres/utilisateurs/recherche', [SettingsController::class, 'searchUsers'])->name('admin.settings.users.search');
     Route::put('/admin/parametres/utilisateurs/mot-de-passe', [SettingsController::class, 'updateUserPassword'])->name('admin.settings.users.password.update');
     Route::put('/admin/parametres/utilisateurs/role', [SettingsController::class, 'updateUserRole'])->name('admin.settings.users.role.update');
+    Route::post('/admin/parametres/utilisateurs/{user}/permissions', [SettingsController::class, 'syncUserPermissions'])->name('admin.settings.users.permissions.sync');
+    Route::post('/admin/parametres/permissions', [SettingsController::class, 'storePermission'])->name('admin.settings.permissions.store');
+    Route::delete('/admin/parametres/permissions/{permission}', [SettingsController::class, 'destroyPermission'])->name('admin.settings.permissions.destroy');
+    Route::post('/admin/parametres/roles/{roleSlug}/permissions', [SettingsController::class, 'syncRolePermissions'])->name('admin.settings.roles.permissions.sync');
 });
+
+// Route accessible au PCA sans entité associée (évite la boucle middleware)
+Route::middleware(['auth'])->get('/pca/en-attente', function () {
+    if (!auth()->user()->isPca()) {
+        return redirect()->route('login');
+    }
+    return view('pca.pending');
+})->name('pca.pending');
 
 Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
