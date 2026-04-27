@@ -1,0 +1,469 @@
+@startuml SGP-RCPB — Diagramme de cas d'utilisation
+
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam ActorStyle awesome
+skinparam ArrowColor #334155
+skinparam ActorBorderColor #475569
+skinparam ActorFontColor #1e293b
+skinparam ActorFontSize 13
+skinparam UsecaseBorderColor #64748b
+skinparam UsecaseBackgroundColor #f8fafc
+skinparam UsecaseFontSize 12
+skinparam PackageBorderColor #94a3b8
+skinparam PackageBackgroundColor #f1f5f9
+skinparam PackageFontSize 13
+skinparam PackageFontStyle bold
+skinparam linetype ortho
+
+' ─────────────────────────────────────────────
+'  ACTEURS
+' ─────────────────────────────────────────────
+actor "Administrateur"         as Admin         #dbeafe
+actor "PCA"                    as PCA           #fef3c7
+actor "Directeur Général (DG)" as DG            #d1fae5
+actor "DGA"                    as DGA           #ede9fe
+actor "Assistante DG"          as AssistanteDG  #fce7f3
+actor "Conseiller DG"          as ConseillerDG  #e0e7ff
+actor "Directeur de Direction" as DirDirection  #cffafe
+actor "Directeur de Caisse"    as DirCaisse     #ffedd5
+actor "Directeur Technique"    as DirTechnique  #dcfce7
+actor "Chef de Service"        as ChefService   #e0e7ff
+actor "Chef d'Agence"          as ChefAgence    #fef9c3
+actor "Agent / Personnel"      as Agent         #f0fdf4
+
+' ─────────────────────────────────────────────
+'  UC TRANSVERSAL : AUTHENTIFICATION
+' ─────────────────────────────────────────────
+package "Authentification" {
+  usecase "Se connecter"              as UC_Login
+  usecase "Se déconnecter"            as UC_Logout
+  usecase "Changer mot de passe"      as UC_ChangePwd
+  usecase "Réinitialiser mot de passe\n(admin)" as UC_ResetPwd
+}
+
+Admin        --> UC_Login
+Admin        --> UC_Logout
+Admin        --> UC_ChangePwd
+Admin        --> UC_ResetPwd
+PCA          --> UC_Login
+PCA          --> UC_Logout
+PCA          --> UC_ChangePwd
+DG           --> UC_Login
+DG           --> UC_Logout
+DG           --> UC_ChangePwd
+DGA          --> UC_Login
+DGA          --> UC_Logout
+DGA          --> UC_ChangePwd
+AssistanteDG --> UC_Login
+AssistanteDG --> UC_Logout
+AssistanteDG --> UC_ChangePwd
+ConseillerDG --> UC_Login
+ConseillerDG --> UC_Logout
+DirDirection --> UC_Login
+DirDirection --> UC_Logout
+DirCaisse    --> UC_Login
+DirCaisse    --> UC_Logout
+DirTechnique --> UC_Login
+DirTechnique --> UC_Logout
+ChefService  --> UC_Login
+ChefService  --> UC_Logout
+ChefAgence   --> UC_Login
+ChefAgence   --> UC_Logout
+Agent        --> UC_Login
+Agent        --> UC_Logout
+
+' ─────────────────────────────────────────────
+'  UC ADMINISTRATION
+' ─────────────────────────────────────────────
+package "Administration" {
+
+  package "Gestion des comptes" {
+    usecase "Créer un compte utilisateur"    as UC_CreateUser
+    usecase "Modifier un compte utilisateur" as UC_EditUser
+    usecase "Supprimer un compte"            as UC_DeleteUser
+    usecase "Attribuer un rôle"              as UC_AssignRole
+    usecase "Réinitialiser un mot de passe"  as UC_ResetUserPwd
+    usecase "Gérer les permissions"          as UC_ManagePerms
+  }
+
+  package "Gestion des agents" {
+    usecase "Créer un agent"     as UC_CreateAgent
+    usecase "Modifier un agent"  as UC_EditAgent
+    usecase "Supprimer un agent" as UC_DeleteAgent
+  }
+
+  package "Structure organisationnelle" {
+    usecase "Configurer la faîtière"         as UC_ConfigEntite
+    usecase "Gérer la Direction Générale"    as UC_ConfigDG
+    usecase "Gérer les directions"           as UC_ManageDirections
+    usecase "Gérer les services"             as UC_ManageServices
+    usecase "Gérer les délégations tech."    as UC_ManageDT
+    usecase "Gérer les caisses"              as UC_ManageCaisses
+    usecase "Gérer les agences"              as UC_ManageAgences
+    usecase "Gérer les guichets"             as UC_ManageGuichets
+  }
+
+  package "Paramètres système" {
+    usecase "Gérer les rôles (catalogue)"    as UC_ManageRoles
+    usecase "Consulter le journal d'activité" as UC_AuditLog
+    usecase "Consulter les alertes"          as UC_Alertes
+    usecase "Paramétrer l'apparence"         as UC_Appearance
+    usecase "Tableau de bord admin"          as UC_AdminDash
+  }
+
+  package "Évaluations & Objectifs (admin)" {
+    usecase "Consulter toutes les évaluations" as UC_Admin_ViewEvals
+    usecase "Consulter tous les objectifs"     as UC_Admin_ViewObjs
+    usecase "Consulter les statistiques"       as UC_Admin_Stats
+  }
+}
+
+Admin --> UC_CreateUser
+Admin --> UC_EditUser
+Admin --> UC_DeleteUser
+Admin --> UC_AssignRole
+Admin --> UC_ResetUserPwd
+Admin --> UC_ManagePerms
+Admin --> UC_CreateAgent
+Admin --> UC_EditAgent
+Admin --> UC_DeleteAgent
+Admin --> UC_ConfigEntite
+Admin --> UC_ConfigDG
+Admin --> UC_ManageDirections
+Admin --> UC_ManageServices
+Admin --> UC_ManageDT
+Admin --> UC_ManageCaisses
+Admin --> UC_ManageAgences
+Admin --> UC_ManageGuichets
+Admin --> UC_ManageRoles
+Admin --> UC_AuditLog
+Admin --> UC_Alertes
+Admin --> UC_Appearance
+Admin --> UC_AdminDash
+Admin --> UC_Admin_ViewEvals
+Admin --> UC_Admin_ViewObjs
+Admin --> UC_Admin_Stats
+
+' ─────────────────────────────────────────────
+'  UC PCA — PILOTAGE DG
+' ─────────────────────────────────────────────
+package "Espace PCA" {
+
+  usecase "Tableau de bord PCA"              as UC_PCA_Dashboard
+  usecase "Consulter les statistiques"       as UC_PCA_Stats
+
+  package "Objectifs DG (PCA)" {
+    usecase "Créer une fiche d'objectifs DG"  as UC_PCA_CreateObj
+    usecase "Consulter les fiches d'objectifs" as UC_PCA_ViewObj
+    usecase "Télécharger le contrat PDF"      as UC_PCA_ExportObjPDF
+  }
+
+  package "Évaluations DG (PCA)" {
+    usecase "Créer une fiche d'évaluation DG" as UC_PCA_CreateEval
+    usecase "Consulter les évaluations DG"    as UC_PCA_ViewEval
+    usecase "Soumettre une évaluation"        as UC_PCA_SubmitEval
+    usecase "Valider une évaluation DG"       as UC_PCA_ValidEval
+    usecase "Refuser une évaluation DG"       as UC_PCA_RefuseEval
+    usecase "Exporter l'évaluation en PDF"    as UC_PCA_ExportPDF
+  }
+}
+
+PCA --> UC_PCA_Dashboard
+PCA --> UC_PCA_Stats
+PCA --> UC_PCA_CreateObj
+PCA --> UC_PCA_ViewObj
+PCA --> UC_PCA_ExportObjPDF
+PCA --> UC_PCA_CreateEval
+PCA --> UC_PCA_ViewEval
+PCA --> UC_PCA_SubmitEval
+PCA --> UC_PCA_ValidEval
+PCA --> UC_PCA_RefuseEval
+PCA --> UC_PCA_ExportPDF
+
+' ─────────────────────────────────────────────
+'  UC DG — MON ESPACE + PILOTAGE
+' ─────────────────────────────────────────────
+package "Espace Directeur Général" {
+
+  usecase "Tableau de bord DG"                    as UC_DG_Dashboard
+  usecase "Consulter ses évaluations reçues"       as UC_DG_ViewEvalRecue
+  usecase "Commenter / signer son évaluation"      as UC_DG_SignEval
+  usecase "Consulter son dossier personnel"        as UC_DG_MonEspace
+
+  package "Objectifs stratégiques (DG)" {
+    usecase "Consulter ses fiches d'objectifs"     as UC_DG_ViewObjStrat
+    usecase "Accepter / Refuser une fiche"         as UC_DG_StatutFiche
+    usecase "Mettre à jour l'avancement"           as UC_DG_SuiviObj
+    usecase "Télécharger le contrat d'objectifs"   as UC_DG_ExportObjPDF
+  }
+
+  package "Pilotage Directions" {
+    usecase "Consulter les directions"             as UC_DG_ViewDirections
+    usecase "Évaluer un directeur"                 as UC_DG_EvalDir
+    usecase "Consulter les évaluations directeurs" as UC_DG_ViewEvalDir
+    usecase "Assigner des objectifs à un directeur" as UC_DG_AssignObjDir
+    usecase "Exporter évaluation directeur PDF"    as UC_DG_ExportEvalDir
+  }
+
+  package "Pilotage Subordonnes DG" {
+    usecase "Consulter le dossier DGA"             as UC_DG_ViewDGA
+    usecase "Consulter le dossier Assistante"      as UC_DG_ViewAssistante
+    usecase "Consulter les dossiers Conseillers"   as UC_DG_ViewConseillers
+    usecase "Assigner une fiche d'objectifs (DGA/Assistante/Conseiller)" as UC_DG_AssignObjSub
+    usecase "Évaluer un subordonné DG"             as UC_DG_EvalSub
+    usecase "Consulter les évaluations subordonnes" as UC_DG_ViewEvalSub
+  }
+
+  package "Réseau" {
+    usecase "Consulter le réseau (DT/Caisses/Agences)" as UC_DG_ViewReseau
+    usecase "Consulter le personnel"               as UC_DG_ViewPersonnel
+  }
+}
+
+DG --> UC_DG_Dashboard
+DG --> UC_DG_ViewEvalRecue
+DG --> UC_DG_SignEval
+DG --> UC_DG_MonEspace
+DG --> UC_DG_ViewObjStrat
+DG --> UC_DG_StatutFiche
+DG --> UC_DG_SuiviObj
+DG --> UC_DG_ExportObjPDF
+DG --> UC_DG_ViewDirections
+DG --> UC_DG_EvalDir
+DG --> UC_DG_ViewEvalDir
+DG --> UC_DG_AssignObjDir
+DG --> UC_DG_ExportEvalDir
+DG --> UC_DG_ViewDGA
+DG --> UC_DG_ViewAssistante
+DG --> UC_DG_ViewConseillers
+DG --> UC_DG_AssignObjSub
+DG --> UC_DG_EvalSub
+DG --> UC_DG_ViewEvalSub
+DG --> UC_DG_ViewReseau
+DG --> UC_DG_ViewPersonnel
+
+' ─────────────────────────────────────────────
+'  UC DGA
+' ─────────────────────────────────────────────
+package "Espace DGA" {
+  usecase "Tableau de bord DGA"                    as UC_DGA_Dashboard
+  usecase "Consulter ses évaluations reçues"       as UC_DGA_ViewEval
+  usecase "Commenter / signer son évaluation"      as UC_DGA_SignEval
+  usecase "Exporter son évaluation en PDF"         as UC_DGA_ExportEval
+  usecase "Consulter sa fiche d'objectifs"         as UC_DGA_ViewFiche
+  usecase "Accepter / Refuser sa fiche"            as UC_DGA_StatutFiche
+  usecase "Mettre à jour l'avancement"             as UC_DGA_SuiviObj
+  usecase "Télécharger le contrat d'objectifs"     as UC_DGA_ExportObjPDF
+}
+
+DGA --> UC_DGA_Dashboard
+DGA --> UC_DGA_ViewEval
+DGA --> UC_DGA_SignEval
+DGA --> UC_DGA_ExportEval
+DGA --> UC_DGA_ViewFiche
+DGA --> UC_DGA_StatutFiche
+DGA --> UC_DGA_SuiviObj
+DGA --> UC_DGA_ExportObjPDF
+
+' ─────────────────────────────────────────────
+'  UC ASSISTANTE DG & CONSEILLERS DG
+' ─────────────────────────────────────────────
+package "Espace Assistante DG / Conseiller DG" {
+  usecase "Tableau de bord"                        as UC_Sub_Dashboard
+  usecase "Consulter ses évaluations reçues"       as UC_Sub_ViewEval
+  usecase "Commenter / signer son évaluation"      as UC_Sub_SignEval
+  usecase "Exporter son évaluation en PDF"         as UC_Sub_ExportEval
+  usecase "Consulter sa fiche d'objectifs"         as UC_Sub_ViewFiche
+  usecase "Accepter / Refuser sa fiche"            as UC_Sub_StatutFiche
+  usecase "Mettre à jour l'avancement"             as UC_Sub_SuiviObj
+  usecase "Télécharger le contrat d'objectifs"     as UC_Sub_ExportObjPDF
+}
+
+AssistanteDG --> UC_Sub_Dashboard
+AssistanteDG --> UC_Sub_ViewEval
+AssistanteDG --> UC_Sub_SignEval
+AssistanteDG --> UC_Sub_ExportEval
+AssistanteDG --> UC_Sub_ViewFiche
+AssistanteDG --> UC_Sub_StatutFiche
+AssistanteDG --> UC_Sub_SuiviObj
+AssistanteDG --> UC_Sub_ExportObjPDF
+
+ConseillerDG --> UC_Sub_Dashboard
+ConseillerDG --> UC_Sub_ViewEval
+ConseillerDG --> UC_Sub_SignEval
+ConseillerDG --> UC_Sub_ExportEval
+ConseillerDG --> UC_Sub_ViewFiche
+ConseillerDG --> UC_Sub_StatutFiche
+ConseillerDG --> UC_Sub_SuiviObj
+ConseillerDG --> UC_Sub_ExportObjPDF
+
+' ─────────────────────────────────────────────
+'  UC DIRECTEURS (Direction / Caisse / DT)
+' ─────────────────────────────────────────────
+package "Espace Directeur" {
+
+  usecase "Tableau de bord directeur"              as UC_Dir_Dashboard
+  usecase "Consulter ses évaluations reçues"       as UC_Dir_ViewEval
+  usecase "Commenter / signer son évaluation"      as UC_Dir_SignEval
+  usecase "Consulter son dossier"                  as UC_Dir_MonEspace
+  usecase "Consulter les objectifs de sa structure" as UC_Dir_ViewObj
+
+  package "Objectifs directeur" {
+    usecase "Consulter sa fiche d'objectifs"       as UC_Dir_ViewFiche
+    usecase "Accepter / Refuser sa fiche"          as UC_Dir_StatutFiche
+    usecase "Mettre à jour l'avancement"           as UC_Dir_SuiviObj
+    usecase "Télécharger le contrat d'objectifs"   as UC_Dir_ExportObjPDF
+  }
+
+  package "Pilotage des chefs" {
+    usecase "Consulter le dossier d'un chef"       as UC_Dir_ViewChef
+    usecase "Assigner une fiche d'objectifs (chef)" as UC_Dir_AssignObjChef
+    usecase "Évaluer un chef de service / agence"  as UC_Dir_EvalChef
+    usecase "Consulter les évaluations des chefs"  as UC_Dir_ViewEvalChef
+    usecase "Exporter évaluation chef PDF"         as UC_Dir_ExportEvalChef
+  }
+
+  usecase "Consulter le personnel"                 as UC_Dir_ViewPersonnel
+}
+
+DirDirection --> UC_Dir_Dashboard
+DirDirection --> UC_Dir_ViewEval
+DirDirection --> UC_Dir_SignEval
+DirDirection --> UC_Dir_MonEspace
+DirDirection --> UC_Dir_ViewObj
+DirDirection --> UC_Dir_ViewFiche
+DirDirection --> UC_Dir_StatutFiche
+DirDirection --> UC_Dir_SuiviObj
+DirDirection --> UC_Dir_ExportObjPDF
+DirDirection --> UC_Dir_ViewChef
+DirDirection --> UC_Dir_AssignObjChef
+DirDirection --> UC_Dir_EvalChef
+DirDirection --> UC_Dir_ViewEvalChef
+DirDirection --> UC_Dir_ExportEvalChef
+DirDirection --> UC_Dir_ViewPersonnel
+
+DirCaisse    --> UC_Dir_Dashboard
+DirCaisse    --> UC_Dir_ViewEval
+DirCaisse    --> UC_Dir_SignEval
+DirCaisse    --> UC_Dir_MonEspace
+DirCaisse    --> UC_Dir_ViewFiche
+DirCaisse    --> UC_Dir_StatutFiche
+DirCaisse    --> UC_Dir_SuiviObj
+DirCaisse    --> UC_Dir_ViewChef
+DirCaisse    --> UC_Dir_AssignObjChef
+DirCaisse    --> UC_Dir_EvalChef
+DirCaisse    --> UC_Dir_ViewEvalChef
+
+DirTechnique --> UC_Dir_Dashboard
+DirTechnique --> UC_Dir_ViewEval
+DirTechnique --> UC_Dir_SignEval
+DirTechnique --> UC_Dir_MonEspace
+DirTechnique --> UC_Dir_ViewFiche
+DirTechnique --> UC_Dir_StatutFiche
+DirTechnique --> UC_Dir_SuiviObj
+DirTechnique --> UC_Dir_ViewChef
+DirTechnique --> UC_Dir_AssignObjChef
+DirTechnique --> UC_Dir_EvalChef
+DirTechnique --> UC_Dir_ViewEvalChef
+
+' ─────────────────────────────────────────────
+'  UC CHEFS (Service / Agence / Guichet)
+' ─────────────────────────────────────────────
+package "Espace Chef de service / Agence" {
+  usecase "Tableau de bord chef"                   as UC_Chef_Dashboard
+  usecase "Consulter ses évaluations reçues"       as UC_Chef_ViewEval
+  usecase "Commenter / signer son évaluation"      as UC_Chef_SignEval
+  usecase "Consulter son dossier"                  as UC_Chef_MonEspace
+  usecase "Consulter sa fiche d'objectifs"         as UC_Chef_ViewFiche
+  usecase "Accepter / Refuser sa fiche"            as UC_Chef_StatutFiche
+  usecase "Mettre à jour l'avancement"             as UC_Chef_SuiviObj
+
+  package "Pilotage des agents" {
+    usecase "Consulter le dossier d'un agent"      as UC_Chef_ViewAgent
+    usecase "Assigner une fiche d'objectifs (agent)" as UC_Chef_AssignObjAgent
+    usecase "Évaluer un agent"                     as UC_Chef_EvalAgent
+    usecase "Consulter les évaluations des agents" as UC_Chef_ViewEvalAgent
+    usecase "Exporter évaluation agent PDF"        as UC_Chef_ExportEvalAgent
+  }
+}
+
+ChefService --> UC_Chef_Dashboard
+ChefService --> UC_Chef_ViewEval
+ChefService --> UC_Chef_SignEval
+ChefService --> UC_Chef_MonEspace
+ChefService --> UC_Chef_ViewFiche
+ChefService --> UC_Chef_StatutFiche
+ChefService --> UC_Chef_SuiviObj
+ChefService --> UC_Chef_ViewAgent
+ChefService --> UC_Chef_AssignObjAgent
+ChefService --> UC_Chef_EvalAgent
+ChefService --> UC_Chef_ViewEvalAgent
+ChefService --> UC_Chef_ExportEvalAgent
+
+ChefAgence  --> UC_Chef_Dashboard
+ChefAgence  --> UC_Chef_ViewEval
+ChefAgence  --> UC_Chef_SignEval
+ChefAgence  --> UC_Chef_MonEspace
+ChefAgence  --> UC_Chef_ViewFiche
+ChefAgence  --> UC_Chef_StatutFiche
+ChefAgence  --> UC_Chef_SuiviObj
+ChefAgence  --> UC_Chef_ViewAgent
+ChefAgence  --> UC_Chef_AssignObjAgent
+ChefAgence  --> UC_Chef_EvalAgent
+ChefAgence  --> UC_Chef_ViewEvalAgent
+ChefAgence  --> UC_Chef_ExportEvalAgent
+
+' ─────────────────────────────────────────────
+'  UC AGENT / PERSONNEL
+' ─────────────────────────────────────────────
+package "Espace Agent / Personnel" {
+  usecase "Tableau de bord"                        as UC_Agent_Dashboard
+  usecase "Consulter ses évaluations reçues"       as UC_Agent_ViewEval
+  usecase "Commenter / signer son évaluation"      as UC_Agent_SignEval
+  usecase "Consulter sa fiche d'objectifs"         as UC_Agent_ViewFiche
+  usecase "Accepter / Refuser sa fiche"            as UC_Agent_StatutFiche
+  usecase "Mettre à jour l'avancement"             as UC_Agent_SuiviObj
+  usecase "Gérer son profil"                       as UC_Agent_Profile
+  usecase "Consulter les alertes"                  as UC_Agent_Alertes
+}
+
+Agent --> UC_Agent_Dashboard
+Agent --> UC_Agent_ViewEval
+Agent --> UC_Agent_SignEval
+Agent --> UC_Agent_ViewFiche
+Agent --> UC_Agent_StatutFiche
+Agent --> UC_Agent_SuiviObj
+Agent --> UC_Agent_Profile
+Agent --> UC_Agent_Alertes
+
+' ─────────────────────────────────────────────
+'  RELATIONS <<include>> & <<extend>>
+' ─────────────────────────────────────────────
+' Authentification requise pour toutes les actions sensibles
+UC_PCA_CreateEval   ..> UC_Login          : <<include>>
+UC_DG_EvalDir       ..> UC_Login          : <<include>>
+UC_Dir_EvalChef     ..> UC_Login          : <<include>>
+UC_Chef_EvalAgent   ..> UC_Login          : <<include>>
+UC_DG_EvalSub       ..> UC_Login          : <<include>>
+
+' Extensions logiques
+UC_PCA_ValidEval    ..> UC_PCA_SubmitEval : <<extend>>
+UC_PCA_RefuseEval   ..> UC_PCA_SubmitEval : <<extend>>
+UC_PCA_ExportPDF    ..> UC_PCA_ViewEval   : <<include>>
+UC_PCA_ExportObjPDF ..> UC_PCA_ViewObj    : <<include>>
+
+UC_DG_ExportEvalDir ..> UC_DG_EvalDir     : <<include>>
+UC_DG_ExportObjPDF  ..> UC_DG_ViewObjStrat : <<include>>
+
+UC_DGA_ExportEval   ..> UC_DGA_ViewEval   : <<include>>
+UC_DGA_ExportObjPDF ..> UC_DGA_ViewFiche  : <<include>>
+
+UC_Dir_ExportObjPDF ..> UC_Dir_ViewFiche  : <<include>>
+UC_Dir_ExportEvalChef ..> UC_Dir_EvalChef : <<include>>
+
+UC_Chef_ExportEvalAgent ..> UC_Chef_EvalAgent : <<include>>
+
+UC_ResetUserPwd     ..> UC_EditUser       : <<extend>>
+
+@enduml
