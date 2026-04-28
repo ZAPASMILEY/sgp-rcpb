@@ -8,25 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('fiche_objectif_objectifs', function (Blueprint $table) {
+        Schema::create('lignes_fiche_objectif', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('fiche_objectif_id')->constrained('fiche_objectifs')->onDelete('cascade');
-            
-            // AJOUT : Lien vers l'objectif stratégique parent
-            $table->foreignId('objectif_id')->nullable()->constrained('objectifs')->nullOnDelete();
-            
-            $table->string('libelle');
-            $table->text('indicateur_performance')->nullable(); 
-            $table->unsignedInteger('poids')->default(0); 
-            $table->decimal('note_obtenue', 5, 2)->default(0); 
-            
-            $table->text('description')->nullable();
+            $table->foreignId('fiche_objectif_id')->constrained('fiche_objectifs')->cascadeOnDelete();
+            $table->text('description');
+            $table->decimal('note_obtenue', 5, 2)->default(0);
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('fiche_objectif_objectifs');
+        Schema::dropIfExists('lignes_fiche_objectif');
     }
 };

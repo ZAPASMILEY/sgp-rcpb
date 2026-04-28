@@ -12,6 +12,24 @@ class Entite extends Model
 {
     use HasFactory;
 
+    /**
+     * La faîtière est unique : une seule ligne peut exister dans cette table.
+     * La colonne `singleton` (valeur 1, contrainte UNIQUE) l'impose en base ;
+     * ce boot() l'impose au niveau applicatif pour des messages d'erreur clairs.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (): void {
+            if (static::query()->exists()) {
+                throw new \RuntimeException(
+                    'La table entites ne peut contenir qu\'une seule ligne (faîtière unique).'
+                );
+            }
+        });
+    }
+
     protected $fillable = [
         'nom',
         'ville',

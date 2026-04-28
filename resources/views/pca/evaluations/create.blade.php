@@ -517,11 +517,11 @@
 
             function renderSubcriterion(path, parentIndex, subcriterion, subIndex, min, max) {
                 const wrapper = document.createElement('div');
-                wrapper.className = 'grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.6fr_120px_1fr_auto]';
+                wrapper.className = 'grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 grid-cols-[1.6fr_100px_1fr_auto]';
                 wrapper.innerHTML = `
                     <input type="hidden" name="${subFieldName(path, parentIndex, subIndex, 'source_fiche_objectif_objectif_id')}" value="${subcriterion.source_fiche_objectif_objectif_id ?? ''}">
                     <input type="text" name="${subFieldName(path, parentIndex, subIndex, 'libelle')}" value="${subcriterion.libelle ?? ''}" class="ent-input" placeholder="Sous-critere">
-                    <input type="number" step="1" min="${min}" max="${max}" name="${subFieldName(path, parentIndex, subIndex, 'note')}" value="${subcriterion.note ?? min}" class="ent-input" placeholder="Note">
+                    <input type="number" step="1" min="${min}" max="${max}" name="${subFieldName(path, parentIndex, subIndex, 'note')}" value="${subcriterion.note ?? min}" class="ent-input" placeholder="Note" oninput="this.value=Math.min(Math.max(parseInt(this.value)||${min},${min}),${max})">
                     <input type="text" name="${subFieldName(path, parentIndex, subIndex, 'observation')}" value="${subcriterion.observation ?? ''}" class="ent-input" placeholder="Observation">
                     <button type="button" class="ent-btn ent-btn-soft" data-remove-subcriterion>Supprimer</button>
                 `;

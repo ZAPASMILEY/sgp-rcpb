@@ -53,6 +53,7 @@
                                 <th class="px-4 py-3 text-center">Directions</th>
                                 <th class="px-4 py-3 text-center">Caisses</th>
                                 <th class="px-4 py-3 text-center">Agences</th>
+                                <th class="px-4 py-3 text-center">Note</th>
                                 <th class="px-4 py-3 text-center">Action</th>
                             </tr>
                         </thead>
@@ -76,6 +77,9 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <span class="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-black text-sky-700">{{ $dt->agences_count }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="text-xs font-bold text-slate-300">—</span>
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <a href="{{ route('dg.delegations.show', $dt) }}" class="ent-btn ent-btn-soft py-1 px-3 text-xs">

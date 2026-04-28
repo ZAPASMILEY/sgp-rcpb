@@ -12,6 +12,8 @@ return new class extends Migration
 
         Schema::create('entites', function (Blueprint $table): void {
             $table->id();
+            $table->tinyInteger('singleton')->unsigned()->default(1)
+                  ->comment('Valeur toujours 1. Contrainte UNIQUE garantit une seule ligne.');
             $table->string('nom')->unique();
             $table->string('ville');
             $table->string('region')->nullable();
@@ -24,6 +26,8 @@ return new class extends Migration
             $table->foreignId('assistante_agent_id')->nullable()->constrained('agents')->nullOnDelete();
 
             $table->timestamps();
+
+            $table->unique('singleton');
         });
 
         Schema::enableForeignKeyConstraints();

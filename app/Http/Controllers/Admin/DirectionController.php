@@ -125,6 +125,26 @@ class DirectionController extends Controller
         ]);
     }
 
+    public function delegationsIndex(): View
+    {
+        $delegations = DelegationTechnique::query()
+            ->withCount(['caisses', 'agents'])
+            ->orderBy('region')
+            ->get();
+
+        $stats = [
+            'delegations' => $delegations->count(),
+            'caisses'     => $delegations->sum('caisses_count'),
+            'agents'      => $delegations->sum('agents_count'),
+            'services'    => \App\Models\Service::whereNotNull('delegation_technique_id')->count(),
+        ];
+
+        return view('admin.delegations_techniques.index', array_merge(compact('delegations', 'stats'), [
+            'directeurs_caisse' => \App\Models\Agent::where('fonction', 'Directeur de Caisse')->orderBy('nom')->get(),
+            'secretaires_caisse' => \App\Models\Agent::where('fonction', 'Secrétaire de Caisse')->orderBy('nom')->get(),
+        ]));
+    }
+
     public function index(): View
     {
         $entite = Entite::with(['pca', 'dg', 'dga'])->latest()->first();

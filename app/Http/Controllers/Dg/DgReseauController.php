@@ -21,7 +21,7 @@ class DgReseauController extends Controller
     private function checkDg(): void
     {
         $user = Auth::user();
-        if (! $user || strtolower($user->role) !== 'dg') {
+        if (! $user || $user->role !== 'DG') {
             abort(403);
         }
     }
@@ -201,7 +201,7 @@ class DgReseauController extends Controller
         $search   = trim((string) $request->get('search', ''));
         $caisseId = (int) $request->get('caisse', 0);
 
-        $query = Agence::with(['superviseurCaisse', 'delegationTechnique'])
+        $query = Agence::with(['caisse', 'delegationTechnique'])
             ->withCount(['agents', 'guichets'])
             ->orderBy('nom');
 
@@ -226,7 +226,7 @@ class DgReseauController extends Controller
     {
         $this->checkDg();
 
-        $agence->load(['superviseurCaisse', 'delegationTechnique', 'guichets']);
+        $agence->load(['caisse', 'delegationTechnique', 'guichets']);
 
         $agentIds = Agent::where('agence_id', $agence->id)->pluck('id')->all();
 
@@ -253,7 +253,7 @@ class DgReseauController extends Controller
         $search   = trim((string) $request->get('search', ''));
         $agenceId = (int) $request->get('agence', 0);
 
-        $query = Guichet::with('agence.superviseurCaisse')
+        $query = Guichet::with('agence.caisse')
             ->orderBy('nom');
 
         if ($search !== '') {
@@ -277,7 +277,7 @@ class DgReseauController extends Controller
     {
         $this->checkDg();
 
-        $guichet->load('agence.superviseurCaisse');
+        $guichet->load('agence.caisse');
 
         // Les agents appartiennent à l'agence du guichet
         $agentIds = Agent::where('agence_id', $guichet->agence_id)->pluck('id')->all();

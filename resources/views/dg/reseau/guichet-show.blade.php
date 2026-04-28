@@ -13,7 +13,7 @@
                     <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">{{ $guichet->nom }}</h1>
                     <p class="mt-1 text-sm text-slate-500">
                         Agence : {{ $guichet->agence?->nom ?? '—' }}
-                        — Caisse : {{ $guichet->agence?->superviseurCaisse?->nom ?? '—' }}
+                        — Caisse : {{ $guichet->agence?->caisse?->nom ?? '—' }}
                     </p>
                 </div>
                 <div class="flex shrink-0 flex-wrap items-center gap-2">

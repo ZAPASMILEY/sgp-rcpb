@@ -306,8 +306,8 @@
 
         function renderSubcriterion(path, parentIdx, sub, subIdx) {
             const w = document.createElement('div');
-            w.className = 'grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1.6fr_120px_1fr_auto]';
-            w.innerHTML = `<input type="hidden" name="${path}[${parentIdx}][subcriteria][${subIdx}][source_fiche_objectif_objectif_id]" value="${sub.source_fiche_objectif_objectif_id ?? ''}"><input type="text" name="${path}[${parentIdx}][subcriteria][${subIdx}][libelle]" value="${escapeHtml(sub.libelle ?? '')}" class="ent-input" placeholder="Sous-critère"><input type="number" name="${path}[${parentIdx}][subcriteria][${subIdx}][note]" value="${sub.note ?? 1}" min="1" max="5" step="1" class="ent-input" placeholder="Note"><input type="text" name="${path}[${parentIdx}][subcriteria][${subIdx}][observation]" value="${escapeHtml(sub.observation ?? '')}" class="ent-input" placeholder="Observation"><button type="button" class="ent-btn ent-btn-soft" data-remove-sub>Supprimer</button>`;
+            w.className = 'grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 grid-cols-[1.6fr_100px_1fr_auto]';
+            w.innerHTML = `<input type="hidden" name="${path}[${parentIdx}][subcriteria][${subIdx}][source_fiche_objectif_objectif_id]" value="${sub.source_fiche_objectif_objectif_id ?? ''}"><input type="text" name="${path}[${parentIdx}][subcriteria][${subIdx}][libelle]" value="${escapeHtml(sub.libelle ?? '')}" class="ent-input" placeholder="Sous-critère"><input type="number" name="${path}[${parentIdx}][subcriteria][${subIdx}][note]" value="${sub.note ?? 1}" min="1" max="5" step="1" class="ent-input" placeholder="Note" oninput="this.value=Math.min(Math.max(parseInt(this.value)||1,1),5)"><input type="text" name="${path}[${parentIdx}][subcriteria][${subIdx}][observation]" value="${escapeHtml(sub.observation ?? '')}" class="ent-input" placeholder="Observation"><button type="button" class="ent-btn ent-btn-soft" data-remove-sub>Supprimer</button>`;
             w.querySelector('[data-remove-sub]').addEventListener('click', () => { w.remove(); updateScoreSummary(); });
             return w;
         }

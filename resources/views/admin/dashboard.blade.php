@@ -196,8 +196,7 @@
                                     </div>
                                 </div>
                                 <div class="mt-3 text-[11px] font-semibold text-slate-500">
-                                    @php($leadDirection = $delegation->directions->first())
-                                    {{ $leadDirection ? trim(($leadDirection->directeur_prenom ?? '').' '.($leadDirection->directeur_nom ?? '')) : 'Aucun responsable charge' }}
+                                    {{ $delegation->directeur ? trim($delegation->directeur->prenom.' '.$delegation->directeur->nom) : 'Aucun responsable charge' }}
                                 </div>
                             </article>
                         @empty

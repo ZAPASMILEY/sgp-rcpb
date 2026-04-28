@@ -64,6 +64,7 @@
                                 <th class="px-4 py-3">Téléphone</th>
                                 <th class="px-4 py-3 text-center">Agents</th>
                                 <th class="px-4 py-3 text-center">Guichets</th>
+                                <th class="px-4 py-3 text-center">Note</th>
                                 <th class="px-4 py-3 text-center">Action</th>
                             </tr>
                         </thead>
@@ -71,7 +72,7 @@
                             @foreach ($agences as $agence)
                                 <tr class="hover:bg-slate-50/60 transition-colors">
                                     <td class="px-4 py-3 font-bold text-slate-900">{{ $agence->nom }}</td>
-                                    <td class="px-4 py-3 text-slate-500">{{ $agence->superviseurCaisse?->nom ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{ $agence->caisse?->nom ?? '—' }}</td>
                                     <td class="px-4 py-3">
                                         <p class="font-semibold">{{ $agence->chef_nom ?? '—' }}</p>
                                         <p class="text-xs text-slate-400">{{ $agence->chef_email }}</p>
@@ -82,6 +83,9 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <span class="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-black text-violet-700">{{ $agence->guichets_count }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="text-xs font-bold text-slate-300">—</span>
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <a href="{{ route('dg.agences.show', $agence) }}" class="ent-btn ent-btn-soft py-1 px-3 text-xs">

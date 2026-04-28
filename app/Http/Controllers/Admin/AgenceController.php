@@ -21,7 +21,8 @@ class AgenceController extends Controller
             'agences' => Agence::query()
                 ->with([
                     'delegationTechnique',
-                    'superviseurCaisse.superviseur.delegationTechnique',
+                    'caisse',
+                    'chef',
                 ])
                 ->latest()
                 ->paginate(12),
@@ -75,7 +76,7 @@ class AgenceController extends Controller
     public function show(Agence $agence): View
     {
         return view('admin.agences.show', [
-            'agence' => $agence->load(['delegationTechnique', 'superviseurCaisse']),
+            'agence' => $agence->load(['delegationTechnique', 'caisse', 'chef']),
         ]);
     }
 
@@ -133,7 +134,7 @@ class AgenceController extends Controller
     public function agentsIndex(Agence $agence): View
     {
         return view('admin.agences.agents.index', [
-            'agence' => $agence->load(['delegationTechnique', 'superviseurCaisse']),
+            'agence' => $agence->load(['delegationTechnique', 'caisse', 'chef']),
             'agents' => Agent::query()
                 ->where('agence_id', $agence->id)
                 ->latest()
@@ -144,7 +145,7 @@ class AgenceController extends Controller
     public function createAgent(Agence $agence): View
     {
         return view('admin.agences.agents.create', [
-            'agence' => $agence->load(['delegationTechnique', 'superviseurCaisse']),
+            'agence' => $agence->load(['delegationTechnique', 'caisse', 'chef']),
             'agents' => Agent::query()
                 ->whereNull('agence_id')
                 ->orderBy('nom')->orderBy('prenom')

@@ -12,7 +12,7 @@
                     <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Espace DG / Agences</p>
                     <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">{{ $agence->nom }}</h1>
                     <p class="mt-1 text-sm text-slate-500">
-                        Caisse : {{ $agence->superviseurCaisse?->nom ?? '—' }}
+                        Caisse : {{ $agence->caisse?->nom ?? '—' }}
                         — Délégation : {{ $agence->delegationTechnique?->region ?? '—' }}
                         — {{ $agence->guichets->count() }} guichet(s)
                     </p>

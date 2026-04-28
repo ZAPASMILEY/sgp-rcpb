@@ -63,6 +63,7 @@
                                 <th class="px-4 py-3">Caisse</th>
                                 <th class="px-4 py-3">Chef de guichet</th>
                                 <th class="px-4 py-3">Téléphone</th>
+                                <th class="px-4 py-3 text-center">Note</th>
                                 <th class="px-4 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
@@ -71,12 +72,15 @@
                                 <tr class="hover:bg-slate-50/60 transition-colors">
                                     <td class="px-4 py-3 font-bold text-slate-900">{{ $guichet->nom }}</td>
                                     <td class="px-4 py-3 text-slate-500">{{ $guichet->agence?->nom ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-slate-500">{{ $guichet->agence?->superviseurCaisse?->nom ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{ $guichet->agence?->caisse?->nom ?? '—' }}</td>
                                     <td class="px-4 py-3">
                                         <p class="font-semibold">{{ $guichet->chef_nom ?? '—' }}</p>
                                         <p class="text-xs text-slate-400">{{ $guichet->chef_email ?? '' }}</p>
                                     </td>
                                     <td class="px-4 py-3 text-slate-500">{{ $guichet->chef_telephone ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="text-xs font-bold text-slate-300">—</span>
+                                    </td>
                                     <td class="px-4 py-3 text-center">
                                         <a href="{{ route('dg.guichets.show', $guichet) }}" class="ent-btn ent-btn-soft py-1 px-3 text-xs">
                                             <i class="fas fa-eye mr-1"></i>Voir

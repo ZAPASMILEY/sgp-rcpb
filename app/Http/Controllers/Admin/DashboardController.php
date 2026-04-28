@@ -20,6 +20,7 @@ class DashboardController extends Controller
     public function __invoke(): View
     {
         $delegations = DelegationTechnique::query()
+            ->with('directeur')
             ->withCount(['agences', 'caisses'])
             ->latest()
             ->take(6)

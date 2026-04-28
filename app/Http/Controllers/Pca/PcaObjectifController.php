@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Pca;
 use App\Http\Controllers\Controller;
 use App\Models\Alerte;
 use App\Models\FicheObjectif;
-use App\Models\FicheObjectifObjectif;
+use App\Models\LigneFicheObjectif;
 use App\Models\Entite;
 use App\Models\Annee;
 use App\Models\Evaluation;
@@ -142,7 +142,7 @@ class PcaObjectifController extends Controller
 
         $fiche = FicheObjectif::create([
             'titre' => $validated['titre_fiche'],
-            'annee' => date('Y'),
+            'annee_id' => Annee::resolveIdForDate(now()),
             'assignable_type' => User::class,
             'assignable_id' => $dgUser->id,
             'date' => $date,
@@ -180,7 +180,7 @@ class PcaObjectifController extends Controller
             ->with('status', "Fiche d'objectifs creee avec succes pour le DG.");
     }
 
-    public function adjustProgress(Request $request, FicheObjectifObjectif $objectif): RedirectResponse
+    public function adjustProgress(Request $request, LigneFicheObjectif $objectif): RedirectResponse
     {
         $this->authorizeObjectif($objectif, $request->user()->agent?->entite_id);
 
@@ -242,7 +242,7 @@ class PcaObjectifController extends Controller
             ->with('status', 'La modification directe de cette fiche n\'est pas disponible.');
     }
 
-    private function authorizeObjectif(FicheObjectifObjectif $objectif, int $entiteId): void
+    private function authorizeObjectif(LigneFicheObjectif $objectif, int $entiteId): void
     {
         $fiche = $objectif->ficheObjectif;
         $dgUser = $this->getDGOfDirectionGenerale();
@@ -273,7 +273,7 @@ class PcaObjectifController extends Controller
         }
     }
 
-    private function isLockedByEvaluation(FicheObjectifObjectif $objectif): bool
+    private function isLockedByEvaluation(LigneFicheObjectif $objectif): bool
     {
         $fiche = $objectif->ficheObjectif;
 

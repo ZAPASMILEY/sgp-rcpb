@@ -19,7 +19,9 @@ class PcaDashboardController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        $entite = $request->user()->entite()->with(['objectifs', 'dg', 'dga', 'assistante'])->firstOrFail();
+        $entite = Entite::with(['objectifs', 'dg', 'dga', 'assistante'])
+            ->where('pca_agent_id', $request->user()->agent_id)
+            ->firstOrFail();
         $entiteId = $entite->id;
 
         // Find the DG user : entites.dg_agent_id → agents.id ← users.agent_id

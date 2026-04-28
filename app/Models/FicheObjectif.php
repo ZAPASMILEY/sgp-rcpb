@@ -26,7 +26,7 @@ class FicheObjectif extends Model
     // Relation avec les lignes d'objectifs (les détails de la fiche)
     public function objectifs(): HasMany
     {
-        return $this->hasMany(FicheObjectifObjectif::class);
+        return $this->hasMany(LigneFicheObjectif::class);
     }
 
     // Relation polymorphique (Agent, Service ou Agence)

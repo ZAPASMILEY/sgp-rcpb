@@ -216,6 +216,10 @@
                                 <dt class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Directions rattachees</dt>
                                 <dd class="mt-2 text-sm font-bold text-slate-800">{{ $directionsRattacheesCount }}</dd>
                             </div>
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm">
+                                <dt class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Note faîtière</dt>
+                                <dd class="mt-2 text-sm font-bold text-slate-300">— (à venir)</dd>
+                            </div>
                         </dl>
                     </div>
 

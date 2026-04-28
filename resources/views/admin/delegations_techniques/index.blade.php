@@ -446,6 +446,7 @@
                                         <p class="text-xs text-slate-400">
                                             <i class="fas fa-phone mr-1"></i>{{ $delegation->secretariat_telephone ?: 'Tél. non renseigné' }}
                                             &bull; {{ $delegation->caisses_count ?? 0 }} caisse(s)
+                                            &bull; <span class="font-bold text-slate-300">Note : —</span>
                                         </p>
                                     </div>
                                 </a>

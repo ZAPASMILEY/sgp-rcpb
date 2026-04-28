@@ -14,24 +14,28 @@ class Guichet extends Model
     protected $fillable = [
         'nom',
         'agence_id',
-        // Responsable : FK vers agent
-        'chef_agent_id',
+        'chef_agent_id', // FK vers la table agents
     ];
 
-    // ── Responsable ────────────────────────────────────────────────────────
-
+    /**
+     * Relation vers l'Agent qui est Chef de Guichet (FK Inverse)
+     */
     public function chef(): BelongsTo
     {
         return $this->belongsTo(Agent::class, 'chef_agent_id');
     }
 
-    // ── Hiérarchie ─────────────────────────────────────────────────────────
-
+    /**
+     * Relation vers l'Agence parente
+     */
     public function agence(): BelongsTo
     {
         return $this->belongsTo(Agence::class);
     }
 
+    /**
+     * Liste des agents affectés à ce guichet (FK Directe)
+     */
     public function agents(): HasMany
     {
         return $this->hasMany(Agent::class);

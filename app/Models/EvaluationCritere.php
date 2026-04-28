@@ -45,8 +45,8 @@ class EvaluationCritere extends Model
         return $this->belongsTo(FicheObjectif::class, 'source_fiche_objectif_id');
     }
 
-    public function ficheObjectifObjectif(): BelongsTo
+    public function ligneFicheObjectif(): BelongsTo
     {
-        return $this->belongsTo(FicheObjectifObjectif::class, 'source_fiche_objectif_objectif_id');
+        return $this->belongsTo(LigneFicheObjectif::class, 'source_fiche_objectif_objectif_id');
     }
 }

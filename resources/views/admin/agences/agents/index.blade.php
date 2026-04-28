@@ -20,8 +20,8 @@
                             @if ($agence->delegationTechnique)
                                 Delegation: {{ $agence->delegationTechnique->region }} / {{ $agence->delegationTechnique->ville }}
                             @endif
-                            @if ($agence->superviseurCaisse)
-                                - Superviseur caisse: {{ $agence->superviseurCaisse->directeur_nom }}
+                            @if ($agence->caisse)
+                                - Superviseur caisse: {{ $agence->caisse->directeur_nom }}
                             @endif
                         </p>
                     </div>

@@ -133,7 +133,7 @@ public function hasPermission(string $permissionName): bool
     // Rôles
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === 'Admin';
     }
 
     public function isPca(): bool

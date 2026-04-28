@@ -36,7 +36,7 @@ class DirectionGeneraleController extends Controller
                 : collect();
 
             // Secrétaires et Conseillers : retrouvés via agents.entite_id
-            $secretaires = User::where('role', 'Secretaire_assistante')
+            $secretaires = User::where('role', 'Secretaire_Assistante')
                 ->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))
                 ->get();
 
@@ -255,7 +255,7 @@ class DirectionGeneraleController extends Controller
 
         $agent->entite_id = $entite->id;
         $agent->save();
-        $agent->user->update(['role' => 'Secretaire_assistante']);
+        $agent->user->update(['role' => 'Secretaire_Assistante']);
 
         return redirect()
             ->route('admin.direction-generale.index')

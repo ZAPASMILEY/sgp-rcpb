@@ -50,7 +50,7 @@ return new class extends Migration
             $table->decimal('note_globale', 8, 2)->default(0);
             $table->text('observation')->nullable();
             $table->foreignId('source_fiche_objectif_id')->nullable()->constrained('fiche_objectifs')->nullOnDelete();
-            $table->foreignId('source_fiche_objectif_objectif_id')->nullable()->constrained('fiche_objectif_objectifs')->nullOnDelete();
+            $table->foreignId('source_fiche_objectif_objectif_id')->nullable()->constrained('lignes_fiche_objectif')->nullOnDelete();
             $table->foreignId('source_template_id')->nullable()->constrained('subjective_criteria_templates')->nullOnDelete();
             $table->timestamps();
         });

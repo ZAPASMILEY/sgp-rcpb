@@ -92,12 +92,13 @@
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Secrétaire</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Délégation</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Superviseur (Dir. caisse)</th>
+                            <th class="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">Note</th>
                             <th class="px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($agences as $agence)
-                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($agence->nom.' '.$agence->chef_nom.' '.$agence->chef_telephone.' '.$agence->secretaire_nom.' '.$agence->secretaire_telephone.' '.($agence->delegationTechnique?->region ?? '').' '.($agence->delegationTechnique?->ville ?? '').' '.($agence->superviseurCaisse?->nom ?? '').' '.($agence->superviseurCaisse?->directeur_nom ?? ''))) }}">
+                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($agence->nom.' '.$agence->chef_nom.' '.$agence->chef_telephone.' '.$agence->secretaire_nom.' '.$agence->secretaire_telephone.' '.($agence->delegationTechnique?->region ?? '').' '.($agence->delegationTechnique?->ville ?? '').' '.($agence->caisse?->nom ?? '').' '.($agence->caisse?->directeur_nom ?? ''))) }}">
                                 <td class="whitespace-nowrap px-3 py-3">
                                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-xs font-bold text-white shadow-sm">{{ ($agences->firstItem() ?? 1) + $loop->index }}</span>
                                 </td>
@@ -121,12 +122,15 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-3">
-                                    @if ($agence->superviseurCaisse)
-                                        <p class="font-semibold text-slate-700">{{ $agence->superviseurCaisse->nom }}</p>
-                                        <p class="mt-0.5 text-xs text-slate-400">{{ $agence->superviseurCaisse->directeur_nom }}</p>
+                                    @if ($agence->caisse)
+                                        <p class="font-semibold text-slate-700">{{ $agence->caisse->nom }}</p>
+                                        <p class="mt-0.5 text-xs text-slate-400">{{ $agence->caisse->directeur_nom }}</p>
                                     @else
                                         -
                                     @endif
+                                </td>
+                                <td class="whitespace-nowrap px-3 py-3 text-center">
+                                    <span class="text-xs font-bold text-slate-300">—</span>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-3 text-right">
                                     <div class="flex items-center justify-end gap-1">

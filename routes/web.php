@@ -82,7 +82,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/directions', function () {
         return redirect()->route('admin.entites.directions.index');
     })->name('admin.directions.index');
-    Route::get('/admin/delegations-techniques', [DirectionController::class, 'index'])->name('admin.delegations-techniques.index');
+    Route::get('/admin/delegations-techniques', [DirectionController::class, 'delegationsIndex'])->name('admin.delegations-techniques.index');
     Route::get('/admin/delegations-techniques/directeurs', function () {
         return redirect()->route('admin.delegations-techniques.index');
     })->name('admin.delegations-techniques.directeurs.index');
