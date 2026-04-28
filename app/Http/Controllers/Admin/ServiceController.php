@@ -47,7 +47,7 @@ class ServiceController extends Controller
         $caisseId = (string) $request->query('caisse_id', '');
 
         $servicesQuery = Service::query()
-            ->with(['direction.entite'])
+            ->with(['direction.entite', 'chef'])
             ->when($source === 'faitiere', function ($query): void {
                 $query->whereNotNull('direction_id')
                       ->whereNull('delegation_technique_id')
@@ -91,7 +91,7 @@ class ServiceController extends Controller
                 'delegation_id' => $delegationId,
                 'caisse_id' => $caisseId,
             ],
-            'directions' => Direction::query()->with('entite')
+            'directions' => Direction::query()->where('nom', '!=', 'Direction Générale')->with('entite')
                 ->orderBy('nom')->get(['id', 'nom', 'entite_id']),
             'stats' => [
                 'total' => Service::count(),
@@ -116,7 +116,7 @@ class ServiceController extends Controller
     public function show(Service $service): View
     {
         return view('admin.services.show', [
-            'service' => $service->load('direction.entite'),
+            'service' => $service->load(['direction.entite', 'chef']),
         ]);
     }
 
@@ -131,10 +131,10 @@ class ServiceController extends Controller
     private function formData(): array
     {
         return [
-            'faitiereDirections' => Direction::query()->orderBy('nom')->get(['id', 'nom']),
+            'faitiereDirections' => Direction::query()->where('nom', '!=', 'Direction Générale')->orderBy('nom')->get(['id', 'nom']),
             'delegations'        => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
             'caisses'            => Caisse::query()->with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
-            'directions'         => Direction::query()->with('entite')->orderBy('nom')->get(['id', 'nom', 'entite_id']),
+            'directions'         => Direction::query()->where('nom', '!=', 'Direction Générale')->with('entite')->orderBy('nom')->get(['id', 'nom', 'entite_id']),
             'chefs'              => Agent::query()->where('fonction', 'Chef de Service')->orderBy('nom')->orderBy('prenom')->get(),
         ];
     }

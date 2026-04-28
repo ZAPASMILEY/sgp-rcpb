@@ -54,12 +54,12 @@ class PcaObjectifController extends Controller
     private function getDGOfDirectionGenerale(): ?User
     {
         $entite = \App\Models\Entite::query()->latest()->first();
-        if (!$entite) {
+        if (!$entite || !$entite->dg_agent_id) {
             return null;
         }
         return User::query()
             ->where('role', 'DG')
-            ->where('pca_entite_id', $entite->id)
+            ->where('agent_id', $entite->dg_agent_id)
             ->first();
     }
 
@@ -114,7 +114,7 @@ class PcaObjectifController extends Controller
     public function show(Request $request, $id): View
     {
         $fiche = FicheObjectif::with('objectifs')->findOrFail($id);
-        $this->authorizeFiche($fiche, (int) $request->user()->pca_entite_id);
+        $this->authorizeFiche($fiche, (int) $request->user()->agent?->entite_id);
 
         return view('pca.objectifs.show', [
             'fiche' => $fiche,
@@ -123,7 +123,7 @@ class PcaObjectifController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $entiteId = $request->user()->pca_entite_id;
+        $entiteId = $request->user()->agent?->entite_id;
         $date = now()->toDateString();
         $dgUser = $this->getDGOfDirectionGenerale();
 
@@ -182,7 +182,7 @@ class PcaObjectifController extends Controller
 
     public function adjustProgress(Request $request, FicheObjectifObjectif $objectif): RedirectResponse
     {
-        $this->authorizeObjectif($objectif, $request->user()->pca_entite_id);
+        $this->authorizeObjectif($objectif, $request->user()->agent?->entite_id);
 
         $validated = $request->validate([
             'direction' => ['required', 'string', 'in:up,down'],
@@ -216,7 +216,7 @@ class PcaObjectifController extends Controller
     public function destroy(Request $request, $id): RedirectResponse
     {
         $fiche = FicheObjectif::findOrFail($id);
-        $this->authorizeFiche($fiche, (int) $request->user()->pca_entite_id);
+        $this->authorizeFiche($fiche, (int) $request->user()->agent?->entite_id);
 
         if ($fiche->statut !== 'en_attente' && $fiche->statut !== null) {
             return redirect()->route('pca.objectifs.index')->with('status', 'Suppression impossible : fiche deja validee ou refusee.');
@@ -231,7 +231,7 @@ class PcaObjectifController extends Controller
     public function edit(Request $request, $id): View|RedirectResponse
     {
         $fiche = FicheObjectif::with('objectifs')->findOrFail($id);
-        $this->authorizeFiche($fiche, (int) $request->user()->pca_entite_id);
+        $this->authorizeFiche($fiche, (int) $request->user()->agent?->entite_id);
 
         if ($fiche->statut !== 'en_attente' && $fiche->statut !== null) {
             return redirect()->route('pca.objectifs.index')->with('status', 'Modification impossible : fiche deja validee ou refusee.');
@@ -294,7 +294,7 @@ class PcaObjectifController extends Controller
      */
     private function buildContratData(Request $request, FicheObjectif $objectif): array
     {
-        $this->authorizeFiche($objectif, $request->user()->pca_entite_id);
+        $this->authorizeFiche($objectif, $request->user()->agent?->entite_id);
 
         $objectif->load('objectifs', 'assignable');
 
@@ -304,12 +304,12 @@ class PcaObjectifController extends Controller
         $salarieFonction = '';
 
         if ($assignable instanceof User) {
-            $entite = Entite::query()->find($request->user()->pca_entite_id);
+            $entite = Entite::query()->find($request->user()->agent?->entite_id);
             $salarieNom = $assignable->name ?? '';
             $salarieFonction = 'Directeur General';
         }
 
-        $entite ??= Entite::query()->findOrFail($request->user()->pca_entite_id);
+        $entite ??= Entite::query()->findOrFail($request->user()->agent?->entite_id);
         $institutionSigle = $this->resolveInstitutionSigle($entite);
 
         return [

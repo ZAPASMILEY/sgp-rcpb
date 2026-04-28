@@ -19,7 +19,7 @@ class Agence extends Model
     protected $fillable = [
         'nom',
         'delegation_technique_id',
-        'superviseur_caisse_id',
+        'caisse_id',
         // Responsables : FK vers agents
         'chef_agent_id',
         'secretaire_agent_id',
@@ -44,9 +44,9 @@ class Agence extends Model
         return $this->belongsTo(DelegationTechnique::class);
     }
 
-    public function superviseurCaisse(): BelongsTo
+    public function caisse(): BelongsTo
     {
-        return $this->belongsTo(Caisse::class, 'superviseur_caisse_id');
+        return $this->belongsTo(Caisse::class, 'caisse_id');
     }
 
     public function guichets(): HasMany

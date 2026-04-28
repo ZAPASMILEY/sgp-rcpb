@@ -61,24 +61,24 @@
 
                 {{-- Entité PCA (conditionnel) --}}
                 <div id="pca-entite-block" class="space-y-2 {{ old('role', $user->role) === 'PCA' ? '' : 'hidden' }}">
-                    <label for="pca_entite_id" class="text-sm font-semibold text-slate-700">
+                    <label for="entite_id" class="text-sm font-semibold text-slate-700">
                         Entité faîtière <span class="text-red-500">*</span>
                     </label>
-                    @if($user->role === 'PCA' && !$user->pca_entite_id)
+                    @if($user->role === 'PCA' && !$user->agent?->entite_id)
                         <div class="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
                             <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-rose-500"></i>
                             <span><strong>Ce compte PCA n'a pas d'entité associée</strong> — c'est pour ça que l'utilisateur ne peut pas se connecter. Sélectionnez une entité ci-dessous.</span>
                         </div>
                     @endif
-                    <select id="pca_entite_id" name="pca_entite_id" class="ent-select">
+                    <select id="entite_id" name="entite_id" class="ent-select">
                         <option value="">— Sélectionner l'entité faîtière —</option>
                         @foreach ($entites as $entite)
-                            <option value="{{ $entite->id }}" @selected(old('pca_entite_id', $user->pca_entite_id) == $entite->id)>
+                            <option value="{{ $entite->id }}" @selected(old('entite_id', $user->agent?->entite_id) == $entite->id)>
                                 {{ $entite->nom }}
                             </option>
                         @endforeach
                     </select>
-                    @error('pca_entite_id')
+                    @error('entite_id')
                         <p class="text-xs text-red-500">{{ $message }}</p>
                     @enderror
                 </div>
@@ -131,7 +131,7 @@
     // Show/hide champ entité PCA
     const roleSelect = document.getElementById('role');
     const pcaBlock   = document.getElementById('pca-entite-block');
-    const pcaSelect  = document.getElementById('pca_entite_id');
+    const pcaSelect  = document.getElementById('entite_id');
     function togglePcaBlock() {
         const isPca = roleSelect.value === 'PCA';
         pcaBlock.classList.toggle('hidden', !isPca);

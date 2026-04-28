@@ -31,7 +31,7 @@ class PcaEvaluationController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $entiteId = $user->pca_entite_id;
+        $entiteId = $user->agent?->entite_id;
 
         $search = trim((string) $request->query('search', ''));
         $statut = trim((string) $request->query('statut', ''));
@@ -127,10 +127,10 @@ class PcaEvaluationController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $user = $request->user();
-        $entiteId = $user->pca_entite_id;
+        $entiteId = $user->agent?->entite_id;
         $entiteDirectionGenerale = $this->getDirectionGeneraleEntite();
         $dg = $this->getDGOfDirectionGenerale();
-        $entiteId = $request->user()->pca_entite_id;
+        $entiteId = $request->user()->agent?->entite_id;
 
         $validated = $request->validate([
             'evaluable_type' => ['required', 'string', 'in:user'],
@@ -308,7 +308,7 @@ class PcaEvaluationController extends Controller
 
     public function show(Request $request, Evaluation $evaluation): View
     {
-        $this->authorizeEvaluation($evaluation, $request->user()->pca_entite_id);
+        $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         $evaluation->load([
             'evaluable',
@@ -335,7 +335,7 @@ class PcaEvaluationController extends Controller
 
     public function exportPdf(Request $request, Evaluation $evaluation): Response
     {
-        $this->authorizeEvaluation($evaluation, $request->user()->pca_entite_id);
+        $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         $evaluation->load([
             'evaluable',
@@ -364,7 +364,7 @@ class PcaEvaluationController extends Controller
 
     public function submit(Request $request, Evaluation $evaluation): RedirectResponse
     {
-        $this->authorizeEvaluation($evaluation, $request->user()->pca_entite_id);
+        $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         if ($evaluation->statut !== 'brouillon') {
             return redirect()->route('pca.evaluations.show', $evaluation)
@@ -389,7 +389,7 @@ class PcaEvaluationController extends Controller
 
     public function approve(Request $request, Evaluation $evaluation): RedirectResponse
     {
-        $this->authorizeEvaluation($evaluation, $request->user()->pca_entite_id);
+        $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         if ($evaluation->statut !== 'soumis') {
             return redirect()->route('pca.evaluations.show', $evaluation)
@@ -404,7 +404,7 @@ class PcaEvaluationController extends Controller
 
     public function destroy(Request $request, Evaluation $evaluation): RedirectResponse
     {
-        $this->authorizeEvaluation($evaluation, $request->user()->pca_entite_id);
+        $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         if ($evaluation->statut === 'valide') {
             return redirect()->route('pca.evaluations.index')
@@ -430,7 +430,7 @@ class PcaEvaluationController extends Controller
                     $allowed = true;
                 }
                 // Ou si c'est le PCA de l'entité
-                if ((int) $entiteId === ($evaluation->evaluateur->pca_entite_id ?? null)) {
+                if ((int) $entiteId === ($evaluation->evaluateur->agent?->entite_id ?? null)) {
                     $allowed = true;
                 }
             }

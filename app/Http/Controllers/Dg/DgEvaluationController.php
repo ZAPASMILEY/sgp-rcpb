@@ -12,8 +12,10 @@ class DgEvaluationController extends Controller
 {
     public function statut(Request $request, Evaluation $evaluation)
     {
-        $user = $request->user();
-        $entiteId = (int) ($user->pca_entite_id ?? 0);
+        $user     = $request->user();
+        $entite   = Entite::query()->where('dg_agent_id', $user->agent_id)->first()
+            ?? Entite::query()->latest()->first();
+        $entiteId = (int) ($entite?->id ?? 0);
         $allowed =
             ($evaluation->evaluable_type === \App\Models\Entite::class && (int) $evaluation->evaluable_id === $entiteId)
             || ($evaluation->evaluable_type === get_class($user) && (int) $evaluation->evaluable_id === $user->id);
@@ -30,7 +32,10 @@ class DgEvaluationController extends Controller
 
     public function show(Request $request, Evaluation $evaluation): View
     {
-        $entiteId = (int) ($request->user()->pca_entite_id ?? 0);
+        $user     = $request->user();
+        $entite   = Entite::query()->where('dg_agent_id', $user->agent_id)->first()
+            ?? Entite::query()->latest()->first();
+        $entiteId = (int) ($entite?->id ?? 0);
 
         $allowed =
             ($evaluation->evaluable_type === Entite::class && (int) $evaluation->evaluable_id === $entiteId)

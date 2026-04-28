@@ -44,6 +44,11 @@ class Direction extends Model
         return $this->hasMany(Service::class);
     }
 
+    public function agents(): HasMany
+    {
+        return $this->hasMany(Agent::class);
+    }
+
     public function caisses(): HasMany
     {
         return $this->hasMany(Caisse::class, 'superviseur_direction_id');

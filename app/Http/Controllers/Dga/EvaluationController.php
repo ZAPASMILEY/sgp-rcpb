@@ -1,22 +1,31 @@
 <?php
 
-namespace App\Http\Controllers\Subordonne;
+namespace App\Http\Controllers\Dga;
 
 use App\Http\Controllers\Controller;
 use App\Models\Alerte;
 use App\Models\Evaluation;
 use App\Models\User;
+use App\Traits\ResolvesEntite;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
-class SubordonneEvaluationController extends Controller
+class EvaluationController extends Controller
 {
-    private const ALLOWED_ROLES = ['Assistante_Dg', 'Conseillers_Dg'];
+    use ResolvesEntite;
 
-    private function authorize(Evaluation $evaluation): void
+    private const ALLOWED_ROLES = ['DGA', 'Assistante_Dg', 'Conseillers_Dg'];
+
+    private const ROLE_LABELS = [
+        'DGA'            => 'Directeur Général Adjoint',
+        'Assistante_Dg'  => 'Assistante DG',
+        'Conseillers_Dg' => 'Conseiller DG',
+    ];
+
+    private function authorizeEvaluation(Evaluation $evaluation): void
     {
         $user = Auth::user();
         if (! $user || ! in_array($user->role, self::ALLOWED_ROLES, true)) {
@@ -29,26 +38,25 @@ class SubordonneEvaluationController extends Controller
 
     public function show(Evaluation $evaluation): View
     {
-        $this->authorize($evaluation);
+        $this->authorizeEvaluation($evaluation);
 
         if ($evaluation->statut === 'brouillon') {
             abort(403, 'Cette évaluation n\'est pas encore disponible.');
         }
 
         $user = Auth::user();
-
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
 
-        $note     = (float) $evaluation->note_finale;
-        $mention  = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
+        $note    = (float) $evaluation->note_finale;
+        $mention = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
 
-        $identification  = $evaluation->identification;
-        $anneeEval       = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');
-        $semestreEval    = trim((string) ($identification?->semestre ?? ''));
+        $identification = $evaluation->identification;
+        $anneeEval      = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');
+        $semestreEval   = trim((string) ($identification?->semestre ?? ''));
         if ($semestreEval === '') {
             $semestreEval = $evaluation->date_debut->month <= 6 ? '1' : '2';
         }
-        $periodeLabel    = $anneeEval.' - Semestre '.$semestreEval;
+        $periodeLabel       = $anneeEval.' - Semestre '.$semestreEval;
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
 
@@ -65,7 +73,7 @@ class SubordonneEvaluationController extends Controller
             default  => 'Brouillon',
         };
 
-        return view('subordonne.evaluations.show', compact(
+        return view($this->espaceViewPrefix().'.evaluations.show', compact(
             'evaluation',
             'user',
             'mention',
@@ -79,7 +87,7 @@ class SubordonneEvaluationController extends Controller
 
     public function statut(Request $request, Evaluation $evaluation): RedirectResponse
     {
-        $this->authorize($evaluation);
+        $this->authorizeEvaluation($evaluation);
 
         if ($evaluation->statut !== 'soumis') {
             return back()->with('error', 'Cette action n\'est possible que sur une évaluation soumise.');
@@ -91,29 +99,32 @@ class SubordonneEvaluationController extends Controller
         $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
         $evaluation->save();
 
-        // Notifier l'évaluateur (DG)
         if ($evaluation->evaluateur_id) {
-            $subordonneUser = Auth::user();
+            $evalue      = Auth::user();
             $actionLabel = $action === 'accepter' ? 'accepté' : 'refusé';
+            $roleLabel   = self::ROLE_LABELS[$evalue?->role] ?? ($evalue?->role ?? '');
             Alerte::notifier(
                 (int) $evaluation->evaluateur_id,
                 "Fiche d'évaluation {$actionLabel}e",
-                "{$subordonneUser?->name} a {$actionLabel} la fiche d'évaluation que vous lui avez soumise.",
+                "{$roleLabel} {$evalue?->name} a {$actionLabel} la fiche d'évaluation que vous lui avez soumise.",
                 $action === 'accepter' ? 'moyenne' : 'haute'
             );
         }
 
         $msg = $action === 'accepter' ? 'Évaluation acceptée.' : 'Évaluation refusée.';
 
-        return redirect()->route('subordonne.evaluations.show', $evaluation)->with('status', $msg);
+        return redirect()
+            ->route($this->espaceRoutePrefix().'.evaluations.show', $evaluation)
+            ->with('status', $msg);
     }
 
     public function commentaire(Request $request, Evaluation $evaluation): RedirectResponse
     {
-        $this->authorize($evaluation);
+        $this->authorizeEvaluation($evaluation);
 
         if ($evaluation->statut === 'valide') {
-            return redirect()->route('subordonne.evaluations.show', $evaluation)
+            return redirect()
+                ->route($this->espaceRoutePrefix().'.evaluations.show', $evaluation)
                 ->with('status', "L'évaluation est validée, le commentaire ne peut plus être modifié.");
         }
 
@@ -124,13 +135,14 @@ class SubordonneEvaluationController extends Controller
         $evaluation->commentaires_evalue = $request->input('commentaires_evalue');
         $evaluation->save();
 
-        return redirect()->route('subordonne.evaluations.show', $evaluation)
+        return redirect()
+            ->route($this->espaceRoutePrefix().'.evaluations.show', $evaluation)
             ->with('status', 'Votre commentaire a été enregistré.');
     }
 
     public function exportPdf(Evaluation $evaluation)
     {
-        $this->authorize($evaluation);
+        $this->authorizeEvaluation($evaluation);
         $user = Auth::user();
 
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
@@ -139,8 +151,7 @@ class SubordonneEvaluationController extends Controller
         $note       = (float) $evaluation->note_finale;
         $mention    = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
         $cibleLabel = $evaluation->identification->nom_prenom ?? $user->name;
-        $roleLabels = ['Assistante_Dg' => 'Assistante DG', 'Conseillers_Dg' => 'Conseiller DG'];
-        $cibleType  = $roleLabels[$user->role] ?? $user->role;
+        $cibleType  = self::ROLE_LABELS[$user->role] ?? $user->role;
 
         $pdf = Pdf::loadView('dg.evaluations.pdf', compact(
             'evaluation', 'subjectiveCriteria', 'objectiveCriteria', 'mention', 'cibleLabel', 'cibleType'

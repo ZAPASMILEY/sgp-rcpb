@@ -52,7 +52,7 @@ class AgenceController extends Controller
                 }),
             ],
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
-            'superviseur_caisse_id'   => [
+            'caisse_id'   => [
                 'required',
                 'integer',
                 Rule::exists('caisses', 'id')->where('delegation_technique_id', $request->integer('delegation_technique_id')),
@@ -61,8 +61,8 @@ class AgenceController extends Controller
             'secretaire_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ], [
             'nom.unique' => 'Cette agence existe deja pour la delegation technique selectionnee.',
-            'superviseur_caisse_id.required' => 'Veuillez choisir une caisse superviseur.',
-            'superviseur_caisse_id.exists' => 'La caisse choisie n\'appartient pas a la delegation technique selectionnee.',
+            'caisse_id.required' => 'Veuillez choisir une caisse superviseur.',
+            'caisse_id.exists' => 'La caisse choisie n\'appartient pas a la delegation technique selectionnee.',
         ]);
 
         Agence::query()->create($validated);
@@ -109,7 +109,7 @@ class AgenceController extends Controller
                 })->ignore($agence->id),
             ],
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
-            'superviseur_caisse_id'   => ['required', 'integer', 'exists:caisses,id'],
+            'caisse_id'   => ['required', 'integer', 'exists:caisses,id'],
             'chef_agent_id'           => ['nullable', 'integer', 'exists:agents,id'],
             'secretaire_agent_id'     => ['nullable', 'integer', 'exists:agents,id'],
         ]);

@@ -19,7 +19,7 @@ class EnsurePca
             return redirect()->route('login');
         }
 
-        if ($request->user()->pca_entite_id === null) {
+        if ($request->user()->agent?->entite_id === null) {
             return redirect()->route('pca.pending');
         }
 

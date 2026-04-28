@@ -1,18 +1,20 @@
 <?php
 
-namespace App\Http\Controllers\Subordonne;
+namespace App\Http\Controllers\Dga;
 
 use App\Http\Controllers\Controller;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\User;
+use App\Traits\ResolvesEntite;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
-class SubordonneMonEspaceController extends Controller
+class MonEspaceController extends Controller
 {
+    use ResolvesEntite;
+
     private const ALLOWED_ROLES = ['DGA', 'Assistante_Dg', 'Conseillers_Dg'];
 
     public function __invoke(Request $request): View
@@ -27,7 +29,7 @@ class SubordonneMonEspaceController extends Controller
         $statut = trim((string) $request->get('statut', ''));
         $search = trim((string) $request->get('search', ''));
 
-        // ── Evaluations (je suis l'evalue) ──────────────────────────────────
+        // ── Evaluations reçues (je suis l'évalué) ───────────────────────────
         $baseE = fn () => Evaluation::where('evaluable_type', User::class)
             ->where('evaluable_id', $user->id)
             ->where('statut', '!=', 'brouillon');
@@ -47,11 +49,12 @@ class SubordonneMonEspaceController extends Controller
             'total'  => $baseE()->count(),
             'soumis' => $baseE()->where('statut', 'soumis')->count(),
             'valide' => $baseE()->where('statut', 'valide')->count(),
+            'refuse' => $baseE()->where('statut', 'refuse')->count(),
         ];
 
         $evaluations = $evalsQ->paginate(10)->withQueryString();
 
-        // ── Fiches d'objectifs (mes objectifs assignes par le DG) ────────────
+        // ── Fiches d'objectifs assignées ────────────────────────────────────
         $baseF = fn () => FicheObjectif::where('assignable_type', User::class)
             ->where('assignable_id', $user->id);
 
@@ -81,11 +84,10 @@ class SubordonneMonEspaceController extends Controller
             'refusees'   => $baseF()->where('statut', 'refusee')->count(),
         ];
 
-        $fiches = $fichesQ->paginate(10)->withQueryString();
-
+        $fiches  = $fichesQ->paginate(10)->withQueryString();
         $filters = compact('tab', 'statut', 'search');
 
-        return view('subordonne.mon-espace', compact(
+        return view($this->espaceViewPrefix().'.mon-espace', compact(
             'user',
             'tab',
             'evaluations',

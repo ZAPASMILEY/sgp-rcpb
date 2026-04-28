@@ -29,6 +29,18 @@ return new class extends Migration
              *         └─ Agence
              *            └─ Guichet
              */
+            $table->foreignId('entite_id')
+                  ->nullable()
+                  ->constrained('entites')
+                  ->nullOnDelete()
+                  ->comment('Direction Générale — DG, DGA, PCA, Assistante_Dg, Conseillers_Dg, Secrétariat DG');
+
+            $table->foreignId('direction_id')
+                  ->nullable()
+                  ->constrained('directions')
+                  ->nullOnDelete()
+                  ->comment('Direction fonctionnelle — agents des services centraux (DRH, DAF, DTIC…)');
+
             $table->foreignId('delegation_technique_id')
                   ->nullable()
                   ->constrained('delegation_techniques')

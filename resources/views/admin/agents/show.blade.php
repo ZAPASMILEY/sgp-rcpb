@@ -78,7 +78,7 @@
                     @else
                         <div class="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-center">
                             <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Sans compte</p>
-                            <a href="{{ route('admin.users.create') }}"
+                            <a href="{{ route('admin.users.create', ['agent_id' => $agent->id]) }}"
                                class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline">
                                 <i class="fas fa-plus text-[10px]"></i> Créer un compte
                             </a>

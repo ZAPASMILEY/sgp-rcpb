@@ -36,27 +36,33 @@
                     [
                         'label' => 'PCA',
                         'titre' => "Président du Conseil d'Administration",
-                        'nom'   => trim(($entite->pca_prenom ?? '').' '.($entite->pca_nom ?? '')) ?: 'Non renseigné',
-                        'sexe'  => $entite->pca_sexe ?? null,
-                        'photo' => $entite->pca_photo_path,
+                        'nom'   => $entite->pca
+                                    ? trim($entite->pca->prenom.' '.$entite->pca->nom)
+                                    : 'Non renseigné',
+                        'sexe'  => $entite->pca?->sexe,
+                        'photo' => $entite->pca?->photo_path,
                         'bg'    => 'bg-orange-400',
                         'badge' => 'text-orange-300',
                     ],
                     [
                         'label' => 'DG',
                         'titre' => 'Directeur Général',
-                        'nom'   => trim(($entite->directrice_generale_prenom ?? '').' '.($entite->directrice_generale_nom ?? '')) ?: 'Non renseigné',
-                        'sexe'  => $entite->directrice_generale_sexe ?? null,
-                        'photo' => $entite->directrice_generale_photo_path,
+                        'nom'   => $entite->dg
+                                    ? trim($entite->dg->prenom.' '.$entite->dg->nom)
+                                    : 'Non renseigné',
+                        'sexe'  => $entite->dg?->sexe,
+                        'photo' => $entite->dg?->photo_path,
                         'bg'    => 'bg-cyan-500',
                         'badge' => 'text-cyan-300',
                     ],
                     [
                         'label' => 'DGA',
                         'titre' => 'Directeur Général Adjoint',
-                        'nom'   => trim(($entite->dga_prenom ?? '').' '.($entite->dga_nom ?? '')) ?: 'Non renseigné',
-                        'sexe'  => $entite->dga_sexe ?? null,
-                        'photo' => $entite->dga_photo_path,
+                        'nom'   => $entite->dga
+                                    ? trim($entite->dga->prenom.' '.$entite->dga->nom)
+                                    : 'Non renseigné',
+                        'sexe'  => $entite->dga?->sexe,
+                        'photo' => $entite->dga?->photo_path,
                         'bg'    => 'bg-violet-500',
                         'badge' => 'text-violet-300',
                     ],

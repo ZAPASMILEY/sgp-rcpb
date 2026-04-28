@@ -104,13 +104,13 @@
                     </div>
 
                     <div class="space-y-2">
-                        <label for="superviseur_caisse_id" class="text-sm font-semibold text-slate-700">Directeur de caisse superviseur</label>
-                        <select id="superviseur_caisse_id" name="superviseur_caisse_id" required class="ent-select" @disabled($caisses->isEmpty() || $delegations->isEmpty())>
+                        <label for="caisse_id" class="text-sm font-semibold text-slate-700">Directeur de caisse superviseur</label>
+                        <select id="caisse_id" name="caisse_id" required class="ent-select" @disabled($caisses->isEmpty() || $delegations->isEmpty())>
                             <option value="">Choisissez d'abord une delegation</option>
                             @foreach ($caisses as $caisse)
                                 <option value="{{ $caisse->id }}"
                                     data-delegation-id="{{ $caisse->delegation_technique_id }}"
-                                    @selected((string) old('superviseur_caisse_id') === (string) $caisse->id)>
+                                    @selected((string) old('caisse_id') === (string) $caisse->id)>
                                     {{ $caisse->nom }}{{ $caisse->directeur ? ' — '.$caisse->directeur->nom.' '.$caisse->directeur->prenom : '' }}
                                     @if ($caisse->delegationTechnique)
                                         - {{ $caisse->delegationTechnique->region }} / {{ $caisse->delegationTechnique->ville }}
@@ -133,7 +133,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var delegationSelect = document.getElementById('delegation_technique_id');
-            var superviseurSelect = document.getElementById('superviseur_caisse_id');
+            var superviseurSelect = document.getElementById('caisse_id');
 
             if (!delegationSelect || !superviseurSelect) {
                 return;

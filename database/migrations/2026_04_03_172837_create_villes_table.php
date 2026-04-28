@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('nom');
             $table->timestamps();
 
-            $table->unique('nom');
+            $table->unique(['delegation_technique_id', 'nom'], 'villes_dt_nom_unique');
         });
     }
 

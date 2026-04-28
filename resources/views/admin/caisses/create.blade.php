@@ -82,11 +82,11 @@
                 </select>
             </div>
             <div class="space-y-2">
-                <label for="superviseur_direction_id" class="text-xs font-bold text-slate-400 ml-1">Direction superviseur</label>
-                <select id="superviseur_direction_id" name="superviseur_direction_id" class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
+                <label for="direction_id" class="text-xs font-bold text-slate-400 ml-1">Direction superviseur</label>
+                <select id="direction_id" name="direction_id" class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
                     <option value="">— Aucune direction superviseur —</option>
                     @foreach ($directions as $direction)
-                        <option value="{{ $direction->id }}" @selected((string) old('superviseur_direction_id') === (string) $direction->id)>
+                        <option value="{{ $direction->id }}" @selected((string) old('direction_id') === (string) $direction->id)>
                             {{ $direction->nom }}{{ $direction->directeur ? ' — '.$direction->directeur->nom.' '.$direction->directeur->prenom : '' }}
                         </option>
                     @endforeach

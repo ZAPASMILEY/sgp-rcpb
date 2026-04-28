@@ -21,8 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Rôles acceptés :
  *  • Directeur_Direction  → directeur d'une direction de la faîtière
  *  • Directeur_Caisse     → directeur d'une caisse
- *  • Directeur_Tehnique   → directeur d'une délégation technique (typo conservée
- *                           pour correspondre à la valeur en base de données)
+ *  • Directeur_Technique  → directeur d'une délégation technique
  *
  * Si l'utilisateur n'est pas connecté ou n'a pas le bon rôle, il est redirigé
  * vers la page de connexion.
@@ -30,15 +29,11 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class EnsureIsDirecteur
 {
-    /**
-     * Liste des rôles autorisés à accéder à l'espace directeur.
-     * NOTE : 'Directeur_Tehnique' est intentionnellement mal orthographié pour
-     * correspondre à la valeur stockée dans la colonne `role` de la table `users`.
-     */
+    /** Liste des rôles autorisés à accéder à l'espace directeur. */
     private const ROLES = [
         'Directeur_Direction',
         'Directeur_Caisse',
-        'Directeur_Tehnique',
+        'Directeur_Technique',
     ];
 
     /**

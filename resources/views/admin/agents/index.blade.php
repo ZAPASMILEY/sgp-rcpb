@@ -40,7 +40,7 @@
             <form method="GET" action="{{ route('admin.agents.index') }}" class="flex flex-wrap items-end gap-3">
 
                 {{-- Recherche textuelle --}}
-                <div class="flex-1 min-w-[200px] space-y-1">
+                <div class="flex-1 min-w-[180px] space-y-1">
                     <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recherche</label>
                     <div class="relative">
                         <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
@@ -55,8 +55,8 @@
                 </div>
 
                 {{-- Filtre par fonction --}}
-                <div class="min-w-[220px] space-y-1">
-                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Filtrer par fonction</label>
+                <div class="min-w-[200px] space-y-1">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Fonction</label>
                     <select name="fonction" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
                         <option value="">Toutes les fonctions</option>
                         @foreach ($fonctions as $val => $label)
@@ -70,12 +70,22 @@
                     </select>
                 </div>
 
+                {{-- Filtre affectation --}}
+                <div class="min-w-[180px] space-y-1">
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Affectation</label>
+                    <select name="affectation" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
+                        <option value="">Tous les agents</option>
+                        <option value="affecte" @selected($affectation === 'affecte')>Affectés ({{ $totalAffectes }})</option>
+                        <option value="non_affecte" @selected($affectation === 'non_affecte')>Non affectés ({{ $totalAgents - $totalAffectes }})</option>
+                    </select>
+                </div>
+
                 <button type="submit"
                         class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700">
                     <i class="fas fa-filter text-xs"></i> Filtrer
                 </button>
 
-                @if ($fonctionActive || $search)
+                @if ($fonctionActive || $search || $affectation)
                     <a href="{{ route('admin.agents.index') }}"
                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
                         <i class="fas fa-times text-xs"></i> Réinitialiser
@@ -120,6 +130,7 @@
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Nom complet</th>
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Fonction</th>
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Contact</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Affectation</th>
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Compte</th>
                             <th class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
                         </tr>
@@ -169,6 +180,61 @@
                                     @endif
                                 </td>
 
+                                {{-- Affectation --}}
+                                <td class="px-4 py-3">
+                                    @php
+                                        $lieu = null; $libelle = null;
+                                        // 1. FK directes (agent membre d'une structure)
+                                        if ($agent->service_id && $agent->service) {
+                                            $lieu = 'Service'; $libelle = $agent->service->nom;
+                                        } elseif ($agent->guichet_id && $agent->guichet) {
+                                            $lieu = 'Guichet'; $libelle = $agent->guichet->nom ?? 'Guichet';
+                                        } elseif ($agent->agence_id && $agent->agence) {
+                                            $lieu = 'Agence'; $libelle = $agent->agence->nom;
+                                        } elseif ($agent->caisse_id && $agent->caisse) {
+                                            $lieu = 'Caisse'; $libelle = $agent->caisse->nom;
+                                        } elseif ($agent->delegation_technique_id && $agent->delegationTechnique) {
+                                            $lieu = 'Délégation'; $libelle = $agent->delegationTechnique->region.' / '.$agent->delegationTechnique->ville;
+                                        } elseif ($agent->direction_id && $agent->direction) {
+                                            $lieu = 'Direction'; $libelle = $agent->direction->nom;
+                                        } elseif ($agent->entite_id && $agent->entite) {
+                                            $lieu = 'Dir. Générale'; $libelle = $agent->entite->nom;
+                                        }
+                                        // 2. FK inverses (agent EST responsable d'une structure)
+                                        elseif ($agent->ledService) {
+                                            $lieu = 'Chef Service'; $libelle = $agent->ledService->nom;
+                                        } elseif ($agent->ledGuichet) {
+                                            $lieu = 'Chef Guichet'; $libelle = $agent->ledGuichet->nom ?? 'Guichet';
+                                        } elseif ($agent->ledAgence) {
+                                            $lieu = "Chef Agence"; $libelle = $agent->ledAgence->nom;
+                                        } elseif ($agent->secretariedCaisse) {
+                                            $lieu = 'Sec. Caisse'; $libelle = $agent->secretariedCaisse->nom;
+                                        } elseif ($agent->directedCaisse) {
+                                            $lieu = 'Dir. Caisse'; $libelle = $agent->directedCaisse->nom;
+                                        } elseif ($agent->secretariedDelegation) {
+                                            $d = $agent->secretariedDelegation;
+                                            $lieu = 'Sec. Délégation'; $libelle = $d->region.' / '.$d->ville;
+                                        } elseif ($agent->directedDelegation) {
+                                            $d = $agent->directedDelegation;
+                                            $lieu = 'Dir. Délégation'; $libelle = $d->region.' / '.$d->ville;
+                                        } elseif ($agent->secretariedDirection) {
+                                            $lieu = 'Sec. Direction'; $libelle = $agent->secretariedDirection->nom;
+                                        } elseif ($agent->directedDirection) {
+                                            $lieu = 'Dir. Direction'; $libelle = $agent->directedDirection->nom;
+                                        }
+                                    @endphp
+                                    @if ($lieu)
+                                        <div>
+                                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{{ $lieu }}</span>
+                                            <p class="mt-0.5 text-xs text-slate-600 font-semibold truncate max-w-[160px]">{{ $libelle }}</p>
+                                        </div>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-600">
+                                            <i class="fas fa-circle-exclamation text-[8px]"></i> Non affecté
+                                        </span>
+                                    @endif
+                                </td>
+
                                 {{-- Compte --}}
                                 <td class="px-4 py-3">
                                     @if ($agent->user)
@@ -210,7 +276,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="py-16 text-center">
+                                <td colspan="8" class="py-16 text-center">
                                     <div class="flex flex-col items-center gap-3 text-slate-400">
                                         <i class="fas fa-users text-4xl"></i>
                                         @if ($fonctionActive)

@@ -25,7 +25,7 @@ class Caisse extends Model
         'annee_ouverture',
         'quartier',
         'secretariat_telephone',
-        'superviseur_direction_id',
+        'direction_id',
         // Responsables : FK vers agents
         'directeur_agent_id',
         'secretaire_agent_id',
@@ -55,14 +55,14 @@ class Caisse extends Model
         return $this->belongsTo(Ville::class);
     }
 
-    public function superviseurDirection(): BelongsTo
+    public function direction(): BelongsTo
     {
-        return $this->belongsTo(Direction::class, 'superviseur_direction_id');
+        return $this->belongsTo(Direction::class, 'direction_id');
     }
 
     public function agences(): HasMany
     {
-        return $this->hasMany(Agence::class, 'superviseur_caisse_id');
+        return $this->hasMany(Agence::class, 'caisse_id');
     }
 
     public function services(): HasMany

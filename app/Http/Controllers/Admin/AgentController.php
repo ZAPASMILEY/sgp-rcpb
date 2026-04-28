@@ -16,11 +16,43 @@ class AgentController extends Controller
 {
     public function index(Request $request): View
     {
-        $fonction = (string) $request->query('fonction', '');
-        $search   = trim((string) $request->query('search', ''));
+        $fonction    = (string) $request->query('fonction', '');
+        $search      = trim((string) $request->query('search', ''));
+        $affectation = (string) $request->query('affectation', ''); // 'affecte' | 'non_affecte' | ''
+
+        // FK directes (agent membre d'une structure)
+        $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id', 'agence_id', 'guichet_id', 'service_id'];
+        // FK inverses (agent EST le responsable d'une structure)
+        $inverseRelations = [
+            'directedDirection', 'secretariedDirection',
+            'directedDelegation', 'secretariedDelegation',
+            'directedCaisse', 'secretariedCaisse',
+            'ledAgence', 'secretariedAgence',
+            'ledGuichet', 'ledService',
+        ];
+
+        $scopeAffecte = function ($q) use ($directFks, $inverseRelations): void {
+            $q->where(function ($sub) use ($directFks, $inverseRelations): void {
+                foreach ($directFks as $col) {
+                    $sub->orWhereNotNull($col);
+                }
+                foreach ($inverseRelations as $rel) {
+                    $sub->orWhereHas($rel);
+                }
+            });
+        };
 
         $agents = Agent::query()
-            ->with(['user'])
+            ->with([
+                'user',
+                // FK directes
+                'entite', 'direction', 'delegationTechnique', 'caisse', 'agence', 'guichet', 'service',
+                // FK inverses — postes de responsabilité
+                'directedDirection', 'secretariedDirection',
+                'directedDelegation', 'secretariedDelegation',
+                'directedCaisse', 'secretariedCaisse',
+                'ledAgence', 'ledGuichet', 'ledService',
+            ])
             ->when($fonction !== '', fn ($q) => $q->where('fonction', $fonction))
             ->when($search !== '', function ($q) use ($search): void {
                 $q->where(function ($sub) use ($search): void {
@@ -29,6 +61,15 @@ class AgentController extends Controller
                         ->orWhere('email',   'like', "%{$search}%")
                         ->orWhere('fonction','like', "%{$search}%");
                 });
+            })
+            ->when($affectation === 'affecte', $scopeAffecte)
+            ->when($affectation === 'non_affecte', function ($q) use ($directFks, $inverseRelations): void {
+                foreach ($directFks as $col) {
+                    $q->whereNull($col);
+                }
+                foreach ($inverseRelations as $rel) {
+                    $q->whereDoesntHave($rel);
+                }
             })
             ->orderBy('nom')
             ->orderBy('prenom')
@@ -40,13 +81,25 @@ class AgentController extends Controller
             ->groupBy('fonction')
             ->pluck('total', 'fonction');
 
+        // Compteurs affectation (FK directes + FK inverses)
+        $totalAffectes = Agent::query()->where(function ($q) use ($directFks, $inverseRelations): void {
+            foreach ($directFks as $col) {
+                $q->orWhereNotNull($col);
+            }
+            foreach ($inverseRelations as $rel) {
+                $q->orWhereHas($rel);
+            }
+        })->count();
+
         return view('admin.agents.index', [
             'agents'           => $agents,
             'fonctionActive'   => $fonction,
+            'affectation'      => $affectation,
             'search'           => $search,
             'fonctions'        => Agent::FONCTIONS,
             'countsByFonction' => $countsByFonction,
             'totalAgents'      => Agent::count(),
+            'totalAffectes'    => $totalAffectes,
         ]);
     }
 

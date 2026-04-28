@@ -24,6 +24,7 @@
                     ['route' => 'admin.dashboard', 'icon' => 'fas fa-gauge-high', 'label' => 'Tableau de bord'],
                     ['route' => 'admin.entites.index', 'icon' => 'fas fa-university', 'label' => 'Faitiere'],
                     ['route' => 'admin.direction-generale.index', 'icon' => 'fas fa-user-tie', 'label' => 'Direction Générale'],
+                    ['route' => 'admin.directions.index', 'icon' => 'fas fa-building-columns', 'label' => 'Directions'],
                     ['route' => 'admin.delegations-techniques.index', 'icon' => 'fas fa-building-circle-arrow-right', 'label' => 'Delegations'],
                 ],
             ],
@@ -40,6 +41,7 @@
                 'title' => '3. Ressources',
                 'items' => [
                     ['route' => 'admin.agents.index', 'icon' => 'fas fa-users', 'label' => 'Agents'],
+                    ['route' => 'admin.users.index', 'icon' => 'fas fa-user-shield', 'label' => 'Comptes'],
                     ['route' => 'admin.statistiques.index', 'icon' => 'fas fa-chart-column', 'label' => 'Statistiques'],
                     ['route' => 'admin.alertes.index', 'icon' => 'fas fa-bell', 'label' => 'Alertes'],
                     ['route' => 'admin.settings.edit', 'icon' => 'fas fa-cog', 'label' => 'Parametres'],

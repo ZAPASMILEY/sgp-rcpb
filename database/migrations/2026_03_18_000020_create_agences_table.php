@@ -14,7 +14,7 @@ return new class extends Migration
 
             // Rattachements hiérarchiques
             $table->foreignId('delegation_technique_id')->constrained('delegation_techniques')->cascadeOnDelete();
-            $table->foreignId('superviseur_caisse_id')->constrained('caisses')->cascadeOnDelete();
+            $table->foreignId('caisse_id')->constrained('caisses')->cascadeOnDelete();
 
             // Responsables : FK vers agents
             $table->foreignId('chef_agent_id')->nullable()->constrained('agents')->nullOnDelete();

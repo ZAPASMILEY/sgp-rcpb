@@ -138,14 +138,20 @@
                     </thead>
                     <tbody>
                         @forelse ($services as $service)
-                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($service->nom.' '.$service->direction?->nom.' '.$service->direction?->entite?->nom.' '.$service->chef_prenom.' '.$service->chef_nom.' '.$service->chef_email.' '.$service->chef_telephone)) }}">
+                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($service->nom.' '.$service->direction?->nom.' '.$service->direction?->entite?->nom.' '.$service->chef?->prenom.' '.$service->chef?->nom.' '.$service->chef?->email.' '.$service->chef?->numero_telephone)) }}">
                                 <td class="whitespace-nowrap px-3 py-3">{{ ($services->firstItem() ?? 1) + $loop->index }}</td>
                                 <td class="px-3 py-3 font-semibold text-slate-800">{{ $service->nom }}</td>
                                 <td class="px-3 py-3">{{ $service->direction?->nom }}</td>
                                 <td class="px-3 py-3">{{ $service->direction?->entite?->nom }}</td>
-                                <td class="px-3 py-3 font-semibold text-slate-700">{{ $service->chef_prenom }} {{ $service->chef_nom }}</td>
-                                <td class="px-3 py-3 text-slate-500">{{ $service->chef_email }}</td>
-                                <td class="px-3 py-3">{{ $service->chef_telephone }}</td>
+                                <td class="px-3 py-3 font-semibold text-slate-700">
+                                    @if($service->chef)
+                                        {{ $service->chef->prenom }} {{ $service->chef->nom }}
+                                    @else
+                                        <span class="text-slate-300 italic text-xs">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-3 text-slate-500">{{ $service->chef?->email ?? '—' }}</td>
+                                <td class="px-3 py-3">{{ $service->chef?->numero_telephone ?? '—' }}</td>
                                 <td class="whitespace-nowrap px-3 py-3 text-right">
                                     <div class="flex items-center justify-end gap-1">
                                         <a href="{{ route('admin.services.show', $service) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Voir"><i class="fas fa-eye text-xs"></i></a>

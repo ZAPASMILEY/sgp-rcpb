@@ -12,9 +12,7 @@ return new class extends Migration
         Schema::create('evaluations', function (Blueprint $table): void {
             $table->id();
 
-            // 1. Destinataire et Évaluateur (Cardinalités 17, 19, 20)
-            // On ajoute agent_id pour la clarté des stats
-            $table->foreignId('agent_id')->constrained('agents')->cascadeOnDelete();
+            // 1. Évaluateur + cible polymorphique
             $table->foreignId('evaluateur_id')->constrained('users')->cascadeOnDelete();
             
             // On garde ta flexibilité morphique si tu veux évaluer des "entités"
@@ -44,7 +42,7 @@ return new class extends Migration
             $table->text('strategies_amelioration')->nullable();
             $table->text('commentaires_evalue')->nullable();
 
-            $table->enum('statut', ['brouillon', 'soumis', 'valide'])->default('brouillon');
+            $table->enum('statut', ['brouillon', 'soumis', 'valide', 'refuse'])->default('brouillon');
 
             // 6. Bloc des Signatures
             $table->string('signature_evalue_nom')->nullable();

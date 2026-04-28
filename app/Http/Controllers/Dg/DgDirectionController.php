@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use App\Models\Entite;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -23,7 +24,10 @@ class DgDirectionController extends Controller
 
     private function getEntiteId(): int
     {
-        return (int) Auth::user()->pca_entite_id;
+        $dg = Auth::user();
+        $entite = Entite::query()->where('dg_agent_id', $dg->agent_id)->first()
+            ?? Entite::query()->latest()->first();
+        return (int) ($entite?->id ?? 0);
     }
 
     private function getDirections(): \Illuminate\Support\Collection

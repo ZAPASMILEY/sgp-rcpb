@@ -3,25 +3,30 @@
 @section('title', 'Nouvelle evaluation | '.config('app.name', 'SGP-RCPB'))
 
 @php
-    $displayYear = now()->year;
-    if (old('identification.date_evaluation')) {
-        try {
-            $displayYear = \Carbon\Carbon::parse(old('identification.date_evaluation'))->year;
-        } catch (\Throwable $e) {
-            $displayYear = now()->year;
+    $extractYear = static function (?string $value, string $format): ?int {
+        if (! filled($value)) {
+            return null;
         }
-    } elseif (old('date_debut')) {
+
         try {
-            $displayYear = \Carbon\Carbon::parse(old('date_debut'))->year;
+            return match ($format) {
+                'd/m/Y' => \Carbon\Carbon::createFromFormat('d/m/Y', $value)->year,
+                'm/Y' => (int) substr($value, -4),
+                default => \Carbon\Carbon::parse($value)->year,
+            };
         } catch (\Throwable $e) {
-            $displayYear = now()->year;
+            return null;
         }
-    }
+    };
+
+    $displayYear = $extractYear(old('identification.date_evaluation'), 'd/m/Y')
+        ?? $extractYear(old('date_debut'), 'm/Y')
+        ?? now()->year;
 @endphp
 
 @section('content')
     <div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-        <div class="mx-auto flex max-w-6xl flex-col gap-6">
+        <div class="w-full flex flex-col gap-6">
             <header class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -53,16 +58,14 @@
                             <div class="space-y-2">
                                 <label for="evaluable_type" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Type de cible</label>
                                 <select id="evaluable_type" name="evaluable_type" class="ent-select" required>
-                                    <option value="">Selectionner un type</option>
-                                    <option value="entite" @selected(old('evaluable_type') === 'entite')>Entite</option>
+                                    <option value="user" selected>Directeur General</option>
                                     <option value="user" @selected(old('evaluable_type') === 'user')>Directeur Général</option>
                                 </select>
                             </div>
                             <div class="space-y-2">
-                                <label for="evaluable_id" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Cible</label>
-                                <select id="evaluable_id" name="evaluable_id" class="ent-select" required data-previous-target="{{ old('evaluable_id') }}">
-                                    <option value="">Selectionner d'abord un type</option>
-                                </select>
+                                <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Cible</label>
+                                <input type="hidden" id="evaluable_id" name="evaluable_id" value="{{ $dg?->id }}" data-previous-target="">
+                                <input type="text" class="ent-input bg-slate-50 text-slate-600" value="{{ $dg?->name ?? 'Aucun DG trouvé' }}" readonly>
                             </div>
                         </div>
 
@@ -89,7 +92,7 @@
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_semestre" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Semestre</label>
-                                <select id="identification_semestre" name="identification[semestre]" class="ent-select">
+                                <select id="identification_semestre" name="identification[semestre]" required class="ent-select">
                                     <option value="">Selectionner</option>
                                     <option value="1" @selected(old('identification.semestre') === '1')>Semestre 1</option>
                                     <option value="2" @selected(old('identification.semestre') === '2')>Semestre 2</option>
@@ -396,9 +399,8 @@
             const availableTypes = Object.entries(assignmentOptions)
                 .filter(([, items]) => Array.isArray(items) && items.length > 0)
                 .map(([key]) => key);
-            const objectiveCatalog = Object.entries(objectiveOptions).flatMap(([type, items]) =>
-                (Array.isArray(items) ? items : []).map((item) => ({ ...item, type }))
-            );
+            const objectiveCatalog = (Array.isArray(objectiveOptions.user) ? objectiveOptions.user : [])
+                .map((item) => ({ ...item, type: 'user' }));
 
             const identificationFields = {
                 nom_prenom: document.getElementById('identification_nom_prenom'),
@@ -615,7 +617,6 @@
             }
 
             function getObjectiveOptionsForCurrentSelection() {
-                // Afficher toutes les fiches d'objectif, sans filtrage
                 return objectiveCatalog;
             }
 

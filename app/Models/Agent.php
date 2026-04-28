@@ -52,6 +52,8 @@ class Agent extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'entite_id',
+        'direction_id',
         'delegation_technique_id',
         'caisse_id',
         'agence_id',
@@ -75,6 +77,16 @@ class Agent extends Model
     }
 
     // ── Rattachements hiérarchiques ───────────────────────────────────────────
+
+    public function entite(): BelongsTo
+    {
+        return $this->belongsTo(Entite::class);
+    }
+
+    public function direction(): BelongsTo
+    {
+        return $this->belongsTo(Direction::class);
+    }
 
     public function delegationTechnique(): BelongsTo
     {
@@ -100,6 +112,61 @@ class Agent extends Model
     {
         return $this->belongsTo(Service::class);
     }
+    // ── Postes de responsabilité (FK inverses) ─────────────────────────────
+    // L'agent EST le responsable d'une structure (référencé depuis la table structure)
+
+    public function directedDirection(): HasOne
+    {
+        return $this->hasOne(Direction::class, 'directeur_agent_id');
+    }
+
+    public function secretariedDirection(): HasOne
+    {
+        return $this->hasOne(Direction::class, 'secretaire_agent_id');
+    }
+
+    public function directedDelegation(): HasOne
+    {
+        return $this->hasOne(DelegationTechnique::class, 'directeur_agent_id');
+    }
+
+    public function secretariedDelegation(): HasOne
+    {
+        return $this->hasOne(DelegationTechnique::class, 'secretaire_agent_id');
+    }
+
+    public function directedCaisse(): HasOne
+    {
+        return $this->hasOne(Caisse::class, 'directeur_agent_id');
+    }
+
+    public function secretariedCaisse(): HasOne
+    {
+        return $this->hasOne(Caisse::class, 'secretaire_agent_id');
+    }
+
+    public function ledAgence(): HasOne
+    {
+        return $this->hasOne(Agence::class, 'chef_agent_id');
+    }
+
+    public function secretariedAgence(): HasOne
+    {
+        return $this->hasOne(Agence::class, 'secretaire_agent_id');
+    }
+
+    public function ledGuichet(): HasOne
+    {
+        return $this->hasOne(Guichet::class, 'chef_agent_id');
+    }
+
+    public function ledService(): HasOne
+    {
+        return $this->hasOne(Service::class, 'chef_agent_id');
+    }
+
+    // ── Objectifs / Évaluations ────────────────────────────────────────────
+
     public function objectifs(): MorphMany
     {
         return $this->morphMany(Objectif::class, 'assignable');

@@ -41,10 +41,6 @@ return new class extends Migration
                   ->nullOnDelete()
                   ->comment('Supérieur direct pour la chaîne de validation des évaluations');
 
-            // ── Rattachement faîtière (héritage – sera dérivé via agent→structure) ──
-            $table->unsignedBigInteger('pca_entite_id')->nullable()
-                  ->comment('Entité de rattachement (legacy – à migrer vers agent→entite)');
-
             $table->timestamps();
         });
 

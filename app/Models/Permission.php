@@ -22,7 +22,7 @@ class Permission extends Model
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'roles_has_permissions', 'permissions_id', 'roles_id')
+        return $this->belongsToMany(Role::class, 'roles_has_permissions', 'permission_id', 'role_id')
                     ->withTimestamps();
     }
 }

@@ -213,7 +213,7 @@ class DgReseauController extends Controller
         }
 
         if ($caisseId) {
-            $query->where('superviseur_caisse_id', $caisseId);
+            $query->where('caisse_id', $caisseId);
         }
 
         $agences = $query->paginate(15)->withQueryString();

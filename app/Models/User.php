@@ -24,7 +24,7 @@ class User extends Authenticatable{
         'password',
         'role',
         'manager_id',
-        'pca_entite_id',
+
         'must_change_password',
         'theme_preference',
     ];
@@ -64,11 +64,6 @@ class User extends Authenticatable{
     public function subordonnesDirects(): HasMany
     {
         return $this->hasMany(User::class, 'manager_id');
-    }
-
-    public function entite(): BelongsTo
-    {
-        return $this->belongsTo(Entite::class, 'pca_entite_id');
     }
 
     public function evaluations(): HasMany
@@ -163,7 +158,7 @@ public function hasPermission(string $permissionName): bool
 
     public function isSecretaireAssistante(): bool
     {
-        return $this->role === 'Secretaire_assistante';
+        return $this->role === 'Secretaire_Assistante';
     }
 
     public function isSecretaireDirection(): bool
@@ -203,17 +198,22 @@ public function hasPermission(string $permissionName): bool
 
     public function isDirecteurTechnique(): bool
     {
-        return $this->role === 'Directeur_Tehnique';
+        return $this->role === 'Directeur_Technique';
     }
 
-    public function isChefsService(): bool
+    public function isChefService(): bool
     {
-        return $this->role === 'Chefs de service';
+        return $this->role === 'Chef_Service';
     }
 
     public function isChefAgence(): bool
     {
-        return $this->role === "chef d'agence";
+        return $this->role === 'Chef_Agence';
+    }
+
+    public function isChefGuichet(): bool
+    {
+        return $this->role === 'Chef_Guichet';
     }
 
     public function isAgent(): bool
@@ -221,13 +221,19 @@ public function hasPermission(string $permissionName): bool
         return $this->role === 'Agent';
     }
 
+    public function isRh(): bool
+    {
+        return $this->role === 'RH';
+    }
+
     public function isPersonnel(): bool
     {
         return in_array($this->role, [
-            'PCA', 'DG', 'Assistante_Dg', 'DGA', 'Secretaire_assistante', 'Secretaire_Direction',
-            'Secretaire_Technique', 'Secretaire_Caisse', 'Secretaire_Agence', 'Conseillers_Dg',
-            'Directeur_Direction', 'Directeur_Caisse', 'Directeur_Tehnique', 'Chefs de service',
-            "chef d'agence", 'Agent'
+            'PCA', 'DG', 'DGA', 'Assistante_Dg', 'Secretaire_Assistante', 'Conseillers_Dg',
+            'Directeur_Direction', 'Directeur_Technique', 'Directeur_Caisse',
+            'Secretaire_Direction', 'Secretaire_Technique', 'Secretaire_Caisse', 'Secretaire_Agence',
+            'Chef_Agence', 'Chef_Guichet', 'Chef_Service',
+            'RH', 'Agent',
         ], true);
     }
 }

@@ -9,6 +9,7 @@ use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\SubjectiveCriteriaTemplate;
 use App\Models\User;
+use App\Traits\ResolvesEntite;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,25 +21,35 @@ use Illuminate\View\View;
 
 class DgSubEvaluationController extends Controller
 {
+    use ResolvesEntite;
+
     private const ALLOWED_ROLES = ['DGA', 'Assistante_Dg', 'Conseillers_Dg'];
 
     /** Retourne tous les subordonnés du DG connecté. */
     private function getSubordonnes(): \Illuminate\Support\Collection
     {
-        $entiteId   = (int) Auth::user()->pca_entite_id;
+        $entite      = $this->getEntiteForDG();
         $subordonnes = collect();
 
-        $dga = User::where('role', 'DGA')->where('pca_entite_id', $entiteId)->first();
-        if ($dga) {
-            $subordonnes->push(['id' => $dga->id, 'nom' => $dga->name, 'role_label' => 'DGA']);
+        if (! $entite) {
+            return $subordonnes;
         }
 
-        $assistante = User::where('role', 'Assistante_Dg')->where('pca_entite_id', $entiteId)->first();
-        if ($assistante) {
-            $subordonnes->push(['id' => $assistante->id, 'nom' => $assistante->name, 'role_label' => 'Assistante']);
+        if ($entite->dga_agent_id) {
+            $dga = User::where('role', 'DGA')->where('agent_id', $entite->dga_agent_id)->first();
+            if ($dga) {
+                $subordonnes->push(['id' => $dga->id, 'nom' => $dga->name, 'role_label' => 'DGA']);
+            }
         }
 
-        $conseillers = User::where('role', 'Conseillers_Dg')->where('pca_entite_id', $entiteId)->get();
+        if ($entite->assistante_agent_id) {
+            $assistante = User::where('role', 'Assistante_Dg')->where('agent_id', $entite->assistante_agent_id)->first();
+            if ($assistante) {
+                $subordonnes->push(['id' => $assistante->id, 'nom' => $assistante->name, 'role_label' => 'Assistante']);
+            }
+        }
+
+        $conseillers = User::where('role', 'Conseillers_Dg')->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))->get();
         foreach ($conseillers as $c) {
             $subordonnes->push(['id' => $c->id, 'nom' => $c->name, 'role_label' => 'Conseiller']);
         }
@@ -299,7 +310,7 @@ class DgSubEvaluationController extends Controller
             abort(403);
         }
 
-        if ((int) ($evaluation->evaluable->pca_entite_id ?? 0) !== (int) $user->pca_entite_id) {
+        if ((int) ($evaluation->evaluable->agent?->entite_id ?? 0) !== (int) ($this->getEntiteForDG()?->id ?? 0)) {
             abort(403);
         }
 
@@ -366,7 +377,7 @@ class DgSubEvaluationController extends Controller
         ) {
             abort(403);
         }
-        if ((int) ($evaluation->evaluable->pca_entite_id ?? 0) !== (int) $user->pca_entite_id) {
+        if ((int) ($evaluation->evaluable->agent?->entite_id ?? 0) !== (int) ($this->getEntiteForDG()?->id ?? 0)) {
             abort(403);
         }
         if ($evaluation->statut === 'valide') {

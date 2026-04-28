@@ -127,38 +127,23 @@ class DirectionController extends Controller
 
     public function index(): View
     {
-        $delegations = DelegationTechnique::query()
-            ->withCount(['caisses'])
-            ->with(['villes' => fn ($q) => $q->orderBy('nom')])
-            ->orderBy('region')
-            ->orderBy('ville')
+        $entite = Entite::with(['pca', 'dg', 'dga'])->latest()->first();
+
+        $directions = Direction::query()
+            ->where('nom', '!=', 'Direction Générale')
+            ->with(['directeur', 'secretaire'])
+            ->withCount(['services', 'agents'])
+            ->when($entite, fn ($q) => $q->where('entite_id', $entite->id))
+            ->orderBy('nom')
             ->get();
 
-        $agentsCount = Agent::query()
-            ->whereNotNull('delegation_technique_id')
-            ->count();
-
-        $servicesCount = Service::query()
-            ->whereNotNull('delegation_technique_id')
-            ->count();
-
         $stats = [
-            'delegations' => $delegations->count(),
-            'caisses'     => $delegations->sum('caisses_count'),
-            'agents'      => $agentsCount,
-            'services'    => $servicesCount,
+            'directions' => $directions->count(),
+            'agents'     => $directions->sum('agents_count'),
+            'services'   => $directions->sum('services_count'),
         ];
 
-        return view('admin.delegations_techniques.index', [
-            'delegations'      => $delegations,
-            'stats'            => $stats,
-            'services'           => Service::query()->orderBy('nom')->get(),
-            'directeurs'         => Agent::query()->where('fonction', 'Directeur Technique')->orderBy('nom')->orderBy('prenom')->get(),
-            'secretaires'        => Agent::query()->where('fonction', 'Secrétaire Technique')->orderBy('nom')->orderBy('prenom')->get(),
-            'chefs_service'      => Agent::query()->where('fonction', 'Chef de Service')->orderBy('nom')->orderBy('prenom')->get(),
-            'directeurs_caisse'  => Agent::query()->where('fonction', 'Directeur de Caisse')->orderBy('nom')->orderBy('prenom')->get(),
-            'secretaires_caisse' => Agent::query()->where('fonction', 'Secrétaire de Caisse')->orderBy('nom')->orderBy('prenom')->get(),
-        ]);
+        return view('admin.directions.index', compact('entite', 'directions', 'stats'));
     }
 
     public function showDelegation(DelegationTechnique $delegationTechnique): View
@@ -398,7 +383,7 @@ class DirectionController extends Controller
         Direction::query()->create($validated);
 
         return redirect()
-            ->route('admin.entites.directions.index')
+            ->route('admin.directions.index')
             ->with('status', 'Direction creee avec succes.');
     }
 

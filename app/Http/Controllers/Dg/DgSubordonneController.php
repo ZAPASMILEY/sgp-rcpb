@@ -3,19 +3,23 @@
 namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
+use App\Models\Entite;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\User;
+use App\Traits\ResolvesEntite;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class DgSubordonneController extends Controller
 {
+    use ResolvesEntite;
+
     /** Retourne l'entite_id du DG connecte. */
     private function entiteId(): int
     {
-        return (int) auth()->user()->pca_entite_id;
+        return (int) ($this->getEntiteForDG()?->id ?? 0);
     }
 
     /** Charge les donnees paginees pour un subordonne (objectifs + evaluations). */
@@ -104,10 +108,10 @@ class DgSubordonneController extends Controller
 
     public function dga(Request $request): View
     {
-        $dga = User::query()
-            ->where('role', 'DGA')
-            ->where('pca_entite_id', $this->entiteId())
-            ->first();
+        $entite = $this->getEntiteForDG();
+        $dga = ($entite && $entite->dga_agent_id)
+            ? User::query()->where('role', 'DGA')->where('agent_id', $entite->dga_agent_id)->first()
+            : null;
 
         $data = $dga
             ? $this->loadDossierData($request, $dga)
@@ -121,10 +125,10 @@ class DgSubordonneController extends Controller
 
     public function assistante(Request $request): View
     {
-        $assistante = User::query()
-            ->where('role', 'Assistante_Dg')
-            ->where('pca_entite_id', $this->entiteId())
-            ->first();
+        $entite = $this->getEntiteForDG();
+        $assistante = ($entite && $entite->assistante_agent_id)
+            ? User::query()->where('role', 'Assistante_Dg')->where('agent_id', $entite->assistante_agent_id)->first()
+            : null;
 
         $data = $assistante
             ? $this->loadDossierData($request, $assistante)
@@ -140,7 +144,7 @@ class DgSubordonneController extends Controller
     {
         $conseillers = User::query()
             ->where('role', 'Conseillers_Dg')
-            ->where('pca_entite_id', $this->entiteId())
+            ->whereHas('agent', fn ($q) => $q->where('entite_id', $this->entiteId()))
             ->get();
 
         return view('dg.subordonnes.conseillers', compact('conseillers'));
@@ -148,7 +152,7 @@ class DgSubordonneController extends Controller
 
     public function conseiller(Request $request, User $user): View
     {
-        if ((int) $user->pca_entite_id !== $this->entiteId() || $user->role !== 'Conseillers_Dg') {
+        if ((int) ($user->agent?->entite_id ?? 0) !== $this->entiteId() || $user->role !== 'Conseillers_Dg') {
             abort(403);
         }
 

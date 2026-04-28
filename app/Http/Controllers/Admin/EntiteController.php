@@ -49,7 +49,7 @@ class EntiteController extends Controller
 
     public function index(): View
     {
-        $entite = Entite::query()->latest()->first();
+        $entite = Entite::with(['pca', 'dg', 'dga', 'assistante'])->latest()->first();
 
         if (!$entite) {
             return view('admin.entites.index', [
@@ -176,7 +176,7 @@ class EntiteController extends Controller
                 $validated['pca_email'],
                 $validated['pca_prenom'].' '.$validated['pca_nom'],
                 'pca',
-                ['pca_entite_id' => $entite->id]
+                ['entite_id' => $entite->id]
             );
         });
 

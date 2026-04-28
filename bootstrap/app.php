@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'subordonne'   => \App\Http\Middleware\EnsureIsSubordonne::class,
             'dga_espace'       => \App\Http\Middleware\EnsureIsDga::class,
             'directeur_espace' => \App\Http\Middleware\EnsureIsDirecteur::class,
+            'rh'               => \App\Http\Middleware\EnsureRh::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

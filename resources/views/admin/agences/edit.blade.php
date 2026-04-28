@@ -77,10 +77,10 @@
 
                 <div>
                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Caisse superviseur <span class="text-rose-500">*</span></label>
-                    <select name="superviseur_caisse_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                    <select name="caisse_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                         <option value="">-- Choisir --</option>
                         @foreach ($caisses as $caisse)
-                            <option value="{{ $caisse->id }}" @selected(old('superviseur_caisse_id', $agence->superviseur_caisse_id) == $caisse->id)>{{ $caisse->nom }}</option>
+                            <option value="{{ $caisse->id }}" @selected(old('caisse_id', $agence->caisse_id) == $caisse->id)>{{ $caisse->nom }}</option>
                         @endforeach
                     </select>
                 </div>

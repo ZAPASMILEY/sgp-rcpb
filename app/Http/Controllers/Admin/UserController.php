@@ -26,17 +26,17 @@ class UserController extends Controller
         'DGA'                     => 'DGA',
         'Assistante DG'           => 'Assistante_Dg',
         'Conseiller DG'           => 'Conseillers_Dg',
-        'Secrétaire Assistante'   => 'Secretaire_assistante',
+        'Secrétaire Assistante'   => 'Secretaire_Assistante',
         'Directeur de Direction'  => 'Directeur_Direction',
         'Secrétaire de Direction' => 'Secretaire_Direction',
-        'Directeur Technique'     => 'Directeur_Tehnique',
+        'Directeur Technique'     => 'Directeur_Technique',
         'Secrétaire Technique'    => 'Secretaire_Technique',
         'Directeur de Caisse'     => 'Directeur_Caisse',
         'Secrétaire de Caisse'    => 'Secretaire_Caisse',
-        "Chef d'Agence"           => "chef d'agence",
+        "Chef d'Agence"           => 'Chef_Agence',
         "Secrétaire d'Agence"     => 'Secretaire_Agence',
-        'Chef de Guichet'         => "chef d'agence",
-        'Chef de Service'         => 'Chefs de service',
+        'Chef de Guichet'         => 'Chef_Guichet',
+        'Chef de Service'         => 'Chef_Service',
         'Agent'                   => 'Agent',
     ];
 
@@ -49,17 +49,19 @@ class UserController extends Controller
         'DG'                    => 'Directeur Général',
         'DGA'                   => 'DGA',
         'Assistante_Dg'         => 'Assistante DG',
-        'Secretaire_assistante' => 'Secrétaire Assistante DG',
+        'Secretaire_Assistante' => 'Secrétaire Assistante DG',
         'Conseillers_Dg'        => 'Conseiller DG',
         'Directeur_Direction'   => 'Directeur de Direction',
+        'Directeur_Technique'   => 'Directeur Technique',
         'Directeur_Caisse'      => 'Directeur de Caisse',
-        'Directeur_Tehnique'    => 'Directeur Technique',
         'Secretaire_Direction'  => 'Secrétaire de Direction',
         'Secretaire_Technique'  => 'Secrétaire Technique',
         'Secretaire_Caisse'     => 'Secrétaire de Caisse',
         'Secretaire_Agence'     => "Secrétaire d'Agence",
-        'Chefs de service'      => 'Chef de Service',
-        "chef d'agence"         => "Chef d'Agence",
+        'Chef_Agence'           => "Chef d'Agence",
+        'Chef_Guichet'          => 'Chef de Guichet',
+        'Chef_Service'          => 'Chef de Service',
+        'RH'                    => 'Responsable RH',
         'Agent'                 => 'Agent',
     ];
 
@@ -73,8 +75,13 @@ class UserController extends Controller
         return view('admin.users.index', ['users' => $users]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $preselectedAgentId = (int) $request->query('agent_id', 0);
+        $preselectedAgent   = $preselectedAgentId > 0
+            ? Agent::query()->find($preselectedAgentId, ['id', 'nom', 'prenom', 'email', 'fonction'])
+            : null;
+
         $agents = Agent::query()
             ->doesntHave('user')
             ->orderBy('nom')
@@ -84,11 +91,12 @@ class UserController extends Controller
         $managers = User::query()->orderBy('name')->get(['id', 'name', 'role']);
 
         return view('admin.users.create', [
-            'agents'          => $agents,
-            'managers'        => $managers,
-            'roles'           => self::ROLES,
-            'fonctionToRole'  => self::FONCTION_TO_ROLE,
-            'entites'         => \App\Models\Entite::query()->orderBy('nom')->get(['id', 'nom']),
+            'agents'           => $agents,
+            'preselectedAgent' => $preselectedAgent,
+            'managers'         => $managers,
+            'roles'            => self::ROLES,
+            'fonctionToRole'   => self::FONCTION_TO_ROLE,
+            'entites'          => \App\Models\Entite::query()->orderBy('nom')->get(['id', 'nom']),
         ]);
     }
 
@@ -100,12 +108,12 @@ class UserController extends Controller
             'manager_id'     => ['nullable', 'integer', 'exists:users,id'],
             'email'          => ['required', 'email', 'max:191', Rule::unique('users', 'email')],
             'password'       => ['required', 'confirmed', Password::min(8)],
-            'pca_entite_id'  => [
-                Rule::requiredIf($request->input('role') === 'PCA'),
+            'entite_id'  => [
+                Rule::requiredIf(in_array($request->input('role'), ['PCA', 'Conseillers_Dg'], true)),
                 'nullable', 'integer', 'exists:entites,id',
             ],
         ], [
-            'pca_entite_id.required' => 'Le rôle PCA nécessite de sélectionner une entité faîtière.',
+            'entite_id.required' => 'Ce rôle nécessite de sélectionner une entité faîtière.',
         ]);
 
         $agent = Agent::findOrFail($validated['agent_id']);
@@ -117,9 +125,15 @@ class UserController extends Controller
             'password'              => Hash::make($validated['password']),
             'role'                  => $validated['role'],
             'manager_id'            => $validated['manager_id'] ?? null,
-            'pca_entite_id'         => $validated['pca_entite_id'] ?? null,
             'must_change_password'  => true,
         ]);
+
+        // entite_id est désormais sur agents (PCA et Conseillers_Dg)
+        $rolesAvecEntite = ['PCA', 'Conseillers_Dg'];
+        if (in_array($validated['role'], $rolesAvecEntite, true)) {
+            $agent->entite_id = $validated['entite_id'] ?? null;
+            $agent->save();
+        }
 
         // Synchronise le champ FK de l'entité faîtière selon le rôle
         $this->syncEntiteAgentField($validated['role'], $agent->id);
@@ -151,19 +165,18 @@ class UserController extends Controller
             'manager_id'    => ['nullable', 'integer', 'exists:users,id', Rule::notIn([$user->id])],
             'email'         => ['required', 'email', 'max:191', Rule::unique('users', 'email')->ignore($user->id)],
             'password'      => ['nullable', 'confirmed', Password::min(8)],
-            'pca_entite_id' => [
-                Rule::requiredIf($request->input('role') === 'PCA'),
+            'entite_id' => [
+                Rule::requiredIf(in_array($request->input('role'), ['PCA', 'Conseillers_Dg'], true)),
                 'nullable', 'integer', 'exists:entites,id',
             ],
         ], [
-            'pca_entite_id.required' => 'Le rôle PCA nécessite de sélectionner une entité faîtière.',
+            'entite_id.required' => 'Ce rôle nécessite de sélectionner une entité faîtière.',
         ]);
 
         $data = [
-            'role'          => $validated['role'],
-            'manager_id'    => $validated['manager_id'] ?? null,
-            'email'         => $validated['email'],
-            'pca_entite_id' => $validated['role'] === 'PCA' ? ($validated['pca_entite_id'] ?? null) : null,
+            'role'       => $validated['role'],
+            'manager_id' => $validated['manager_id'] ?? null,
+            'email'      => $validated['email'],
         ];
 
         if (! empty($validated['password'])) {
@@ -173,8 +186,15 @@ class UserController extends Controller
 
         $user->update($data);
 
-        // Synchronise le champ FK de l'entité faîtière si l'agent est défini
+        // entite_id est désormais sur agents (PCA et Conseillers_Dg)
         if ($user->agent_id) {
+            $rolesAvecEntite = ['PCA', 'Conseillers_Dg'];
+            $agent = Agent::findOrFail($user->agent_id);
+            $agent->entite_id = in_array($validated['role'], $rolesAvecEntite, true)
+                ? ($validated['entite_id'] ?? null)
+                : null;
+            $agent->save();
+
             $this->syncEntiteAgentField($validated['role'], $user->agent_id);
         }
 
@@ -204,6 +224,8 @@ class UserController extends Controller
         $entite = Entite::query()->latest()->first();
         if ($entite) {
             $entite->update([$column => $agentId]);
+            // Synchronise aussi agents.entite_id pour que l'affectation soit visible partout
+            Agent::where('id', $agentId)->update(['entite_id' => $entite->id]);
         }
     }
 

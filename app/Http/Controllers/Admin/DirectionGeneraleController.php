@@ -25,25 +25,32 @@ class DirectionGeneraleController extends Controller
         $conseillers = collect();
 
         if ($entite) {
-            $membres = User::whereIn('role', ['DG', 'Assistante_Dg', 'DGA'])
-                ->where('pca_entite_id', $entite->id)
-                ->get();
+            // DG, DGA, Assistante : retrouvés via les FK inverses sur entites
+            $agentIds = array_values(array_filter([
+                $entite->dg_agent_id,
+                $entite->dga_agent_id,
+                $entite->assistante_agent_id,
+            ]));
+            $membres = $agentIds
+                ? User::whereIn('agent_id', $agentIds)->get()
+                : collect();
 
+            // Secrétaires et Conseillers : retrouvés via agents.entite_id
             $secretaires = User::where('role', 'Secretaire_assistante')
-                ->where('pca_entite_id', $entite->id)
+                ->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))
                 ->get();
 
             $conseillers = User::where('role', 'Conseillers_Dg')
-                ->where('pca_entite_id', $entite->id)
+                ->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))
                 ->get();
         }
 
         return view('admin.direction-generale.index', [
-            'entite'     => $entite,
-            'direction'  => $direction,
-            'membres'    => $membres,
-            'secretaires'=> $secretaires,
-            'conseillers'=> $conseillers,
+            'entite'      => $entite,
+            'direction'   => $direction,
+            'membres'     => $membres,
+            'secretaires' => $secretaires,
+            'conseillers' => $conseillers,
         ]);
     }
 
@@ -60,12 +67,17 @@ class DirectionGeneraleController extends Controller
             ->where('nom', 'Direction Générale')
             ->exists();
 
+        if ($dejaConfiguree) {
+            return redirect()
+                ->route('admin.direction-generale.index')
+                ->with('error', 'La Direction Générale est déjà configurée. Utilisez le bouton Modifier pour apporter des changements.');
+        }
+
         return view('admin.direction-generale.create', [
-            'entite'         => $entite,
-            'dejaConfiguree' => $dejaConfiguree,
-            'dg_agents'      => \App\Models\Agent::query()->where('fonction', 'Directeur Général')->orderBy('nom')->get(),
-            'dga_agents'     => \App\Models\Agent::query()->where('fonction', 'DGA')->orderBy('nom')->get(),
-            'assistantes'    => \App\Models\Agent::query()->where('fonction', 'Assistante DG')->orderBy('nom')->get(),
+            'entite'      => $entite,
+            'dg_agents'   => \App\Models\Agent::query()->where('fonction', 'Directeur Général')->orderBy('nom')->get(),
+            'dga_agents'  => \App\Models\Agent::query()->where('fonction', 'DGA')->orderBy('nom')->get(),
+            'assistantes' => \App\Models\Agent::query()->where('fonction', 'Assistante DG')->orderBy('nom')->get(),
         ]);
     }
 
@@ -78,6 +90,16 @@ class DirectionGeneraleController extends Controller
                 ->with('error', 'Configurez d\'abord la faitiere.');
         }
 
+        $dejaConfiguree = Direction::where('entite_id', $entite->id)
+            ->where('nom', 'Direction Générale')
+            ->exists();
+
+        if ($dejaConfiguree) {
+            return redirect()
+                ->route('admin.direction-generale.index')
+                ->with('error', 'La Direction Générale est déjà configurée.');
+        }
+
         $validated = $request->validate([
             'dg_agent_id'         => ['nullable', 'integer', 'exists:agents,id'],
             'dga_agent_id'        => ['nullable', 'integer', 'exists:agents,id'],
@@ -86,10 +108,11 @@ class DirectionGeneraleController extends Controller
 
         $entite->update($validated);
 
-        Direction::firstOrCreate(
-            ['entite_id' => $entite->id, 'nom' => 'Direction Générale'],
-            ['directeur_agent_id' => $validated['dg_agent_id'] ?? null]
-        );
+        Direction::create([
+            'entite_id'          => $entite->id,
+            'nom'                => 'Direction Générale',
+            'directeur_agent_id' => $validated['dg_agent_id'] ?? null,
+        ]);
 
         return redirect()
             ->route('admin.direction-generale.index')
@@ -108,7 +131,13 @@ class DirectionGeneraleController extends Controller
         }
 
         // Sécurité : seuls les membres de l'entite courante peuvent être édités
-        if ((int) $user->pca_entite_id !== $entite->id || ! in_array($user->role, ['DG', 'DGA', 'Assistante_Dg'], true)) {
+        $roleColumn = match ($user->role) {
+            'DG'            => 'dg_agent_id',
+            'DGA'           => 'dga_agent_id',
+            'Assistante_Dg' => 'assistante_agent_id',
+            default         => null,
+        };
+        if (! $roleColumn || (int) $entite->{$roleColumn} !== (int) $user->agent_id) {
             abort(403);
         }
 
@@ -124,7 +153,13 @@ class DirectionGeneraleController extends Controller
     public function updateMembre(Request $request, User $user): RedirectResponse
     {
         $entite = Entite::latest()->first();
-        if (! $entite || (int) $user->pca_entite_id !== $entite->id || ! in_array($user->role, ['DG', 'DGA', 'Assistante_Dg'], true)) {
+        $roleColumn = match ($user->role) {
+            'DG'            => 'dg_agent_id',
+            'DGA'           => 'dga_agent_id',
+            'Assistante_Dg' => 'assistante_agent_id',
+            default         => null,
+        };
+        if (! $entite || ! $roleColumn || (int) $entite->{$roleColumn} !== (int) $user->agent_id) {
             abort(403);
         }
 
@@ -218,10 +253,9 @@ class DirectionGeneraleController extends Controller
             ])->withInput();
         }
 
-        $agent->user->update([
-            'role'          => 'Secretaire_assistante',
-            'pca_entite_id' => $entite->id,
-        ]);
+        $agent->entite_id = $entite->id;
+        $agent->save();
+        $agent->user->update(['role' => 'Secretaire_assistante']);
 
         return redirect()
             ->route('admin.direction-generale.index')
@@ -276,10 +310,9 @@ class DirectionGeneraleController extends Controller
             ])->withInput();
         }
 
-        $agent->user->update([
-            'role'          => 'Conseillers_Dg',
-            'pca_entite_id' => $entite->id,
-        ]);
+        $agent->entite_id = $entite->id;
+        $agent->save();
+        $agent->user->update(['role' => 'Conseillers_Dg']);
 
         return redirect()
             ->route('admin.direction-generale.index')

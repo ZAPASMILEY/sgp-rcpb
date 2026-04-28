@@ -24,7 +24,7 @@ Artisan::command('users:create-from-entite', function () {
             'nom'    => $entite->pca_nom,
             'email'  => $entite->pca_email,
             'role'   => 'pca',
-            'pca_entite_id' => $entite->id,
+            'entite_id' => $entite->id,
         ],
         [
             'prenom' => $entite->directrice_generale_prenom,
@@ -44,26 +44,28 @@ Artisan::command('users:create-from-entite', function () {
         if (!$u['email']) continue;
         $exists = User::where('email', $u['email'])->first();
         if ($exists) {
-            // Si c'est le PCA, on met à jour le pca_entite_id si besoin
-            if ($u['role'] === 'pca' && empty($exists->pca_entite_id)) {
-                $exists->pca_entite_id = $entite->id;
-                $exists->save();
-                $this->info("pca_entite_id mis à jour pour le PCA existant: {$u['email']}");
+            // entite_id est maintenant sur agents — mise à jour via l'agent lié
+            if ($u['role'] === 'pca' && $exists->agent_id && empty($exists->agent?->entite_id)) {
+                $exists->agent->entite_id = $entite->id;
+                $exists->agent->save();
+                $this->info("entite_id mis à jour sur agent pour le PCA existant: {$u['email']}");
             } else {
                 $this->info("Utilisateur déjà existant: {$u['email']}");
             }
             continue;
         }
         $data = [
-            'name' => trim(($u['prenom'] ?? '') . ' ' . ($u['nom'] ?? '')),
-            'email' => $u['email'],
-            'role' => $u['role'],
-            'password' => Hash::make('changeme123'), // Mot de passe temporaire
+            'name'     => trim(($u['prenom'] ?? '') . ' ' . ($u['nom'] ?? '')),
+            'email'    => $u['email'],
+            'role'     => $u['role'],
+            'password' => Hash::make('changeme123'),
         ];
-        if (isset($u['pca_entite_id'])) {
-            $data['pca_entite_id'] = $u['pca_entite_id'];
-        }
         $user = User::create($data);
+        // entite_id du PCA → sur l'agent, pas sur le user
+        if (isset($u['entite_id']) && $user->agent_id) {
+            $user->agent->entite_id = $u['entite_id'];
+            $user->agent->save();
+        }
         $this->info("Utilisateur créé: {$user->name} ({$user->role})");
     }
 });

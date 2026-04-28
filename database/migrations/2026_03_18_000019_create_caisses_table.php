@@ -16,7 +16,6 @@ return new class extends Migration
             // Rattachements hiérarchiques
             $table->foreignId('delegation_technique_id')->nullable()->constrained('delegation_techniques')->nullOnDelete();
             $table->foreignId('ville_id')->nullable()->constrained('villes')->nullOnDelete();
-            $table->foreignId('superviseur_direction_id')->nullable()->constrained('directions')->nullOnDelete();
 
             $table->string('nom')->unique();
             $table->string('annee_ouverture', 4)->nullable();

@@ -26,19 +26,11 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // FK users.pca_entite_id → entites.id
-        Schema::table('users', function (Blueprint $table): void {
-            $table->foreign('pca_entite_id')->references('id')->on('entites')->nullOnDelete();
-        });
-
         Schema::enableForeignKeyConstraints();
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table): void {
-            $table->dropForeign(['pca_entite_id']);
-        });
         Schema::dropIfExists('entites');
     }
 };
