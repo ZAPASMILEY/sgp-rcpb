@@ -38,6 +38,7 @@ class Entite extends Model
         // Responsables : FK vers agents
         'dg_agent_id',
         'dga_agent_id',
+        'dga_secretaire_agent_id',
         'pca_agent_id',
         'assistante_agent_id',
     ];
@@ -52,6 +53,11 @@ class Entite extends Model
     public function dga(): BelongsTo
     {
         return $this->belongsTo(Agent::class, 'dga_agent_id');
+    }
+
+    public function dgaSecretaire(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'dga_secretaire_agent_id');
     }
 
     public function pca(): BelongsTo

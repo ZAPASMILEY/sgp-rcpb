@@ -32,8 +32,8 @@
                 <div class="mt-6 rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-4">
                     <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Direction cible</p>
                     <p class="mt-2 text-base font-black text-slate-900">{{ $direction->nom }}</p>
-                    @php $directeurNom = trim($direction->directeur_prenom.' '.$direction->directeur_nom); @endphp
-                    @if ($directeurNom !== '')
+                    @php $directeurNom = $direction->directeur ? trim($direction->directeur->prenom.' '.$direction->directeur->nom) : null; @endphp
+                    @if ($directeurNom)
                         <p class="mt-1 text-sm text-slate-500">Directeur : {{ $directeurNom }}</p>
                     @endif
                 </div>

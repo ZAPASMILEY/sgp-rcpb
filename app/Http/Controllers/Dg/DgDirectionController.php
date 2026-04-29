@@ -9,6 +9,7 @@ use App\Models\Direction;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\SubjectiveCriteriaTemplate;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,11 +33,8 @@ class DgDirectionController extends Controller
 
     private function getDirections(): \Illuminate\Support\Collection
     {
-        // On exclut la Direction Générale : le DG ne s'évalue pas lui-même via ce module.
-        // Le filtre porte sur user_id pour être robuste même si le nom de la direction change.
         return Direction::where('entite_id', $this->getEntiteId())
-            ->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', '!=', Auth::id()))
-            ->with(['user', 'services'])
+            ->with(['directeur', 'services'])
             ->orderBy('nom')
             ->get();
     }
@@ -140,6 +138,8 @@ class DgDirectionController extends Controller
             ->orderByDesc('date')
             ->get();
 
+        $direction->load('directeur');
+
         return view('dg.directions.show', compact('direction', 'tab', 'evaluations', 'fiches'));
     }
 
@@ -148,6 +148,8 @@ class DgDirectionController extends Controller
     public function createObjectif(Request $request, Direction $direction): View
     {
         $this->authorizeDirection($direction);
+
+        $direction->load('directeur');
 
         $oldObjectifs = old('objectifs', ['']);
         if (! is_array($oldObjectifs) || $oldObjectifs === []) {
@@ -159,6 +161,7 @@ class DgDirectionController extends Controller
 
     public function storeObjectif(Request $request): RedirectResponse
     {
+
         $directionIds = Direction::where('entite_id', $this->getEntiteId())->pluck('id')->all();
 
         $validated = $request->validate([
@@ -187,13 +190,16 @@ class DgDirectionController extends Controller
         }
 
         // Notifier le directeur
-        if ($direction->user_id) {
-            Alerte::notifier(
-                (int) $direction->user_id,
-                'Nouvelle fiche d\'objectifs reçue',
-                "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ». Connectez-vous pour l'examiner.",
-                'haute'
-            );
+        if ($direction->directeur_agent_id) {
+            $directeurUser = User::where('agent_id', $direction->directeur_agent_id)->first();
+            if ($directeurUser) {
+                Alerte::notifier(
+                    $directeurUser->id,
+                    'Nouvelle fiche d\'objectifs reçue',
+                    "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ». Connectez-vous pour l'examiner.",
+                    'haute'
+                );
+            }
         }
 
         return redirect()
@@ -237,6 +243,8 @@ class DgDirectionController extends Controller
     public function createEvaluation(Request $request, Direction $direction): View
     {
         $this->authorizeDirection($direction);
+
+        $direction->load('directeur');
 
         $today = now()->toDateString();
         $fiches = FicheObjectif::query()
@@ -286,6 +294,7 @@ class DgDirectionController extends Controller
 
     public function storeEvaluation(Request $request): RedirectResponse
     {
+
         $user         = Auth::user();
         $directionIds = Direction::where('entite_id', $this->getEntiteId())->pluck('id')->all();
 
@@ -434,6 +443,7 @@ class DgDirectionController extends Controller
     public function showEvaluation(Evaluation $evaluation): View
     {
         $direction = $this->authorizeEvaluation($evaluation);
+        $direction->load('directeur');
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
 
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
@@ -472,6 +482,7 @@ class DgDirectionController extends Controller
 
     public function submitEvaluation(Evaluation $evaluation): RedirectResponse
     {
+
         $direction = $this->authorizeEvaluation($evaluation);
 
         if ($evaluation->statut !== 'brouillon') {
@@ -482,13 +493,16 @@ class DgDirectionController extends Controller
         $evaluation->save();
 
         // Notifier le directeur
-        if ($direction->user_id) {
-            Alerte::notifier(
-                (int) $direction->user_id,
-                'Nouvelle fiche d\'évaluation reçue',
-                'Le Directeur Général vous a soumis une fiche d\'évaluation. Connectez-vous pour la consulter.',
-                'haute'
-            );
+        if ($direction->directeur_agent_id) {
+            $directeurUser = User::where('agent_id', $direction->directeur_agent_id)->first();
+            if ($directeurUser) {
+                Alerte::notifier(
+                    $directeurUser->id,
+                    'Nouvelle fiche d\'évaluation reçue',
+                    'Le Directeur Général vous a soumis une fiche d\'évaluation. Connectez-vous pour la consulter.',
+                    'haute'
+                );
+            }
         }
 
         return redirect()
@@ -513,6 +527,7 @@ class DgDirectionController extends Controller
 
     public function exportEvaluationPdf(Evaluation $evaluation)
     {
+
         $direction = $this->authorizeEvaluation($evaluation);
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
 
@@ -520,7 +535,9 @@ class DgDirectionController extends Controller
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
         $note       = (float) $evaluation->note_finale;
         $mention    = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
-        $cibleLabel = $evaluation->identification?->nom_prenom ?? trim($direction->directeur_prenom.' '.$direction->directeur_nom);
+        $direction->loadMissing('directeur');
+        $directeurNom = $direction->directeur ? trim($direction->directeur->prenom.' '.$direction->directeur->nom) : '';
+        $cibleLabel = $evaluation->identification?->nom_prenom ?? ($directeurNom ?: $direction->nom);
         $cibleType  = 'Directeur — '.$direction->nom;
 
         $pdf = Pdf::loadView('dg.evaluations.pdf', compact(

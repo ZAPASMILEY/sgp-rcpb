@@ -22,7 +22,7 @@ class AuthenticatedSessionController extends Controller
                 return redirect()->route('dg.dashboard');
             }
             if ($request->user()->role === 'DGA') {
-                return redirect()->route('dga.mon-espace');
+                return redirect()->route('dga.dashboard');
             }
             if (in_array($request->user()->role, ['Assistante_Dg', 'Conseillers_Dg'], true)) {
                 return redirect()->route('subordonne.mon-espace');

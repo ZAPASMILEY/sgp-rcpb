@@ -12,7 +12,7 @@
                     <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Espace DG / Directions / {{ $direction->nom }}</p>
                     <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Évaluation</h1>
                     <p class="mt-2 text-sm text-slate-600">
-                        {{ $ident?->nom_prenom ?? trim($direction->directeur_prenom.' '.$direction->directeur_nom) ?: $direction->nom }} —
+                        {{ $ident?->nom_prenom ?? ($direction->directeur ? trim($direction->directeur->prenom.' '.$direction->directeur->nom) : $direction->nom) }} —
                         Période {{ $evaluation->date_debut->format('m/Y') }} – {{ $evaluation->date_fin->format('m/Y') }}
                     </p>
                 </div>

@@ -105,9 +105,31 @@ public function permissions(): BelongsToMany
     return $this->belongsToMany(Permission::class, 'permission_user')->withTimestamps();
 }
 
+/** Cache en mémoire pour éviter plusieurs requêtes DB par permission par requête. */
+private array $permissionCache = [];
+
+/**
+ * Vérifie si l'utilisateur a une permission donnée.
+ * Contrôle dans l'ordre :
+ *   1. Les permissions accordées directement à l'utilisateur (permission_user).
+ *   2. Les permissions héritées de ses rôles (role_user → roles_has_permissions).
+ */
 public function hasPermission(string $permissionName): bool
 {
-    return $this->permissions()->where('name', $permissionName)->exists();
+    if (array_key_exists($permissionName, $this->permissionCache)) {
+        return $this->permissionCache[$permissionName];
+    }
+
+    // 1. Permission directe
+    $direct = $this->permissions()->where('name', $permissionName)->exists();
+
+    // 2. Permission via rôle
+    $viaRole = $direct ? false
+        : $this->roles()
+            ->whereHas('permissions', fn ($q) => $q->where('name', $permissionName))
+            ->exists();
+
+    return $this->permissionCache[$permissionName] = ($direct || $viaRole);
 }
     // Subordonnés du DG (DGA, assistante DG)
     public function subordonnes()

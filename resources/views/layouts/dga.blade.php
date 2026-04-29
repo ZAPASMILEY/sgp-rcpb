@@ -4,7 +4,7 @@
         [
             'title' => 'Mon espace',
             'items' => [
-                ['route' => 'dga.mon-espace', 'icon' => 'fas fa-house', 'label' => 'Tableau de bord'],
+                ['route' => 'dga.dashboard', 'icon' => 'fas fa-house', 'label' => 'Tableau de bord'],
             ],
         ],
         [
@@ -12,6 +12,21 @@
             'items' => [
                 ['route' => 'dga.mon-espace', 'query' => 'tab=evaluations', 'icon' => 'fas fa-star',    'label' => 'Mes evaluations'],
                 ['route' => 'dga.mon-espace', 'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye', 'label' => 'Mes objectifs'],
+            ],
+        ],
+        [
+            'title' => 'Mes subordonnés',
+            'items' => [
+                ['route' => 'dga.subordonnes.index', 'icon' => 'fas fa-users', 'label' => 'Directeurs Techniques'],
+            ],
+        ],
+        [
+            'title' => 'Réseau RCPB',
+            'items' => [
+                ['route' => 'dga.reseau.delegations', 'icon' => 'fas fa-map-marker-alt', 'label' => 'Délégations'],
+                ['route' => 'dga.reseau.caisses',     'icon' => 'fas fa-landmark',        'label' => 'Caisses'],
+                ['route' => 'dga.reseau.agences',     'icon' => 'fas fa-building',         'label' => 'Agences'],
+                ['route' => 'dga.reseau.guichets',    'icon' => 'fas fa-cash-register',    'label' => 'Guichets'],
             ],
         ],
     ];

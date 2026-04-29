@@ -236,34 +236,27 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::post('/logout', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/logout', fn () => redirect()->route('login'));
     Route::get('/', \App\Http\Controllers\Dg\DgDashboardController::class)->name('dashboard');
-    Route::get('/objectifs', function () {
-        return view('dg.objectifs');
-    })->name('objectifs');
-    // Route pour afficher la fiche d'objectifs
-Route::get('/objectifs/{fiche}', [DgObjectifController::class, 'show'])->name('objectifs.show');
+    // Objectifs du DG (reçus + assignés aux subordonnés) — spécifiques AVANT le wildcard {fiche}
+    Route::get('/objectifs/creer',               [\App\Http\Controllers\Dg\DgObjectifController::class, 'create'])->name('objectifs.create');
+    Route::post('/objectifs',                    [\App\Http\Controllers\Dg\DgObjectifController::class, 'store'])->name('objectifs.store');
+    Route::get('/objectifs/{fiche}/pdf',         [\App\Http\Controllers\Dg\DgObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
+    Route::get('/objectifs/{fiche}',             [\App\Http\Controllers\Dg\DgObjectifController::class, 'show'])->name('objectifs.show');
+    Route::patch('/objectifs/{fiche}/statut',    [\App\Http\Controllers\Dg\DgObjectifController::class, 'statut'])->name('objectifs.statut');
+    Route::patch('/objectifs/{fiche}/avancement',[\App\Http\Controllers\Dg\DgObjectifController::class, 'avancement'])->name('objectifs.avancement');
+    Route::delete('/objectifs/{fiche}',          [\App\Http\Controllers\Dg\DgObjectifController::class, 'destroy'])->name('objectifs.destroy');
 
-// Route pour ACCEPTER ou REFUSER (C'est celle-ci qui manquait)
-Route::patch('/objectifs/{fiche}/statut', [DgObjectifController::class, 'statut'])->name('objectifs.statut');
-    Route::get('/evaluations', function () {
-        return view('dg.evaluations');
-    })->name('evaluations');
-    Route::get('/objectifs/creer', [\App\Http\Controllers\Dg\DgObjectifController::class, 'create'])->name('objectifs.create');
-    Route::post('/objectifs', [\App\Http\Controllers\Dg\DgObjectifController::class, 'store'])->name('objectifs.store');
-    Route::get('/objectifs/{fiche}', [\App\Http\Controllers\Dg\DgObjectifController::class, 'show'])->name('objectifs.show');
-    Route::patch('/objectifs/{fiche}/statut', [\App\Http\Controllers\Dg\DgObjectifController::class, 'statut'])->name('objectifs.statut');
-    Route::patch('/objectifs/{fiche}/avancement', [\App\Http\Controllers\Dg\DgObjectifController::class, 'avancement'])->name('objectifs.avancement');
-    Route::delete('/objectifs/{fiche}', [\App\Http\Controllers\Dg\DgObjectifController::class, 'destroy'])->name('objectifs.destroy');
-    // Route pour afficher une évaluation DG
-    Route::get('/evaluations/{evaluation}', [App\Http\Controllers\Dg\EvaluationController::class, 'show'])->name('evaluations.show');
+    // Évaluations reçues par le DG (de la PCA) — spécifiques AVANT le wildcard {evaluation}
+    Route::get('/evaluations/{evaluation}/pdf',  [App\Http\Controllers\Dg\EvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
+    Route::get('/evaluations/{evaluation}',      [App\Http\Controllers\Dg\EvaluationController::class, 'show'])->name('evaluations.show');
     Route::patch('/evaluations/{evaluation}/statut', [App\Http\Controllers\Dg\EvaluationController::class, 'statut'])->name('evaluations.statut');
-    Route::get('/evaluations/{evaluation}/pdf', [App\Http\Controllers\Dg\EvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
-    Route::get('/subordonne-evaluations/creer',         [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'create'])->name('sub-evaluations.create');
-    Route::post('/subordonne-evaluations',              [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'store'])->name('sub-evaluations.store');
-    Route::get('/subordonne-evaluations/{evaluation}',      [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'show'])->name('sub-evaluations.show');
-    Route::get('/subordonne-evaluations/{evaluation}/pdf',  [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'exportPdf'])->name('sub-evaluations.pdf');
+
+    // Évaluations données par le DG à ses subordonnés — spécifiques AVANT le wildcard
+    Route::get('/subordonne-evaluations/creer',                    [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'create'])->name('sub-evaluations.create');
+    Route::post('/subordonne-evaluations',                         [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'store'])->name('sub-evaluations.store');
+    Route::get('/subordonne-evaluations/{evaluation}/pdf',         [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'exportPdf'])->name('sub-evaluations.pdf');
+    Route::get('/subordonne-evaluations/{evaluation}',             [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'show'])->name('sub-evaluations.show');
     Route::patch('/subordonne-evaluations/{evaluation}/soumettre', [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'submit'])->name('sub-evaluations.submit');
-    Route::delete('/subordonne-evaluations/{evaluation}',   [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'destroy'])->name('sub-evaluations.destroy');
-    Route::get('/objectifs/{fiche}/pdf',                    [\App\Http\Controllers\Dg\DgObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
+    Route::delete('/subordonne-evaluations/{evaluation}',          [\App\Http\Controllers\Dg\DgSubEvaluationController::class, 'destroy'])->name('sub-evaluations.destroy');
 
     // Subordonnés du DG
     Route::get('/dga',                    [\App\Http\Controllers\Dg\DgSubordonneController::class, 'dga'])->name('dga');
@@ -327,15 +320,51 @@ Route::middleware(['auth', 'dg'])->get('/dg/mon-espace', \App\Http\Controllers\D
 // Espace DGA (Directeur General Adjoint)
 Route::middleware(['auth', 'dga_espace'])->prefix('espace-dga')->name('dga.')->group(function (): void {
     Route::post('/logout',                                    [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
-    Route::get('/',                                           \App\Http\Controllers\Dga\MonEspaceController::class)->name('mon-espace');
+    Route::get('/',                                           \App\Http\Controllers\Dga\DgaDashboardController::class)->name('dashboard');
+    Route::get('/mon-dossier',                                \App\Http\Controllers\Dga\MonEspaceController::class)->name('mon-espace');
+
+    // Évaluations reçues
     Route::get('/evaluations/{evaluation}',                   [\App\Http\Controllers\Dga\EvaluationController::class, 'show'])->name('evaluations.show');
     Route::patch('/evaluations/{evaluation}/statut',          [\App\Http\Controllers\Dga\EvaluationController::class, 'statut'])->name('evaluations.statut');
     Route::get('/evaluations/{evaluation}/pdf',               [\App\Http\Controllers\Dga\EvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
     Route::post('/evaluations/{evaluation}/commentaire',      [\App\Http\Controllers\Dga\EvaluationController::class, 'commentaire'])->name('evaluations.commentaire');
+
+    // Fiches objectifs reçues
     Route::get('/objectifs/{fiche}',                          [\App\Http\Controllers\Dga\ObjectifController::class, 'show'])->name('objectifs.show');
     Route::patch('/objectifs/{fiche}/statut',                 [\App\Http\Controllers\Dga\ObjectifController::class, 'statut'])->name('objectifs.statut');
     Route::patch('/objectifs/{fiche}/avancement',             [\App\Http\Controllers\Dga\ObjectifController::class, 'avancement'])->name('objectifs.avancement');
     Route::get('/objectifs/{fiche}/pdf',                      [\App\Http\Controllers\Dga\ObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
+
+    // Mes subordonnés (Directeurs Techniques + secrétaire)
+    Route::get('/subordonnes',                                      [\App\Http\Controllers\Dga\DgaSubordonnesController::class, 'index'])->name('subordonnes.index');
+    Route::get('/subordonnes/{user}',                               [\App\Http\Controllers\Dga\DgaSubordonnesController::class, 'show'])->name('subordonnes.show');
+
+    // Fiches d'objectifs assignées par le DGA à ses subordonnés — spécifiques AVANT le wildcard
+    Route::get('/sub-objectifs/creer',               [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'create'])->name('sub-objectifs.create');
+    Route::post('/sub-objectifs',                    [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'store'])->name('sub-objectifs.store');
+    Route::get('/sub-objectifs/{fiche}',             [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'show'])->name('sub-objectifs.show');
+    Route::patch('/sub-objectifs/{fiche}/avancement',[\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'avancement'])->name('sub-objectifs.avancement');
+    Route::delete('/sub-objectifs/{fiche}',          [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'destroy'])->name('sub-objectifs.destroy');
+
+    // Évaluations des subordonnés (DGA → DTs / secrétaire)
+    Route::get('/subordonne-evaluations/creer',                     [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'create'])->name('sub-evaluations.create');
+    Route::post('/subordonne-evaluations',                          [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'store'])->name('sub-evaluations.store');
+    Route::get('/subordonne-evaluations/{evaluation}',              [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'show'])->name('sub-evaluations.show');
+    Route::get('/subordonne-evaluations/{evaluation}/pdf',          [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'exportPdf'])->name('sub-evaluations.pdf');
+    Route::patch('/subordonne-evaluations/{evaluation}/soumettre',  [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'submit'])->name('sub-evaluations.submit');
+    Route::delete('/subordonne-evaluations/{evaluation}',           [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'destroy'])->name('sub-evaluations.destroy');
+
+    // Réseau (lecture seule — délégations, caisses, agences, guichets)
+    Route::prefix('reseau')->name('reseau.')->group(function (): void {
+        Route::get('/delegations',              [\App\Http\Controllers\Dga\DgaReseauController::class, 'delegations'])->name('delegations');
+        Route::get('/delegations/{delegation}', [\App\Http\Controllers\Dga\DgaReseauController::class, 'delegation'])->name('delegations.show');
+        Route::get('/caisses',                  [\App\Http\Controllers\Dga\DgaReseauController::class, 'caisses'])->name('caisses');
+        Route::get('/caisses/{caisse}',         [\App\Http\Controllers\Dga\DgaReseauController::class, 'caisse'])->name('caisses.show');
+        Route::get('/agences',                  [\App\Http\Controllers\Dga\DgaReseauController::class, 'agences'])->name('agences');
+        Route::get('/agences/{agence}',         [\App\Http\Controllers\Dga\DgaReseauController::class, 'agence'])->name('agences.show');
+        Route::get('/guichets',                 [\App\Http\Controllers\Dga\DgaReseauController::class, 'guichets'])->name('guichets');
+        Route::get('/guichets/{guichet}',       [\App\Http\Controllers\Dga\DgaReseauController::class, 'guichet'])->name('guichets.show');
+    });
 });
 
 // Espace Subordonnés (Assistante_Dg, Conseillers_Dg) — mêmes contrôleurs que DGA

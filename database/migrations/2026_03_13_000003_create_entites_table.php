@@ -22,6 +22,7 @@ return new class extends Migration
             // Responsables : FK vers agents (sélectionnés, pas dénormalisés)
             $table->foreignId('dg_agent_id')->nullable()->constrained('agents')->nullOnDelete();
             $table->foreignId('dga_agent_id')->nullable()->constrained('agents')->nullOnDelete();
+            $table->foreignId('dga_secretaire_agent_id')->nullable()->constrained('agents')->nullOnDelete();
             $table->foreignId('pca_agent_id')->nullable()->constrained('agents')->nullOnDelete();
             $table->foreignId('assistante_agent_id')->nullable()->constrained('agents')->nullOnDelete();
 

@@ -64,6 +64,16 @@ trait ResolvesEntite
         return User::query()->where('role', 'Assistante_Dg')->where('agent_id', $entite->assistante_agent_id)->first();
     }
 
+    /** Secrétaire du DGA (via entites.dga_secretaire_agent_id). */
+    protected function getDgaSecretaireUser(?Entite $entite = null): ?User
+    {
+        $entite ??= $this->getEntite();
+        if (! $entite || ! $entite->dga_secretaire_agent_id) {
+            return null;
+        }
+        return User::query()->where('agent_id', $entite->dga_secretaire_agent_id)->first();
+    }
+
     /**
      * Préfixe de route selon le rôle de l'utilisateur connecté.
      * DGA → 'dga'  |  Assistante_Dg / Conseillers_Dg → 'subordonne'

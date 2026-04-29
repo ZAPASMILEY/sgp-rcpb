@@ -21,9 +21,9 @@
             ],
         ],
         [
-            'title' => 'Directions',
+            'title' => 'Mes Directeurs',
             'items' => [
-                ['route' => 'dg.directions', 'icon' => 'fas fa-building', 'label' => 'Directions'],
+                ['route' => 'dg.directions', 'icon' => 'fas fa-user-tie', 'label' => 'Mes Directeurs'],
             ],
         ],
         [

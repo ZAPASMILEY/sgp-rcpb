@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
 use App\Models\Alerte;
+use App\Models\Annee;
 use App\Models\Entite;
 use App\Models\FicheObjectif;
 use App\Models\User;
@@ -58,6 +59,7 @@ class DgObjectifController extends Controller
             abort(403, 'Accès réservé au Directeur Général.');
         }
 
+
         $subordonnes = $this->getSubordonnes()->values();
         $requestedSubordonneId = (int) $request->integer('subordonne_id');
         $selectedSubordonne = $subordonnes->firstWhere('id', $requestedSubordonneId);
@@ -78,6 +80,7 @@ class DgObjectifController extends Controller
         if (! $user || strtolower((string) $user->role) !== 'dg') {
             abort(403, 'Accès réservé au Directeur Général.');
         }
+
 
         $subordonnes = $this->getSubordonnes()->values();
         $allowedSubordonneIds = $subordonnes
@@ -100,6 +103,7 @@ class DgObjectifController extends Controller
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee'                 => now()->year,
+            'annee_id'              => Annee::resolveIdForDate(now()),
             'assignable_type'       => User::class,
             'assignable_id'         => $validated['subordonne_id'],
             'date'                  => now()->toDateString(),
@@ -155,6 +159,7 @@ class DgObjectifController extends Controller
     }
     public function avancement(Request $request, $fiche): RedirectResponse
     {
+
         $fiche = FicheObjectif::findOrFail($fiche);
 
         $request->validate([

@@ -64,6 +64,7 @@ class DgSubEvaluationController extends Controller
             abort(403);
         }
 
+
         $subordonnes      = $this->getSubordonnes();
         $preselectedId    = (int) $request->get('subordonne_id', 0);
         $selectedSubordonne = $subordonnes->firstWhere('id', $preselectedId);
@@ -128,6 +129,7 @@ class DgSubEvaluationController extends Controller
         if (! $user || strtolower((string) $user->role) !== 'dg') {
             abort(403);
         }
+
 
         $subordonnes       = $this->getSubordonnes();
         $allowedIds        = $subordonnes->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -343,6 +345,7 @@ class DgSubEvaluationController extends Controller
             abort(403);
         }
 
+
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres', 'evaluable']);
         $evaluable = $evaluation->evaluable;
 
@@ -402,6 +405,7 @@ class DgSubEvaluationController extends Controller
         if (! $user || strtolower((string) $user->role) !== 'dg') {
             abort(403);
         }
+
         if ($evaluation->statut !== 'brouillon') {
             return back()->with('error', 'Cette évaluation ne peut plus être soumise.');
         }
