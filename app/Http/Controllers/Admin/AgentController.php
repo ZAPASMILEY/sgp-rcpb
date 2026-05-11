@@ -201,7 +201,7 @@ class AgentController extends Controller
             'sexe'             => ['nullable', 'in:homme,femme'],
             'email'            => $emailRule,
             'numero_telephone' => [
-                'nullable',
+                'required',
                 'string',
                 'max:30',
                 $agent

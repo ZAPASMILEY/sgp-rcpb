@@ -65,45 +65,55 @@ class PcaObjectifController extends Controller
 
     public function index(Request $request): View
     {
+        $this->authorize('objectifs.voir-equipe');
         $dgUser = $this->getDGOfDirectionGenerale();
         $search = trim((string) $request->query('search', ''));
+        $statut = trim((string) $request->query('statut', ''));
 
+        // Base query scoped to the DG (no statut filter → used for stats)
         $baseQuery = FicheObjectif::query()
-            ->with('assignable')
+            ->with(['assignable', 'annee'])
             ->withCount('objectifs')
             ->where('assignable_type', User::class)
-            ->when($dgUser, fn ($query) => $query->where('assignable_id', $dgUser->id), fn ($query) => $query->whereRaw('1 = 0'))
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($sub) use ($search) {
+            ->when($dgUser, fn ($q) => $q->where('assignable_id', $dgUser->id), fn ($q) => $q->whereRaw('1 = 0'))
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($sub) use ($search) {
                     $sub->where('titre', 'like', "%{$search}%")
                         ->orWhere('annee', 'like', "%{$search}%");
                 });
             });
 
-        $fiches = (clone $baseQuery)
-            ->orderByDesc('date')
-            ->paginate(10)
-            ->withQueryString();
-
+        // Stats always computed on the unfiltered base
         $stats = [
-            'total' => (clone $baseQuery)->count(),
-            'acceptees' => (clone $baseQuery)->where('statut', 'acceptee')->count(),
-            'en_attente' => (clone $baseQuery)->where(function ($query) {
-                $query->where('statut', 'en_attente')
-                    ->orWhereNull('statut');
-            })->count(),
-            'refusees' => (clone $baseQuery)->where('statut', 'refusee')->count(),
+            'total'      => (clone $baseQuery)->count(),
+            'acceptees'  => (clone $baseQuery)->where('statut', 'acceptee')->count(),
+            'en_attente' => (clone $baseQuery)->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
+            'refusees'   => (clone $baseQuery)->where('statut', 'refusee')->count(),
         ];
 
+        // Apply optional statut filter for the paginated list
+        $listQuery = clone $baseQuery;
+        if ($statut === 'acceptee') {
+            $listQuery->where('statut', 'acceptee');
+        } elseif ($statut === 'refusee') {
+            $listQuery->where('statut', 'refusee');
+        } elseif ($statut === 'en_attente') {
+            $listQuery->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'));
+        }
+
+        $fiches = $listQuery->orderByDesc('date')->paginate(10)->withQueryString();
+
         return view('pca.objectifs.index', [
-            'fiches' => $fiches,
-            'filters' => ['search' => $search],
-            'stats' => $stats,
+            'fiches'  => $fiches,
+            'dgUser'  => $dgUser,
+            'filters' => ['search' => $search, 'statut' => $statut],
+            'stats'   => $stats,
         ]);
     }
 
     public function create(Request $request): View
     {
+        $this->authorize('objectifs.assigner');
         $dgUser = $this->getDGOfDirectionGenerale();
         return view('pca.objectifs.create', [
             'dgUser' => $dgUser,
@@ -113,6 +123,7 @@ class PcaObjectifController extends Controller
 
     public function show(Request $request, $id): View
     {
+        $this->authorize('objectifs.voir-equipe');
         $fiche = FicheObjectif::with('objectifs')->findOrFail($id);
         $this->authorizeFiche($fiche, (int) $request->user()->agent?->entite_id);
 
@@ -123,6 +134,7 @@ class PcaObjectifController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('objectifs.assigner');
         $entiteId = $request->user()->agent?->entite_id;
         $date = now()->toDateString();
         $dgUser = $this->getDGOfDirectionGenerale();
@@ -140,6 +152,11 @@ class PcaObjectifController extends Controller
             'objectifs.*' => ['required', 'string', 'max:5000'],
         ]);
 
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
         $fiche = FicheObjectif::create([
             'titre' => $validated['titre_fiche'],
             'annee_id' => Annee::resolveIdForDate(now()),
@@ -151,7 +168,7 @@ class PcaObjectifController extends Controller
             'statut' => 'en_attente',
         ]);
 
-        foreach ($validated['objectifs'] as $objectifDesc) {
+        foreach ($objectifs as $objectifDesc) {
             $fiche->objectifs()->create([
                 'description' => $objectifDesc,
             ]);
@@ -182,6 +199,7 @@ class PcaObjectifController extends Controller
 
     public function adjustProgress(Request $request, LigneFicheObjectif $objectif): RedirectResponse
     {
+        $this->authorize('objectifs.avancement');
         $this->authorizeObjectif($objectif, $request->user()->agent?->entite_id);
 
         $validated = $request->validate([
@@ -215,6 +233,7 @@ class PcaObjectifController extends Controller
 
     public function destroy(Request $request, $id): RedirectResponse
     {
+        $this->authorize('objectifs.assigner');
         $fiche = FicheObjectif::findOrFail($id);
         $this->authorizeFiche($fiche, (int) $request->user()->agent?->entite_id);
 

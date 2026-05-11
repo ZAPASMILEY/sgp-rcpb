@@ -6,21 +6,23 @@ use App\Http\Controllers\Controller;
 use App\Models\Alerte;
 use App\Models\Annee;
 use App\Models\Direction;
+use App\Models\Entite;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
-use App\Models\SubjectiveCriteriaTemplate;
 use App\Models\User;
+use App\Services\EvaluationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use App\Models\Entite;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use Illuminate\View\View;
 
 class DgDirectionController extends Controller
 {
+    public function __construct(private readonly EvaluationService $evaluationService) {}
+
     // ── Helpers ────────────────────────────────────────────────────────────
 
     private function getEntiteId(): int
@@ -33,7 +35,17 @@ class DgDirectionController extends Controller
 
     private function getDirections(): \Illuminate\Support\Collection
     {
+        // On exclut la direction dont le DG connecté est lui-même le directeur
+        // (ex: "Direction Générale") — le DG ne peut pas s'auto-évaluer ici.
+        $dgAgentId = Auth::user()->agent_id;
+
         return Direction::where('entite_id', $this->getEntiteId())
+            ->when($dgAgentId, fn ($q) => $q->where(function ($q) use ($dgAgentId) {
+                // Garder les directions sans directeur assigné OU dont le directeur
+                // n'est pas le DG connecté.
+                $q->whereNull('directeur_agent_id')
+                  ->orWhere('directeur_agent_id', '!=', $dgAgentId);
+            }))
             ->with(['directeur', 'services'])
             ->orderBy('nom')
             ->get();
@@ -66,14 +78,21 @@ class DgDirectionController extends Controller
 
     private function authorizeObjectif(FicheObjectif $fiche): Direction
     {
-        if (
-            $fiche->assignable_type !== Direction::class
-        ) {
+        if ($fiche->assignable_type !== User::class) {
             abort(403);
         }
 
-        $direction = Direction::find($fiche->assignable_id);
-        if (! $direction || (int) $direction->entite_id !== $this->getEntiteId()) {
+        $user = User::find($fiche->assignable_id);
+        if (! $user || ! $user->agent_id) {
+            abort(403);
+        }
+
+        // La fiche doit viser le directeur d'une direction rattachée à cette entité.
+        $direction = Direction::where('entite_id', $this->getEntiteId())
+            ->where('directeur_agent_id', $user->agent_id)
+            ->first();
+
+        if (! $direction) {
             abort(403);
         }
 
@@ -84,42 +103,17 @@ class DgDirectionController extends Controller
 
     public function index(): View
     {
+        $this->authorize('evaluations.voir-reseau');
         $directions = $this->getDirections();
 
         return view('dg.directions.index', compact('directions'));
-    }
-
-    // ── Avancement objectif direction ──────────────────────────────────────
-
-    /**
-     * Met à jour le pourcentage d'avancement d'une fiche d'objectifs d'un directeur.
-     * L'avancement doit être un multiple de 5 (0, 5, 10, … 100).
-     */
-    public function avancements(Request $request, FicheObjectif $fiche): RedirectResponse
-    {
-        $this->authorizeObjectif($fiche);
-
-        $request->validate([
-            'avancement_percentage' => ['required', 'integer', 'min:0', 'max:100'],
-        ]);
-
-        $val = (int) $request->avancement_percentage;
-        if ($val % 5 !== 0) {
-            return back()->with('error', "L'avancement doit être un multiple de 5.");
-        }
-
-        $fiche->avancement_percentage = $val;
-        $fiche->save();
-
-        return redirect()
-            ->route('dg.directions.objectifs.show', $fiche)
-            ->with('status', 'Avancement mis à jour.');
     }
 
     // ── Show direction ─────────────────────────────────────────────────────
 
     public function show(Request $request, Direction $direction): View
     {
+        $this->authorize('evaluations.voir-reseau');
         $this->authorizeDirection($direction);
 
         $tab = $request->get('tab', 'evaluations');
@@ -132,13 +126,19 @@ class DgDirectionController extends Controller
             ->orderByDesc('date_debut')
             ->get();
 
-        $fiches = FicheObjectif::where('assignable_type', Direction::class)
-            ->where('assignable_id', $direction->id)
-            ->withCount('objectifs')
-            ->orderByDesc('date')
-            ->get();
-
         $direction->load('directeur');
+
+        $directeurUser = $direction->directeur_agent_id
+            ? User::where('agent_id', $direction->directeur_agent_id)->first()
+            : null;
+
+        $fiches = $directeurUser
+            ? FicheObjectif::where('assignable_type', User::class)
+                ->where('assignable_id', $directeurUser->id)
+                ->withCount('objectifs')
+                ->orderByDesc('date')
+                ->get()
+            : collect();
 
         return view('dg.directions.show', compact('direction', 'tab', 'evaluations', 'fiches'));
     }
@@ -147,6 +147,7 @@ class DgDirectionController extends Controller
 
     public function createObjectif(Request $request, Direction $direction): View
     {
+        $this->authorize('objectifs.assigner');
         $this->authorizeDirection($direction);
 
         $direction->load('directeur');
@@ -161,7 +162,7 @@ class DgDirectionController extends Controller
 
     public function storeObjectif(Request $request): RedirectResponse
     {
-
+        $this->authorize('objectifs.assigner');
         $directionIds = Direction::where('entite_id', $this->getEntiteId())->pluck('id')->all();
 
         $validated = $request->validate([
@@ -174,11 +175,21 @@ class DgDirectionController extends Controller
 
         $direction = Direction::findOrFail($validated['direction_id']);
 
+        // Résolution du directeur — on assigne à la PERSONNE, pas à la structure.
+        $directeurUser = $direction->directeur_agent_id
+            ? User::where('agent_id', $direction->directeur_agent_id)->first()
+            : null;
+
+        if (! $directeurUser) {
+            return back()->withInput()
+                ->with('error', "Aucun directeur avec un compte utilisateur n'est assigné à la direction « {$direction->nom} ».");
+        }
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
-            'annee'                 => now()->year,
-            'assignable_type'       => Direction::class,
-            'assignable_id'         => $direction->id,
+            'annee_id'              => Annee::resolveIdForDate(now()),
+            'assignable_type'       => User::class,
+            'assignable_id'         => $directeurUser->id,
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
@@ -189,26 +200,21 @@ class DgDirectionController extends Controller
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        // Notifier le directeur
-        if ($direction->directeur_agent_id) {
-            $directeurUser = User::where('agent_id', $direction->directeur_agent_id)->first();
-            if ($directeurUser) {
-                Alerte::notifier(
-                    $directeurUser->id,
-                    'Nouvelle fiche d\'objectifs reçue',
-                    "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ». Connectez-vous pour l'examiner.",
-                    'haute'
-                );
-            }
-        }
+        Alerte::notifier(
+            $directeurUser->id,
+            'Nouvelle fiche d\'objectifs reçue',
+            "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+            'haute'
+        );
 
         return redirect()
             ->route('dg.directions.show', ['direction' => $direction->id, 'tab' => 'objectifs'])
-            ->with('status', "Fiche d'objectifs assignée à la direction « {$direction->nom} ».");
+            ->with('status', "Fiche d'objectifs assignée au directeur de « {$direction->nom} ».");
     }
 
     public function showObjectif(FicheObjectif $fiche): View
     {
+        $this->authorize('objectifs.voir-equipe');
         $direction = $this->authorizeObjectif($fiche);
         $fiche->load('objectifs');
 
@@ -230,6 +236,7 @@ class DgDirectionController extends Controller
 
     public function destroyObjectif(FicheObjectif $fiche): RedirectResponse
     {
+        $this->authorize('objectifs.assigner');
         $direction = $this->authorizeObjectif($fiche);
         $fiche->delete();
 
@@ -242,19 +249,26 @@ class DgDirectionController extends Controller
 
     public function createEvaluation(Request $request, Direction $direction): View
     {
+        $this->authorize('evaluations.creer');
         $this->authorizeDirection($direction);
 
         $direction->load('directeur');
 
         $today = now()->toDateString();
-        $fiches = FicheObjectif::query()
-            ->with('objectifs')
-            ->where('statut', 'acceptee')
-            ->whereDate('date_echeance', '>=', $today)
-            ->where('assignable_type', Direction::class)
-            ->where('assignable_id', $direction->id)
-            ->orderBy('titre')
-            ->get();
+        $directeurUser = $direction->directeur_agent_id
+            ? User::where('agent_id', $direction->directeur_agent_id)->first()
+            : null;
+
+        $fiches = $directeurUser
+            ? FicheObjectif::query()
+                ->with('objectifs')
+                ->where('statut', 'acceptee')
+                ->whereDate('date_echeance', '>=', $today)
+                ->where('assignable_type', User::class)
+                ->where('assignable_id', $directeurUser->id)
+                ->orderBy('titre')
+                ->get()
+            : collect();
 
         $objectiveOptions = $fiches->map(fn ($f) => [
             'id'            => $f->id,
@@ -268,7 +282,7 @@ class DgDirectionController extends Controller
             ])->values()->all(),
         ])->values()->all();
 
-        $subjectiveTemplates = $this->buildSubjectiveTemplates();
+        $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
         $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
         if (! is_array($oldFormations) || $oldFormations === []) {
@@ -281,6 +295,7 @@ class DgDirectionController extends Controller
         }
 
         $displayYear = now()->year;
+        $entiteNom   = \App\Models\Entite::find($this->getEntiteId())?->nom ?? '';
 
         return view('dg.directions.evaluations.create', compact(
             'direction',
@@ -289,12 +304,13 @@ class DgDirectionController extends Controller
             'oldFormations',
             'oldExperiences',
             'displayYear',
+            'entiteNom',
         ));
     }
 
     public function storeEvaluation(Request $request): RedirectResponse
     {
-
+        $this->authorize('evaluations.creer');
         $user         = Auth::user();
         $directionIds = Direction::where('entite_id', $this->getEntiteId())->pluck('id')->all();
 
@@ -340,7 +356,7 @@ class DgDirectionController extends Controller
         $identification = $validated['identification'] ?? [];
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
-            $normalized = $this->normalizeDateValue($raw);
+            $normalized = $this->evaluationService->normalizeDateValue($raw);
             if ($normalized === null) {
                 return back()->withInput()->withErrors(['identification.date_evaluation' => 'Format de date invalide. Utilisez JJ/MM/AAAA.']);
             }
@@ -365,14 +381,14 @@ class DgDirectionController extends Controller
             ->filter(fn ($row) => $row['periode'] !== '' || $row['poste'] !== '' || $row['observations'] !== '')
             ->values()->all();
 
-        $normalizedSubjective = $this->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
-        $normalizedObjective  = $this->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
+        $normalizedSubjective = $this->evaluationService->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
+        $normalizedObjective  = $this->evaluationService->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
 
         if ($normalizedSubjective === [] || $normalizedObjective === []) {
             return back()->withInput()->withErrors(['subjective_criteres' => 'Les critères subjectifs et objectifs doivent contenir au moins une ligne notée.']);
         }
 
-        $scores = $this->computeScores($normalizedSubjective, $normalizedObjective);
+        $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
         try {
             $anneeId = Annee::resolveIdForDate($dateDebut);
@@ -409,28 +425,7 @@ class DgDirectionController extends Controller
             ]);
 
             $evaluation->identification()->create($identification);
-
-            foreach (array_merge($normalizedSubjective, $normalizedObjective) as $criterion) {
-                $critere = $evaluation->criteres()->create([
-                    'type'                              => $criterion['type'],
-                    'ordre'                             => $criterion['ordre'],
-                    'titre'                             => $criterion['titre'],
-                    'description'                       => $criterion['description'],
-                    'note_globale'                      => $criterion['note_globale'],
-                    'observation'                       => $criterion['observation'],
-                    'source_template_id'                => $criterion['source_template_id'],
-                    'source_fiche_objectif_id'          => $criterion['source_fiche_objectif_id'],
-                    'source_fiche_objectif_objectif_id' => $criterion['source_fiche_objectif_objectif_id'],
-                ]);
-                foreach ($criterion['subcriteria'] as $sub) {
-                    $critere->sousCriteres()->create([
-                        'ordre'       => $sub['ordre'],
-                        'libelle'     => $sub['libelle'],
-                        'note'        => $sub['note'],
-                        'observation' => $sub['observation'],
-                    ]);
-                }
-            }
+            $this->evaluationService->persistCriteria($evaluation, array_merge($normalizedSubjective, $normalizedObjective));
 
             return $evaluation;
         });
@@ -442,6 +437,7 @@ class DgDirectionController extends Controller
 
     public function showEvaluation(Evaluation $evaluation): View
     {
+        $this->authorize('evaluations.voir-reseau');
         $direction = $this->authorizeEvaluation($evaluation);
         $direction->load('directeur');
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
@@ -482,7 +478,7 @@ class DgDirectionController extends Controller
 
     public function submitEvaluation(Evaluation $evaluation): RedirectResponse
     {
-
+        $this->authorize('evaluations.soumettre');
         $direction = $this->authorizeEvaluation($evaluation);
 
         if ($evaluation->statut !== 'brouillon') {
@@ -512,6 +508,7 @@ class DgDirectionController extends Controller
 
     public function destroyEvaluation(Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('evaluations.creer');
         $direction = $this->authorizeEvaluation($evaluation);
 
         if ($evaluation->statut === 'valide') {
@@ -527,7 +524,7 @@ class DgDirectionController extends Controller
 
     public function exportEvaluationPdf(Evaluation $evaluation)
     {
-
+        $this->authorize('evaluations.exporter-pdf');
         $direction = $this->authorizeEvaluation($evaluation);
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
 
@@ -547,115 +544,4 @@ class DgDirectionController extends Controller
         return $pdf->download('evaluation-direction-'.$evaluation->id.'.pdf');
     }
 
-    // ── Private helpers ────────────────────────────────────────────────────
-
-    private function buildSubjectiveTemplates(): array
-    {
-        return SubjectiveCriteriaTemplate::query()
-            ->with('subcriteria')
-            ->where('is_active', true)
-            ->orderBy('ordre')
-            ->get()
-            ->map(fn ($template) => [
-                'id'          => $template->id,
-                'ordre'       => $template->ordre,
-                'titre'       => $template->titre,
-                'description' => $template->description,
-                'subcriteria' => $template->subcriteria->map(fn ($sub) => [
-                    'libelle' => $sub->libelle,
-                    'ordre'   => $sub->ordre,
-                ])->values()->all(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    private function normalizeCriteria(array $criteria, string $type, int $minNote, int $maxNote, bool $strict = true): array
-    {
-        $normalized = [];
-        foreach (array_values($criteria) as $idx => $criterion) {
-            if (! is_array($criterion)) {
-                continue;
-            }
-            $title = trim((string) ($criterion['titre'] ?? ''));
-            if ($title === '') {
-                continue;
-            }
-            $subcriteria = [];
-            foreach (array_values((array) ($criterion['subcriteria'] ?? [])) as $subIdx => $sub) {
-                if (! is_array($sub)) {
-                    continue;
-                }
-                $label = trim((string) ($sub['libelle'] ?? ''));
-                if ($label === '') {
-                    if ($strict) {
-                        continue;
-                    }
-                    $label = '-';
-                }
-                $note          = max($minNote, min($maxNote, (float) ($sub['note'] ?? $minNote)));
-                $subcriteria[] = [
-                    'ordre'       => $subIdx + 1,
-                    'libelle'     => $label,
-                    'note'        => $note,
-                    'observation' => filled($sub['observation'] ?? null) ? trim((string) $sub['observation']) : null,
-                ];
-            }
-            if ($strict && $subcriteria === []) {
-                continue;
-            }
-            if (! $strict && $subcriteria === []) {
-                $subcriteria = [['ordre' => 1, 'libelle' => '-', 'note' => $minNote, 'observation' => null]];
-            }
-            $normalized[] = [
-                'type'                              => $type,
-                'ordre'                             => $idx + 1,
-                'titre'                             => $title,
-                'description'                       => filled($criterion['description'] ?? null) ? trim((string) $criterion['description']) : null,
-                'note_globale'                      => round(collect($subcriteria)->avg('note') ?? 0, 2),
-                'observation'                       => filled($criterion['observation'] ?? null) ? trim((string) $criterion['observation']) : null,
-                'source_template_id'                => isset($criterion['source_template_id']) ? (int) $criterion['source_template_id'] : null,
-                'source_fiche_objectif_id'          => isset($criterion['source_fiche_objectif_id']) ? (int) $criterion['source_fiche_objectif_id'] : null,
-                'source_fiche_objectif_objectif_id' => isset($criterion['source_fiche_objectif_objectif_id']) ? (int) $criterion['source_fiche_objectif_objectif_id'] : null,
-                'subcriteria'                       => $subcriteria,
-            ];
-        }
-
-        return $normalized;
-    }
-
-    private function computeScores(array $subjectiveCriteria, array $objectiveCriteria): array
-    {
-        $moyObj  = round(collect($objectiveCriteria)->avg('note_globale') ?? 0, 2);
-        $moySubj = round(collect($subjectiveCriteria)->avg('note_globale') ?? 0, 2);
-        $noteObj  = round($moyObj * 0.75, 2);
-        $noteSubj = round($moySubj * 0.25, 2);
-
-        return [
-            'moyenne_objectifs'        => $moyObj,
-            'moyenne_subjectifs'       => $moySubj,
-            'note_criteres_objectifs'  => $noteObj,
-            'note_criteres_subjectifs' => $noteSubj,
-            'note_finale'              => round(($noteObj + $noteSubj) * 2, 2),
-        ];
-    }
-
-    private function normalizeDateValue(mixed $value): ?string
-    {
-        $value = trim((string) $value);
-        if ($value === '') {
-            return null;
-        }
-        foreach (['Y-m-d', 'd/m/Y'] as $format) {
-            try {
-                $date = Carbon::createFromFormat($format, $value);
-                if ($date && $date->format($format) === $value) {
-                    return $date->toDateString();
-                }
-            } catch (\Throwable) {
-            }
-        }
-
-        return null;
-    }
 }

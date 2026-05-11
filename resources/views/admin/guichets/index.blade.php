@@ -84,10 +84,11 @@
                                 </td>
                                 <td class="px-3 py-3 text-right">
                                     <div class="flex justify-end gap-2">
-                                        <a href="{{ route('admin.guichets.edit', $guichet) }}" class="text-blue-500 hover:text-blue-700"><i class="fas fa-pen"></i></a>
+                                        <a href="{{ route('admin.guichets.agents.index', $guichet) }}" class="text-emerald-600 hover:text-emerald-800" title="Gérer les agents"><i class="fas fa-users"></i></a>
+                                        <a href="{{ route('admin.guichets.edit', $guichet) }}" class="text-blue-500 hover:text-blue-700" title="Modifier"><i class="fas fa-pen"></i></a>
                                         <form action="{{ route('admin.guichets.destroy', $guichet) }}" method="POST" onsubmit="return confirm('Supprimer ?')">
                                             @csrf @method('DELETE')
-                                            <button type="submit" class="text-rose-500 hover:text-rose-700"><i class="fas fa-trash"></i></button>
+                                            <button type="submit" class="text-rose-500 hover:text-rose-700" title="Supprimer"><i class="fas fa-trash"></i></button>
                                         </form>
                                     </div>
                                 </td>

@@ -6,7 +6,7 @@
         <ul class="divide-y divide-slate-200">
             @foreach($fichesSubordonnes as $fiche)
                 <li class="py-2 flex items-center justify-between">
-                    <span>{{ $fiche->titre }} ({{ $fiche->annee }}) - {{ $fiche->assignable_nom }}</span>
+                    <span>{{ $fiche->titre }} ({{ $fiche->annee?->annee ?? $fiche->annee_id }}) - {{ $fiche->assignable_nom }}</span>
                     <a href="{{ route('dg.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft">Voir</a>
                 </li>
             @endforeach

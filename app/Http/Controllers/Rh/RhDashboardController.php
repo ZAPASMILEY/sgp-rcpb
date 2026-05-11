@@ -16,26 +16,72 @@ class RhDashboardController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        $tab    = $request->get('tab', 'agents');
-        $statut = trim((string) $request->get('statut', ''));
-        $search = trim((string) $request->get('search', ''));
-        $annee  = trim((string) $request->get('annee', ''));
+        $tab    = $request->input('tab', 'evaluations');
+        $statut = trim((string) $request->input('statut', ''));
+        $search = trim((string) $request->input('search', ''));
+        $annee  = trim((string) $request->input('annee', ''));
 
-        // ── Stats globales ────────────────────────────────────────────────────
+        // ── KPI globaux (toutes évaluations — agents ET cadres) ───────────────
         $stats = [
             'agents'      => Agent::count(),
-            'evaluations' => Evaluation::count(),
-            'eval_valide' => Evaluation::where('statut', 'valide')->count(),
+            'total'       => Evaluation::count(),
+            'soumis'      => Evaluation::where('statut', 'soumis')->count(),
+            'valide'      => Evaluation::where('statut', 'valide')->count(),
+            'refuse'      => Evaluation::where('statut', 'refuse')->count(),
+            'brouillon'   => Evaluation::where('statut', 'brouillon')->count(),
+            'excellent'   => Evaluation::where('statut', '!=', 'brouillon')->where('note_finale', '>=', 8.5)->count(),
+            'bien'        => Evaluation::where('statut', '!=', 'brouillon')->where('note_finale', '>=', 7)->where('note_finale', '<', 8.5)->count(),
+            'passable'    => Evaluation::where('statut', '!=', 'brouillon')->where('note_finale', '>=', 5)->where('note_finale', '<', 7)->count(),
+            'insuffisant' => Evaluation::where('statut', '!=', 'brouillon')->where('note_finale', '>', 0)->where('note_finale', '<', 5)->count(),
             'objectifs'   => FicheObjectif::count(),
             'obj_accepte' => FicheObjectif::where('statut', 'acceptee')->count(),
         ];
 
-        // ── Données pour les filtres ─────────────────────────────────────────
+        // ── Top / Bottom performers ───────────────────────────────────────────
+        $topEval = Evaluation::whereIn('statut', ['soumis', 'valide'])
+            ->where('note_finale', '>', 0)
+            ->with('identification')
+            ->orderByDesc('note_finale')
+            ->first();
+
+        $bottomEval = Evaluation::whereIn('statut', ['soumis', 'valide'])
+            ->where('note_finale', '>', 0)
+            ->with('identification')
+            ->orderBy('note_finale')
+            ->first();
+
+        // ── Filtres pour les listes ───────────────────────────────────────────
         $delegations = DelegationTechnique::orderBy('region')->get(['id', 'region', 'ville']);
         $caisses     = Caisse::orderBy('nom')->get(['id', 'nom']);
         $directions  = Direction::orderBy('nom')->get(['id', 'nom']);
 
-        // ── Tab Agents ───────────────────────────────────────────────────────
+        // ── Tab Évaluations : TOUTES les évaluations (agents + cadres) ────────
+        $evaluations = null;
+        if ($tab === 'evaluations') {
+            $q = Evaluation::with([
+                'evaluateur:id,name,role',
+                'evaluable',
+                'identification:id,evaluation_id,nom_prenom,emploi',
+            ])->orderByDesc('date_debut');
+
+            if ($statut) $q->where('statut', $statut);
+            if ($annee)  $q->whereYear('date_debut', $annee);
+            if ($search) {
+                $q->where(function ($s) use ($search) {
+                    $s->whereHas('identification', fn ($i) =>
+                            $i->where('nom_prenom', 'like', "%{$search}%")
+                              ->orWhere('emploi', 'like', "%{$search}%")
+                      )
+                      ->orWhereHas('evaluateur', fn ($e) =>
+                            $e->where('name', 'like', "%{$search}%")
+                      );
+                });
+            }
+
+            $evaluations = $q->paginate(25)->withQueryString();
+        }
+
+        // ── Tab Agents ────────────────────────────────────────────────────────
         $agents = null;
         if ($tab === 'agents') {
             $q = Agent::with([
@@ -55,71 +101,26 @@ class RhDashboardController extends Controller
                       ->orWhere('fonction', 'like', "%{$search}%")
                 );
             }
-
-            $dtId      = $request->get('dt_id');
-            $caisseId  = $request->get('caisse_id');
-            $dirId     = $request->get('dir_id');
-
-            if ($dtId)     $q->where('delegation_technique_id', $dtId);
-            if ($caisseId) $q->where('caisse_id', $caisseId);
-            if ($dirId)    $q->where('direction_id', $dirId);
+            if ($request->input('dt_id'))     $q->where('delegation_technique_id', $request->input('dt_id'));
+            if ($request->input('caisse_id')) $q->where('caisse_id', $request->input('caisse_id'));
+            if ($request->input('dir_id'))    $q->where('direction_id', $request->input('dir_id'));
 
             $agents = $q->paginate(20)->withQueryString();
         }
 
-        // ── Tab Évaluations ──────────────────────────────────────────────────
-        $evaluations = null;
-        $evalStats   = null;
-        if ($tab === 'evaluations') {
-            $baseE = fn () => Evaluation::where('evaluable_type', Agent::class);
-
-            $evalStats = [
-                'total'     => $baseE()->count(),
-                'brouillon' => $baseE()->where('statut', 'brouillon')->count(),
-                'soumis'    => $baseE()->where('statut', 'soumis')->count(),
-                'valide'    => $baseE()->where('statut', 'valide')->count(),
-                'refuse'    => $baseE()->where('statut', 'refuse')->count(),
-            ];
-
-            $q = Evaluation::with([
-                'evaluateur:id,name,role',
-                'evaluable' => fn ($m) => $m->select('id', 'nom', 'prenom', 'fonction',
-                    'delegation_technique_id', 'caisse_id', 'direction_id'),
-            ])
-            ->where('evaluable_type', Agent::class)
-            ->orderByDesc('date_debut');
-
-            if ($statut) $q->where('statut', $statut);
-            if ($annee)  $q->whereYear('date_debut', $annee);
-            if ($search) {
-                $q->whereHas('evaluable', fn ($s) =>
-                    $s->where('nom', 'like', "%{$search}%")
-                      ->orWhere('prenom', 'like', "%{$search}%")
-                );
-            }
-
-            $evaluations = $q->paginate(20)->withQueryString();
-        }
-
-        // ── Tab Objectifs ────────────────────────────────────────────────────
+        // ── Tab Objectifs ─────────────────────────────────────────────────────
         $fiches     = null;
         $ficheStats = null;
         if ($tab === 'objectifs') {
-            $baseF = fn () => FicheObjectif::where('assignable_type', Agent::class);
-
             $ficheStats = [
-                'total'      => $baseF()->count(),
-                'acceptee'   => $baseF()->where('statut', 'acceptee')->count(),
-                'en_attente' => $baseF()->whereIn('statut', ['en_attente', 'brouillon'])->count(),
-                'refusee'    => $baseF()->where('statut', 'refusee')->count(),
+                'total'      => FicheObjectif::count(),
+                'acceptee'   => FicheObjectif::where('statut', 'acceptee')->count(),
+                'en_attente' => FicheObjectif::whereIn('statut', ['en_attente', 'brouillon'])->count(),
+                'refusee'    => FicheObjectif::where('statut', 'refusee')->count(),
             ];
 
-            $q = FicheObjectif::with([
-                'assignable' => fn ($m) => $m->select('id', 'nom', 'prenom', 'fonction',
-                    'delegation_technique_id', 'caisse_id'),
-            ])
+            $q = FicheObjectif::with(['assignable'])
             ->withCount('objectifs')
-            ->where('assignable_type', Agent::class)
             ->orderByDesc('date');
 
             if ($statut) $q->where('statut', $statut);
@@ -139,6 +140,8 @@ class RhDashboardController extends Controller
 
         return view('rh.dashboard', compact(
             'stats',
+            'topEval',
+            'bottomEval',
             'tab',
             'filters',
             'delegations',
@@ -146,7 +149,6 @@ class RhDashboardController extends Controller
             'directions',
             'agents',
             'evaluations',
-            'evalStats',
             'fiches',
             'ficheStats',
         ));

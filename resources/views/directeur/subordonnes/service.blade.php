@@ -42,11 +42,11 @@
                         </a>
                     @endforeach
                 </div>
-                @if ($tab === 'evaluations')
+                @if ($tab === 'evaluations' && $evaluationsEnabled)
                     <a href="{{ route('directeur.evaluations.create', ['service_id' => $service->id]) }}" class="ent-btn ent-btn-primary text-xs">
                         <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
                     </a>
-                @else
+                @elseif ($tab === 'objectifs' && $objectifsEnabled)
                     <a href="{{ route('directeur.subordonnes.service.objectifs.create', $service) }}" class="ent-btn ent-btn-primary text-xs">
                         <i class="fas fa-plus mr-1"></i> Assigner des objectifs
                     </a>
@@ -129,7 +129,7 @@
                             <div>
                                 <p class="text-base font-black text-slate-900">{{ $fiche->titre }}</p>
                                 <p class="mt-0.5 text-sm text-slate-500">
-                                    Année : {{ $fiche->annee }}
+                                    Année : {{ $fiche->annee?->annee ?? $fiche->annee_id }}
                                     @if ($fiche->date_echeance)
                                         · Échéance : {{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}
                                     @endif

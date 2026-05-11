@@ -3,15 +3,10 @@
 namespace App\Http\Controllers\Pca;
 
 use App\Http\Controllers\Controller;
-use App\Models\Agent;
-use App\Models\Direction;
 use App\Models\Entite;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
-use App\Models\Objectif;
-use App\Models\Service;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -19,163 +14,107 @@ class PcaDashboardController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        $entite = Entite::with(['objectifs', 'dg', 'dga', 'assistante'])
+        // ── Entité faîtière (identité institutionnelle uniquement) ──────────
+        $entite = Entite::with(['dg', 'dga', 'dgaSecretaire', 'pca', 'assistante'])
             ->where('pca_agent_id', $request->user()->agent_id)
             ->firstOrFail();
-        $entiteId = $entite->id;
 
-        // Find the DG user : entites.dg_agent_id → agents.id ← users.agent_id
-        $dgUser = $entite->dg_agent_id
-            ? User::query()->where('role', 'DG')->where('agent_id', $entite->dg_agent_id)->first()
+        // ── Année de pilotage ──────────────────────────────────────────────
+        $annee = (int) $request->query('annee', now()->year);
+
+        // ── Utilisateur DG ─────────────────────────────────────────────────
+        $dgUser   = $entite->dg_agent_id
+            ? User::where('agent_id', $entite->dg_agent_id)->first()
             : null;
+        $dgUserId = $dgUser?->id ?? 0;
 
-        $dgUserId = $dgUser?->id;
+        $dgNom      = $entite->dg ? trim($entite->dg->prenom . ' ' . $entite->dg->nom) : '';
+        $dgInitiale = strtoupper(substr($dgNom ?: 'D', 0, 1));
 
-        // Fiches d'objectifs assigned to the DG user
-        $fichesObjectifsDGQuery = FicheObjectif::query()
-            ->where('assignable_type', User::class)
-            ->when($dgUserId, fn ($q) => $q->where('assignable_id', $dgUserId), fn ($q) => $q->whereRaw('1 = 0'));
+        // ── Fiches d'objectifs — DG uniquement ───────────────────────────
+        $fichesBase = FicheObjectif::query()
+            ->where('assignable_type', \App\Models\User::class)
+            ->where('assignable_id', $dgUserId)
+            ->whereYear('date', $annee);
 
-        $nbFichesObjectifsDG     = (clone $fichesObjectifsDGQuery)->count();
-        $nbFichesObjectifsAttente = (clone $fichesObjectifsDGQuery)->where('statut', 'en_attente')->count();
-        $nbFichesObjectifsAcceptees = (clone $fichesObjectifsDGQuery)->where('statut', 'acceptee')->count();
+        $totalFiches     = (clone $fichesBase)->count();
+        $fichesAcceptees = (clone $fichesBase)->where('statut', 'acceptee')->count();
+        $fichesEnAttente = (clone $fichesBase)->where('statut', 'en_attente')->count();
+        $fichesRefusees  = (clone $fichesBase)->where('statut', 'refusee')->count();
+        $tauxAvancement  = round((clone $fichesBase)->avg('avancement_percentage') ?? 0, 1);
 
-        $fichesStatsDG = [
-            'acceptées' => $nbFichesObjectifsAcceptees,
-            'en_attente' => $nbFichesObjectifsAttente,
-            'refusées' => (clone $fichesObjectifsDGQuery)->where('statut', 'refusee')->count(),
+        // ── Évaluations — DG uniquement ───────────────────────────────────
+        $evalsBase = Evaluation::query()
+            ->where('evaluable_type', \App\Models\User::class)
+            ->where('evaluable_id', $dgUserId)
+            ->whereYear('date_debut', $annee);
+
+        $evalsTotal     = (clone $evalsBase)->count();
+        $evalsValidees  = (clone $evalsBase)->where('statut', 'valide')->count();
+        $evalsSoumises  = (clone $evalsBase)->where('statut', 'soumis')->count();
+        $evalsRefusees  = (clone $evalsBase)->where('statut', 'refuse')->count();
+        $evalsBrouillon = (clone $evalsBase)->where('statut', 'brouillon')->count();
+        $noteMoyenne    = round((clone $evalsBase)->where('statut', 'valide')->avg('note_finale') ?? 0, 2);
+
+        // ── Fiches DG récentes ────────────────────────────────────────────
+        $fichesDGRecentes = $dgUserId
+            ? FicheObjectif::where('assignable_type', \App\Models\User::class)
+                ->where('assignable_id', $dgUserId)
+                ->whereYear('date', $annee)
+                ->latest('date')
+                ->take(6)
+                ->get()
+            : collect();
+
+        // ── Personnel du cabinet ───────────────────────────────────────────
+        $personnelCabinet = collect([
+            ['role' => 'Directeur(trice) Général(e)', 'agent' => $entite->dg,           'icon' => 'fas fa-user-tie',    'color' => 'bg-emerald-100 text-emerald-700'],
+            ['role' => 'DGA',                          'agent' => $entite->dga,          'icon' => 'fas fa-user-shield', 'color' => 'bg-sky-100 text-sky-700'],
+            ['role' => 'Assistante DG',                'agent' => $entite->assistante,   'icon' => 'fas fa-user',        'color' => 'bg-violet-100 text-violet-700'],
+            ['role' => 'Sec. DGA',                    'agent' => $entite->dgaSecretaire, 'icon' => 'fas fa-user-pen',   'color' => 'bg-amber-100 text-amber-700'],
+        ])->filter(fn ($p) => $p['agent'] !== null)->values();
+
+        // ── Données pour ApexCharts ────────────────────────────────────────
+        $evalsDonut = [
+            'labels' => ['Validées', 'Soumises', 'Brouillon', 'Refusées'],
+            'series' => [$evalsValidees, $evalsSoumises, $evalsBrouillon, $evalsRefusees],
+            'colors' => ['#10b981', '#f59e0b', '#94a3b8', '#ef4444'],
         ];
 
-        $dernieresFichesDG = (clone $fichesObjectifsDGQuery)
-            ->orderByDesc('date')
-            ->take(5)
-            ->get();
+        $fichesDonut = [
+            'labels' => ['Acceptées', 'En attente', 'Refusées'],
+            'series' => [$fichesAcceptees, $fichesEnAttente, $fichesRefusees],
+            'colors' => ['#10b981', '#f59e0b', '#ef4444'],
+        ];
 
-        // Evaluations for the DG user
-        $evaluationsDGQuery = Evaluation::query()
-            ->where('evaluable_type', User::class)
-            ->when($dgUserId, fn ($q) => $q->where('evaluable_id', $dgUserId), fn ($q) => $q->whereRaw('1 = 0'));
-
-        $nbEvaluationsDG = (clone $evaluationsDGQuery)->count();
-
-        $dernieresEvaluationsDG = (clone $evaluationsDGQuery)
-            ->latest('date_debut')
-            ->take(5)
-            ->get();
-
-        // Chart data — evaluations grouped by month (last 6 months)
-        $evaluationsParMois = (clone $evaluationsDGQuery)
-            ->where('date_debut', '>=', now()->subMonths(6)->startOfMonth())
-            ->get()
-            ->groupBy(fn ($e) => Carbon::parse($e->date_debut)->format('M Y'));
-
-        $evaluationsDGLabels = $evaluationsParMois->keys()->values()->toArray();
-        $evaluationsDGData   = $evaluationsParMois->map->count()->values()->toArray();
-
-        if (empty($evaluationsDGLabels)) {
-            $evaluationsDGLabels = [now()->format('M Y')];
-            $evaluationsDGData   = [0];
-        }
-
-        // Alertes — fiches en attente créées dans les 7 derniers jours
-        $alertesDGCollection = (clone $fichesObjectifsDGQuery)
-            ->where('statut', 'en_attente')
-            ->where('date', '>=', now()->subDays(7)->toDateString())
-            ->orderByDesc('date')
-            ->get();
-
-        $alertesDG = $alertesDGCollection
-            ->map(fn ($f) => "Fiche \"{$f->titre}\" en attente de validation depuis le ".Carbon::parse($f->date)->format('d/m/Y').'.')
-            ->toArray();
-
-        // Alertes chart — last 7 days
-        $alertesParJour = collect(range(6, 0))->mapWithKeys(function ($daysAgo) use ($fichesObjectifsDGQuery) {
-            $day = now()->subDays($daysAgo)->toDateString();
-            $count = (clone $fichesObjectifsDGQuery)
-                ->where('statut', 'en_attente')
-                ->whereDate('date', $day)
-                ->count();
-            return [Carbon::parse($day)->format('d/m') => $count];
-        });
-
-        $alertesDGLabels = $alertesParJour->keys()->values()->toArray();
-        $alertesDGData   = $alertesParJour->values()->toArray();
-
-        // Structural counts
-        $directions = Direction::query()
-            ->where('entite_id', $entiteId)
-            ->get();
-
-        $directionsRattacheesCount = $directions->count();
-        $directionIds = $directions->pluck('id')->all();
-
-        $servicesRattachesCount = Service::query()
-            ->whereIn('direction_id', $directionIds)
-            ->count();
-
-        $serviceIds = Service::query()
-            ->whereIn('direction_id', $directionIds)
-            ->pluck('id')
-            ->all();
-
-        $agentsRattachesCount = Agent::query()
-            ->whereIn('service_id', $serviceIds)
-            ->count();
-
-        $personnelRattache = collect([
-            [
-                'fonction' => 'Directeur(trice) Général(e)',
-                'nom'      => $entite->dg       ? trim($entite->dg->prenom.' '.$entite->dg->nom)             : '',
-                'icone'    => 'fas fa-user-tie',
-            ],
-            [
-                'fonction' => 'Assistante DG',
-                'nom'      => $entite->assistante ? trim($entite->assistante->prenom.' '.$entite->assistante->nom) : '',
-                'icone'    => 'fas fa-user',
-            ],
-            [
-                'fonction' => 'DGA',
-                'nom'      => $entite->dga      ? trim($entite->dga->prenom.' '.$entite->dga->nom)           : '',
-                'icone'    => 'fas fa-user-shield',
-            ],
-        ])->filter(fn (array $personne): bool => $personne['nom'] !== '')->values();
-
-        $personnelRattacheCount = $personnelRattache->count();
-
-        $objectifsPendingCount = Objectif::query()
-            ->where(function ($q) use ($entiteId, $directionIds): void {
-                $q->where(function ($sub) use ($entiteId): void {
-                    $sub->where('assignable_type', \App\Models\Entite::class)
-                        ->where('assignable_id', $entiteId);
-                })->orWhere(function ($sub) use ($directionIds): void {
-                    $sub->where('assignable_type', Direction::class)
-                        ->whereIn('assignable_id', $directionIds);
-                });
-            })
-            ->where('avancement_percentage', '<', 100)
-            ->count();
+        $anneesDisponibles = range(now()->year - 2, now()->year + 1);
 
         return view('pca.dashboard', compact(
             'entite',
-            'directions',
-            'directionsRattacheesCount',
-            'servicesRattachesCount',
-            'agentsRattachesCount',
-            'personnelRattache',
-            'personnelRattacheCount',
-            'objectifsPendingCount',
-            'fichesStatsDG',
-            'nbFichesObjectifsDG',
-            'nbEvaluationsDG',
-            'nbFichesObjectifsAttente',
-            'nbFichesObjectifsAcceptees',
-            'dernieresFichesDG',
-            'dernieresEvaluationsDG',
-            'alertesDG',
-            'evaluationsDGLabels',
-            'evaluationsDGData',
-            'alertesDGLabels',
-            'alertesDGData',
+            'annee',
+            'anneesDisponibles',
+            'dgUser',
+            'dgNom',
+            'dgInitiale',
+            'personnelCabinet',
+            // KPIs objectifs
+            'totalFiches',
+            'fichesAcceptees',
+            'fichesEnAttente',
+            'fichesRefusees',
+            'tauxAvancement',
+            // KPIs évaluations
+            'evalsTotal',
+            'evalsValidees',
+            'evalsSoumises',
+            'evalsRefusees',
+            'evalsBrouillon',
+            'noteMoyenne',
+            // Charts
+            'evalsDonut',
+            'fichesDonut',
+            // Récents
+            'fichesDGRecentes',
         ));
     }
 }

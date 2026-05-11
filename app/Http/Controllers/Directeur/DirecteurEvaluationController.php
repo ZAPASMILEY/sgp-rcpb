@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Directeur;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agence;
 use App\Models\Alerte;
 use App\Models\Annee;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\Service;
-use App\Models\SubjectiveCriteriaTemplate;
+use App\Services\EvaluationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -44,6 +44,8 @@ use Illuminate\View\View;
  */
 class DirecteurEvaluationController extends Controller
 {
+    public function __construct(private readonly EvaluationService $evaluationService) {}
+
     // ── Authorization helpers ──────────────────────────────────────────────
 
     /**
@@ -56,17 +58,23 @@ class DirecteurEvaluationController extends Controller
 
     /**
      * Vérifie que l'évaluation a bien été reçue (adressée) au directeur connecté.
-     * Contrôle : evaluable_type = entité du directeur, evaluable_id = id de l'entité, role = 'manager'.
+     *
+     * Deux sources possibles :
+     *  a) DG/PCA : evaluable_type = entité du directeur, evaluable_role = 'manager'
+     *  b) DGA    : evaluable_type = User::class, evaluable_id = Auth::id()
      */
     private function authorizeReceivedEval(Evaluation $evaluation): DirecteurEntity
     {
         $ctx = $this->getContext();
 
-        if (
-            $evaluation->evaluable_type !== $ctx->modelClass ||
-            (int) $evaluation->evaluable_id !== $ctx->getId() ||
-            strtolower((string) ($evaluation->evaluable_role ?? '')) !== 'manager'
-        ) {
+        $isEntityBased = $evaluation->evaluable_type === $ctx->modelClass
+            && (int) $evaluation->evaluable_id === $ctx->getId()
+            && strtolower((string) ($evaluation->evaluable_role ?? '')) === 'manager';
+
+        $isUserBased = $evaluation->evaluable_type === \App\Models\User::class
+            && (int) $evaluation->evaluable_id === Auth::id();
+
+        if (! $isEntityBased && ! $isUserBased) {
             abort(403);
         }
 
@@ -81,18 +89,32 @@ class DirecteurEvaluationController extends Controller
     {
         $ctx = $this->getContext();
 
+        $validTypes = [Service::class, Agence::class, \App\Models\Caisse::class];
+
         if (
-            $evaluation->evaluable_type !== Service::class ||
+            ! in_array($evaluation->evaluable_type, $validTypes) ||
             strtolower((string) ($evaluation->evaluable_role ?? '')) !== 'manager' ||
             (int) $evaluation->evaluateur_id !== Auth::id()
         ) {
             abort(403);
         }
 
-        // Vérifie que le service évalué appartient bien à l'entité de ce directeur.
-        $service = Service::find($evaluation->evaluable_id);
-        if (! $service || ! $ctx->serviceOwnedBy($service)) {
-            abort(403);
+        // Vérifie que la cible appartient bien à l'entité de ce directeur.
+        if ($evaluation->evaluable_type === Service::class) {
+            $service = Service::find($evaluation->evaluable_id);
+            if (! $service || ! $ctx->serviceOwnedBy($service)) {
+                abort(403);
+            }
+        } elseif ($evaluation->evaluable_type === Agence::class) {
+            $agence = Agence::find($evaluation->evaluable_id);
+            if (! $agence || ! $ctx->agenceOwnedBy($agence)) {
+                abort(403);
+            }
+        } elseif ($evaluation->evaluable_type === \App\Models\Caisse::class) {
+            $caisse = \App\Models\Caisse::find($evaluation->evaluable_id);
+            if (! $caisse || ! $ctx->caisseOwnedBy($caisse)) {
+                abort(403);
+            }
         }
 
         return $ctx;
@@ -110,26 +132,44 @@ class DirecteurEvaluationController extends Controller
      */
     public function create(Request $request): View
     {
+        $this->authorize('evaluations.creer');
         $ctx       = $this->getContext();
         $direction = $ctx->entity;
 
-        // Tous les services rattachés à l'entité du directeur
-        $services = $ctx->getServices();
+        // Services avec leur chef (agent) pour afficher le nom du responsable
+        $services = Service::where($ctx->serviceField, $ctx->getId())
+            ->with('chef')
+            ->orderBy('nom')
+            ->get();
 
-        // Pré-sélection du service via paramètre URL (ex: depuis la page subordonné)
+        // Pré-sélection du service via paramètre URL
         $preselectedId   = (int) $request->get('service_id', 0);
         $selectedService = $services->firstWhere('id', $preselectedId);
 
-        // Si l'entité n'a qu'un seul service, on le sélectionne automatiquement
-        if (! $selectedService && $services->count() === 1) {
+        if (! $selectedService && $services->count() === 1 && ! $ctx->hasAgences()) {
             $selectedService = $services->first();
         }
 
-        // Fiches d'objectifs acceptées pour le service sélectionné (non échues)
-        // Utilisées pour pré-remplir les critères objectifs du formulaire JS
+        // Agences avec leur chef (Directeur_Caisse uniquement)
+        $agences = $ctx->hasAgences()
+            ? \App\Models\Agence::where('caisse_id', $ctx->getId())->with('chef')->orderBy('nom')->get()
+            : collect();
+        $preselectedAId = (int) $request->get('agence_id', 0);
+        $selectedAgence = $agences->firstWhere('id', $preselectedAId) ?: null;
+
+        // Caisses avec leur directeur (Directeur_Technique uniquement)
+        // Le DT évalue les directeurs de caisse de sa délégation + les services directs de sa délégation.
+        $caisses = $ctx->hasCaisses()
+            ? \App\Models\Caisse::where('delegation_technique_id', $ctx->getId())->with('directeurAgent')->orderBy('nom')->get()
+            : collect();
+        $preselectedCId = (int) $request->get('caisse_id', 0);
+        $selectedCaisse = $caisses->firstWhere('id', $preselectedCId) ?: null;
+
+        // Fiches d'objectifs acceptées pour la cible sélectionnée
         $objectiveOptions = [];
+        $today = now()->toDateString();
+
         if ($selectedService) {
-            $today  = now()->toDateString();
             $fiches = FicheObjectif::query()
                 ->with('objectifs')
                 ->where('statut', 'acceptee')
@@ -152,10 +192,56 @@ class DirecteurEvaluationController extends Controller
                     ])->values()->all(),
                 ];
             }
+        } elseif ($selectedAgence) {
+            $fiches = FicheObjectif::query()
+                ->with('objectifs')
+                ->where('statut', 'acceptee')
+                ->whereDate('date_echeance', '>=', $today)
+                ->where('assignable_type', Agence::class)
+                ->where('assignable_id', $selectedAgence->id)
+                ->orderBy('titre')
+                ->get();
+
+            foreach ($fiches as $fiche) {
+                $objectiveOptions[] = [
+                    'id'            => $fiche->id,
+                    'titre'         => $fiche->titre,
+                    'date_echeance' => $fiche->date_echeance instanceof Carbon
+                        ? $fiche->date_echeance->toDateString()
+                        : (string) $fiche->date_echeance,
+                    'objectifs'     => $fiche->objectifs->map(fn ($item) => [
+                        'source_fiche_objectif_objectif_id' => $item->id,
+                        'titre'                             => $item->description,
+                    ])->values()->all(),
+                ];
+            }
+        } elseif ($selectedCaisse) {
+            $fiches = FicheObjectif::query()
+                ->with('objectifs')
+                ->where('statut', 'acceptee')
+                ->whereDate('date_echeance', '>=', $today)
+                ->where('assignable_type', \App\Models\Caisse::class)
+                ->where('assignable_id', $selectedCaisse->id)
+                ->orderBy('titre')
+                ->get();
+
+            foreach ($fiches as $fiche) {
+                $objectiveOptions[] = [
+                    'id'            => $fiche->id,
+                    'titre'         => $fiche->titre,
+                    'date_echeance' => $fiche->date_echeance instanceof Carbon
+                        ? $fiche->date_echeance->toDateString()
+                        : (string) $fiche->date_echeance,
+                    'objectifs'     => $fiche->objectifs->map(fn ($item) => [
+                        'source_fiche_objectif_objectif_id' => $item->id,
+                        'titre'                             => $item->description,
+                    ])->values()->all(),
+                ];
+            }
         }
 
         // Templates de critères subjectifs actifs, triés par ordre
-        $subjectiveTemplates = $this->buildSubjectiveTemplates();
+        $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
         // Valeurs précédentes pour les tableaux formations/expériences (après erreur de validation)
         $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
@@ -169,16 +255,76 @@ class DirecteurEvaluationController extends Controller
         }
 
         $displayYear = now()->year;
+        $entiteNom   = $direction->nom ?? '';
+
+        // Données JSON pour auto-remplissage dynamique des champs d'identification
+        $servicesJson = $services->map(fn ($svc) => [
+            'id'        => $svc->id,
+            'nom'       => $svc->nom,
+            'nom_prenom'=> $svc->chef ? trim($svc->chef->prenom.' '.$svc->chef->nom) : '',
+            'emploi'    => $svc->chef?->fonction ?? 'Chef de service',
+            'entite_nom'=> $entiteNom,
+        ])->values()->toArray();
+
+        $agencesJson = $agences->map(fn ($agc) => [
+            'id'        => $agc->id,
+            'nom'       => $agc->nom,
+            'nom_prenom'=> $agc->chef ? trim($agc->chef->prenom.' '.$agc->chef->nom) : '',
+            'emploi'    => $agc->chef?->fonction ?? "Chef d'agence",
+            'entite_nom'=> $entiteNom,
+        ])->values()->toArray();
+
+        $caissesJson = $caisses->map(fn ($cai) => [
+            'id'        => $cai->id,
+            'nom'       => $cai->nom,
+            'nom_prenom'=> $cai->directeurAgent ? trim($cai->directeurAgent->prenom.' '.$cai->directeurAgent->nom) : '',
+            'emploi'    => $cai->directeurAgent?->fonction ?? 'Directeur de caisse',
+            'entite_nom'=> $entiteNom,
+        ])->values()->toArray();
+
+        // Pré-remplissage initial selon la cible sélectionnée (premier affichage)
+        $prefilledNomPrenom        = null;
+        $prefilledEmploi           = null;
+        $prefilledDirectionService = null;
+
+        if ($selectedCaisse) {
+            $ag = $selectedCaisse->directeurAgent;
+            $prefilledNomPrenom        = $ag ? trim($ag->prenom.' '.$ag->nom) : '';
+            $prefilledEmploi           = $ag?->fonction ?? 'Directeur de caisse';
+            $prefilledDirectionService = $selectedCaisse->nom;
+        } elseif ($selectedAgence) {
+            $ag = $selectedAgence->chef;
+            $prefilledNomPrenom        = $ag ? trim($ag->prenom.' '.$ag->nom) : '';
+            $prefilledEmploi           = $ag?->fonction ?? "Chef d'agence";
+            $prefilledDirectionService = $selectedAgence->nom;
+        } elseif ($selectedService) {
+            $ag = $selectedService->chef;
+            $prefilledNomPrenom        = $ag ? trim($ag->prenom.' '.$ag->nom) : '';
+            $prefilledEmploi           = $ag?->fonction ?? 'Chef de service';
+            $prefilledDirectionService = $selectedService->nom;
+        }
 
         return view('directeur.evaluations.create', compact(
+            'ctx',
             'direction',
             'services',
             'selectedService',
+            'agences',
+            'selectedAgence',
+            'caisses',
+            'selectedCaisse',
             'objectiveOptions',
             'subjectiveTemplates',
             'oldFormations',
             'oldExperiences',
             'displayYear',
+            'entiteNom',
+            'servicesJson',
+            'agencesJson',
+            'caissesJson',
+            'prefilledNomPrenom',
+            'prefilledEmploi',
+            'prefilledDirectionService',
         ));
     }
 
@@ -195,12 +341,27 @@ class DirecteurEvaluationController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('evaluations.creer');
         $ctx        = $this->getContext();
         $user       = Auth::user();
-        $serviceIds = $ctx->getServiceIds(); // Whitelist des IDs autorisés
+        $serviceIds = $ctx->getServiceIds();
+        $agenceIds  = $ctx->hasAgences() ? $ctx->getAgences()->pluck('id')->all() : [];
+
+        // Détermine si on évalue un service, une agence ou une caisse
+        $rawServiceId = $request->input('service_id');
+        $rawAgenceId  = $request->input('agence_id');
+        $rawCaisseId  = $request->input('caisse_id');
+        $isAgence     = blank($rawServiceId) && ! blank($rawAgenceId);
+        $isCaisse     = blank($rawServiceId) && blank($rawAgenceId) && ! blank($rawCaisseId);
 
         $validated = $request->validate([
-            'service_id'                       => ['required', 'integer', 'in:'.implode(',', $serviceIds ?: [0])],
+            'service_id'                       => ($isAgence || $isCaisse)
+                ? ['nullable']
+                : ['required', 'integer', 'in:'.implode(',', $serviceIds ?: [0])],
+            'agence_id'                        => $isAgence
+                ? ['required', 'integer', 'in:'.implode(',', $agenceIds ?: [0])]
+                : ['nullable'],
+            'caisse_id'                        => ['nullable', 'integer'],
             'date_debut'                       => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'date_fin'                         => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'identification.nom_prenom'        => ['nullable', 'string', 'max:255'],
@@ -229,7 +390,34 @@ class DirecteurEvaluationController extends Controller
             'date_signature_evaluateur'        => ['nullable', 'date'],
         ]);
 
-        $service = Service::findOrFail($validated['service_id']);
+        // Résolution de la cible avec vérification stricte d'appartenance
+        // DT       : services directs de SA délégation OU directeurs de caisses de SA délégation
+        // Dir.Caisse : services de SA caisse OU agences de SA caisse
+        if ($isCaisse) {
+            $evaluableModel = \App\Models\Caisse::findOrFail((int) $rawCaisseId);
+            if (! $ctx->caisseOwnedBy($evaluableModel)) {
+                abort(403);
+            }
+            $evaluableClass = \App\Models\Caisse::class;
+            $cibleLabel     = "le directeur de la caisse « {$evaluableModel->nom} »";
+            $redirectRoute  = route('directeur.subordonnes.caisse', ['caisse' => $evaluableModel->id, 'tab' => 'evaluations']);
+        } elseif ($isAgence) {
+            $evaluableModel = Agence::findOrFail($validated['agence_id']);
+            if (! $ctx->agenceOwnedBy($evaluableModel)) {
+                abort(403);
+            }
+            $evaluableClass = Agence::class;
+            $cibleLabel     = "le chef d'agence « {$evaluableModel->nom} »";
+            $redirectRoute  = route('directeur.subordonnes.agence', ['agence' => $evaluableModel->id, 'tab' => 'evaluations']);
+        } else {
+            $evaluableModel = Service::findOrFail($validated['service_id']);
+            if (! $ctx->serviceOwnedBy($evaluableModel)) {
+                abort(403);
+            }
+            $evaluableClass = Service::class;
+            $cibleLabel     = "le chef du service « {$evaluableModel->nom} »";
+            $redirectRoute  = route('directeur.mon-espace', ['tab' => 'dashboard']);
+        }
 
         // Conversion du format MM/AAAA → AAAA-MM-01 (stocké comme date SQL)
         $dateDebut = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_debut']);
@@ -243,7 +431,7 @@ class DirecteurEvaluationController extends Controller
         $identification = $validated['identification'] ?? [];
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
-            $normalized = $this->normalizeDateValue($raw);
+            $normalized = $this->evaluationService->normalizeDateValue($raw);
             if ($normalized === null) {
                 return back()->withInput()->withErrors(['identification.date_evaluation' => 'Format de date invalide. Utilisez JJ/MM/AAAA.']);
             }
@@ -273,15 +461,15 @@ class DirecteurEvaluationController extends Controller
         // Normalisation des critères :
         //   - subjectifs : strict=false → les lignes sans libellé de sous-critère sont gardées (libellé = '-')
         //   - objectifs  : strict=true  → les lignes sans sous-critère noté sont ignorées
-        $normalizedSubjective = $this->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
-        $normalizedObjective  = $this->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
+        $normalizedSubjective = $this->evaluationService->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
+        $normalizedObjective  = $this->evaluationService->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
 
         if ($normalizedSubjective === [] || $normalizedObjective === []) {
             return back()->withInput()->withErrors(['subjective_criteres' => 'Les critères subjectifs et objectifs doivent contenir au moins une ligne notée.']);
         }
 
         // Calcul des scores (pondération 75 % objectifs / 25 % subjectifs × 2 = note /10)
-        $scores = $this->computeScores($normalizedSubjective, $normalizedObjective);
+        $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
         // Résolution de l'année de notation (table annees)
         try {
@@ -292,13 +480,13 @@ class DirecteurEvaluationController extends Controller
 
         // Transaction : Evaluation → Identification → Critères → SousCritères
         $evaluation = DB::transaction(function () use (
-            $user, $service, $dateDebut, $dateFin, $anneeId,
+            $user, $evaluableModel, $evaluableClass, $dateDebut, $dateFin, $anneeId,
             $scores, $validated, $identification,
             $normalizedSubjective, $normalizedObjective
         ) {
             $evaluation = Evaluation::create([
-                'evaluable_type'            => Service::class,
-                'evaluable_id'              => $service->id,
+                'evaluable_type'            => $evaluableClass,
+                'evaluable_id'              => $evaluableModel->id,
                 'evaluable_role'            => 'manager',
                 'annee_id'                  => $anneeId,
                 'evaluateur_id'             => $user->id,
@@ -321,37 +509,13 @@ class DirecteurEvaluationController extends Controller
 
             // Section identification (fiche de renseignements du chef de service)
             $evaluation->identification()->create($identification);
-
-            // Critères subjectifs puis objectifs (fusionnés dans la boucle)
-            foreach (array_merge($normalizedSubjective, $normalizedObjective) as $criterion) {
-                $critere = $evaluation->criteres()->create([
-                    'type'                              => $criterion['type'],
-                    'ordre'                             => $criterion['ordre'],
-                    'titre'                             => $criterion['titre'],
-                    'description'                       => $criterion['description'],
-                    'note_globale'                      => $criterion['note_globale'],
-                    'observation'                       => $criterion['observation'],
-                    'source_template_id'                => $criterion['source_template_id'],
-                    'source_fiche_objectif_id'          => $criterion['source_fiche_objectif_id'],
-                    'source_fiche_objectif_objectif_id' => $criterion['source_fiche_objectif_objectif_id'],
-                ]);
-                // Sous-critères du critère courant
-                foreach ($criterion['subcriteria'] as $sub) {
-                    $critere->sousCriteres()->create([
-                        'ordre'       => $sub['ordre'],
-                        'libelle'     => $sub['libelle'],
-                        'note'        => $sub['note'],
-                        'observation' => $sub['observation'],
-                    ]);
-                }
-            }
+            $this->evaluationService->persistCriteria($evaluation, array_merge($normalizedSubjective, $normalizedObjective));
 
             return $evaluation;
         });
 
-        return redirect()
-            ->route('directeur.mon-espace', ['tab' => 'dashboard'])
-            ->with('status', "Évaluation créée pour le chef du service « {$service->nom} ».");
+        return redirect($redirectRoute)
+            ->with('status', "Évaluation créée pour {$cibleLabel}.");
     }
 
     /**
@@ -364,28 +528,49 @@ class DirecteurEvaluationController extends Controller
      */
     public function show(Evaluation $evaluation): View
     {
+        $this->authorize('evaluations.voir-equipe');
         $ctx       = $this->getContext();
         $direction = $ctx->entity;
 
         // Déterminer si l'évaluation est reçue par ce directeur
-        $isReceived = $evaluation->evaluable_type === $ctx->modelClass
+        // Cas a : DG/PCA assigne à l'entité (Direction, Caisse, DelegationTechnique)
+        $isReceivedByEntity = $evaluation->evaluable_type === $ctx->modelClass
             && (int) $evaluation->evaluable_id === $ctx->getId()
             && strtolower((string) ($evaluation->evaluable_role ?? '')) === 'manager';
 
-        // Déterminer si l'évaluation a été créée par ce directeur pour un de ses services
-        $isCreated = $evaluation->evaluable_type === Service::class
-            && strtolower((string) ($evaluation->evaluable_role ?? '')) === 'manager'
-            && (int) $evaluation->evaluateur_id === Auth::id();
+        // Cas b : DGA assigne directement à l'User
+        $isReceivedByUser = $evaluation->evaluable_type === \App\Models\User::class
+            && (int) $evaluation->evaluable_id === Auth::id();
+
+        $isReceived = $isReceivedByEntity || $isReceivedByUser;
+
+        // Déterminer si l'évaluation a été créée par ce directeur pour un de ses subordonnés
+        // DT : services directs | Directeur_Caisse : services + agences de la caisse
+        $isCreated = strtolower((string) ($evaluation->evaluable_role ?? '')) === 'manager'
+            && (int) $evaluation->evaluateur_id === Auth::id()
+            && in_array($evaluation->evaluable_type, [Service::class, Agence::class, \App\Models\Caisse::class]);
 
         if (! $isReceived && ! $isCreated) {
             abort(403);
         }
 
-        // Pour une évaluation créée, vérifier que le service cible appartient à l'entité
+        // Pour une évaluation créée, vérifier que la cible appartient bien à l'entité du directeur
         if ($isCreated) {
-            $service = Service::find($evaluation->evaluable_id);
-            if (! $service || ! $ctx->serviceOwnedBy($service)) {
-                abort(403);
+            if ($evaluation->evaluable_type === Service::class) {
+                $service = Service::find($evaluation->evaluable_id);
+                if (! $service || ! $ctx->serviceOwnedBy($service)) {
+                    abort(403);
+                }
+            } elseif ($evaluation->evaluable_type === Agence::class) {
+                $agence = Agence::find($evaluation->evaluable_id);
+                if (! $agence || ! $ctx->agenceOwnedBy($agence)) {
+                    abort(403);
+                }
+            } elseif ($evaluation->evaluable_type === \App\Models\Caisse::class) {
+                $caisse = \App\Models\Caisse::find($evaluation->evaluable_id);
+                if (! $caisse || ! $ctx->caisseOwnedBy($caisse)) {
+                    abort(403);
+                }
             }
         }
 
@@ -403,9 +588,13 @@ class DirecteurEvaluationController extends Controller
             ?? ($isReceived
                 ? $ctx->getDirecteurNomPrenom()
                 : ($evaluation->evaluable?->nom ?? '-'));
-        $cibleType  = $isReceived
+        $cibleType = $isReceived
             ? $ctx->getRoleLabel()
-            : 'Chef de service — '.($evaluation->evaluable?->nom ?? '-');
+            : match ($evaluation->evaluable_type) {
+                Agence::class             => "Chef d'agence — " . ($evaluation->evaluable?->nom ?? '-'),
+                \App\Models\Caisse::class => 'Directeur de caisse — ' . ($evaluation->evaluable?->nom ?? '-'),
+                default                   => 'Chef de service — ' . ($evaluation->evaluable?->nom ?? '-'),
+            };
 
         // Badge de statut
         $statusClass = match ($evaluation->statut) {
@@ -449,6 +638,7 @@ class DirecteurEvaluationController extends Controller
      */
     public function statut(Request $request, Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('evaluations.accepter');
         $this->authorizeReceivedEval($evaluation);
 
         if ($evaluation->statut !== 'soumis') {
@@ -486,6 +676,7 @@ class DirecteurEvaluationController extends Controller
      */
     public function submit(Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('evaluations.soumettre');
         $this->authorizeCreatedEval($evaluation);
 
         if ($evaluation->statut !== 'brouillon') {
@@ -507,6 +698,7 @@ class DirecteurEvaluationController extends Controller
      */
     public function destroy(Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('evaluations.creer');
         $this->authorizeCreatedEval($evaluation);
 
         if ($evaluation->statut === 'valide') {
@@ -527,11 +719,12 @@ class DirecteurEvaluationController extends Controller
      */
     public function exportPdf(Evaluation $evaluation)
     {
+        $this->authorize('evaluations.exporter-pdf');
         $ctx = $this->getContext();
 
         // Vérifie les droits d'accès (reçue ou créée par ce directeur)
-        $isReceived = $evaluation->evaluable_type === $ctx->modelClass
-            && (int) $evaluation->evaluable_id === $ctx->getId();
+        $isReceived = ($evaluation->evaluable_type === $ctx->modelClass && (int) $evaluation->evaluable_id === $ctx->getId())
+            || ($evaluation->evaluable_type === \App\Models\User::class && (int) $evaluation->evaluable_id === Auth::id());
         $isCreated  = $evaluation->evaluable_type === Service::class
             && (int) $evaluation->evaluateur_id === Auth::id();
 
@@ -555,131 +748,4 @@ class DirecteurEvaluationController extends Controller
         return $pdf->download('evaluation-'.$evaluation->id.'-directeur.pdf');
     }
 
-    // ── Private helpers ────────────────────────────────────────────────────
-
-    /**
-     * Charge tous les templates de critères subjectifs actifs depuis la base.
-     * Retourne un tableau PHP brut (encodé en JSON dans la vue pour le moteur JS).
-     */
-    private function buildSubjectiveTemplates(): array
-    {
-        return SubjectiveCriteriaTemplate::query()
-            ->with('subcriteria')
-            ->where('is_active', true)
-            ->orderBy('ordre')
-            ->get()
-            ->map(fn ($template) => [
-                'id'          => $template->id,
-                'ordre'       => $template->ordre,
-                'titre'       => $template->titre,
-                'description' => $template->description,
-                'subcriteria' => $template->subcriteria->map(fn ($sub) => [
-                    'libelle' => $sub->libelle,
-                    'ordre'   => $sub->ordre,
-                ])->values()->all(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Normalise et valide les critères soumis par le formulaire JS.
-     *
-     * @param  array   $criteria  Tableau de critères bruts (depuis request)
-     * @param  string  $type      'subjectif' ou 'objectif'
-     * @param  int     $minNote   Note minimale autorisée (1 pour les deux types)
-     * @param  int     $maxNote   Note maximale autorisée (5 pour les deux types)
-     * @param  bool    $strict    Si true, les critères sans sous-critères sont ignorés.
-     *                            Si false (subjectifs), un sous-critère par défaut '-' est injecté.
-     * @return array   Critères normalisés prêts à être persistés
-     */
-    private function normalizeCriteria(array $criteria, string $type, int $minNote, int $maxNote, bool $strict = true): array
-    {
-        $normalized = [];
-        foreach (array_values($criteria) as $idx => $criterion) {
-            if (! is_array($criterion)) continue;
-            $title = trim((string) ($criterion['titre'] ?? ''));
-            if ($title === '') continue;
-
-            $subcriteria = [];
-            foreach (array_values((array) ($criterion['subcriteria'] ?? [])) as $subIdx => $sub) {
-                if (! is_array($sub)) continue;
-                $label = trim((string) ($sub['libelle'] ?? ''));
-                if ($label === '') {
-                    if ($strict) continue;
-                    $label = '-';
-                }
-                $note          = max($minNote, min($maxNote, (float) ($sub['note'] ?? $minNote)));
-                $subcriteria[] = [
-                    'ordre'       => $subIdx + 1,
-                    'libelle'     => $label,
-                    'note'        => $note,
-                    'observation' => filled($sub['observation'] ?? null) ? trim((string) $sub['observation']) : null,
-                ];
-            }
-
-            if ($strict && $subcriteria === []) continue;
-            if (! $strict && $subcriteria === []) {
-                $subcriteria = [['ordre' => 1, 'libelle' => '-', 'note' => $minNote, 'observation' => null]];
-            }
-
-            $normalized[] = [
-                'type'                              => $type,
-                'ordre'                             => $idx + 1,
-                'titre'                             => $title,
-                'description'                       => filled($criterion['description'] ?? null) ? trim((string) $criterion['description']) : null,
-                'note_globale'                      => round(collect($subcriteria)->avg('note') ?? 0, 2),
-                'observation'                       => filled($criterion['observation'] ?? null) ? trim((string) $criterion['observation']) : null,
-                'source_template_id'                => isset($criterion['source_template_id']) ? (int) $criterion['source_template_id'] : null,
-                'source_fiche_objectif_id'          => isset($criterion['source_fiche_objectif_id']) ? (int) $criterion['source_fiche_objectif_id'] : null,
-                'source_fiche_objectif_objectif_id' => isset($criterion['source_fiche_objectif_objectif_id']) ? (int) $criterion['source_fiche_objectif_objectif_id'] : null,
-                'subcriteria'                       => $subcriteria,
-            ];
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * Calcule les scores pondérés à partir des critères normalisés.
-     *
-     * Pondération :
-     *   objectifs  × 0,75 = note_criteres_objectifs   (sur 3,75)
-     *   subjectifs × 0,25 = note_criteres_subjectifs  (sur 1,25)
-     *   note_finale = (objectifs + subjectifs) × 2    (ramène sur 10)
-     */
-    private function computeScores(array $subjectiveCriteria, array $objectiveCriteria): array
-    {
-        $moyObj  = round(collect($objectiveCriteria)->avg('note_globale') ?? 0, 2);
-        $moySubj = round(collect($subjectiveCriteria)->avg('note_globale') ?? 0, 2);
-        $noteObj  = round($moyObj * 0.75, 2);
-        $noteSubj = round($moySubj * 0.25, 2);
-
-        return [
-            'moyenne_objectifs'        => $moyObj,
-            'moyenne_subjectifs'       => $moySubj,
-            'note_criteres_objectifs'  => $noteObj,
-            'note_criteres_subjectifs' => $noteSubj,
-            'note_finale'              => round(($noteObj + $noteSubj) * 2, 2),
-        ];
-    }
-
-    /**
-     * Tente de parser une date saisie librement (JJ/MM/AAAA ou AAAA-MM-JJ)
-     * et la retourne au format AAAA-MM-JJ (stockage SQL).
-     * Retourne null si le format ne correspond à aucun des deux attendus.
-     */
-    private function normalizeDateValue(mixed $value): ?string
-    {
-        $value = trim((string) $value);
-        if ($value === '') return null;
-        foreach (['Y-m-d', 'd/m/Y'] as $format) {
-            try {
-                $date = Carbon::createFromFormat($format, $value);
-                if ($date && $date->format($format) === $value) return $date->toDateString();
-            } catch (\Throwable) {}
-        }
-
-        return null;
-    }
 }

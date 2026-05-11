@@ -10,8 +10,13 @@
         [
             'title' => 'Mon dossier',
             'items' => [
-                ['route' => 'dga.mon-espace', 'query' => 'tab=evaluations', 'icon' => 'fas fa-star',    'label' => 'Mes evaluations'],
-                ['route' => 'dga.mon-espace', 'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye', 'label' => 'Mes objectifs'],
+                ['route' => 'dga.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon espace'],
+            ],
+        ],
+        [
+            'title' => 'Ma Direction',
+            'items' => [
+                ['route' => 'dga.direction', 'icon' => 'fas fa-sitemap', 'label' => 'Ma Direction'],
             ],
         ],
         [
@@ -27,6 +32,12 @@
                 ['route' => 'dga.reseau.caisses',     'icon' => 'fas fa-landmark',        'label' => 'Caisses'],
                 ['route' => 'dga.reseau.agences',     'icon' => 'fas fa-building',         'label' => 'Agences'],
                 ['route' => 'dga.reseau.guichets',    'icon' => 'fas fa-cash-register',    'label' => 'Guichets'],
+            ],
+        ],
+        [
+            'title' => 'Formations',
+            'items' => [
+                ['route' => 'dga.formations.index', 'icon' => 'fas fa-graduation-cap', 'label' => 'Mes formations'],
             ],
         ],
     ];
@@ -46,8 +57,8 @@
     <style>
         :root {
             --sidebar-width: 260px;
-            --sidebar-color:      #7c3aed;
-            --sidebar-color-dark: #5b21b6;
+            --sidebar-color:      #008751;
+            --sidebar-color-dark: #006837;
         }
 
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
@@ -169,7 +180,7 @@
     </nav>
 
     <div class="main-content">
-        <header class="flex h-12 shrink-0 items-center justify-between border-b border-slate-100 bg-white/80 px-4 backdrop-blur-sm">
+        <header class="relative z-[9999] flex h-12 shrink-0 items-center justify-between border-b border-slate-100 bg-white/80 px-4 backdrop-blur-sm">
             <button class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 text-slate-500 shadow-sm lg:hidden" id="btnToggleSidebar" type="button">
                 <i class="fas fa-bars"></i>
             </button>
@@ -178,6 +189,12 @@
         </header>
 
         <div class="flex-1 w-full overflow-visible">
+            @if(session('feature_disabled'))
+                <div class="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-700 shadow-sm">
+                    <i class="fas fa-ban shrink-0"></i>
+                    <span>{{ session('feature_disabled') }}</span>
+                </div>
+            @endif
             @yield('content')
         </div>
     </div>

@@ -13,19 +13,10 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class DgReseauController extends Controller
 {
-    private function checkDg(): void
-    {
-        $user = Auth::user();
-        if (! $user || $user->role !== 'DG') {
-            abort(403);
-        }
-    }
-
     /**
      * Construit la requête d'évaluations pour une liste d'agent IDs avec filtres.
      */
@@ -90,11 +81,12 @@ class DgReseauController extends Controller
 
     public function delegations(Request $request): View
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
 
         $search = trim((string) $request->get('search', ''));
 
-        $query = DelegationTechnique::withCount(['caisses', 'agences'])
+        $query = DelegationTechnique::with('directeur')
+            ->withCount(['caisses', 'agences'])
             ->orderBy('region');
 
         if ($search !== '') {
@@ -115,7 +107,7 @@ class DgReseauController extends Controller
 
     public function delegation(DelegationTechnique $delegation, Request $request): View
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
 
         $delegation->load(['caisses.agences']);
 
@@ -139,12 +131,12 @@ class DgReseauController extends Controller
 
     public function caisses(Request $request): View
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
 
         $search  = trim((string) $request->get('search', ''));
         $delegId = (int) $request->get('delegation', 0);
 
-        $query = Caisse::with('delegationTechnique')
+        $query = Caisse::with(['delegationTechnique', 'directeur'])
             ->withCount('agences')
             ->orderBy('nom');
 
@@ -171,7 +163,7 @@ class DgReseauController extends Controller
 
     public function caisse(Caisse $caisse, Request $request): View
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
 
         $caisse->load(['delegationTechnique', 'agences']);
 
@@ -196,12 +188,12 @@ class DgReseauController extends Controller
 
     public function agences(Request $request): View
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
 
         $search   = trim((string) $request->get('search', ''));
         $caisseId = (int) $request->get('caisse', 0);
 
-        $query = Agence::with(['caisse', 'delegationTechnique'])
+        $query = Agence::with(['caisse', 'delegationTechnique', 'chef'])
             ->withCount(['agents', 'guichets'])
             ->orderBy('nom');
 
@@ -224,7 +216,7 @@ class DgReseauController extends Controller
 
     public function agence(Agence $agence, Request $request): View
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
 
         $agence->load(['caisse', 'delegationTechnique', 'guichets']);
 
@@ -248,12 +240,12 @@ class DgReseauController extends Controller
 
     public function guichets(Request $request): View
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
 
         $search   = trim((string) $request->get('search', ''));
         $agenceId = (int) $request->get('agence', 0);
 
-        $query = Guichet::with('agence.caisse')
+        $query = Guichet::with(['agence.caisse', 'chef'])
             ->orderBy('nom');
 
         if ($search !== '') {
@@ -275,7 +267,7 @@ class DgReseauController extends Controller
 
     public function guichet(Guichet $guichet, Request $request): View
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
 
         $guichet->load('agence.caisse');
 
@@ -330,14 +322,14 @@ class DgReseauController extends Controller
 
     public function delegationPdf(DelegationTechnique $delegation, Request $request): Response
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
         $agentIds = Agent::where('delegation_technique_id', $delegation->id)->pluck('id')->all();
         return $this->makePdf($agentIds, $request, 'Délégation Technique', $delegation->region);
     }
 
     public function caissePdf(Caisse $caisse, Request $request): Response
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
         $agenceIds = $caisse->agences()->pluck('id')->all();
         $agentIds  = Agent::whereIn('agence_id', $agenceIds)->pluck('id')->all();
         return $this->makePdf($agentIds, $request, 'Caisse Populaire', $caisse->nom);
@@ -345,14 +337,14 @@ class DgReseauController extends Controller
 
     public function agencePdf(Agence $agence, Request $request): Response
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
         $agentIds = Agent::where('agence_id', $agence->id)->pluck('id')->all();
         return $this->makePdf($agentIds, $request, 'Agence', $agence->nom);
     }
 
     public function guichetPdf(Guichet $guichet, Request $request): Response
     {
-        $this->checkDg();
+        $this->authorize('evaluations.voir-reseau');
         $guichet->load('agence');
         $agentIds = Agent::where('agence_id', $guichet->agence_id)->pluck('id')->all();
         return $this->makePdf($agentIds, $request, 'Guichet', $guichet->nom);

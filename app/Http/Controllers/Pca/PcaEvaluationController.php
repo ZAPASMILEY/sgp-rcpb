@@ -9,20 +9,20 @@ use App\Models\Direction;
 use App\Models\Entite;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
-use App\Models\SubjectiveCriteriaTemplate;
 use App\Models\User;
+use App\Services\EvaluationService;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
 class PcaEvaluationController extends Controller
 {
+    public function __construct(private readonly EvaluationService $evaluationService) {}
+
     /** @var array<string, array{class: class-string, role: string}> */
     private const TARGET_MAP = [
         'user'   => ['class' => User::class, 'role' => 'DG'],
@@ -30,6 +30,7 @@ class PcaEvaluationController extends Controller
 
     public function index(Request $request): View
     {
+        $this->authorize('evaluations.voir-equipe');
         $user = $request->user();
         $entiteId = $user->agent?->entite_id;
 
@@ -70,6 +71,7 @@ class PcaEvaluationController extends Controller
 
     public function create(Request $request): View
     {
+        $this->authorize('evaluations.creer');
         $entiteFaitiere = $this->getDirectionGeneraleEntite();
         $directionGenerale = $this->getDirectionGeneraleDirection();
         $dg = $this->getDGOfDirectionGenerale();
@@ -89,7 +91,7 @@ class PcaEvaluationController extends Controller
             'assignmentOptions' => $assignmentOptions,
             'targetProfiles' => $this->buildTargetProfiles($entiteFaitiere->id),
             'objectiveOptions' => $this->buildObjectiveOptions($entiteFaitiere->id),
-            'subjectiveTemplates' => $this->buildSubjectiveTemplates(),
+            'subjectiveTemplates' => $this->evaluationService->buildSubjectiveTemplates(),
         ]);
     }
 
@@ -126,6 +128,7 @@ class PcaEvaluationController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('evaluations.creer');
         $user = $request->user();
         $entiteId = $user->agent?->entite_id;
         $entiteDirectionGenerale = $this->getDirectionGeneraleEntite();
@@ -193,20 +196,30 @@ class PcaEvaluationController extends Controller
             ]);
         }
 
-        $validated = $this->normalizePayloadDateFields($validated);
+        $validated = $this->evaluationService->normalizePayloadDates($validated, [
+            'identification.date_recrutement',
+            'identification.date_evaluation',
+            'identification.date_titularisation',
+            'identification.date_naissance',
+            'identification.date_confirmation',
+            'identification.date_affectation',
+            'date_signature_evalue',
+            'date_signature_directeur',
+            'date_signature_evaluateur',
+        ]);
 
         $targetConfig = self::TARGET_MAP[$validated['evaluable_type']];
         $targetId = $dg?->id;
         $this->authorizeTarget($validated['evaluable_type'], $targetId, $entiteId);
 
-        $normalizedSubjective = $this->normalizeCriteria(
+        $normalizedSubjective = $this->evaluationService->normalizeCriteria(
             (array) $request->input('subjective_criteres', []),
             'subjectif',
             1,
             5,
             false
         );
-        $normalizedObjective = $this->normalizeCriteria(
+        $normalizedObjective = $this->evaluationService->normalizeCriteria(
             (array) $request->input('objective_criteres', []),
             'objectif',
             1,
@@ -219,7 +232,7 @@ class PcaEvaluationController extends Controller
             ]);
         }
 
-        $scores = $this->computeScores($normalizedSubjective, $normalizedObjective);
+        $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
         $evaluation = DB::transaction(function () use ($request, $validated, $targetConfig, $targetId, $normalizedSubjective, $normalizedObjective, $scores) {
             $evaluation = Evaluation::create([
@@ -271,29 +284,7 @@ class PcaEvaluationController extends Controller
                 ->all();
 
             $evaluation->identification()->create($identification);
-
-            foreach (array_merge($normalizedSubjective, $normalizedObjective) as $criterion) {
-                $critere = $evaluation->criteres()->create([
-                    'type' => $criterion['type'],
-                    'ordre' => $criterion['ordre'],
-                    'titre' => $criterion['titre'],
-                    'description' => $criterion['description'],
-                    'note_globale' => $criterion['note_globale'],
-                    'observation' => $criterion['observation'],
-                    'source_template_id' => $criterion['source_template_id'],
-                    'source_fiche_objectif_id' => $criterion['source_fiche_objectif_id'],
-                    'source_fiche_objectif_objectif_id' => $criterion['source_fiche_objectif_objectif_id'],
-                ]);
-
-                foreach ($criterion['subcriteria'] as $subcriterion) {
-                    $critere->sousCriteres()->create([
-                        'ordre' => $subcriterion['ordre'],
-                        'libelle' => $subcriterion['libelle'],
-                        'note' => $subcriterion['note'],
-                        'observation' => $subcriterion['observation'],
-                    ]);
-                }
-            }
+            $this->evaluationService->persistCriteria($evaluation, array_merge($normalizedSubjective, $normalizedObjective));
 
             return $evaluation;
         });
@@ -308,6 +299,7 @@ class PcaEvaluationController extends Controller
 
     public function show(Request $request, Evaluation $evaluation): View
     {
+        $this->authorize('evaluations.voir-equipe');
         $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         $evaluation->load([
@@ -319,7 +311,7 @@ class PcaEvaluationController extends Controller
 
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
         $objectiveCriteria = $evaluation->criteres->where('type', 'objectif')->values();
-        $mention = $this->mentionFromScore((float) $evaluation->note_finale);
+        $mention = $this->evaluationService->mention((float) $evaluation->note_finale);
         $cibleLabel = $this->evaluableLabel($evaluation->evaluable, $evaluation->evaluable_role ?? 'entity');
         $cibleType = $this->evaluableTypeLabel($evaluation->evaluable_type, $evaluation->evaluable_role ?? 'entity');
 
@@ -335,6 +327,7 @@ class PcaEvaluationController extends Controller
 
     public function exportPdf(Request $request, Evaluation $evaluation): Response
     {
+        $this->authorize('evaluations.exporter-pdf');
         $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         $evaluation->load([
@@ -346,7 +339,7 @@ class PcaEvaluationController extends Controller
 
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
         $objectiveCriteria = $evaluation->criteres->where('type', 'objectif')->values();
-        $mention = $this->mentionFromScore((float) $evaluation->note_finale);
+        $mention = $this->evaluationService->mention((float) $evaluation->note_finale);
         $cibleLabel = $this->evaluableLabel($evaluation->evaluable, $evaluation->evaluable_role ?? 'entity');
         $cibleType = $this->evaluableTypeLabel($evaluation->evaluable_type, $evaluation->evaluable_role ?? 'entity');
 
@@ -364,6 +357,7 @@ class PcaEvaluationController extends Controller
 
     public function submit(Request $request, Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('evaluations.soumettre');
         $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         if ($evaluation->statut !== 'brouillon') {
@@ -389,6 +383,7 @@ class PcaEvaluationController extends Controller
 
     public function approve(Request $request, Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('evaluations.accepter');
         $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         if ($evaluation->statut !== 'soumis') {
@@ -404,6 +399,7 @@ class PcaEvaluationController extends Controller
 
     public function destroy(Request $request, Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('evaluations.creer');
         $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
         if ($evaluation->statut === 'valide') {
@@ -572,219 +568,6 @@ class PcaEvaluationController extends Controller
         }
 
         return $options;
-    }
-
-    /** @return array<int, array<string, mixed>> */
-    private function buildSubjectiveTemplates(): array
-    {
-        return SubjectiveCriteriaTemplate::query()
-            ->with('subcriteria')
-            ->where('is_active', true)
-            ->orderBy('ordre')
-            ->get()
-            ->map(fn (SubjectiveCriteriaTemplate $template) => [
-                'id' => $template->id,
-                'ordre' => $template->ordre,
-                'titre' => $template->titre,
-                'description' => $template->description,
-                'subcriteria' => $template->subcriteria->map(fn ($subcriterion) => [
-                    'libelle' => $subcriterion->libelle,
-                    'ordre' => $subcriterion->ordre,
-                ])->values()->all(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @param array<int, mixed> $criteria
-     * @param bool $strict  When false (subjective mode): empty sub-libelles become '-'
-     *                      and criteria with no subcriteria keep a default placeholder row.
-     * @return array<int, array<string, mixed>>
-     */
-    private function normalizeCriteria(array $criteria, string $type, int $minNote, int $maxNote, bool $strict = true): array
-    {
-        $normalized = [];
-
-        foreach (array_values($criteria) as $criterionIndex => $criterion) {
-            if (! is_array($criterion)) {
-                continue;
-            }
-
-            $title = trim((string) ($criterion['titre'] ?? ''));
-
-            // A criterion with no title is always dropped, regardless of mode.
-            if ($title === '') {
-                continue;
-            }
-
-            $subcriteria = [];
-
-            foreach (array_values((array) ($criterion['subcriteria'] ?? [])) as $subIndex => $subcriterion) {
-                if (! is_array($subcriterion)) {
-                    continue;
-                }
-
-                $label = trim((string) ($subcriterion['libelle'] ?? ''));
-
-                if ($label === '') {
-                    if ($strict) {
-                        // Strict mode: drop subcriteria with empty label.
-                        continue;
-                    }
-                    // Non-strict (subjective): keep with a placeholder label.
-                    $label = '-';
-                }
-
-                $note = (float) ($subcriterion['note'] ?? $minNote);
-                $note = max($minNote, min($maxNote, $note));
-
-                $subcriteria[] = [
-                    'ordre'       => $subIndex + 1,
-                    'libelle'     => $label,
-                    'note'        => $note,
-                    'observation' => filled($subcriterion['observation'] ?? null) ? trim((string) $subcriterion['observation']) : null,
-                ];
-            }
-
-            if ($strict && $subcriteria === []) {
-                // Strict mode: drop criterion that ended up with no subcriteria.
-                continue;
-            }
-
-            // Non-strict: if still empty (e.g. form sent no subcriteria array at all),
-            // add a single placeholder so the criterion is always persisted.
-            if (! $strict && $subcriteria === []) {
-                $subcriteria = [[
-                    'ordre'       => 1,
-                    'libelle'     => '-',
-                    'note'        => $minNote,
-                    'observation' => null,
-                ]];
-            }
-
-            $noteGlobale = round(collect($subcriteria)->avg('note') ?? 0, 2);
-
-            $normalized[] = [
-                'type'        => $type,
-                'ordre'       => $criterionIndex + 1,
-                'titre'       => $title,
-                'description' => filled($criterion['description'] ?? null) ? trim((string) $criterion['description']) : null,
-                'note_globale'                    => $noteGlobale,
-                'observation'                     => filled($criterion['observation'] ?? null) ? trim((string) $criterion['observation']) : null,
-                'source_template_id'              => isset($criterion['source_template_id']) ? (int) $criterion['source_template_id'] : null,
-                'source_fiche_objectif_id'        => isset($criterion['source_fiche_objectif_id']) ? (int) $criterion['source_fiche_objectif_id'] : null,
-                'source_fiche_objectif_objectif_id' => isset($criterion['source_fiche_objectif_objectif_id']) ? (int) $criterion['source_fiche_objectif_objectif_id'] : null,
-                'subcriteria' => $subcriteria,
-            ];
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> $subjectiveCriteria
-     * @param array<int, array<string, mixed>> $objectiveCriteria
-     * @return array<string, float|int>
-     */
-    private function computeScores(array $subjectiveCriteria, array $objectiveCriteria): array
-    {
-        $moyenneSubjectifs = round(collect($subjectiveCriteria)->avg('note_globale') ?? 0, 2);
-        $moyenneObjectifs = round(collect($objectiveCriteria)->avg('note_globale') ?? 0, 2);
-        $noteCriteresSubjectifs = round($moyenneSubjectifs * 0.25, 2);
-        $noteCriteresObjectifs = round($moyenneObjectifs * 0.75, 2);
-        $noteFinale = round(($noteCriteresObjectifs + $noteCriteresSubjectifs) * 2, 2);
-
-        return [
-            'moyenne_subjectifs' => $moyenneSubjectifs,
-            'moyenne_objectifs' => $moyenneObjectifs,
-            'note_criteres_subjectifs' => $noteCriteresSubjectifs,
-            'note_criteres_objectifs' => $noteCriteresObjectifs,
-            'note_finale' => $noteFinale,
-        ];
-    }
-
-    /**
-     * @param array<string, mixed> $validated
-     * @return array<string, mixed>
-     */
-    private function normalizePayloadDateFields(array $validated): array
-    {
-        $errors = [];
-
-        foreach ([
-            'identification.date_recrutement',
-            'identification.date_evaluation',
-            'identification.date_titularisation',
-            'identification.date_naissance',
-            'identification.date_confirmation',
-            'identification.date_affectation',
-            'date_signature_evalue',
-            'date_signature_directeur',
-            'date_signature_evaluateur',
-        ] as $path) {
-            $rawValue = data_get($validated, $path);
-
-            if (blank($rawValue)) {
-                data_set($validated, $path, null);
-                continue;
-            }
-
-            $normalized = $this->normalizeDateValue($rawValue);
-
-            if ($normalized === null) {
-                $errors[$path] = 'Format de date invalide. Utilisez JJ/MM/AAAA ou AAAA-MM-JJ.';
-                continue;
-            }
-
-            data_set($validated, $path, $normalized);
-        }
-
-        if ($errors !== []) {
-            throw ValidationException::withMessages($errors);
-        }
-
-        return $validated;
-    }
-
-    private function normalizeDateValue(mixed $value): ?string
-    {
-        $value = trim((string) $value);
-
-        if ($value === '') {
-            return null;
-        }
-
-        foreach (['Y-m-d', 'd/m/Y'] as $format) {
-            try {
-                $date = Carbon::createFromFormat($format, $value);
-            } catch (\Throwable) {
-                continue;
-            }
-
-            if ($date !== false && $date->format($format) === $value) {
-                return $date->toDateString();
-            }
-        }
-
-        return null;
-    }
-
-    private function mentionFromScore(float $score): string
-    {
-        if ($score < 5) {
-            return 'Insuffisant';
-        }
-
-        if ($score < 7) {
-            return 'Passable';
-        }
-
-        if ($score < 8.5) {
-            return 'Bien';
-        }
-
-        return 'Excellent';
     }
 
     private function evaluableLabel(mixed $evaluable, string $role): string

@@ -36,11 +36,12 @@
             {{-- Tab Navigation --}}
             <div class="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
                 @foreach([
-                    'general'    => ['icon' => 'fa-sliders-h',      'label' => 'Général'],
-                    'comptes'    => ['icon' => 'fa-users-cog',       'label' => 'Comptes & Rôles'],
-                    'roles'      => ['icon' => 'fa-user-tag',        'label' => 'Rôles & Permissions'],
-                    'droits'     => ['icon' => 'fa-user-lock',       'label' => 'Droits Individuels'],
-                    'catalogue'  => ['icon' => 'fa-list-alt',        'label' => 'Catalogue Permissions'],
+                    'general'          => ['icon' => 'fa-sliders-h',      'label' => 'Général'],
+                    'fonctionnalites'   => ['icon' => 'fa-toggle-on',      'label' => 'Fonctionnalités'],
+                    'comptes'          => ['icon' => 'fa-users-cog',       'label' => 'Comptes & Rôles'],
+                    'roles'            => ['icon' => 'fa-user-tag',        'label' => 'Rôles & Permissions'],
+                    'droits'           => ['icon' => 'fa-user-lock',       'label' => 'Droits Individuels'],
+                    'catalogue'        => ['icon' => 'fa-list-alt',        'label' => 'Catalogue Permissions'],
                 ] as $tab => $meta)
                     <a href="{{ route('admin.settings.edit', array_merge(request()->except('tab'), ['tab' => $tab])) }}"
                        class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider transition
@@ -241,6 +242,122 @@
         @endif {{-- /general --}}
 
         {{-- ══════════════════════════════════════════════════════════════
+             TAB: FONCTIONNALITÉS
+        ══════════════════════════════════════════════════════════════ --}}
+        @if($activeTab === 'fonctionnalites')
+        <div class="space-y-4">
+
+            {{-- Section header --}}
+            <div class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+                <div class="flex items-center gap-4">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+                        <i class="fas fa-toggle-on text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-black text-slate-900">Contrôle des fonctionnalités</h2>
+                        <p class="mt-0.5 text-sm text-slate-500">Activez ou désactivez les modules de création d'évaluations et d'assignation d'objectifs pour l'ensemble des utilisateurs.</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Toggle cards --}}
+            <div class="grid gap-4 sm:grid-cols-2">
+
+                {{-- Évaluations --}}
+                @php $evalOn = $featuresEnabled['evaluations'] ?? true; @endphp
+                <div class="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-slate-100">
+                    <div class="flex items-center gap-4 border-b border-slate-100 px-6 py-4">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $evalOn ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400' }}">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-black text-slate-900">Évaluations</p>
+                            <p class="text-xs text-slate-500">Création et soumission de fiches d'évaluation</p>
+                        </div>
+                        <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black
+                                     {{ $evalOn ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600' }}">
+                            <span class="h-1.5 w-1.5 rounded-full {{ $evalOn ? 'bg-emerald-500' : 'bg-rose-500' }}"></span>
+                            {{ $evalOn ? 'Activées' : 'Désactivées' }}
+                        </span>
+                    </div>
+                    <div class="px-6 py-5">
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            @if($evalOn)
+                                Les utilisateurs peuvent actuellement <strong>créer et soumettre</strong> des évaluations. Désactivez pour bloquer toute nouvelle création.
+                            @else
+                                La création d'évaluations est <strong>bloquée</strong>. Les fiches existantes restent accessibles en lecture.
+                            @endif
+                        </p>
+                        <form method="POST" action="{{ route('admin.settings.feature.toggle', 'evaluations') }}" class="mt-4">
+                            @csrf
+                            <button type="submit"
+                                    onclick="return confirm('{{ $evalOn ? 'Désactiver les évaluations pour tous les utilisateurs ?' : 'Activer les évaluations ?' }}')"
+                                    class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-black transition
+                                           {{ $evalOn
+                                               ? 'border-2 border-rose-200 bg-white text-rose-600 hover:bg-rose-50'
+                                               : 'bg-emerald-600 text-white shadow-md shadow-emerald-200 hover:bg-emerald-700' }}">
+                                <i class="fas {{ $evalOn ? 'fa-toggle-off' : 'fa-toggle-on' }} text-base"></i>
+                                {{ $evalOn ? 'Désactiver les évaluations' : 'Activer les évaluations' }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {{-- Objectifs --}}
+                @php $objOn = $featuresEnabled['objectifs'] ?? true; @endphp
+                <div class="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-slate-100">
+                    <div class="flex items-center gap-4 border-b border-slate-100 px-6 py-4">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $objOn ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400' }}">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-black text-slate-900">Assignation d'objectifs</p>
+                            <p class="text-xs text-slate-500">Création et assignation de fiches d'objectifs</p>
+                        </div>
+                        <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black
+                                     {{ $objOn ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600' }}">
+                            <span class="h-1.5 w-1.5 rounded-full {{ $objOn ? 'bg-emerald-500' : 'bg-rose-500' }}"></span>
+                            {{ $objOn ? 'Activées' : 'Désactivées' }}
+                        </span>
+                    </div>
+                    <div class="px-6 py-5">
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            @if($objOn)
+                                Les responsables peuvent actuellement <strong>assigner des objectifs</strong> à leurs subordonnés. Désactivez pour bloquer toute nouvelle assignation.
+                            @else
+                                L'assignation d'objectifs est <strong>bloquée</strong>. Les fiches existantes restent accessibles en lecture.
+                            @endif
+                        </p>
+                        <form method="POST" action="{{ route('admin.settings.feature.toggle', 'objectifs') }}" class="mt-4">
+                            @csrf
+                            <button type="submit"
+                                    onclick="return confirm('{{ $objOn ? 'Désactiver l\'assignation d\'objectifs pour tous les utilisateurs ?' : 'Activer l\'assignation d\'objectifs ?' }}')"
+                                    class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-black transition
+                                           {{ $objOn
+                                               ? 'border-2 border-rose-200 bg-white text-rose-600 hover:bg-rose-50'
+                                               : 'bg-emerald-600 text-white shadow-md shadow-emerald-200 hover:bg-emerald-700' }}">
+                                <i class="fas {{ $objOn ? 'fa-toggle-off' : 'fa-toggle-on' }} text-base"></i>
+                                {{ $objOn ? 'Désactiver les objectifs' : 'Activer les objectifs' }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>{{-- /grid --}}
+
+            {{-- Info note --}}
+            <div class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+                <i class="fas fa-info-circle mt-0.5 text-amber-500"></i>
+                <div class="text-sm text-amber-800">
+                    <p class="font-bold">Ces paramètres prennent effet immédiatement.</p>
+                    <p class="mt-0.5">Lorsqu'une fonctionnalité est désactivée, les formulaires de création sont inaccessibles pour tous les rôles. Les données existantes (fiches, évaluations) ne sont pas supprimées.</p>
+                </div>
+            </div>
+
+        </div>
+        @endif {{-- /fonctionnalites --}}
+
+        {{-- ══════════════════════════════════════════════════════════════
              TAB: COMPTES & RÔLES
         ══════════════════════════════════════════════════════════════ --}}
         @if($activeTab === 'comptes')
@@ -404,49 +521,71 @@
 
             {{-- Permissions du rôle sélectionné --}}
             <div class="rounded-2xl bg-white p-6 shadow-sm">
-                @if($selectedRole)
+                @if($selectedRoleSlug && isset($allRoles[$selectedRoleSlug]))
                     <div class="mb-5 flex items-center justify-between">
                         <div>
                             <h3 class="text-sm font-black uppercase tracking-wider text-slate-800">
                                 Permissions — {{ $allRoles[$selectedRoleSlug] }}
                             </h3>
-                            <p class="text-xs text-slate-400">Cochez les permissions par défaut pour ce rôle.</p>
+                            <p class="text-xs text-slate-400">Cochez les droits accordés par défaut à ce rôle.</p>
                         </div>
                         <span class="rounded-xl bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700">
-                            {{ $rolePermissions->count() }} / {{ $permissions->count() }}
+                            {{ $rolePermissions->count() }} / {{ $permissions->count() }} accordées
                         </span>
                     </div>
 
                     @if($permissions->isEmpty())
                         <p class="py-8 text-center text-sm text-slate-400">
-                            Aucune permission dans le catalogue. <a href="{{ route('admin.settings.edit', ['tab' => 'catalogue']) }}" class="text-indigo-500 underline">Créer des permissions d'abord.</a>
+                            Aucune permission dans le catalogue.
+                            <a href="{{ route('admin.settings.edit', ['tab' => 'catalogue']) }}" class="text-indigo-500 underline">Créer des permissions d'abord.</a>
                         </p>
                     @else
-                        <form method="POST" action="{{ route('admin.settings.roles.permissions.sync', $selectedRoleSlug) }}" class="space-y-4">
+                        <form method="POST" action="{{ route('admin.settings.roles.permissions.sync', $selectedRoleSlug) }}" class="space-y-5">
                             @csrf
-                            <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-                                @foreach($permissions as $perm)
-                                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-100 p-3 hover:bg-slate-50">
-                                        <input type="checkbox" name="permissions[]" value="{{ $perm->id }}"
-                                               class="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                               @checked($rolePermissions->contains($perm->id))>
-                                        <div class="min-w-0">
-                                            <p class="text-sm font-bold text-slate-700">{{ $perm->slug }}</p>
-                                            <p class="text-[11px] text-slate-400 font-mono">{{ $perm->name }}</p>
-                                            @if($perm->description)
-                                                <p class="mt-0.5 text-[10px] text-slate-400">{{ $perm->description }}</p>
-                                            @endif
+                            <div class="max-h-[520px] overflow-y-auto pr-1 space-y-4">
+                                @foreach($permissionGroups as $prefix => $group)
+                                    @if(count($group['items']) > 0)
+                                        @php
+                                            $colorMap = [
+                                                'indigo' => ['bg' => 'bg-indigo-50', 'text' => 'text-indigo-700', 'border' => 'border-indigo-100', 'check' => 'text-indigo-600'],
+                                                'emerald'=> ['bg' => 'bg-emerald-50', 'text' => 'text-emerald-700', 'border' => 'border-emerald-100', 'check' => 'text-emerald-600'],
+                                                'sky'    => ['bg' => 'bg-sky-50',     'text' => 'text-sky-700',     'border' => 'border-sky-100',     'check' => 'text-sky-600'],
+                                                'amber'  => ['bg' => 'bg-amber-50',   'text' => 'text-amber-700',   'border' => 'border-amber-100',   'check' => 'text-amber-600'],
+                                                'rose'   => ['bg' => 'bg-rose-50',    'text' => 'text-rose-700',    'border' => 'border-rose-100',    'check' => 'text-rose-600'],
+                                            ];
+                                            $c = $colorMap[$group['color']] ?? $colorMap['indigo'];
+                                        @endphp
+                                        <div class="rounded-2xl border {{ $c['border'] }} overflow-hidden">
+                                            <div class="{{ $c['bg'] }} px-4 py-2.5 flex items-center gap-2">
+                                                <i class="{{ $group['icon'] }} text-xs {{ $c['text'] }}"></i>
+                                                <span class="text-xs font-black uppercase tracking-wider {{ $c['text'] }}">{{ $group['label'] }}</span>
+                                            </div>
+                                            <div class="divide-y divide-slate-50">
+                                                @foreach($group['items'] as $perm)
+                                                    <label class="flex cursor-pointer items-start gap-3 px-4 py-3 hover:bg-slate-50 transition">
+                                                        <input type="checkbox" name="permissions[]" value="{{ $perm->id }}"
+                                                               class="mt-0.5 h-4 w-4 rounded border-slate-300 {{ $c['check'] }} focus:ring-indigo-500"
+                                                               @checked($rolePermissions->contains($perm->id))>
+                                                        <div>
+                                                            <p class="text-sm font-semibold text-slate-800">
+                                                                {{ $group['labels'][$perm->name] ?? $perm->name }}
+                                                            </p>
+                                                            <p class="text-xs font-mono text-slate-400">{{ $perm->name }}</p>
+                                                        </div>
+                                                    </label>
+                                                @endforeach
+                                            </div>
                                         </div>
-                                    </label>
+                                    @endif
                                 @endforeach
                             </div>
                             <div class="flex items-center gap-3 border-t border-slate-100 pt-4">
                                 <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-indigo-700">
                                     <i class="fas fa-save"></i> Enregistrer
                                 </button>
-                                <a href="{{ route('admin.settings.edit', ['tab' => 'roles']) }}"
+                                <a href="{{ route('admin.settings.edit', ['tab' => 'roles', 'role' => $selectedRoleSlug]) }}"
                                    class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-2.5 text-xs font-bold text-slate-500 transition hover:bg-slate-50">
-                                    Tout décocher
+                                    <i class="fas fa-times"></i> Annuler
                                 </a>
                             </div>
                         </form>
@@ -532,17 +671,11 @@
                             @csrf
                             <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                                 @foreach($permissions as $perm)
-                                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-100 p-3 hover:bg-slate-50">
+                                    <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-100 p-3 hover:bg-slate-50">
                                         <input type="checkbox" name="permissions[]" value="{{ $perm->id }}"
-                                               class="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                               class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                                @checked($userPermissions->contains($perm->id))>
-                                        <div class="min-w-0">
-                                            <p class="text-sm font-bold text-slate-700">{{ $perm->slug }}</p>
-                                            <p class="text-[11px] text-slate-400 font-mono">{{ $perm->name }}</p>
-                                            @if($perm->description)
-                                                <p class="mt-0.5 text-[10px] text-slate-400">{{ $perm->description }}</p>
-                                            @endif
-                                        </div>
+                                        <span class="font-mono text-sm text-slate-700">{{ $perm->name }}</span>
                                     </label>
                                 @endforeach
                             </div>
@@ -595,21 +728,19 @@
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-slate-100">
-                                    <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Libellé</th>
-                                    <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Code technique</th>
-                                    <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Description</th>
+                                    <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">#</th>
+                                    <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Code permission (name)</th>
                                     <th class="pb-3"></th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-50">
                                 @foreach($permissions as $perm)
                                     <tr class="group hover:bg-slate-50/50">
-                                        <td class="py-3 font-bold text-slate-700">{{ $perm->slug }}</td>
-                                        <td class="py-3 font-mono text-xs text-slate-500">{{ $perm->name }}</td>
-                                        <td class="py-3 text-xs text-slate-400">{{ $perm->description ?: '—' }}</td>
+                                        <td class="py-3 text-xs text-slate-300 w-8">{{ $loop->iteration }}</td>
+                                        <td class="py-3 font-mono text-sm text-slate-700">{{ $perm->name }}</td>
                                         <td class="py-3 text-right">
                                             <form method="POST" action="{{ route('admin.settings.permissions.destroy', $perm) }}"
-                                                  onsubmit="return confirm('Supprimer « {{ $perm->slug }} » ?')">
+                                                  onsubmit="return confirm('Supprimer « {{ addslashes($perm->name) }} » ?')">
                                                 @csrf @method('DELETE')
                                                 <button type="submit"
                                                         class="inline-flex items-center gap-1 rounded-lg border border-rose-100 bg-rose-50 px-3 py-1.5 text-[10px] font-black uppercase text-rose-600 transition hover:bg-rose-600 hover:text-white">
@@ -641,36 +772,17 @@
 
                     <div>
                         <label class="mb-1 block text-[11px] font-black uppercase tracking-wider text-slate-400">
-                            Libellé <span class="text-rose-500">*</span>
+                            Code permission <span class="text-rose-500">*</span>
                         </label>
-                        <input name="slug" type="text" required maxlength="150"
-                               value="{{ old('slug') }}"
-                               placeholder="Ex : Valider une évaluation"
-                               class="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:ring-violet-400 @error('slug') border-rose-400 @enderror">
-                        @error('slug')
-                            <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div>
-                        <label class="mb-1 block text-[11px] font-black uppercase tracking-wider text-slate-400">
-                            Code technique <span class="text-rose-500">*</span>
-                        </label>
+                        {{-- Format Spatie : minuscules, chiffres, tirets, points. Ex: evaluations.valider --}}
                         <input name="name" type="text" required maxlength="100"
                                value="{{ old('name') }}"
-                               placeholder="valider-evaluation"
+                               placeholder="ex : evaluations.valider"
                                class="w-full rounded-2xl border border-slate-200 px-4 py-2.5 font-mono text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:ring-violet-400 @error('name') border-rose-400 @enderror">
-                        <p class="mt-1 text-[10px] text-slate-400">Minuscules, chiffres et tirets uniquement.</p>
+                        <p class="mt-1 text-[10px] text-slate-400">Minuscules, chiffres, tirets et points uniquement. Ex&nbsp;: <code>agents.creer</code></p>
                         @error('name')
                             <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
                         @enderror
-                    </div>
-
-                    <div>
-                        <label class="mb-1 block text-[11px] font-black uppercase tracking-wider text-slate-400">Description</label>
-                        <textarea name="description" rows="2" maxlength="255"
-                                  placeholder="Description optionnelle…"
-                                  class="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:ring-violet-400">{{ old('description') }}</textarea>
                     </div>
 
                     <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 py-3 text-sm font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-violet-700">
@@ -944,23 +1056,5 @@ function resetManagePwdModal() {
         }
     });
 
-// Auto-générer le code technique depuis le libellé
-const slugInput = document.querySelector('input[name="slug"]');
-const nameInput = document.querySelector('input[name="name"]');
-if (slugInput && nameInput) {
-    slugInput.addEventListener('input', function() {
-        if (!nameInput.dataset.manual) {
-            nameInput.value = this.value
-                .toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-z0-9\s-]/g, '')
-                .trim()
-                .replace(/\s+/g, '-');
-        }
-    });
-    nameInput.addEventListener('input', function() {
-        this.dataset.manual = '1';
-    });
-}
 </script>
 @endpush

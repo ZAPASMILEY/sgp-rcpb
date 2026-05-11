@@ -50,7 +50,6 @@
                                 <th class="px-4 py-3">Région / Ville</th>
                                 <th class="px-4 py-3">Directeur</th>
                                 <th class="px-4 py-3">Téléphone</th>
-                                <th class="px-4 py-3 text-center">Directions</th>
                                 <th class="px-4 py-3 text-center">Caisses</th>
                                 <th class="px-4 py-3 text-center">Agences</th>
                                 <th class="px-4 py-3 text-center">Note</th>
@@ -65,13 +64,14 @@
                                         <p class="text-xs text-slate-400">{{ $dt->ville }}</p>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <p class="font-semibold">{{ $dt->directeur_prenom }} {{ $dt->directeur_nom }}</p>
-                                        <p class="text-xs text-slate-400">{{ $dt->directeur_email }}</p>
+                                        @if($dt->directeur)
+                                            <p class="font-semibold">{{ $dt->directeur->prenom }} {{ $dt->directeur->nom }}</p>
+                                            <p class="text-xs text-slate-400">{{ $dt->directeur->email }}</p>
+                                        @else
+                                            <span class="text-xs text-slate-400">—</span>
+                                        @endif
                                     </td>
-                                    <td class="px-4 py-3 text-slate-500">{{ $dt->directeur_telephone ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-center">
-                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black text-slate-600">{{ $dt->directions_count }}</span>
-                                    </td>
+                                    <td class="px-4 py-3 text-slate-500">{{ $dt->directeur?->numero_telephone ?? '—' }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-black text-emerald-700">{{ $dt->caisses_count }}</span>
                                     </td>

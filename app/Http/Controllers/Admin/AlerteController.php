@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class AlerteController extends Controller
@@ -129,7 +130,7 @@ class AlerteController extends Controller
             'priorite'   => $validated['priorite'],
             'statut'     => 'active',
             'ip_address' => $request->ip(),
-            'created_by' => auth()->id(),
+            'created_by' => $request->user()->id,
         ]);
 
         // Diffuser l'alerte à tous les utilisateurs (notifications in-app)
@@ -224,7 +225,12 @@ class AlerteController extends Controller
 
     public function lireTout(Request $request): RedirectResponse
     {
-        $request->user()->alertesNonLues()->update(['lu' => true, 'lu_at' => now()]);
+        // BelongsToMany->update() mettrait à jour la table "alertes", pas le pivot.
+        // On cible directement la table pivot alerte_user pour changer lu → true.
+        DB::table('alerte_user')
+            ->where('user_id', $request->user()->id)
+            ->where('lu', false)
+            ->update(['lu' => true, 'lu_at' => now()]);
 
         return back()->with('status', 'Toutes les notifications ont été marquées comme lues.');
     }

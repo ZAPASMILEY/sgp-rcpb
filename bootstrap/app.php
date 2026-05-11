@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'dga_espace'       => \App\Http\Middleware\EnsureIsDga::class,
             'directeur_espace' => \App\Http\Middleware\EnsureIsDirecteur::class,
             'rh'               => \App\Http\Middleware\EnsureRh::class,
+            // Middleware pour les trois types de chefs (service, agence, guichet)
+            'chef'             => \App\Http\Middleware\EnsureIsChef::class,
+            'feature'          => \App\Http\Middleware\FeatureGate::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

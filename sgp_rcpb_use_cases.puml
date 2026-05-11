@@ -84,6 +84,7 @@ package "Administration" {
     usecase "Supprimer un compte"            as UC_DeleteUser
     usecase "Attribuer un rôle"              as UC_AssignRole
     usecase "Réinitialiser un mot de passe"  as UC_ResetUserPwd
+    usecase "Activer / Désactiver un compte" as UC_ToggleActive
     usecase "Gérer les permissions"          as UC_ManagePerms
   }
 
@@ -96,6 +97,7 @@ package "Administration" {
   package "Structure organisationnelle" {
     usecase "Configurer la faîtière"         as UC_ConfigEntite
     usecase "Gérer la Direction Générale"    as UC_ConfigDG
+    usecase "Gérer la Direction DGA"         as UC_ConfigDGA
     usecase "Gérer les directions"           as UC_ManageDirections
     usecase "Gérer les services"             as UC_ManageServices
     usecase "Gérer les délégations tech."    as UC_ManageDT
@@ -124,12 +126,14 @@ Admin --> UC_EditUser
 Admin --> UC_DeleteUser
 Admin --> UC_AssignRole
 Admin --> UC_ResetUserPwd
+Admin --> UC_ToggleActive
 Admin --> UC_ManagePerms
 Admin --> UC_CreateAgent
 Admin --> UC_EditAgent
 Admin --> UC_DeleteAgent
 Admin --> UC_ConfigEntite
 Admin --> UC_ConfigDG
+Admin --> UC_ConfigDGA
 Admin --> UC_ManageDirections
 Admin --> UC_ManageServices
 Admin --> UC_ManageDT
@@ -255,6 +259,7 @@ package "Espace DGA" {
   usecase "Accepter / Refuser sa fiche"            as UC_DGA_StatutFiche
   usecase "Mettre à jour l'avancement"             as UC_DGA_SuiviObj
   usecase "Télécharger le contrat d'objectifs"     as UC_DGA_ExportObjPDF
+  usecase "Consulter sa direction (services/agents)" as UC_DGA_ViewDirection
 }
 
 DGA --> UC_DGA_Dashboard
@@ -265,6 +270,7 @@ DGA --> UC_DGA_ViewFiche
 DGA --> UC_DGA_StatutFiche
 DGA --> UC_DGA_SuiviObj
 DGA --> UC_DGA_ExportObjPDF
+DGA --> UC_DGA_ViewDirection
 
 ' ─────────────────────────────────────────────
 '  UC ASSISTANTE DG & CONSEILLERS DG

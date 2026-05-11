@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Directeur;
 
 use App\Http\Controllers\Controller;
 use App\Models\FicheObjectif;
+use App\Services\ObjectifService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +29,8 @@ use Illuminate\View\View;
  */
 class DirecteurObjectifController extends Controller
 {
+    public function __construct(private readonly ObjectifService $objectifService) {}
+
     /**
      * Résout et retourne le contexte du directeur connecté.
      * Déclenche un 403 si l'utilisateur n'est pas lié à une entité.
@@ -37,6 +41,26 @@ class DirecteurObjectifController extends Controller
     }
 
     /**
+     * Vérifie que la fiche appartient au directeur connecté.
+     *
+     * Accepte deux cas :
+     *  a) Assignée à l'entité du directeur (DG / PCA → Direction / Caisse / DelegationTechnique)
+     *  b) Assignée directement au User (DGA → Directeur_Technique ou secrétaire)
+     */
+    private function ficheAppartientAuDirecteur(FicheObjectif $fiche, DirecteurEntity $ctx): bool
+    {
+        // Cas a : entité
+        if ($fiche->assignable_type === $ctx->modelClass && (int) $fiche->assignable_id === $ctx->getId()) {
+            return true;
+        }
+        // Cas b : utilisateur (DGA assigne au User directement)
+        if ($fiche->assignable_type === \App\Models\User::class && (int) $fiche->assignable_id === Auth::id()) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Affiche le détail d'une fiche d'objectifs reçue par le directeur.
      *
      * Vérifie que la fiche est bien assignée à l'entité du directeur connecté
@@ -44,13 +68,11 @@ class DirecteurObjectifController extends Controller
      */
     public function show(FicheObjectif $fiche): View
     {
+        $this->authorize('objectifs.voir-equipe');
         $ctx = $this->getContext();
 
-        // Sécurité : la fiche doit être assignée à l'entité exacte du directeur.
-        if (
-            $fiche->assignable_type !== $ctx->modelClass ||
-            (int) $fiche->assignable_id !== $ctx->getId()
-        ) {
+        // Sécurité : la fiche doit appartenir au directeur connecté.
+        if (! $this->ficheAppartientAuDirecteur($fiche, $ctx)) {
             abort(403);
         }
 
@@ -89,12 +111,10 @@ class DirecteurObjectifController extends Controller
      */
     public function avancement(Request $request, FicheObjectif $fiche): RedirectResponse
     {
+        $this->authorize('objectifs.avancement');
         $ctx = $this->getContext();
 
-        if (
-            $fiche->assignable_type !== $ctx->modelClass ||
-            (int) $fiche->assignable_id !== $ctx->getId()
-        ) {
+        if (! $this->ficheAppartientAuDirecteur($fiche, $ctx)) {
             abort(403);
         }
 
@@ -107,12 +127,37 @@ class DirecteurObjectifController extends Controller
             return back()->with('error', "L'avancement doit être un multiple de 5.");
         }
 
-        $fiche->avancement_percentage = $val;
-        $fiche->save();
+        $this->objectifService->updateAvancement($fiche, $val);
 
         return redirect()
             ->route('directeur.objectifs.show', $fiche)
             ->with('status', 'Avancement mis à jour.');
+    }
+
+    /**
+     * Exporte la fiche d'objectifs reçue en PDF.
+     */
+    public function exportPdf(FicheObjectif $fiche): \Illuminate\Http\Response
+    {
+        $this->authorize('objectifs.voir-equipe');
+        $ctx = $this->getContext();
+
+        if (! $this->ficheAppartientAuDirecteur($fiche, $ctx)) {
+            abort(403);
+        }
+
+        $fiche->load(['objectifs', 'annee']);
+
+        $assigneNom    = $ctx->getDirecteurNomPrenom();
+        $assigneRole   = $ctx->getRoleLabel();
+        $assigneurNom  = '-';
+        $assigneurRole = 'Supérieur hiérarchique';
+
+        $pdf = Pdf::loadView('pdf.fiche-objectifs', compact(
+            'fiche', 'assigneNom', 'assigneRole', 'assigneurNom', 'assigneurRole'
+        ))->setPaper('a4', 'portrait');
+
+        return $pdf->download('fiche-objectifs-directeur-' . $fiche->id . '.pdf');
     }
 
     /**
@@ -125,13 +170,11 @@ class DirecteurObjectifController extends Controller
      */
     public function statut(Request $request, FicheObjectif $fiche): RedirectResponse
     {
+        $this->authorize('objectifs.accepter');
         $ctx = $this->getContext();
 
         // Vérification que la fiche appartient bien à ce directeur.
-        if (
-            $fiche->assignable_type !== $ctx->modelClass ||
-            (int) $fiche->assignable_id !== $ctx->getId()
-        ) {
+        if (! $this->ficheAppartientAuDirecteur($fiche, $ctx)) {
             abort(403);
         }
 

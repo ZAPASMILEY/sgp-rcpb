@@ -1,66 +1,81 @@
 @extends('layouts.subordonne')
 
-@section('title', 'Mon Espace | '.config('app.name', 'SGP-RCPB'))
+@section('title', 'Tableau de bord | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+@php
+$roleLabel = match($user->role) {
+    'DGA'           => 'Directeur Général Adjoint',
+    'Assistante_Dg' => 'Assistante du DG',
+    'Conseillers_Dg'=> 'Conseiller du DG',
+    default         => $user->role,
+};
+@endphp
+<div class="min-h-screen bg-[#f1f5f9] pb-12">
 
-        {{-- Header --}}
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-start justify-between gap-4">
+    {{-- ══════════════════════════ HERO ══════════════════════════════════════ --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+        <div class="pointer-events-none absolute inset-0 opacity-10">
+            <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/30 blur-3xl"></div>
+            <div class="absolute -bottom-16 left-10 h-48 w-48 rounded-full bg-teal-300/40 blur-2xl"></div>
+        </div>
+        <div class="relative flex items-center gap-5">
+            <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl font-black text-white shadow-inner ring-2 ring-white/20">
+                {{ strtoupper(substr($user->name, 0, 1)) }}
+            </div>
+            <div>
+                <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">{{ $roleLabel }} · RCPB</p>
+                <h1 class="mt-0.5 text-2xl font-black tracking-tight text-white">{{ $user->name }}</h1>
+                <p class="mt-1 text-sm text-emerald-100/80">Synthèse du {{ now()->translatedFormat('d F Y') }}</p>
+            </div>
+        </div>
+
+        {{-- Mini KPIs dans le hero --}}
+        <div class="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            @foreach ([
+                ['label' => 'Évaluations', 'value' => $evaluationsStats['total'],  'icon' => 'fas fa-star'],
+                ['label' => 'Validées',    'value' => $evaluationsStats['valide'], 'icon' => 'fas fa-check'],
+                ['label' => 'Objectifs',   'value' => $fichesStats['total'],       'icon' => 'fas fa-clipboard-list'],
+                ['label' => 'Acceptés',    'value' => $fichesStats['acceptees'],   'icon' => 'fas fa-circle-check'],
+            ] as $m)
+            <div class="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white text-sm">
+                    <i class="{{ $m['icon'] }}"></i>
+                </span>
                 <div>
-                    @php
-                        $roleLabel = match($user->role) {
-                            'DGA'           => 'Directeur General Adjoint',
-                            'Assistante_Dg' => 'Assistante du DG',
-                            'Conseillers_Dg'=> 'Conseiller du DG',
-                            default         => $user->role,
-                        };
-                    @endphp
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mon Espace / {{ $roleLabel }}</p>
-                    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">{{ $user->name }}</h1>
-                    <p class="mt-1 text-sm text-slate-500">{{ $roleLabel }}</p>
-                </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 font-black text-xl shadow-sm">
-                    {{ strtoupper(substr($user->name, 0, 1)) }}
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{{ $m['label'] }}</p>
+                    <p class="text-lg font-black text-white">{{ $m['value'] }}</p>
                 </div>
             </div>
-        </header>
+            @endforeach
+        </div>{{-- mini KPIs --}}
+    </div>{{-- hero --}}
 
-        @if (session('status'))
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {{ session('status') }}
+    <div class="px-4 pt-6 lg:px-8">
+    <div class="w-full flex flex-col gap-6">
+
+        {{-- Section secrétaire (Assistante_Dg uniquement) --}}
+        @if ($user->role === 'Assistante_Dg')
+            <div class="rounded-[24px] border border-slate-100 bg-white px-6 py-5 shadow-sm lg:px-8">
+                <p class="mb-4 text-xs font-black uppercase tracking-[0.18em] text-slate-400">Mes subordonnés</p>
+                <a href="{{ route('assistante.secretaire') }}"
+                   class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md">
+                    <div class="flex items-center gap-4">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                            <i class="fas fa-user-tie"></i>
+                        </span>
+                        <div>
+                            <p class="font-black text-slate-900">Ma secrétaire</p>
+                            <p class="text-xs text-slate-500">Gérer les évaluations et objectifs</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-xs text-slate-400"></i>
+                </a>
             </div>
         @endif
 
-        {{-- Stats rapides --}}
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            @php
-            $quickCards = [
-                ['label'=>'Evaluations',  'value'=>$evaluationsStats['total'],  'icon'=>'fas fa-star',     'tone'=>'border-cyan-100 bg-cyan-50/80 text-cyan-900',        'iconWrap'=>'bg-white text-cyan-600'],
-                ['label'=>'Validees',     'value'=>$evaluationsStats['valide'], 'icon'=>'fas fa-check',    'tone'=>'border-emerald-100 bg-emerald-50/80 text-emerald-900','iconWrap'=>'bg-white text-emerald-600'],
-                ['label'=>'Objectifs',    'value'=>$fichesStats['total'],       'icon'=>'fas fa-bullseye', 'tone'=>'border-violet-100 bg-violet-50/80 text-violet-900',   'iconWrap'=>'bg-white text-violet-600'],
-                ['label'=>'Acceptes',     'value'=>$fichesStats['acceptees'],   'icon'=>'fas fa-circle-check','tone'=>'border-slate-100 bg-white text-slate-900',         'iconWrap'=>'bg-slate-100 text-slate-600'],
-            ];
-            @endphp
-            @foreach ($quickCards as $card)
-                <div class="rounded-2xl border px-4 py-4 shadow-sm {{ $card['tone'] }}">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.18em] opacity-60">{{ $card['label'] }}</p>
-                            <p class="mt-1 text-3xl font-black leading-none">{{ $card['value'] }}</p>
-                        </div>
-                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $card['iconWrap'] }}">
-                            <i class="{{ $card['icon'] }}"></i>
-                        </span>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-
         {{-- Tabs --}}
-        <div class="admin-panel px-6 py-6">
+        <div class="rounded-[24px] border border-slate-100 bg-white px-6 py-6 shadow-sm">
 
             {{-- Tab nav --}}
             <div class="mb-6 flex flex-wrap items-center gap-4">
@@ -346,7 +361,7 @@
                                         <td class="px-4 py-4 font-black text-slate-900">{{ $fiche->id }}</td>
                                         <td class="px-4 py-4">
                                             <p class="font-semibold text-slate-700">{{ $fiche->titre }}</p>
-                                            <p class="mt-1 text-xs text-slate-400">Annee {{ $fiche->annee }}</p>
+                                            <p class="mt-1 text-xs text-slate-400">Annee {{ $fiche->annee?->annee ?? $fiche->annee_id }}</p>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-slate-600">
                                             <p>{{ \Carbon\Carbon::parse($fiche->date)->format('d/m/Y') }}</p>
@@ -408,5 +423,6 @@
         </div>
 
     </div>
+    </div>{{-- px-4 --}}
 </div>
 @endsection

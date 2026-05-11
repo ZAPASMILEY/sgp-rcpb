@@ -173,7 +173,7 @@ class ObjectifController extends Controller
     private function validateObjectif(Request $request): array
     {
         $validated = $request->validate([
-            'assignable_type' => ['required', 'string', 'in:entite,direction,service,agent'],
+            'assignable_type' => ['required', 'string', 'in:agent'],
             'assignable_id' => ['required', 'integer'],
             'date_echeance' => ['required', 'date', 'after_or_equal:today'],
             'commentaire' => ['required', 'string', 'max:5000'],
@@ -198,35 +198,6 @@ class ObjectifController extends Controller
     private function assignmentOptions(): array
     {
         return [
-            'entite' => Entite::query()
-                ->orderBy('nom')
-                ->get(['id', 'nom'])
-                ->map(fn (Entite $entite): array => [
-                    'id' => $entite->id,
-                    'label' => $entite->nom,
-                ])
-                ->values()
-                ->all(),
-            'direction' => Direction::query()
-                ->with('entite')
-                ->orderBy('nom')
-                ->get(['id', 'nom', 'entite_id'])
-                ->map(fn (Direction $direction): array => [
-                    'id' => $direction->id,
-                    'label' => $direction->nom.($direction->entite ? ' - '.$direction->entite->nom : ''),
-                ])
-                ->values()
-                ->all(),
-            'service' => Service::query()
-                ->with('direction')
-                ->orderBy('nom')
-                ->get(['id', 'nom', 'direction_id'])
-                ->map(fn (Service $service): array => [
-                    'id' => $service->id,
-                    'label' => $service->nom.($service->direction ? ' - '.$service->direction->nom : ''),
-                ])
-                ->values()
-                ->all(),
             'agent' => Agent::query()
                 ->with('service')
                 ->orderBy('nom')
@@ -243,23 +214,12 @@ class ObjectifController extends Controller
 
     private function assignableClassFromKey(string $key): string
     {
-        return match ($key) {
-            'entite' => Entite::class,
-            'direction' => Direction::class,
-            'service' => Service::class,
-            'agent' => Agent::class,
-        };
+        return Agent::class;
     }
 
     private function assignableKeyFromClass(string $class): string
     {
-        return match ($class) {
-            Entite::class => 'entite',
-            Direction::class => 'direction',
-            Service::class => 'service',
-            Agent::class => 'agent',
-            default => 'entite',
-        };
+        return 'agent';
     }
 
     private function isExpired(Objectif $objectif): bool

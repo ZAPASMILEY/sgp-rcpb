@@ -24,8 +24,17 @@ class AuthenticatedSessionController extends Controller
             if ($request->user()->role === 'DGA') {
                 return redirect()->route('dga.dashboard');
             }
-            if (in_array($request->user()->role, ['Assistante_Dg', 'Conseillers_Dg'], true)) {
+            if (in_array($request->user()->role, ['Assistante_Dg', 'Conseillers_Dg', 'Secretaire_Assistante'], true)) {
                 return redirect()->route('subordonne.mon-espace');
+            }
+            if (in_array($request->user()->role, ['Directeur_Direction', 'Directeur_Technique', 'Directeur_Caisse'], true)) {
+                return redirect()->route('directeur.dashboard');
+            }
+            if (in_array($request->user()->role, ['Chef_Service', 'Chef_Agence', 'Chef_Guichet'], true)) {
+                return redirect()->route('chef.dashboard');
+            }
+            if ($request->user()->role === 'RH') {
+                return redirect()->route('rh.dashboard');
             }
             if ($request->user()->isPersonnel()) {
                 return redirect()->route('personnel.dashboard');
@@ -58,6 +67,14 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        // Compte désactivé par l'admin
+        if (! $request->user()?->is_active) {
+            Auth::guard('web')->logout();
+            throw ValidationException::withMessages([
+                'email' => 'Votre compte a été désactivé. Contactez l\'administrateur.',
+            ]);
+        }
+
         $request->session()->regenerate();
 
         if ($request->user()?->isPca()) {
@@ -67,10 +84,20 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('dg.dashboard'));
         }
         if ($request->user()?->role === 'DGA') {
-            return redirect()->intended(route('dga.mon-espace'));
+            return redirect()->intended(route('dga.dashboard'));
         }
-        if (in_array($request->user()?->role, ['Assistante_Dg', 'Conseillers_Dg'], true)) {
+        if (in_array($request->user()?->role, ['Assistante_Dg', 'Conseillers_Dg', 'Secretaire_Assistante'], true)) {
             return redirect()->intended(route('subordonne.mon-espace'));
+        }
+        if (in_array($request->user()?->role, ['Directeur_Direction', 'Directeur_Technique', 'Directeur_Caisse'], true)) {
+            return redirect()->intended(route('directeur.dashboard'));
+        }
+        // Chefs : Chef_Service, Chef_Agence, Chef_Guichet ont leur propre espace
+        if (in_array($request->user()?->role, ['Chef_Service', 'Chef_Agence', 'Chef_Guichet'], true)) {
+            return redirect()->intended(route('chef.dashboard'));
+        }
+        if ($request->user()?->role === 'RH') {
+            return redirect()->intended(route('rh.dashboard'));
         }
         if ($request->user()?->isPersonnel()) {
             return redirect()->intended(route('personnel.dashboard'));

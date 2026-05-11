@@ -114,3 +114,40 @@
     }
 </style>
 @endsection
+
+@push('head')
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet">
+    <style>
+        .ts-wrapper .ts-control {
+            background: rgb(241 245 249);
+            border: none;
+            border-radius: 20px;
+            padding: 1rem;
+            font-weight: 700;
+            color: #334155;
+            box-shadow: none;
+        }
+        .ts-wrapper.focus .ts-control { box-shadow: 0 0 0 2px #22d3ee; }
+        .ts-dropdown { border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .ts-dropdown .option { padding: 10px 16px; font-weight: 600; font-size: 14px; }
+        .ts-dropdown .option:hover, .ts-dropdown .option.active { background: #ecfeff; color: #0e7490; }
+    </style>
+@endpush
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            ['directeur_agent_id', 'secretaire_agent_id'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) {
+                    new TomSelect(el, {
+                        placeholder: 'Rechercher un agent...',
+                        allowEmptyOption: true,
+                        maxOptions: 50,
+                    });
+                }
+            });
+        });
+    </script>
+@endpush

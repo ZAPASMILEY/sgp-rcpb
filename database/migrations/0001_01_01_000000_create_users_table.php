@@ -33,6 +33,8 @@ return new class extends Migration
             $table->string('role', 50)->default('Agent')
                   ->comment('Rôle système : DG | DGA | Directeur_Caisse | Chef_Service | Agent …');
             $table->string('theme_preference', 50)->default('reference');
+            $table->boolean('is_active')->default(true)
+                  ->comment('Compte activé par l\'admin. Désactivé = connexion refusée.');
 
             // ── Hiérarchie de validation N+1 ──────────────────────────────────
             $table->foreignId('manager_id')

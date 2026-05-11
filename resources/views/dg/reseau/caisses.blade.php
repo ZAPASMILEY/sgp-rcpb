@@ -79,8 +79,12 @@
                                         <span class="block text-xs text-slate-400">{{ $caisse->delegationTechnique?->ville }}</span>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <p class="font-semibold">{{ $caisse->directeur_prenom }} {{ $caisse->directeur_nom }}</p>
-                                        <p class="text-xs text-slate-400">{{ $caisse->directeur_email }}</p>
+                                        @if($caisse->directeur)
+                                            <p class="font-semibold">{{ $caisse->directeur->prenom }} {{ $caisse->directeur->nom }}</p>
+                                            <p class="text-xs text-slate-400">{{ $caisse->directeur->email }}</p>
+                                        @else
+                                            <span class="text-xs text-slate-400">—</span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3 text-slate-500">{{ $caisse->annee_ouverture ?? '—' }}</td>
                                     <td class="px-4 py-3 text-center">

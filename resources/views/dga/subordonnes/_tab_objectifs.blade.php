@@ -121,7 +121,7 @@ $ficheCards = [
                         </td>
                         <td class="px-4 py-4">
                             <p class="text-sm font-black text-slate-900">{{ $fiche->titre }}</p>
-                            <p class="mt-1 text-xs font-semibold text-slate-500">Année {{ $fiche->annee }}</p>
+                            <p class="mt-1 text-xs font-semibold text-slate-500">Année {{ $fiche->annee_value ?? '—' }}</p>
                         </td>
                         <td class="px-4 py-4 whitespace-nowrap">
                             <p class="font-semibold text-slate-700">

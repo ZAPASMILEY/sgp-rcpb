@@ -78,11 +78,7 @@
                             <tr><th class="px-3 py-3">Période</th><th class="px-3 py-3">Formation</th><th class="px-3 py-3">Domaine</th></tr>
                         </thead>
                         <tbody>
-                            @forelse (($ident->formations ?? []) as $row)
-                                <tr class="border-t border-slate-200"><td class="px-3 py-2">{{ $row['periode'] ?? '-' }}</td><td class="px-3 py-2">{{ $row['libelle'] ?? '-' }}</td><td class="px-3 py-2">{{ $row['domaine'] ?? '-' }}</td></tr>
-                            @empty
-                                <tr><td colspan="3" class="px-3 py-3 text-slate-400">Aucune formation renseignée.</td></tr>
-                            @endforelse
+                            @include('evaluations._formations_auto')
                         </tbody>
                     </table>
                 </div>

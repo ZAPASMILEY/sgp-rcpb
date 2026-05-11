@@ -3,41 +3,261 @@
 @section('title', 'Mes subordonnés | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
+<div class="min-h-screen bg-slate-50 px-4 pb-10 pt-4 lg:px-8">
     <div class="w-full flex flex-col gap-6">
 
+        {{-- Header --}}
         <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Espace Directeur / Subordonnés</p>
-                    <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Mes subordonnés</h1>
-                    <p class="mt-2 text-sm text-slate-600">{{ $direction->nom }}</p>
-                </div>
-            </div>
+            <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Espace Directeur / Subordonnés</p>
+            <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950">Mes subordonnés</h1>
+            <p class="mt-1 text-sm text-slate-500">{{ $ctx->getNom() }} · {{ $ctx->getRoleLabel() }}</p>
         </header>
 
         @if (session('status'))
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                <i class="fas fa-check-circle mr-2"></i>{{ session('status') }}
+            </div>
         @endif
         @if (session('error'))
-            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{{ session('error') }}</div>
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
+            </div>
         @endif
 
-        {{-- Chefs de service --}}
-        <section class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-center justify-between gap-4 mb-5">
-                <h2 class="text-lg font-black text-slate-900">Chefs de service</h2>
-                <a href="{{ route('directeur.evaluations.create') }}" class="ent-btn ent-btn-primary text-xs">
-                    <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
-                </a>
+        {{-- ══ MODULE : Directeurs de Caisse (Directeur_Technique uniquement) ══ --}}
+        @if ($ctx->hasCaisses())
+        <section class="admin-panel overflow-hidden">
+
+            {{-- Module header --}}
+            <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4 lg:px-8">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 text-violet-700">
+                        <i class="fas fa-landmark text-sm"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-sm font-black uppercase tracking-[0.14em] text-slate-700">Directeurs de Caisse</h2>
+                        <p class="text-xs text-slate-400">{{ $caissesData->count() }} caisse(s) sous votre délégation</p>
+                    </div>
+                </div>
             </div>
 
-            @if ($servicesData->isEmpty())
-                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-400">
-                    Aucun service rattaché à votre direction.
+            {{-- Liste --}}
+            @if ($caissesData->isEmpty())
+                <div class="px-6 py-10 text-center lg:px-8">
+                    <i class="fas fa-landmark text-2xl text-slate-200"></i>
+                    <p class="mt-3 text-sm font-semibold text-slate-400">Aucune caisse rattachée à votre délégation</p>
                 </div>
             @else
-                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div class="divide-y divide-slate-100">
+                    @foreach ($caissesData as $item)
+                        @php
+                            $css   = $item['caisse'];
+                            $eval  = $item['latestEval'];
+                            $dir   = $item['directeurUser'] ? $item['directeurUser']->name : null;
+                            $note  = $eval ? number_format((float) $eval->note_finale, 2, ',', ' ') : null;
+                            $noteClass = $eval ? match(true) {
+                                (float) $eval->note_finale >= 8.5 => 'bg-emerald-100 text-emerald-700',
+                                (float) $eval->note_finale >= 7   => 'bg-sky-100 text-sky-700',
+                                (float) $eval->note_finale >= 5   => 'bg-amber-100 text-amber-700',
+                                default                            => 'bg-rose-100 text-rose-700',
+                            } : null;
+                        @endphp
+                        <div class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 transition hover:bg-slate-50/70 lg:px-8">
+
+                            {{-- Identité --}}
+                            <div class="flex items-center gap-4 min-w-0">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 font-black text-base">
+                                    {{ strtoupper(substr($css->nom, 0, 1)) }}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="truncate font-black text-slate-900">{{ $css->nom }}</p>
+                                    <p class="text-xs text-slate-500">{{ $dir ?? 'Directeur non assigné' }}</p>
+                                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-users text-[9px]"></i> {{ $item['agentsCount'] }} agents
+                                        </span>
+                                        <span class="text-slate-200">·</span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-star text-[9px]"></i> {{ $item['evalCount'] }} éval.
+                                        </span>
+                                        <span class="text-slate-200">·</span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-bullseye text-[9px]"></i> {{ $item['ficheCount'] }} objectifs
+                                        </span>
+                                        @if ($note)
+                                            <span class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black {{ $noteClass }}">{{ $note }}/10</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="flex shrink-0 items-center gap-2">
+                                @if($evaluationsEnabled)
+                                    <a href="{{ route('directeur.evaluations.create', ['caisse_id' => $css->id]) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700">
+                                        <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                                    </a>
+                                @else
+                                    <span title="Fonctionnalité désactivée"
+                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                        <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                                    </span>
+                                @endif
+                                @if($objectifsEnabled)
+                                    <a href="{{ route('directeur.subordonnes.caisse.objectifs.create', $css) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700">
+                                        <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                                    </a>
+                                @else
+                                    <span title="Fonctionnalité désactivée"
+                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                        <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                                    </span>
+                                @endif
+                                <a href="{{ route('directeur.subordonnes.caisse', $css) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-violet-700">
+                                    <i class="fas fa-folder-open text-[10px]"></i> Dossier
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+        @endif
+
+        {{-- ══ MODULE : Agences (Directeur_Caisse uniquement) ══ --}}
+        @if ($ctx->hasAgences())
+        <section class="admin-panel overflow-hidden">
+
+            {{-- Module header --}}
+            <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4 lg:px-8">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                        <i class="fas fa-building text-sm"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-sm font-black uppercase tracking-[0.14em] text-slate-700">Agences</h2>
+                        <p class="text-xs text-slate-400">{{ $agencesData->count() }} agence(s) sous votre caisse</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Liste --}}
+            @if ($agencesData->isEmpty())
+                <div class="px-6 py-10 text-center lg:px-8">
+                    <i class="fas fa-building text-2xl text-slate-200"></i>
+                    <p class="mt-3 text-sm font-semibold text-slate-400">Aucune agence rattachée à votre caisse</p>
+                </div>
+            @else
+                <div class="divide-y divide-slate-100">
+                    @foreach ($agencesData as $item)
+                        @php
+                            $agc  = $item['agence'];
+                            $eval = $item['latestEval'];
+                            $chef = $agc->chef ? trim($agc->chef->prenom.' '.$agc->chef->nom) : null;
+                            $note = $eval ? number_format((float) $eval->note_finale, 2, ',', ' ') : null;
+                            $noteClass = $eval ? match(true) {
+                                (float) $eval->note_finale >= 8.5 => 'bg-emerald-100 text-emerald-700',
+                                (float) $eval->note_finale >= 7   => 'bg-sky-100 text-sky-700',
+                                (float) $eval->note_finale >= 5   => 'bg-amber-100 text-amber-700',
+                                default                            => 'bg-rose-100 text-rose-700',
+                            } : null;
+                        @endphp
+                        <div class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 transition hover:bg-slate-50/70 lg:px-8">
+
+                            {{-- Identité --}}
+                            <div class="flex items-center gap-4 min-w-0">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 font-black text-base">
+                                    {{ strtoupper(substr($agc->nom, 0, 1)) }}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="truncate font-black text-slate-900">{{ $agc->nom }}</p>
+                                    <p class="text-xs text-slate-500">{{ $chef ?? 'Chef non assigné' }}</p>
+                                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-users text-[9px]"></i> {{ $item['agentsCount'] }} agents
+                                        </span>
+                                        <span class="text-slate-200">·</span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-cash-register text-[9px]"></i> {{ $item['guichetsCount'] }} guichets
+                                        </span>
+                                        <span class="text-slate-200">·</span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-star text-[9px]"></i> {{ $item['evalCount'] }} éval.
+                                        </span>
+                                        <span class="text-slate-200">·</span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-bullseye text-[9px]"></i> {{ $item['ficheCount'] }} objectifs
+                                        </span>
+                                        @if ($note)
+                                            <span class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black {{ $noteClass }}">{{ $note }}/10</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="flex shrink-0 items-center gap-2">
+                                @if($evaluationsEnabled)
+                                    <a href="{{ route('directeur.evaluations.create', ['agence_id' => $agc->id]) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700">
+                                        <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                                    </a>
+                                @else
+                                    <span title="Fonctionnalité désactivée"
+                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                        <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                                    </span>
+                                @endif
+                                @if($objectifsEnabled)
+                                    <a href="{{ route('directeur.subordonnes.agence.objectifs.create', $agc) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700">
+                                        <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                                    </a>
+                                @else
+                                    <span title="Fonctionnalité désactivée"
+                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                        <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                                    </span>
+                                @endif
+                                <a href="{{ route('directeur.subordonnes.agence', $agc) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-sky-700">
+                                    <i class="fas fa-folder-open text-[10px]"></i> Dossier
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+        @endif
+
+        {{-- ══ MODULE : Chefs de Service ══ --}}
+        <section class="admin-panel overflow-hidden">
+
+            {{-- Module header --}}
+            <div class="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4 lg:px-8">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                        <i class="fas fa-sitemap text-sm"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-sm font-black uppercase tracking-[0.14em] text-slate-700">Chefs de Service</h2>
+                        <p class="text-xs text-slate-400">{{ $servicesData->count() }} service(s)</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Liste --}}
+            @if ($servicesData->isEmpty())
+                <div class="px-6 py-10 text-center lg:px-8">
+                    <i class="fas fa-sitemap text-2xl text-slate-200"></i>
+                    <p class="mt-3 text-sm font-semibold text-slate-400">Aucun service rattaché à votre structure</p>
+                </div>
+            @else
+                <div class="divide-y divide-slate-100">
                     @foreach ($servicesData as $item)
                         @php
                             $svc  = $item['service'];
@@ -51,41 +271,62 @@
                                 default                            => 'bg-rose-100 text-rose-700',
                             } : null;
                         @endphp
-                        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col gap-4">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-base font-black text-slate-900">{{ $svc->nom }}</p>
-                                    <p class="mt-0.5 text-sm text-slate-500">{{ $chef ?: '—' }}</p>
+                        <div class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 transition hover:bg-slate-50/70 lg:px-8">
+
+                            {{-- Identité --}}
+                            <div class="flex items-center gap-4 min-w-0">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 font-black text-base">
+                                    {{ strtoupper(substr($svc->nom, 0, 1)) }}
                                 </div>
-                                @if ($note)
-                                    <span class="inline-flex rounded-full px-3 py-1 text-sm font-black {{ $noteClass }}">
-                                        {{ $note }}/10
+                                <div class="min-w-0">
+                                    <p class="truncate font-black text-slate-900">{{ $svc->nom }}</p>
+                                    <p class="text-xs text-slate-500">{{ $chef ?: 'Chef non assigné' }}</p>
+                                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-users text-[9px]"></i> {{ $item['agentsCount'] }} agents
+                                        </span>
+                                        <span class="text-slate-200">·</span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-star text-[9px]"></i> {{ $item['evalCount'] }} éval.
+                                        </span>
+                                        <span class="text-slate-200">·</span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                            <i class="fas fa-bullseye text-[9px]"></i> {{ $item['ficheCount'] }} objectifs
+                                        </span>
+                                        @if ($note)
+                                            <span class="inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-black {{ $noteClass }}">{{ $note }}/10</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="flex shrink-0 items-center gap-2">
+                                @if($evaluationsEnabled)
+                                    <a href="{{ route('directeur.evaluations.create', ['service_id' => $svc->id]) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700">
+                                        <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                                    </a>
+                                @else
+                                    <span title="Fonctionnalité désactivée"
+                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                        <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
-                            </div>
-                            <div class="flex items-center gap-3 text-xs text-slate-500">
-                                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-bold text-slate-600">
-                                    <i class="fas fa-users text-[9px]"></i> {{ $item['agentsCount'] }} agents
-                                </span>
-                                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-bold text-slate-600">
-                                    <i class="fas fa-star text-[9px]"></i> {{ $item['evalCount'] }} éval.
-                                </span>
-                                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 font-bold text-slate-600">
-                                    <i class="fas fa-bullseye text-[9px]"></i> {{ $item['ficheCount'] }} objectifs
-                                </span>
-                            </div>
-                            <div class="flex gap-2 mt-auto pt-2 border-t border-slate-100">
+                                @if($objectifsEnabled)
+                                    <a href="{{ route('directeur.subordonnes.service.objectifs.create', $svc) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700">
+                                        <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                                    </a>
+                                @else
+                                    <span title="Fonctionnalité désactivée"
+                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                        <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                                    </span>
+                                @endif
                                 <a href="{{ route('directeur.subordonnes.service', $svc) }}"
-                                   class="ent-btn ent-btn-soft flex-1 justify-center text-xs">
-                                    <i class="fas fa-eye mr-1"></i> Voir le dossier
-                                </a>
-                                <a href="{{ route('directeur.evaluations.create', ['service_id' => $svc->id]) }}"
-                                   class="ent-btn ent-btn-soft text-xs" title="Nouvelle évaluation">
-                                    <i class="fas fa-plus"></i>
-                                </a>
-                                <a href="{{ route('directeur.subordonnes.service.objectifs.create', $svc) }}"
-                                   class="ent-btn ent-btn-soft text-xs" title="Assigner des objectifs">
-                                    <i class="fas fa-bullseye"></i>
+                                   class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-indigo-700">
+                                    <i class="fas fa-folder-open text-[10px]"></i> Dossier
                                 </a>
                             </div>
                         </div>
@@ -94,45 +335,77 @@
             @endif
         </section>
 
-        {{-- Secrétaire --}}
-        <section class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-center justify-between gap-4 mb-5">
-                <h2 class="text-lg font-black text-slate-900">Secrétaire</h2>
-                @if ($secretaire)
-                    <div class="flex gap-2">
-                        <a href="{{ route('directeur.subordonnes.secretaire.evaluations.create') }}" class="ent-btn ent-btn-soft text-xs">
-                            <i class="fas fa-plus mr-1"></i> Évaluer
-                        </a>
-                        <a href="{{ route('directeur.subordonnes.secretaire.objectifs.create') }}" class="ent-btn ent-btn-soft text-xs">
-                            <i class="fas fa-bullseye mr-1"></i> Objectifs
-                        </a>
-                    </div>
-                @endif
+        {{-- ══ MODULE : Secrétaire ══ --}}
+        <section class="admin-panel overflow-hidden">
+
+            {{-- Module header --}}
+            <div class="flex items-center gap-3 border-b border-slate-100 px-6 py-4 lg:px-8">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+                    <i class="fas fa-user-pen text-sm"></i>
+                </span>
+                <div>
+                    <h2 class="text-sm font-black uppercase tracking-[0.14em] text-slate-700">Secrétaire</h2>
+                    <p class="text-xs text-slate-400">Secrétaire de direction</p>
+                </div>
             </div>
 
             @if ($secretaire)
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center gap-4">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 font-black text-lg">
+                <div class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 transition hover:bg-slate-50/70 lg:px-8">
+
+                    {{-- Identité --}}
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 font-black text-base">
                             {{ strtoupper(substr($secretaire->name, 0, 1)) }}
                         </div>
-                        <div>
-                            <p class="text-base font-black text-slate-900">{{ $secretaire->name }}</p>
-                            <p class="text-sm text-slate-500">{{ $secretaire->email }}</p>
-                            <div class="mt-1 flex gap-2 text-xs text-slate-400">
-                                <span>{{ $secretaireEvalCount }} évaluation(s)</span>
-                                <span>·</span>
-                                <span>{{ $secretaireObjectifCount }} fiche(s) objectifs</span>
+                        <div class="min-w-0">
+                            <p class="truncate font-black text-slate-900">{{ $secretaire->name }}</p>
+                            <p class="text-xs text-slate-500">{{ $secretaire->email }}</p>
+                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                    <i class="fas fa-star text-[9px]"></i> {{ $secretaireEvalCount }} éval.
+                                </span>
+                                <span class="text-slate-200">·</span>
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                                    <i class="fas fa-bullseye text-[9px]"></i> {{ $secretaireObjectifCount }} objectifs
+                                </span>
                             </div>
                         </div>
                     </div>
-                    <a href="{{ route('directeur.subordonnes.secretaire') }}" class="ent-btn ent-btn-soft text-xs">
-                        <i class="fas fa-eye mr-1"></i> Voir le dossier
-                    </a>
+
+                    {{-- Actions --}}
+                    <div class="flex shrink-0 items-center gap-2">
+                        @if($evaluationsEnabled)
+                            <a href="{{ route('directeur.subordonnes.secretaire.evaluations.create') }}"
+                               class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-rose-300 hover:text-rose-600">
+                                <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                            </a>
+                        @else
+                            <span title="Fonctionnalité désactivée"
+                                  class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                            </span>
+                        @endif
+                        @if($objectifsEnabled)
+                            <a href="{{ route('directeur.subordonnes.secretaire.objectifs.create') }}"
+                               class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-rose-300 hover:text-rose-600">
+                                <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                            </a>
+                        @else
+                            <span title="Fonctionnalité désactivée"
+                                  class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                            </span>
+                        @endif
+                        <a href="{{ route('directeur.subordonnes.secretaire') }}"
+                           class="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-rose-700">
+                            <i class="fas fa-folder-open text-[10px]"></i> Dossier
+                        </a>
+                    </div>
                 </div>
             @else
-                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-400">
-                    Aucun(e) secrétaire enregistré(e) pour votre direction.
+                <div class="px-6 py-10 text-center lg:px-8">
+                    <i class="fas fa-user-pen text-2xl text-slate-200"></i>
+                    <p class="mt-3 text-sm font-semibold text-slate-400">Aucune secrétaire enregistrée pour votre structure</p>
                 </div>
             @endif
         </section>

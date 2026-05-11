@@ -346,7 +346,7 @@
                                         <td class="px-4 py-4 font-black text-slate-900">{{ $fiche->id }}</td>
                                         <td class="px-4 py-4">
                                             <p class="font-semibold text-slate-700">{{ $fiche->titre }}</p>
-                                            <p class="mt-1 text-xs text-slate-400">Année {{ $fiche->annee }}</p>
+                                            <p class="mt-1 text-xs text-slate-400">Année {{ $fiche->annee?->annee ?? $fiche->annee_id }}</p>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-slate-600">
                                             <p>{{ \Carbon\Carbon::parse($fiche->date)->format('d/m/Y') }}</p>

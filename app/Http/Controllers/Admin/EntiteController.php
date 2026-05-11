@@ -247,6 +247,7 @@ class EntiteController extends Controller
                         ->orWhere('prenom', 'like', "%{$search}%")
                     );
             }))
+            ->with('directeur')   // charge la relation Agent pour éviter N+1
             ->withCount('services');
 
         if ($sort === 'highest') {

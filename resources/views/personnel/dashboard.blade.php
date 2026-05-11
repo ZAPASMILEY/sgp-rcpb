@@ -1,421 +1,288 @@
 @extends('layouts.personnel')
 
-@section('title', 'Mon Espace | '.config('app.name', 'SGP-RCPB'))
+@section('title', 'Tableau de bord | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+<div class="min-h-screen bg-[#f1f5f9] pb-12">
 
-        {{-- Header --}}
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mon Espace Personnel</p>
-                    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">{{ $user->name }}</h1>
-                    @if ($agent)
-                        <p class="mt-1 text-sm text-slate-500">
-                            {{ $agent->fonction ?? $user->role }}
-                            @if ($agent->service)
-                                — {{ $agent->service->nom }}
-                            @elseif ($agent->agence)
-                                — {{ $agent->agence->nom ?? 'Agence' }}
-                            @endif
-                        </p>
-                    @else
-                        <p class="mt-1 text-sm text-slate-500">{{ $user->role }}</p>
-                    @endif
-                </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 font-black text-xl shadow-sm">
+    {{-- ══════════════════════════ HERO ══════════════════════════════════════ --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+        <div class="pointer-events-none absolute inset-0 opacity-10">
+            <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/30 blur-3xl"></div>
+            <div class="absolute -bottom-16 left-10 h-48 w-48 rounded-full bg-teal-300/40 blur-2xl"></div>
+        </div>
+
+        <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-5">
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl font-black text-white shadow-inner ring-2 ring-white/20">
                     {{ strtoupper(substr($user->name, 0, 1)) }}
                 </div>
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">
+                        @if ($agent?->service)
+                            {{ $agent->service->nom }} · Personnel
+                        @elseif ($agent?->agence)
+                            {{ $agent->agence->nom }} · Personnel
+                        @else
+                            Mon Espace · Personnel
+                        @endif
+                    </p>
+                    <h1 class="mt-0.5 text-2xl font-black tracking-tight text-white">{{ $user->name }}</h1>
+                    <p class="mt-1 text-sm text-emerald-100/80">
+                        {{ $agent?->fonction ?? $user->role }} · Synthèse du {{ now()->translatedFormat('d F Y') }}
+                    </p>
+                </div>
             </div>
-        </header>
+
+            {{-- Sélecteur d'année --}}
+            <div class="flex shrink-0 items-center gap-3">
+                <span class="text-[11px] font-black uppercase tracking-widest text-emerald-200">Année</span>
+                <form method="GET" action="{{ route('personnel.dashboard') }}" id="year-form">
+                    <select name="annee" onchange="document.getElementById('year-form').submit()"
+                            class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none transition hover:bg-white/20">
+                        @foreach ($anneesDisponibles as $yr)
+                            <option value="{{ $yr }}" @selected($yr === $annee) class="text-slate-900 bg-white">{{ $yr }}</option>
+                        @endforeach
+                    </select>
+                </form>
+                <a href="{{ route('personnel.mon-espace') }}"
+                   class="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm transition hover:bg-white/20">
+                    <i class="fas fa-folder-open text-xs"></i> Mon dossier
+                </a>
+            </div>
+        </div>
+
+        {{-- Mini KPIs dans le hero --}}
+        <div class="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            @foreach ([
+                ['label' => 'Évaluations',   'value' => $evaluationsStats['total'],  'icon' => 'fas fa-star'],
+                ['label' => 'Validées',       'value' => $evaluationsStats['valide'], 'icon' => 'fas fa-check'],
+                ['label' => 'Fiches obj.',    'value' => $fichesStats['total'],       'icon' => 'fas fa-clipboard-list'],
+                ['label' => 'Avancement moy.','value' => $tauxAvancement.'%',         'icon' => 'fas fa-gauge-high'],
+            ] as $m)
+            <div class="flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white text-sm">
+                    <i class="{{ $m['icon'] }}"></i>
+                </span>
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{{ $m['label'] }}</p>
+                    <p class="text-lg font-black text-white">{{ $m['value'] }}</p>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+
+    <div class="px-4 pt-6 lg:px-8">
+    <div class="w-full flex flex-col gap-6">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {{ session('status') }}
+                <i class="fas fa-check-circle mr-2"></i>{{ session('status') }}
             </div>
         @endif
 
         @if (! $agent)
-            {{-- No linked agent record --}}
-            <div class="admin-panel px-6 py-12 text-center">
+            <div class="rounded-[24px] border border-slate-100 bg-white px-6 py-12 text-center shadow-sm">
                 <i class="fas fa-user-slash text-3xl text-slate-300"></i>
-                <p class="mt-3 text-sm font-semibold text-slate-700">Aucun dossier agent associe a votre compte.</p>
-                <p class="mt-1 text-xs text-slate-500">Veuillez contacter l'administrateur pour lier votre compte a un dossier agent.</p>
+                <p class="mt-3 text-sm font-semibold text-slate-700">Aucun dossier agent associé à votre compte.</p>
+                <p class="mt-1 text-xs text-slate-500">Contactez l'administrateur pour lier votre compte à un dossier agent.</p>
             </div>
         @else
 
-            {{-- Agent info card --}}
-            <div class="admin-panel px-6 py-5">
-                <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500 mb-3">Informations personnelles</p>
-                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 text-sm text-slate-700">
-                    @if ($agent->prenom || $agent->nom)
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Nom complet</p>
-                            <p class="mt-1 font-semibold">{{ trim($agent->prenom.' '.$agent->nom) }}</p>
-                        </div>
-                    @endif
-                    @if ($agent->fonction)
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Fonction</p>
-                            <p class="mt-1 font-semibold">{{ $agent->fonction }}</p>
-                        </div>
-                    @endif
-                    @if ($agent->service)
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Service</p>
-                            <p class="mt-1 font-semibold">{{ $agent->service->nom }}</p>
-                        </div>
-                    @elseif ($agent->agence)
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Agence</p>
-                            <p class="mt-1 font-semibold">{{ $agent->agence->nom ?? 'Agence' }}</p>
-                        </div>
-                    @endif
-                    @if ($agent->email)
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Email</p>
-                            <p class="mt-1 font-semibold">{{ $agent->email }}</p>
-                        </div>
-                    @endif
-                </div>
+        {{-- ── Graphiques ── --}}
+        @if ($evaluationsStats['total'] > 0 || $fichesStats['total'] > 0)
+        <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Mes évaluations {{ $annee }}</p>
+                <h2 class="mt-1 text-base font-black text-slate-900">Répartition par statut</h2>
+                <div id="chart-evals-donut" class="mt-3"></div>
             </div>
-
-            {{-- Tabs --}}
-            <div class="admin-panel px-6 py-6">
-
-                {{-- Tab nav --}}
-                <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-                    <div class="inline-flex gap-1 rounded-2xl border border-slate-200 bg-slate-100/70 p-1">
-                        <a href="{{ route('personnel.dashboard') }}?tab=evaluations"
-                           class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition
-                               {{ $tab === 'evaluations'
-                                   ? 'border border-slate-200 bg-white text-cyan-700 shadow-sm'
-                                   : 'text-slate-500 hover:text-slate-800' }}">
-                            <i class="fas fa-star-half-stroke text-xs"></i>
-                            Mes evaluations
-                            <span class="rounded-full px-2 py-0.5 text-[11px] font-black
-                                {{ $tab === 'evaluations' ? 'bg-cyan-100 text-cyan-700' : 'bg-slate-200 text-slate-600' }}">
-                                {{ $evaluationsStats['total'] }}
-                            </span>
-                        </a>
-                        <a href="{{ route('personnel.dashboard') }}?tab=objectifs"
-                           class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition
-                               {{ $tab === 'objectifs'
-                                   ? 'border border-slate-200 bg-white text-emerald-700 shadow-sm'
-                                   : 'text-slate-500 hover:text-slate-800' }}">
-                            <i class="fas fa-bullseye text-xs"></i>
-                            Mes objectifs
-                            <span class="rounded-full px-2 py-0.5 text-[11px] font-black
-                                {{ $tab === 'objectifs' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600' }}">
-                                {{ $fichesStats['total'] }}
-                            </span>
-                        </a>
-                    </div>
-                </div>
-
-                {{-- ── TAB: Evaluations ── --}}
-                @if ($tab === 'evaluations')
-
-                    {{-- Stats cards --}}
-                    <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        @php
-                        $evalCards = [
-                            ['label'=>'Total',     'value'=>$evaluationsStats['total'],    'icon'=>'fas fa-clipboard-list', 'tone'=>'border-slate-100 bg-white text-slate-900',         'iconWrap'=>'bg-slate-100 text-slate-600'],
-                            ['label'=>'Brouillons','value'=>$evaluationsStats['brouillon'],'icon'=>'fas fa-file-pen',       'tone'=>'border-slate-100 bg-slate-50/80 text-slate-900',   'iconWrap'=>'bg-white text-slate-500'],
-                            ['label'=>'Soumises',  'value'=>$evaluationsStats['soumis'],   'icon'=>'fas fa-paper-plane',    'tone'=>'border-amber-100 bg-amber-50/80 text-amber-900',   'iconWrap'=>'bg-white text-amber-600'],
-                            ['label'=>'Validees',  'value'=>$evaluationsStats['valide'],   'icon'=>'fas fa-circle-check',   'tone'=>'border-emerald-100 bg-emerald-50/80 text-emerald-900','iconWrap'=>'bg-white text-emerald-600'],
-                        ];
-                        @endphp
-                        @foreach ($evalCards as $card)
-                            <div class="rounded-2xl border px-4 py-4 shadow-sm {{ $card['tone'] }}">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p class="text-[10px] font-black uppercase tracking-[0.18em] opacity-60">{{ $card['label'] }}</p>
-                                        <p class="mt-1 text-3xl font-black leading-none">{{ $card['value'] }}</p>
-                                    </div>
-                                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $card['iconWrap'] }}">
-                                        <i class="{{ $card['icon'] }}"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    {{-- Filter --}}
-                    <form method="GET" action="{{ route('personnel.dashboard') }}"
-                          class="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                        <input type="hidden" name="tab" value="evaluations">
-                        <div class="space-y-1.5">
-                            <label class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Statut</label>
-                            <select name="statut"
-                                    class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100">
-                                <option value="">Tous les statuts</option>
-                                <option value="brouillon" @selected($filters['statut'] === 'brouillon')>Brouillon</option>
-                                <option value="soumis"    @selected($filters['statut'] === 'soumis')>Soumise</option>
-                                <option value="valide"    @selected($filters['statut'] === 'valide')>Validee</option>
-                            </select>
-                        </div>
-                        <button type="submit"
-                                class="inline-flex items-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                            <i class="fas fa-filter mr-2 text-xs"></i> Filtrer
-                        </button>
-                        <a href="{{ route('personnel.dashboard') }}?tab=evaluations"
-                           class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
-                            Effacer
-                        </a>
-                    </form>
-
-                    {{-- Table evaluations --}}
-                    <div class="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-left text-sm text-slate-700">
-                                <thead class="bg-slate-50/80">
-                                    <tr class="border-b border-slate-200 text-slate-500">
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Periode</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Note finale</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Mention</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Evaluateur</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    @forelse ($evaluations as $evaluation)
-                                        @php
-                                            $note = (float) $evaluation->note_finale;
-                                            $mention = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
-                                            $mentionClass = match ($mention) {
-                                                'Excellent' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                                                'Bien'      => 'border-sky-200 bg-sky-50 text-sky-700',
-                                                'Passable'  => 'border-amber-200 bg-amber-50 text-amber-700',
-                                                default     => 'border-rose-200 bg-rose-50 text-rose-700',
-                                            };
-                                            $statusClass = match ($evaluation->statut) {
-                                                'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                                                'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-                                                default  => 'border-slate-200 bg-slate-100 text-slate-700',
-                                            };
-                                            $statusLabel = match ($evaluation->statut) {
-                                                'valide' => 'Validee',
-                                                'soumis' => 'Soumise',
-                                                default  => 'Brouillon',
-                                            };
-                                            $identification = $evaluation->identification;
-                                            $anneeEval      = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');
-                                            $semestreEval   = trim((string) ($identification?->semestre ?? ''));
-                                            if ($semestreEval === '') {
-                                                $semestreEval = $evaluation->date_debut->month <= 6 ? '1' : '2';
-                                            }
-                                            $noteValue   = number_format($note, 2, ',', ' ');
-                                            $notePercent = max(0, min(100, ($note / 10) * 100));
-                                            $noteBarClass = $notePercent >= 85 ? 'bg-emerald-500' : ($notePercent >= 70 ? 'bg-sky-500' : ($notePercent >= 50 ? 'bg-amber-400' : 'bg-rose-400'));
-                                        @endphp
-                                        <tr class="align-top hover:bg-slate-50/60">
-                                            <td class="px-4 py-4 font-black text-slate-900">{{ $evaluation->id }}</td>
-                                            <td class="px-4 py-4 whitespace-nowrap">
-                                                <p class="font-semibold text-slate-700">{{ $anneeEval }} - Semestre {{ $semestreEval }}</p>
-                                                <p class="mt-1 text-xs text-slate-400">
-                                                    {{ $evaluation->date_debut->format('m/Y') }} → {{ $evaluation->date_fin->format('m/Y') }}
-                                                </p>
-                                            </td>
-                                            <td class="px-4 py-4">
-                                                <div class="min-w-[130px]">
-                                                    <div class="mb-1.5 flex items-center justify-between gap-2">
-                                                        <span class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Score</span>
-                                                        <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-black text-slate-700">
-                                                            {{ $noteValue }}/10
-                                                        </span>
-                                                    </div>
-                                                    <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                                                        <div class="h-full rounded-full {{ $noteBarClass }}" style="width: {{ $notePercent }}%"></div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="px-4 py-4">
-                                                <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $mentionClass }}">
-                                                    {{ $mention }}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-4">
-                                                <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statusClass }}">
-                                                    {{ $statusLabel }}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-4 text-slate-600 text-sm">
-                                                {{ $evaluation->evaluateur?->name ?? '-' }}
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="6" class="px-4 py-12 text-center">
-                                                <div class="mx-auto max-w-sm rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-8">
-                                                    <i class="fas fa-clipboard text-2xl text-slate-300"></i>
-                                                    <p class="mt-2 text-sm font-black text-slate-700">Aucune evaluation</p>
-                                                    <p class="mt-1 text-xs text-slate-500">Vous n'avez pas encore d'evaluation enregistree.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    @if ($evaluations->hasPages())
-                        <div class="mt-5 border-t border-slate-200 pt-4">
-                            {{ $evaluations->links() }}
-                        </div>
-                    @endif
-
-                {{-- ── TAB: Objectifs ── --}}
-                @else
-
-                    {{-- Stats cards objectifs --}}
-                    <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        @php
-                        $objCards = [
-                            ['label'=>'Total',      'value'=>$fichesStats['total'],     'icon'=>'fas fa-clipboard-list', 'tone'=>'border-slate-100 bg-white text-slate-900',          'iconWrap'=>'bg-slate-100 text-slate-600'],
-                            ['label'=>'Acceptees',  'value'=>$fichesStats['acceptees'], 'icon'=>'fas fa-circle-check',   'tone'=>'border-emerald-100 bg-emerald-50/80 text-emerald-900','iconWrap'=>'bg-white text-emerald-600'],
-                            ['label'=>'En attente', 'value'=>$fichesStats['en_attente'],'icon'=>'fas fa-clock',          'tone'=>'border-amber-100 bg-amber-50/80 text-amber-900',    'iconWrap'=>'bg-white text-amber-600'],
-                            ['label'=>'Refusees',   'value'=>$fichesStats['refusees'],  'icon'=>'fas fa-circle-xmark',   'tone'=>'border-rose-100 bg-rose-50/80 text-rose-900',       'iconWrap'=>'bg-white text-rose-500'],
-                        ];
-                        @endphp
-                        @foreach ($objCards as $card)
-                            <div class="rounded-2xl border px-4 py-4 shadow-sm {{ $card['tone'] }}">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p class="text-[10px] font-black uppercase tracking-[0.18em] opacity-60">{{ $card['label'] }}</p>
-                                        <p class="mt-1 text-3xl font-black leading-none">{{ $card['value'] }}</p>
-                                    </div>
-                                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $card['iconWrap'] }}">
-                                        <i class="{{ $card['icon'] }}"></i>
-                                    </span>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    {{-- Filter --}}
-                    <form method="GET" action="{{ route('personnel.dashboard') }}"
-                          class="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                        <input type="hidden" name="tab" value="objectifs">
-                        <div class="space-y-1.5">
-                            <label class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Recherche</label>
-                            <input type="text" name="search" value="{{ $filters['search'] }}"
-                                   placeholder="Titre ou annee..."
-                                   class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100">
-                        </div>
-                        <div class="space-y-1.5">
-                            <label class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Statut</label>
-                            <select name="statut"
-                                    class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100">
-                                <option value="">Tous</option>
-                                <option value="en_attente" @selected($filters['statut'] === 'en_attente')>En attente</option>
-                                <option value="acceptee"   @selected($filters['statut'] === 'acceptee')>Acceptee</option>
-                                <option value="refusee"    @selected($filters['statut'] === 'refusee')>Refusee</option>
-                            </select>
-                        </div>
-                        <button type="submit"
-                                class="inline-flex items-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-                            <i class="fas fa-filter mr-2 text-xs"></i> Filtrer
-                        </button>
-                        <a href="{{ route('personnel.dashboard') }}?tab=objectifs"
-                           class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
-                            Effacer
-                        </a>
-                    </form>
-
-                    {{-- Table objectifs --}}
-                    <div class="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-left text-sm text-slate-700">
-                                <thead class="bg-slate-50/80">
-                                    <tr class="border-b border-slate-200 text-slate-500">
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Fiche</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Periode</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Objectifs</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Avancement</th>
-                                        <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-100">
-                                    @forelse ($fiches as $fiche)
-                                        @php
-                                            $statutClass = match ($fiche->statut ?? 'en_attente') {
-                                                'acceptee' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                                                'refusee'  => 'border-rose-200 bg-rose-50 text-rose-700',
-                                                default    => 'border-amber-200 bg-amber-50 text-amber-700',
-                                            };
-                                            $statutLabel = match ($fiche->statut ?? 'en_attente') {
-                                                'acceptee' => 'Acceptee',
-                                                'refusee'  => 'Refusee',
-                                                default    => 'En attente',
-                                            };
-                                            $avancement = (int) ($fiche->avancement_percentage ?? 0);
-                                            $avancementColor = $avancement >= 80 ? 'bg-emerald-500' : ($avancement >= 50 ? 'bg-sky-500' : ($avancement >= 25 ? 'bg-amber-400' : 'bg-slate-300'));
-                                        @endphp
-                                        <tr class="hover:bg-slate-50/60">
-                                            <td class="px-4 py-4 font-black text-slate-900">{{ $fiche->id }}</td>
-                                            <td class="px-4 py-4">
-                                                <p class="font-semibold text-slate-700">{{ $fiche->titre }}</p>
-                                                <p class="mt-1 text-xs text-slate-400">Annee {{ $fiche->annee }}</p>
-                                            </td>
-                                            <td class="px-4 py-4 whitespace-nowrap text-slate-600">
-                                                <p>{{ \Carbon\Carbon::parse($fiche->date)->format('d/m/Y') }}</p>
-                                                <p class="mt-1 text-xs text-slate-400">Echeance : {{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}</p>
-                                            </td>
-                                            <td class="px-4 py-4">
-                                                <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-700">
-                                                    <i class="fas fa-list text-[10px]"></i>
-                                                    {{ $fiche->objectifs_count }}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-4">
-                                                <div class="min-w-[120px]">
-                                                    <div class="mb-1.5 flex items-center justify-between gap-2">
-                                                        <span class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Progress</span>
-                                                        <span class="text-xs font-black text-slate-700">{{ $avancement }}%</span>
-                                                    </div>
-                                                    <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                                                        <div class="h-full rounded-full {{ $avancementColor }}" style="width: {{ $avancement }}%"></div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="px-4 py-4">
-                                                <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statutClass }}">
-                                                    {{ $statutLabel }}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="6" class="px-4 py-12 text-center">
-                                                <div class="mx-auto max-w-sm rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-8">
-                                                    <i class="fas fa-bullseye text-2xl text-slate-300"></i>
-                                                    <p class="mt-2 text-sm font-black text-slate-700">Aucun objectif</p>
-                                                    <p class="mt-1 text-xs text-slate-500">Vous n'avez pas encore de fiche d'objectifs assignee.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    @if ($fiches->hasPages())
-                        <div class="mt-5 border-t border-slate-200 pt-4">
-                            {{ $fiches->links() }}
-                        </div>
-                    @endif
-
-                @endif
+            <div class="rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm">
+                <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Mes objectifs {{ $annee }}</p>
+                <h2 class="mt-1 text-base font-black text-slate-900">Statut des fiches</h2>
+                <div id="chart-fiches-donut" class="mt-3"></div>
             </div>
+        </div>
         @endif
 
+        {{-- ── Informations personnelles ── --}}
+        <div class="rounded-[24px] border border-slate-100 bg-white px-6 py-5 shadow-sm">
+            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500 mb-3">Informations personnelles</p>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 text-sm text-slate-700">
+                @if ($agent->prenom || $agent->nom)
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Nom complet</p>
+                        <p class="mt-1 font-semibold">{{ trim($agent->prenom.' '.$agent->nom) }}</p>
+                    </div>
+                @endif
+                @if ($agent->fonction)
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Fonction</p>
+                        <p class="mt-1 font-semibold">{{ $agent->fonction }}</p>
+                    </div>
+                @endif
+                @if ($agent->service)
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Service</p>
+                        <p class="mt-1 font-semibold">{{ $agent->service->nom }}</p>
+                    </div>
+                @elseif ($agent->agence)
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Agence</p>
+                        <p class="mt-1 font-semibold">{{ $agent->agence->nom }}</p>
+                    </div>
+                @endif
+                @if ($agent->email)
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Email</p>
+                        <p class="mt-1 font-semibold">{{ $agent->email }}</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- ── Évaluations récentes ── --}}
+        <div class="rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Évaluations</p>
+                    <h2 class="mt-0.5 text-base font-black text-slate-900">Mes dernières évaluations · {{ $annee }}</h2>
+                </div>
+                <a href="{{ route('personnel.mon-espace') }}?tab=evaluations"
+                   class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition hover:border-cyan-300 hover:text-cyan-700">
+                    Voir tout <i class="fas fa-arrow-right text-[10px]"></i>
+                </a>
+            </div>
+
+            @if ($evaluationsRecentes->isEmpty())
+                <div class="px-6 py-10 text-center">
+                    <i class="fas fa-clipboard text-2xl text-slate-200"></i>
+                    <p class="mt-2 text-sm text-slate-400">Aucune évaluation pour {{ $annee }}</p>
+                </div>
+            @else
+                <div class="divide-y divide-slate-50">
+                    @foreach ($evaluationsRecentes as $eval)
+                        @php
+                            $statClass = match ($eval->statut) {
+                                'valide' => 'bg-emerald-100 text-emerald-700',
+                                'soumis' => 'bg-amber-100 text-amber-700',
+                                default  => 'bg-slate-100 text-slate-600',
+                            };
+                            $statLabel = match ($eval->statut) {
+                                'valide' => 'Validée', 'soumis' => 'Soumise', default => 'Brouillon',
+                            };
+                            $note = $eval->note_finale !== null ? number_format((float)$eval->note_finale, 2, ',', ' ').'/10' : null;
+                        @endphp
+                        <div class="flex items-center gap-4 px-6 py-4 transition hover:bg-slate-50/60">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-bold text-slate-900">
+                                    Période {{ $eval->date_debut->format('m/Y') }} – {{ $eval->date_fin->format('m/Y') }}
+                                </p>
+                                <p class="mt-0.5 text-xs text-slate-400">
+                                    Par {{ $eval->evaluateur?->name ?? '—' }}
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                @if ($note)
+                                    <span class="text-sm font-black text-emerald-700">{{ $note }}</span>
+                                @endif
+                                <span class="rounded-full px-3 py-1 text-xs font-black {{ $statClass }}">{{ $statLabel }}</span>
+                                @if ($eval->statut !== 'brouillon')
+                                <a href="{{ route('personnel.evaluations.show', $eval) }}"
+                                   class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600 shadow-sm transition hover:border-cyan-300 hover:text-cyan-700">
+                                    <i class="fas fa-eye text-[10px]"></i> Voir
+                                </a>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        {{-- ── Fiches d'objectifs récentes ── --}}
+        <div class="rounded-[24px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Objectifs</p>
+                    <h2 class="mt-0.5 text-base font-black text-slate-900">Mes dernières fiches · {{ $annee }}</h2>
+                </div>
+                <a href="{{ route('personnel.mon-espace') }}?tab=objectifs"
+                   class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700">
+                    Voir tout <i class="fas fa-arrow-right text-[10px]"></i>
+                </a>
+            </div>
+
+            @if ($fichesRecentes->isEmpty())
+                <div class="px-6 py-10 text-center">
+                    <i class="fas fa-bullseye text-2xl text-slate-200"></i>
+                    <p class="mt-2 text-sm text-slate-400">Aucune fiche d'objectifs pour {{ $annee }}</p>
+                </div>
+            @else
+                <div class="divide-y divide-slate-50">
+                    @foreach ($fichesRecentes as $fiche)
+                        @php
+                            $statClass = match ($fiche->statut ?? 'en_attente') {
+                                'acceptee' => 'bg-emerald-100 text-emerald-700',
+                                'refusee'  => 'bg-rose-100 text-rose-700',
+                                default    => 'bg-amber-100 text-amber-700',
+                            };
+                            $statLabel = match ($fiche->statut ?? 'en_attente') {
+                                'acceptee' => 'Acceptée', 'refusee' => 'Refusée', default => 'En attente',
+                            };
+                            $av = (int)($fiche->avancement_percentage ?? 0);
+                            $avColor = $av >= 80 ? 'bg-emerald-500' : ($av >= 50 ? 'bg-sky-500' : ($av >= 25 ? 'bg-amber-400' : 'bg-slate-300'));
+                        @endphp
+                        <div class="flex items-center gap-4 px-6 py-4 transition hover:bg-slate-50/60">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-bold text-slate-900">{{ $fiche->titre }}</p>
+                                <div class="mt-1.5 flex items-center gap-3">
+                                    <div class="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                                        <div class="h-full rounded-full {{ $avColor }}" style="width:{{ $av }}%"></div>
+                                    </div>
+                                    <span class="text-xs font-semibold text-slate-500">{{ $av }}% · {{ $fiche->objectifs_count }} obj.</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="rounded-full px-3 py-1 text-xs font-black {{ $statClass }}">{{ $statLabel }}</span>
+                                <a href="{{ route('personnel.fiches.show', $fiche) }}"
+                                   class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700">
+                                    <i class="fas fa-eye text-[10px]"></i> Voir
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        @endif {{-- end $agent check --}}
+
+    </div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(function() {
+    var eD = {!! json_encode($evalsDonut) !!};
+    var fD = {!! json_encode($fichesDonut) !!};
+    if (eD.series.every(v => v === 0) && fD.series.every(v => v === 0)) return;
+    var script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/apexcharts';
+    script.onload = function () {
+        function donut(data) {
+            return { chart:{type:'donut',height:200,fontFamily:'Inter,sans-serif'}, labels:data.labels, series:data.series, colors:data.colors,
+                plotOptions:{pie:{donut:{size:'65%',labels:{show:true,total:{show:true,label:'Total',fontSize:'12px',fontWeight:700,color:'#475569',
+                    formatter:function(w){return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0);}}}}}},
+                legend:{position:'bottom',fontSize:'11px',fontWeight:600}, dataLabels:{enabled:false}, stroke:{width:2} };
+        }
+        if (document.querySelector('#chart-evals-donut'))  new ApexCharts(document.querySelector('#chart-evals-donut'),  donut(eD)).render();
+        if (document.querySelector('#chart-fiches-donut')) new ApexCharts(document.querySelector('#chart-fiches-donut'), donut(fD)).render();
+    };
+    document.head.appendChild(script);
+})();
+</script>
+@endpush

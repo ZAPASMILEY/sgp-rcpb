@@ -1,4 +1,4 @@
-@extends('layouts.directeur')
+@extends($layout ?? 'layouts.directeur')
 
 @section('title', 'Évaluer la secrétaire | '.config('app.name', 'SGP-RCPB'))
 
@@ -13,7 +13,7 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Nouvelle évaluation</h1>
                         <p class="mt-2 text-sm text-slate-600">{{ $secretaire->name }}</p>
                     </div>
-                    <a href="{{ route('directeur.subordonnes.secretaire', ['tab' => 'evaluations']) }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <a href="{{ $backRoute ?? route('directeur.subordonnes.secretaire', ['tab' => 'evaluations']) }}" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
             </header>
 
@@ -24,7 +24,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('directeur.subordonnes.secretaire.evaluations.store') }}" class="space-y-8">
+                <form method="POST" action="{{ $storeRoute ?? route('directeur.subordonnes.secretaire.evaluations.store') }}" class="space-y-8">
                     @csrf
 
                     {{-- ── Section 1 : Identification ── --}}
@@ -262,7 +262,7 @@
                     </section>
 
                     <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-6">
-                        <a href="{{ route('directeur.subordonnes.secretaire', ['tab' => 'evaluations']) }}" class="ent-btn ent-btn-soft">Annuler</a>
+                        <a href="{{ $backRoute ?? route('directeur.subordonnes.secretaire', ['tab' => 'evaluations']) }}" class="ent-btn ent-btn-soft">Annuler</a>
                         <button type="submit" class="ent-btn ent-btn-primary">Créer l'évaluation</button>
                     </div>
                 </form>

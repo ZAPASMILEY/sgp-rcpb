@@ -12,6 +12,7 @@ class DgEvaluationController extends Controller
 {
     public function statut(Request $request, Evaluation $evaluation)
     {
+        $this->authorize('evaluations.accepter');
         $user     = $request->user();
         $entite   = Entite::query()->where('dg_agent_id', $user->agent_id)->first()
             ?? Entite::query()->latest()->first();
@@ -32,6 +33,7 @@ class DgEvaluationController extends Controller
 
     public function show(Request $request, Evaluation $evaluation): View
     {
+        $this->authorize('evaluations.voir-reseau');
         $user     = $request->user();
         $entite   = Entite::query()->where('dg_agent_id', $user->agent_id)->first()
             ?? Entite::query()->latest()->first();

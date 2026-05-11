@@ -43,15 +43,21 @@ class DirecteurMonEspaceController extends \App\Http\Controllers\Controller
         // Résout l'entité (Direction, Caisse ou DelegationTechnique) liée au compte connecté.
         $ctx = DirecteurEntity::resolveOrFail($user);
 
-        // Tab actif transmis dans l'URL (?tab=evaluations, ?tab=objectifs, …)
-        $tab = $request->query('tab', 'dashboard');
+        // Tab actif transmis dans l'URL (?tab=evaluations, ?tab=objectifs)
+        $tab = $request->query('tab', 'evaluations');
 
         // ── 1. Évaluations reçues par le directeur ────────────────────────
-        // Le directeur est ici l'évalué (evaluable_type = son entité, role = manager).
-        // Ces fiches sont créées par le DG ou la PCA.
-        $evaluationsRecues = Evaluation::where('evaluable_type', $ctx->modelClass)
-            ->where('evaluable_id', $ctx->getId())
-            ->where('evaluable_role', 'manager')
+        // Deux sources possibles :
+        //  a) DG/PCA assigne à l'entité (evaluable_type = entité, role = 'manager')
+        //  b) DGA assigne directement à l'User (evaluable_type = User, role = rôle du directeur)
+        $evaluationsRecues = Evaluation::where(function ($q) use ($ctx) {
+                $q->where('evaluable_type', $ctx->modelClass)
+                  ->where('evaluable_id', $ctx->getId())
+                  ->where('evaluable_role', 'manager');
+            })->orWhere(function ($q) use ($user) {
+                $q->where('evaluable_type', \App\Models\User::class)
+                  ->where('evaluable_id', $user->id);
+            })
             ->with(['evaluateur', 'identification'])
             ->orderByDesc('date_debut')
             ->get();
@@ -66,9 +72,16 @@ class DirecteurMonEspaceController extends \App\Http\Controllers\Controller
         ];
 
         // ── 2. Fiches d'objectifs reçues par le directeur ─────────────────
-        // Assignées par le DG/PCA à l'entité du directeur.
-        $fichesObjectifs = FicheObjectif::where('assignable_type', $ctx->modelClass)
-            ->where('assignable_id', $ctx->getId())
+        // Deux cas possibles :
+        //  a) DG/PCA assigne à l'entité (Direction, Caisse, DelegationTechnique)
+        //  b) DGA assigne directement au User (Directeur_Technique ou secrétaire)
+        $fichesObjectifs = FicheObjectif::where(function ($q) use ($ctx) {
+                $q->where('assignable_type', $ctx->modelClass)
+                  ->where('assignable_id', $ctx->getId());
+            })->orWhere(function ($q) use ($user) {
+                $q->where('assignable_type', \App\Models\User::class)
+                  ->where('assignable_id', $user->id);
+            })
             ->with('objectifs')
             ->orderByDesc('date')
             ->get();
@@ -106,6 +119,30 @@ class DirecteurMonEspaceController extends \App\Http\Controllers\Controller
         $notesChefs  = $servicesOverview->pluck('eval')->filter()->pluck('note_finale')->map(fn ($n) => (float) $n);
         $noteMoyenne = $notesChefs->isNotEmpty() ? round($notesChefs->avg(), 2) : null;
 
+        // Aperçu des caisses (Directeur_Technique uniquement)
+        $caissesOverview = collect();
+        if ($ctx->hasCaisses()) {
+            $caissesOverview = $ctx->getCaissesWithDirecteur()->map(function ($caisse) use ($user) {
+                $directeurUser = $caisse->directeur_agent_id
+                    ? \App\Models\User::where('agent_id', $caisse->directeur_agent_id)->first()
+                    : null;
+
+                $latestEval = \App\Models\Evaluation::where('evaluable_type', \App\Models\Caisse::class)
+                    ->where('evaluable_id', $caisse->id)
+                    ->where('evaluable_role', 'manager')
+                    ->whereIn('statut', ['soumis', 'valide'])
+                    ->orderByDesc('date_debut')
+                    ->first();
+
+                return [
+                    'caisse'        => $caisse,
+                    'directeurUser' => $directeurUser,
+                    'eval'          => $latestEval,
+                    'agents_count'  => $caisse->agents_count,
+                ];
+            });
+        }
+
         // ── 4. Évaluations créées par le directeur pour ses chefs ─────────
         // Le directeur est ici l'évaluateur. Cible : les chefs de service (evaluable = Service).
         $evaluationsCreees = Evaluation::where('evaluateur_id', $user->id)
@@ -125,6 +162,7 @@ class DirecteurMonEspaceController extends \App\Http\Controllers\Controller
             'ctx',
             'tab',
             'servicesOverview',
+            'caissesOverview',
             'evaluationsRecues',
             'evaluationsStats',
             'fichesObjectifs',

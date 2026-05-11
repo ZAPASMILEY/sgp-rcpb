@@ -74,10 +74,14 @@
                                     <td class="px-4 py-3 text-slate-500">{{ $guichet->agence?->nom ?? '—' }}</td>
                                     <td class="px-4 py-3 text-slate-500">{{ $guichet->agence?->caisse?->nom ?? '—' }}</td>
                                     <td class="px-4 py-3">
-                                        <p class="font-semibold">{{ $guichet->chef_nom ?? '—' }}</p>
-                                        <p class="text-xs text-slate-400">{{ $guichet->chef_email ?? '' }}</p>
+                                        @if($guichet->chef)
+                                            <p class="font-semibold">{{ $guichet->chef->prenom }} {{ $guichet->chef->nom }}</p>
+                                            <p class="text-xs text-slate-400">{{ $guichet->chef->email }}</p>
+                                        @else
+                                            <span class="text-xs text-slate-400">—</span>
+                                        @endif
                                     </td>
-                                    <td class="px-4 py-3 text-slate-500">{{ $guichet->chef_telephone ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-slate-500">{{ $guichet->chef?->numero_telephone ?? '—' }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <span class="text-xs font-bold text-slate-300">—</span>
                                     </td>

@@ -4,12 +4,6 @@
 @section('page_title', '')
 
 @section('content')
-    <div class="mb-4">
-        <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
-            <i class="fas fa-arrow-left"></i>
-            <span>Retour</span>
-        </a>
-    </div>
 @php
     $calendarStart = now()->startOfMonth()->startOfWeek(\Illuminate\Support\Carbon::MONDAY);
     $calendarEnd = now()->endOfMonth()->endOfWeek(\Illuminate\Support\Carbon::SUNDAY);
@@ -83,38 +77,54 @@
     ];
 @endphp
 
-<div class="relative z-10 -mt-8 bg-[linear-gradient(180deg,#f6f9ff_0%,#fbfdff_100%)] px-4 pb-6 pt-0 lg:px-8">
-    <div class="mx-auto max-w-[1500px] space-y-4">
-        <section class="rounded-[26px] border border-white bg-white/90 px-5 py-4 shadow-[0_18px_60px_-35px_rgba(148,163,184,0.6)] backdrop-blur">
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                <div>
-                    <p class="text-base font-black text-emerald-700">Tableau de bord</p>
-                    <div class="mt-1 flex flex-wrap items-center gap-3">
-                        <h1 class="text-3xl font-black tracking-tight text-slate-900">Pilotage administratif</h1>
-                    </div>
-                    <p class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Synthese du {{ now()->translatedFormat('d F Y') }}</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
-                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Caisses</p>
-                        <p class="mt-1 text-xl font-black text-slate-900">{{ $caissesCount }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Agences</p>
-                        <p class="mt-1 text-xl font-black text-slate-900">{{ $agencesCount }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Guichets</p>
-                        <p class="mt-1 text-xl font-black text-slate-900">{{ $guichetsCount }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-slate-50 px-4 py-3">
-                        <p class="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Alertes</p>
-                        <p class="mt-1 text-xl font-black text-rose-500">{{ $failedLoginAttemptsCount }}</p>
-                    </div>
-                </div>
+{{-- ── Hero Banner ────────────────────────────────────────────────────── --}}
+<div class="relative overflow-hidden px-6 py-8 lg:px-10" style="background: linear-gradient(135deg, #1e293b 0%, #334155 60%, #475569 100%);">
+    <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full blur-3xl" style="background:rgba(255,255,255,0.04)"></div>
+    <div class="pointer-events-none absolute -bottom-10 left-1/3 h-48 w-48 rounded-full blur-2xl" style="background:rgba(148,163,184,0.08)"></div>
+    <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-center gap-5">
+            <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl font-black text-white shadow-lg ring-1 ring-white/20">
+                <i class="fas fa-shield-halved"></i>
             </div>
-        </section>
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-slate-300">Administration Système · RCPB</p>
+                <h1 class="mt-0.5 text-2xl font-black text-white">Pilotage Administratif</h1>
+                <p class="mt-0.5 text-sm text-slate-300/80">{{ now()->translatedFormat('d F Y') }}</p>
+            </div>
+        </div>
+        @if ($failedLoginAttemptsToday > 0)
+        <div class="flex items-center gap-3 rounded-2xl border border-rose-400/30 bg-rose-500/20 px-5 py-3 backdrop-blur-sm">
+            <i class="fas fa-triangle-exclamation text-rose-300"></i>
+            <p class="text-sm font-bold text-rose-200">
+                <span class="font-black text-white">{{ $failedLoginAttemptsToday }}</span> alerte(s) de connexion aujourd'hui
+            </p>
+        </div>
+        @endif
+    </div>
+    <div class="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+        @foreach ([
+            ['label' => 'Agents',      'value' => $agentsCount,     'icon' => 'fas fa-users',                'iconColor' => '#fbbf24'],
+            ['label' => 'Directions',  'value' => $directionsCount, 'icon' => 'fas fa-sitemap',              'iconColor' => '#38bdf8'],
+            ['label' => 'Délégations', 'value' => $delegationsCount,'icon' => 'fas fa-map-marker-alt',       'iconColor' => '#34d399'],
+            ['label' => 'Caisses',     'value' => $caissesCount,    'icon' => 'fas fa-landmark',             'iconColor' => '#a78bfa'],
+            ['label' => 'Agences',     'value' => $agencesCount,    'icon' => 'fas fa-building',             'iconColor' => '#22d3ee'],
+            ['label' => 'Guichets',    'value' => $guichetsCount,   'icon' => 'fas fa-cash-register',        'iconColor' => '#fb7185'],
+        ] as $hs)
+        <div class="flex items-center gap-3 rounded-2xl px-4 py-3" style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.15);">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base" style="background:rgba(255,255,255,0.15); color:{{ $hs['iconColor'] }}">
+                <i class="{{ $hs['icon'] }}"></i>
+            </span>
+            <div>
+                <p class="leading-none font-black text-white" style="font-size:1.6rem">{{ $hs['value'] }}</p>
+                <p class="mt-1 font-bold" style="font-size:0.72rem; color:rgba(255,255,255,0.75); text-transform:uppercase; letter-spacing:0.08em">{{ $hs['label'] }}</p>
+            </div>
+        </div>
+        @endforeach
+    </div>
+</div>
+
+<div class="relative z-10 bg-[#f1f5f9] px-4 pb-6 pt-6 lg:px-8">
+    <div class="mx-auto max-w-[1500px] space-y-4">
 
         <section class="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-6">
             @foreach ($overviewCards as $card)
@@ -178,8 +188,8 @@
                             <article class="rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-4">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
-                                        <h3 class="truncate text-base font-black text-slate-900">{{ $delegation->ville }}</h3>
-                                        <p class="text-[11px] font-semibold text-slate-400">{{ $delegation->adresse ?: 'Adresse non renseignee' }}</p>
+                                        <h3 class="truncate text-base font-black text-slate-900">DT {{ $delegation->region }}</h3>
+                                        <p class="text-[11px] font-semibold text-slate-400">{{ $delegation->ville }}</p>
                                     </div>
                                     <a href="{{ route('admin.delegations-techniques.index') }}" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition hover:bg-emerald-600 hover:text-white" title="Ouvrir la delegation {{ $delegation->ville }}">
                                         <i class="fas fa-building"></i>
@@ -278,7 +288,17 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-black text-slate-900">{{ trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) ?: 'Agent non renseigne' }}</p>
-                                        <p class="truncate text-[11px] font-semibold text-slate-400">{{ $agent->service?->nom ?? 'Sans service' }}</p>
+                                        @php
+                                            $structure = $agent->guichet?->nom
+                                                ?? $agent->agence?->nom
+                                                ?? $agent->caisse?->nom
+                                                ?? $agent->delegationTechnique
+                                                    ? ($agent->delegationTechnique->region . ' – ' . $agent->delegationTechnique->ville)
+                                                    : ($agent->service?->nom
+                                                        ?? $agent->direction?->nom
+                                                        ?? null);
+                                        @endphp
+                                        <p class="truncate text-[11px] font-semibold text-slate-400">{{ $structure ?? 'Non affecté' }}</p>
                                     </div>
                                 </div>
                             </article>
@@ -289,31 +309,42 @@
                 </section>
 
                 <section id="security-log" class="rounded-[26px] border border-rose-200 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
-                    <div class="mb-4 flex items-center justify-between">
+                    <div class="mb-3 flex items-center justify-between">
                         <div>
-                            <h2 class="text-xl font-black tracking-tight text-rose-600">Journal de securite</h2>
-                            <p class="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">{{ $failedLoginAttemptsCount }} tentative(s) enregistree(s)</p>
+                            <h2 class="text-base font-black tracking-tight text-rose-600">Journal de sécurité</h2>
+                            <p class="mt-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">{{ $failedLoginAttemptsCount }} tentative(s) enregistrée(s)</p>
                         </div>
-                        <span class="inline-flex h-8 items-center rounded-full bg-rose-500 px-4 text-[10px] font-black uppercase tracking-[0.14em] text-white">A surveiller</span>
+                        @if($failedLoginAttemptsCount > 0)
+                            <span class="inline-flex h-7 items-center gap-1.5 rounded-full bg-rose-500 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-white">
+                                <i class="fas fa-triangle-exclamation text-[9px]"></i> Alerte
+                            </span>
+                        @else
+                            <span class="inline-flex h-7 items-center gap-1.5 rounded-full bg-emerald-100 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-700">
+                                <i class="fas fa-check text-[9px]"></i> OK
+                            </span>
+                        @endif
                     </div>
 
-                    <div class="space-y-3">
+                    {{-- Liste scrollable limitée en hauteur --}}
+                    <div class="overflow-y-auto rounded-2xl" style="max-height: 260px;">
                         @forelse ($recentLoginFailures as $failure)
-                            <article class="rounded-[18px] bg-rose-50 px-4 py-3">
-                                <div class="flex items-start gap-3">
-                                    <div class="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-[10px] text-white">
-                                        <i class="fas fa-exclamation"></i>
-                                    </div>
-                                    <div class="min-w-0">
-                                        <p class="truncate text-sm font-black text-rose-700">{{ $failure->email ?: 'Email non renseigne' }}</p>
-                                        <p class="truncate text-[11px] font-semibold text-rose-500">
-                                            {{ $failure->ip_address ?: 'IP inconnue' }} • {{ optional($failure->attempted_at)->format('d/m/Y H:i') }}
-                                        </p>
-                                    </div>
+                            <div class="flex items-center gap-3 border-b border-rose-50 px-3 py-2 last:border-0 hover:bg-rose-50/50 transition">
+                                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500 text-[9px] text-white">
+                                    <i class="fas fa-exclamation"></i>
                                 </div>
-                            </article>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-xs font-black text-rose-700">{{ $failure->email ?: 'Email non renseigné' }}</p>
+                                    <p class="text-[10px] font-semibold text-slate-400">{{ $failure->ip_address ?: 'IP inconnue' }}</p>
+                                </div>
+                                <span class="shrink-0 text-[10px] font-semibold text-slate-400">
+                                    {{ optional($failure->attempted_at)->format('d/m H:i') }}
+                                </span>
+                            </div>
                         @empty
-                            <p class="rounded-[18px] bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">Aucune alerte de connexion recente.</p>
+                            <div class="flex flex-col items-center justify-center py-8 text-center">
+                                <i class="fas fa-shield-check text-2xl text-emerald-300 mb-2"></i>
+                                <p class="text-sm font-semibold text-slate-400">Aucune alerte récente</p>
+                            </div>
                         @endforelse
                     </div>
                 </section>
@@ -324,25 +355,27 @@
 
 @push('scripts')
 <script>
+window._adminCharts = {
+    reseau:      {!! json_encode($reseauChart) !!},
+    delegations: {!! json_encode($delegationsChart) !!},
+    alerts:      {!! json_encode($alertsChart) !!},
+    moreThan5:   {!! json_encode(count($delegationsChart['categories']) > 5) !!},
+};
+</script>
+<script>
 document.addEventListener('DOMContentLoaded', function () {
+    var c = window._adminCharts;
+
     // 1. Donut — Répartition du réseau
     new ApexCharts(document.querySelector('#chart-reseau'), {
         chart: { type: 'donut', height: 260, fontFamily: 'Inter, sans-serif' },
-        series: @json($reseauChart['series']),
-        labels: @json($reseauChart['labels']),
+        series: c.reseau.series,
+        labels: c.reseau.labels,
         colors: ['#10b981', '#3b82f6', '#f59e0b'],
         legend: { position: 'bottom', fontSize: '12px', fontWeight: 700, labels: { colors: '#64748b' } },
-        plotOptions: {
-            pie: {
-                donut: {
-                    size: '60%',
-                    labels: {
-                        show: true,
-                        total: { show: true, label: 'Total', fontSize: '13px', fontWeight: 900, color: '#334155' }
-                    }
-                }
-            }
-        },
+        plotOptions: { pie: { donut: { size: '60%',
+            labels: { show: true, total: { show: true, label: 'Total', fontSize: '13px', fontWeight: 900, color: '#334155' } }
+        }}},
         dataLabels: { enabled: false },
         stroke: { width: 2, colors: ['#fff'] },
         tooltip: { y: { formatter: function (val) { return val + ' structures'; } } },
@@ -352,12 +385,12 @@ document.addEventListener('DOMContentLoaded', function () {
     new ApexCharts(document.querySelector('#chart-delegations'), {
         chart: { type: 'bar', height: 260, fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
         series: [
-            { name: 'Caisses', data: @json($delegationsChart['caisses']) },
-            { name: 'Agences', data: @json($delegationsChart['agences']) },
+            { name: 'Caisses', data: c.delegations.caisses },
+            { name: 'Agences', data: c.delegations.agences },
         ],
         xaxis: {
-            categories: @json($delegationsChart['categories']),
-            labels: { style: { fontSize: '10px', fontWeight: 700, colors: '#94a3b8' }, rotate: -45, rotateAlways: @json(count($delegationsChart['categories']) > 5) },
+            categories: c.delegations.categories,
+            labels: { style: { fontSize: '10px', fontWeight: 700, colors: '#94a3b8' }, rotate: -45, rotateAlways: c.moreThan5 },
         },
         yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#94a3b8' } } },
         colors: ['#10b981', '#6366f1'],
@@ -371,9 +404,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // 3. Area — Alertes 7 jours
     new ApexCharts(document.querySelector('#chart-alerts'), {
         chart: { type: 'area', height: 260, fontFamily: 'Inter, sans-serif', toolbar: { show: false }, sparkline: { enabled: false } },
-        series: [{ name: 'Tentatives', data: @json($alertsChart['series']) }],
+        series: [{ name: 'Tentatives', data: c.alerts.series }],
         xaxis: {
-            categories: @json($alertsChart['categories']),
+            categories: c.alerts.categories,
             labels: { style: { fontSize: '10px', fontWeight: 700, colors: '#94a3b8' } },
         },
         yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: '#94a3b8' } }, min: 0 },

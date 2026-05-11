@@ -66,15 +66,7 @@
             <th>Formation</th>
             <th>Domaine</th>
         </tr>
-        @forelse (($evaluation->identification->formations ?? []) as $row)
-            <tr>
-                <td>{{ $row['periode'] ?? '-' }}</td>
-                <td>{{ $row['libelle'] ?? '-' }}</td>
-                <td>{{ $row['domaine'] ?? '-' }}</td>
-            </tr>
-        @empty
-            <tr><td colspan="3">Aucune formation renseignee.</td></tr>
-        @endforelse
+        @include('evaluations._formations_auto_pdf')
     </table>
 
     <h2>Experience professionnelle</h2>

@@ -33,7 +33,7 @@
                 </p>
                 <div class="fiche-box">
                     <div class="fiche-title">Titre : {{ $fiche->titre }}</div>
-                    <div class="fiche-detail">Année : {{ $fiche->annee }}</div>
+                    <div class="fiche-detail">Année : {{ $fiche->annee?->annee ?? $fiche->annee_id }}</div>
                     <div class="fiche-detail">Date d'assignation : {{ $fiche->date }}</div>
                     <div class="fiche-detail">Échéance : {{ $fiche->date_echeance }}</div>
                 </div>

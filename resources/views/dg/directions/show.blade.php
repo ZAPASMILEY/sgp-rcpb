@@ -33,12 +33,26 @@
                     @endif
                 </div>
                 <div class="flex shrink-0 flex-wrap items-center gap-2">
-                    <a href="{{ route('dg.directions.evaluations.create', $direction) }}" class="ent-btn ent-btn-primary">
-                        <i class="fas fa-pen-to-square mr-2"></i>Nouvelle évaluation
-                    </a>
-                    <a href="{{ route('dg.directions.objectifs.create', $direction) }}" class="ent-btn ent-btn-soft">
-                        <i class="fas fa-bullseye mr-2"></i>Assigner des objectifs
-                    </a>
+                    @if($evaluationsEnabled)
+                        <a href="{{ route('dg.directions.evaluations.create', $direction) }}" class="ent-btn ent-btn-primary">
+                            <i class="fas fa-pen-to-square mr-2"></i>Nouvelle évaluation
+                        </a>
+                    @else
+                        <span title="Fonctionnalité désactivée par l'administrateur"
+                              class="ent-btn ent-btn-primary cursor-not-allowed opacity-60 select-none pointer-events-none">
+                            <i class="fas fa-pen-to-square mr-2"></i>Nouvelle évaluation
+                        </span>
+                    @endif
+                    @if($objectifsEnabled)
+                        <a href="{{ route('dg.directions.objectifs.create', $direction) }}" class="ent-btn ent-btn-soft">
+                            <i class="fas fa-bullseye mr-2"></i>Assigner des objectifs
+                        </a>
+                    @else
+                        <span title="Fonctionnalité désactivée par l'administrateur"
+                              class="ent-btn ent-btn-soft cursor-not-allowed opacity-60 select-none pointer-events-none">
+                            <i class="fas fa-bullseye mr-2"></i>Assigner des objectifs
+                        </span>
+                    @endif
                     <a href="{{ route('dg.directions') }}" class="ent-btn ent-btn-soft">
                         <i class="fas fa-arrow-left mr-2"></i>Retour
                     </a>
@@ -74,9 +88,16 @@
             <section class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex items-center justify-between gap-4 mb-4">
                     <h2 class="text-lg font-black text-slate-900">Évaluations créées</h2>
-                    <a href="{{ route('dg.directions.evaluations.create', $direction) }}" class="ent-btn ent-btn-primary">
-                        <i class="fas fa-plus mr-2"></i>Nouvelle évaluation
-                    </a>
+                    @if($evaluationsEnabled)
+                        <a href="{{ route('dg.directions.evaluations.create', $direction) }}" class="ent-btn ent-btn-primary">
+                            <i class="fas fa-plus mr-2"></i>Nouvelle évaluation
+                        </a>
+                    @else
+                        <span title="Fonctionnalité désactivée par l'administrateur"
+                              class="ent-btn ent-btn-primary cursor-not-allowed opacity-60 select-none pointer-events-none">
+                            <i class="fas fa-plus mr-2"></i>Nouvelle évaluation
+                        </span>
+                    @endif
                 </div>
 
                 @if ($evaluations->isEmpty())
@@ -165,9 +186,16 @@
             <section class="admin-panel px-6 py-6 lg:px-8">
                 <div class="flex items-center justify-between gap-4 mb-4">
                     <h2 class="text-lg font-black text-slate-900">Fiches d'objectifs assignées</h2>
-                    <a href="{{ route('dg.directions.objectifs.create', $direction) }}" class="ent-btn ent-btn-primary">
-                        <i class="fas fa-plus mr-2"></i>Assigner des objectifs
-                    </a>
+                    @if($objectifsEnabled)
+                        <a href="{{ route('dg.directions.objectifs.create', $direction) }}" class="ent-btn ent-btn-primary">
+                            <i class="fas fa-plus mr-2"></i>Assigner des objectifs
+                        </a>
+                    @else
+                        <span title="Fonctionnalité désactivée par l'administrateur"
+                              class="ent-btn ent-btn-primary cursor-not-allowed opacity-60 select-none pointer-events-none">
+                            <i class="fas fa-plus mr-2"></i>Assigner des objectifs
+                        </span>
+                    @endif
                 </div>
 
                 @if ($fiches->isEmpty())
@@ -217,17 +245,7 @@
                                        class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
                                         Voir
                                     </a>
-                                    <form method="POST" action="{{ route('dg.directions.objectifs.avancement', $fiche) }}"
-                                          class="flex items-center gap-1">
-                                        @csrf @method('PATCH')
-                                        <select name="avancement_percentage"
-                                                class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-                                                onchange="this.form.submit()">
-                                            @for ($p = 0; $p <= 100; $p += 5)
-                                                <option value="{{ $p }}" @selected((int) $fiche->avancement_percentage === $p)>{{ $p }}%</option>
-                                            @endfor
-                                        </select>
-                                    </form>
+
                                     <form method="POST" action="{{ route('dg.directions.objectifs.destroy', $fiche) }}"
                                           onsubmit="return confirm('Supprimer cette fiche ?')">
                                         @csrf @method('DELETE')

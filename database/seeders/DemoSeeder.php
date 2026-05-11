@@ -42,7 +42,7 @@ class DemoSeeder extends Seeder
 
         // 1. FAÎTIÈRE
         $entite = Entite::create([
-            'nom'    => 'RCPB',
+            'nom'    => 'FCPB',
             'ville'  => 'Ouagadougou',
             'region' => 'Centre',
         ]);

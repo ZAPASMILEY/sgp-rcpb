@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Permission;
-use App\Models\Role;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -12,49 +11,149 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Permission\Models\Permission; // Remplace l'ancien App\Models\Permission
+use Spatie\Permission\Models\Role;       // Remplace l'ancien App\Models\Role
 
 class SettingsController extends Controller
 {
+    /**
+     * Affiche la page des paramètres admin.
+     * Contient plusieurs onglets : thème, sécurité, rôles, droits individuels, catalogue.
+     */
     public function edit(Request $request): View
     {
-        $permissions    = Permission::orderBy('name')->get();
-        $allRoles       = UserController::ROLES;
+        // ── Onglet Catalogue : toutes les permissions disponibles ─────────
+        $permissions = Permission::orderBy('name')->get();
 
-        // Onglet Rôles — chargement dynamique selon ?role=slug
-        $selectedRoleSlug = $request->query('role');
-        $selectedRole     = null;
-        $rolePermissions  = collect();
-        if ($selectedRoleSlug && isset($allRoles[$selectedRoleSlug])) {
-            $selectedRole    = Role::with('permissions')->firstOrCreate(
-                ['slug' => $selectedRoleSlug],
-                ['name' => $allRoles[$selectedRoleSlug], 'description' => '']
-            );
-            $rolePermissions = $selectedRole->permissions->pluck('id');
+        // Grouper les permissions par préfixe pour l'affichage dans les onglets Rôles et Catalogue.
+        // Ordre d'affichage : Évaluations → Objectifs → Personnel → Structures → Administration
+        $permissionGroups = [
+            'evaluations' => [
+                'label' => 'Évaluations',
+                'icon'  => 'fas fa-clipboard-check',
+                'color' => 'indigo',
+                'items' => [],
+                'labels' => [
+                    'evaluations.creer'        => 'Créer une fiche d\'évaluation',
+                    'evaluations.soumettre'    => 'Soumettre une évaluation',
+                    'evaluations.accepter'     => 'Accepter / refuser une évaluation',
+                    'evaluations.voir-propres' => 'Consulter ses propres évaluations',
+                    'evaluations.voir-equipe'  => 'Consulter les évaluations de son équipe',
+                    'evaluations.voir-reseau'  => 'Consulter toutes les évaluations du réseau (DG)',
+                    'evaluations.exporter-pdf' => 'Télécharger une évaluation en PDF',
+                ],
+            ],
+            'objectifs' => [
+                'label' => 'Objectifs',
+                'icon'  => 'fas fa-bullseye',
+                'color' => 'emerald',
+                'items' => [],
+                'labels' => [
+                    'objectifs.assigner'     => 'Assigner une fiche d\'objectifs',
+                    'objectifs.accepter'     => 'Accepter / refuser une fiche d\'objectifs',
+                    'objectifs.avancement'   => 'Mettre à jour l\'avancement',
+                    'objectifs.voir-propres' => 'Consulter ses propres fiches d\'objectifs',
+                    'objectifs.voir-equipe'  => 'Consulter les fiches de son équipe',
+                ],
+            ],
+            'agents' => [
+                'label' => 'Personnel',
+                'icon'  => 'fas fa-users',
+                'color' => 'sky',
+                'items' => [],
+                'labels' => [
+                    'agents.voir'      => 'Consulter la liste du personnel',
+                    'agents.creer'     => 'Créer un agent',
+                    'agents.modifier'  => 'Modifier un agent',
+                    'agents.supprimer' => 'Supprimer un agent',
+                    'agents.affecter'  => 'Affecter un agent à une structure',
+                ],
+            ],
+            'structures' => [
+                'label' => 'Structures',
+                'icon'  => 'fas fa-sitemap',
+                'color' => 'amber',
+                'items' => [],
+                'labels' => [
+                    'structures.voir'     => 'Consulter les structures',
+                    'structures.creer'    => 'Créer une structure',
+                    'structures.modifier' => 'Modifier une structure',
+                ],
+            ],
+            'admin' => [
+                'label' => 'Administration',
+                'icon'  => 'fas fa-cog',
+                'color' => 'rose',
+                'items' => [],
+                'labels' => [
+                    'admin.roles'     => 'Gérer les rôles et permissions',
+                    'admin.users'     => 'Gérer les comptes utilisateurs',
+                    'admin.annees'    => 'Gérer les années d\'exercice',
+                    'admin.activites' => 'Consulter les logs d\'activité',
+                    'admin.alertes'   => 'Créer et diffuser des alertes',
+                ],
+            ],
+        ];
+
+        foreach ($permissions as $perm) {
+            $prefix = explode('.', $perm->name)[0];
+            if (isset($permissionGroups[$prefix])) {
+                $permissionGroups[$prefix]['items'][] = $perm;
+            }
         }
 
-        // Onglet Droits individuels — chargement selon ?user_id=id
+        // ── Onglet Rôles : affiche les permissions d'un rôle sélectionné ──
+        $allRoles        = UserController::ROLES; // Tableau role_slug => label
+        $selectedRoleSlug = $request->query('role');
+        $selectedRole     = null;
+        $rolePermissions  = collect(); // IDs des permissions déjà accordées au rôle
+
+        if ($selectedRoleSlug && isset($allRoles[$selectedRoleSlug])) {
+            // Chercher le rôle Spatie par son "name" (= le slug dans notre convention).
+            // Si le rôle n'existe pas encore (seeder non joué), $selectedRole reste null.
+            // Recherche le rôle Spatie par son nom (ex: 'dg', 'admin'…).
+            // Retourne null si le seeder n'a pas encore été joué.
+            $selectedRole = Role::with('permissions')
+                ->where('name', $selectedRoleSlug)
+                ->first();
+
+            // Récupère les IDs pour pré-cocher les cases dans la vue.
+            $rolePermissions = $selectedRole?->permissions->pluck('id') ?? collect();
+        }
+
+        // ── Onglet Droits individuels : permissions directes d'un user ────
         $selectedUserId  = $request->query('user_id');
         $selectedUser    = null;
-        $userPermissions = collect();
+        $userPermissions = collect(); // IDs des permissions directement accordées
+
         if ($selectedUserId) {
-            $selectedUser    = User::with('permissions')->find($selectedUserId);
-            $userPermissions = $selectedUser?->permissions->pluck('id') ?? collect();
+            // Spatie expose getDirectPermissions() pour les permissions directes seulement
+            // (exclut celles héritées des rôles).
+            $selectedUser    = User::find($selectedUserId);
+            $userPermissions = $selectedUser?->getDirectPermissions()->pluck('id') ?? collect();
         }
 
         return view('admin.settings.edit', [
-            'theme'            => $request->user()->theme_preference ?? 'reference',
-            'maxLoginAttempts' => (int) $request->session()->get('admin_security.max_login_attempts', 3),
-            'lockoutTime'      => (int) $request->session()->get('admin_security.lockout_time', 30),
-            'allRoles'         => $allRoles,
-            'permissions'      => $permissions,
-            'selectedRoleSlug' => $selectedRoleSlug,
-            'selectedRole'     => $selectedRole,
-            'rolePermissions'  => $rolePermissions,
-            'allUsers'         => User::query()->orderBy('name')->get(['id', 'name', 'email', 'role']),
-            'selectedUser'     => $selectedUser,
-            'userPermissions'  => $userPermissions,
+            'theme'             => $request->user()->theme_preference ?? 'reference',
+            'maxLoginAttempts'  => (int) $request->session()->get('admin_security.max_login_attempts', 3),
+            'lockoutTime'       => (int) $request->session()->get('admin_security.lockout_time', 30),
+            'allRoles'          => $allRoles,
+            'permissions'       => $permissions,
+            'permissionGroups'  => $permissionGroups,
+            'selectedRoleSlug'  => $selectedRoleSlug,
+            'selectedRole'      => $selectedRole,
+            'rolePermissions'   => $rolePermissions,
+            'allUsers'          => User::orderBy('name')->get(['id', 'name', 'email', 'role']),
+            'selectedUser'      => $selectedUser,
+            'userPermissions'   => $userPermissions,
+            'featuresEnabled'   => [
+                'evaluations' => Setting::featureEnabled('evaluations'),
+                'objectifs'   => Setting::featureEnabled('objectifs'),
+            ],
         ]);
     }
+
+    // ── Thème & Sécurité ──────────────────────────────────────────────────────
 
     public function updateTheme(Request $request): RedirectResponse
     {
@@ -62,104 +161,78 @@ class SettingsController extends Controller
             'theme_preference' => ['required', 'string', 'in:reference,classic'],
         ]);
 
-        $request->user()->forceFill([
-            'theme_preference' => $validated['theme_preference'],
-        ])->save();
+        $request->user()->forceFill(['theme_preference' => $validated['theme_preference']])->save();
 
-        return redirect()
-            ->route('admin.settings.edit')
-            ->with('status', 'Theme mis a jour avec succes.');
+        return redirect()->route('admin.settings.edit')->with('status', 'Thème mis à jour.');
     }
 
     public function updatePassword(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'current_password' => ['required', 'string'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'password'         => ['required', 'confirmed', Password::min(8)],
         ]);
 
         if (! Hash::check($validated['current_password'], (string) $request->user()->password)) {
-            return back()->withErrors([
-                'current_password' => 'Le mot de passe actuel est incorrect.',
-            ])->withInput();
+            return back()->withErrors(['current_password' => 'Le mot de passe actuel est incorrect.'])->withInput();
         }
 
-        $request->user()->forceFill([
-            'password' => Hash::make($validated['password']),
-        ])->save();
+        $request->user()->forceFill(['password' => Hash::make($validated['password'])])->save();
 
-        return redirect()
-            ->route('admin.settings.edit')
-            ->with('status', 'Mot de passe mis a jour avec succes.');
+        return redirect()->route('admin.settings.edit')->with('status', 'Mot de passe mis à jour.');
     }
 
     public function updateSecurity(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'max_login_attempts' => ['required', 'integer', 'min:1', 'max:10'],
-            'lockout_time' => ['required', 'integer', 'in:15,30,60,1440'],
+            'lockout_time'       => ['required', 'integer', 'in:15,30,60,1440'],
         ]);
 
         $request->session()->put('admin_security', [
             'max_login_attempts' => (int) $validated['max_login_attempts'],
-            'lockout_time' => (int) $validated['lockout_time'],
+            'lockout_time'       => (int) $validated['lockout_time'],
         ]);
 
-        return redirect()
-            ->route('admin.settings.edit')
-            ->with('status', 'Politique de securite mise a jour avec succes.');
+        return redirect()->route('admin.settings.edit')->with('status', 'Politique de sécurité mise à jour.');
     }
 
     public function destroyAccount(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'delete_password' => ['required', 'string'],
-        ]);
-
+        $validated = $request->validate(['delete_password' => ['required', 'string']]);
         $user = $request->user();
 
         if (! Hash::check($validated['delete_password'], (string) $user->password)) {
-            return back()->withErrors([
-                'delete_password' => 'Le mot de passe de confirmation est incorrect.',
-            ]);
+            return back()->withErrors(['delete_password' => 'Le mot de passe de confirmation est incorrect.']);
         }
 
-        if ($user->isAdmin() && User::query()->where('role', 'admin')->count() <= 1) {
-            return back()->withErrors([
-                'delete_password' => 'Impossible de supprimer le dernier compte administrateur.',
-            ]);
+        if ($user->isAdmin() && User::where('role', 'admin')->count() <= 1) {
+            return back()->withErrors(['delete_password' => 'Impossible de supprimer le dernier compte administrateur.']);
         }
 
         Auth::logout();
         $user->delete();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()
-            ->route('login')
-            ->with('status', 'Compte supprime avec succes.');
+        return redirect()->route('login')->with('status', 'Compte supprimé.');
     }
 
     public function searchUsers(Request $request)
     {
         $query = $request->query('q', '');
-
         if (strlen($query) < 2) {
             return response()->json([]);
         }
 
-        $users = User::query()
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%")
-                  ->orWhere('role', 'like', "%{$query}%");
-            })
-            ->select('id', 'name', 'email', 'role')
-            ->take(10)
-            ->get();
-
-        return response()->json($users);
+        return response()->json(
+            User::where(fn ($q) => $q->where('name', 'like', "%{$query}%")
+                ->orWhere('email', 'like', "%{$query}%")
+                ->orWhere('role', 'like', "%{$query}%"))
+                ->select('id', 'name', 'email', 'role')
+                ->take(10)
+                ->get()
+        );
     }
 
     public function updateUserPassword(Request $request): RedirectResponse
@@ -172,57 +245,73 @@ class SettingsController extends Controller
         $user = User::findOrFail($validated['user_id']);
         $user->forceFill(['password' => Hash::make($validated['password'])])->save();
 
-        return redirect()
-            ->route('admin.settings.edit')
-            ->with('status', 'Mot de passe de ' . $user->name . ' mis à jour avec succès.');
+        return redirect()->route('admin.settings.edit')
+            ->with('status', 'Mot de passe de '.$user->name.' mis à jour.');
     }
 
     public function updateUserRole(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
-            'role'    => ['required', 'string', 'in:PCA,DG,DGA,Assistante_Dg,Secretaire_assistante,Secretaire_Direction,Secretaire_Technique,Secretaire_Caisse,Secretaire_Agence,Conseillers_Dg,Directeur_Direction,Directeur_Caisse,Directeur_Tehnique,Chefs de service,chef d\'agence,Agent,admin'],
+            'role'    => ['required', 'string', 'in:'.implode(',', array_keys(UserController::ROLES))],
         ]);
 
         $user = User::findOrFail($validated['user_id']);
         $user->forceFill(['role' => $validated['role']])->save();
 
-        return redirect()
-            ->route('admin.settings.edit')
-            ->with('status', 'Rôle de ' . $user->name . ' mis à jour avec succès.');
+        return redirect()->route('admin.settings.edit')
+            ->with('status', 'Rôle de '.$user->name.' mis à jour.');
     }
 
-    // ── Permissions catalogue ─────────────────────────────────────────────────
+    // ── Catalogue des permissions ─────────────────────────────────────────────
 
+    /**
+     * Crée une nouvelle permission dans le catalogue.
+     * Seul le champ "name" est requis par Spatie (ex: 'structures.creer').
+     */
     public function storePermission(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'        => ['required', 'string', 'max:100', 'regex:/^[a-z0-9\-]+$/', 'unique:permissions,name'],
-            'slug'        => ['required', 'string', 'max:150'],
-            'description' => ['nullable', 'string', 'max:255'],
+            // Le nom doit être unique et ne contenir que lettres minuscules, chiffres, tirets et points.
+            'name' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9.\-]+$/', 'unique:permissions,name'],
         ], [
-            'name.regex'  => 'Le code technique ne doit contenir que des minuscules, chiffres et tirets.',
-            'name.unique' => 'Ce code de permission existe déjà.',
+            'name.regex'  => 'Le code ne doit contenir que des minuscules, chiffres, tirets et points.',
+            'name.unique' => 'Cette permission existe déjà.',
         ]);
 
-        Permission::create($validated);
+        // Spatie crée la permission avec guard_name 'web' par défaut.
+        Permission::create(['name' => $validated['name'], 'guard_name' => 'web']);
 
-        return redirect()
-            ->route('admin.settings.edit', ['tab' => 'catalogue'])
-            ->with('status', 'Permission « '.$validated['slug'].' » créée.');
+        // Vider le cache Spatie pour que la nouvelle permission soit disponible immédiatement.
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'catalogue'])
+            ->with('status', 'Permission « '.$validated['name'].' » créée.');
     }
 
+    /**
+     * Supprime une permission du catalogue.
+     * La suppression est en cascade : toutes les associations rôle↔permission
+     * et utilisateur↔permission sont supprimées automatiquement.
+     */
     public function destroyPermission(Permission $permission): RedirectResponse
     {
+        $name = $permission->name;
         $permission->delete();
 
-        return redirect()
-            ->route('admin.settings.edit', ['tab' => 'catalogue'])
-            ->with('status', 'Permission supprimée.');
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'catalogue'])
+            ->with('status', 'Permission « '.$name.' » supprimée.');
     }
 
     // ── Permissions par rôle ──────────────────────────────────────────────────
 
+    /**
+     * Met à jour les permissions d'un rôle entier (ex: le rôle 'dg').
+     * Le formulaire soumet les IDs des permissions cochées.
+     * On les convertit en noms avant d'appeler syncPermissions() de Spatie.
+     */
     public function syncRolePermissions(Request $request, string $roleSlug): RedirectResponse
     {
         $allRoles = UserController::ROLES;
@@ -233,19 +322,51 @@ class SettingsController extends Controller
             'permissions.*' => ['integer', 'exists:permissions,id'],
         ]);
 
-        $role = Role::firstOrCreate(
-            ['slug' => $roleSlug],
-            ['name' => $allRoles[$roleSlug], 'description' => '']
-        );
+        // Récupérer ou créer le rôle Spatie correspondant au slug.
+        $role = Role::firstOrCreate([
+            'name'       => $roleSlug,   // 'dg', 'admin', 'pca'…
+            'guard_name' => 'web',
+        ]);
 
-        $role->permissions()->sync($validated['permissions'] ?? []);
+        // Convertir les IDs reçus en noms de permissions (Spatie travaille avec les noms).
+        $permissionNames = Permission::whereIn('id', $validated['permissions'] ?? [])
+            ->pluck('name');
 
-        return redirect()
-            ->route('admin.settings.edit', ['tab' => 'roles', 'role' => $roleSlug])
+        // syncPermissions() remplace toutes les permissions du rôle.
+        $role->syncPermissions($permissionNames);
+
+        // Vider le cache pour que les changements soient pris en compte immédiatement.
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'roles', 'role' => $roleSlug])
             ->with('status', 'Permissions du rôle « '.$allRoles[$roleSlug].' » mises à jour.');
     }
 
     // ── Permissions individuelles utilisateur ─────────────────────────────────
+
+    /**
+     * Met à jour les permissions directes d'un utilisateur spécifique.
+     * Ces permissions s'ajoutent à celles héritées de son rôle Spatie.
+     * Le formulaire soumet les IDs des permissions cochées.
+     */
+    // ── Feature toggles ───────────────────────────────────────────────────────
+
+    /**
+     * Active ou désactive une fonctionnalité globale (evaluations / objectifs).
+     */
+    public function toggleFeature(Request $request, string $feature): RedirectResponse
+    {
+        abort_unless(in_array($feature, ['evaluations', 'objectifs'], true), 404);
+
+        $current = Setting::featureEnabled($feature);
+        Setting::set($feature . '_enabled', $current ? '0' : '1');
+
+        $label  = $feature === 'evaluations' ? 'Évaluations' : 'Assignation d\'objectifs';
+        $state  = $current ? 'désactivée' : 'activée';
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'fonctionnalites'])
+            ->with('status', "{$label} {$state} avec succès.");
+    }
 
     public function syncUserPermissions(Request $request, User $user): RedirectResponse
     {
@@ -254,10 +375,17 @@ class SettingsController extends Controller
             'permissions.*' => ['integer', 'exists:permissions,id'],
         ]);
 
-        $user->permissions()->sync($validated['permissions'] ?? []);
+        // Convertir les IDs en noms de permissions.
+        $permissionNames = Permission::whereIn('id', $validated['permissions'] ?? [])
+            ->pluck('name');
 
-        return redirect()
-            ->route('admin.settings.edit', ['tab' => 'droits', 'user_id' => $user->id])
+        // syncPermissions() sur un utilisateur remplace ses permissions directes
+        // (pas celles héritées de ses rôles Spatie).
+        $user->syncPermissions($permissionNames);
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'droits', 'user_id' => $user->id])
             ->with('status', 'Permissions de '.$user->name.' mises à jour.');
     }
 }

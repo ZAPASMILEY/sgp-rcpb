@@ -44,7 +44,7 @@ class UserController extends Controller
      * Rôles disponibles dans le système (valeur stockée en BD → libellé affiché).
      */
     public const ROLES = [
-        'admin'                 => 'Administrateur',
+        'Admin'                 => 'Administrateur',
         'PCA'                   => 'PCA',
         'DG'                    => 'Directeur Général',
         'DGA'                   => 'DGA',
@@ -65,14 +65,28 @@ class UserController extends Controller
         'Agent'                 => 'Agent',
     ];
 
-    public function index(): View
+    public function index(Request $request): View
     {
+        $search = trim((string) $request->query('search', ''));
+
         $users = User::query()
             ->with(['agent', 'manager'])
+            ->when($search !== '', function ($q) use ($search): void {
+                $q->where(function ($q) use ($search): void {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('role', 'like', "%{$search}%")
+                      ->orWhereHas('agent', fn ($aq) => $aq
+                          ->where('nom', 'like', "%{$search}%")
+                          ->orWhere('prenom', 'like', "%{$search}%")
+                          ->orWhere('fonction', 'like', "%{$search}%")
+                      );
+                });
+            })
             ->orderBy('name')
             ->get();
 
-        return view('admin.users.index', ['users' => $users]);
+        return view('admin.users.index', ['users' => $users, 'search' => $search]);
     }
 
     public function create(Request $request): View
@@ -237,6 +251,20 @@ class UserController extends Controller
         return redirect()
             ->route('admin.users.index')
             ->with('status', 'Compte supprimé. L\'agent est conservé.');
+    }
+
+    /**
+     * Active ou désactive le compte utilisateur.
+     */
+    public function toggleActive(User $user): RedirectResponse
+    {
+        $user->update(['is_active' => ! $user->is_active]);
+
+        $label = $user->is_active ? 'activé' : 'désactivé';
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('status', "Compte de {$user->name} {$label} avec succès.");
     }
 
     /**

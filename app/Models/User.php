@@ -6,17 +6,15 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough; // Import indispensable
 use App\Models\Agent;
-class User extends Authenticatable{
-    use HasFactory, Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
+class User extends Authenticatable
+{
+    use HasFactory, Notifiable, HasRoles;
+
     protected $fillable = [
         'agent_id',
         'name',
@@ -24,26 +22,16 @@ class User extends Authenticatable{
         'password',
         'role',
         'manager_id',
-
         'must_change_password',
+        'is_active',
         'theme_preference',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
@@ -54,6 +42,21 @@ class User extends Authenticatable{
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    /**
+     * RELATION MANQUANTE : Permet d'accéder à l'entité du PCA/DG via l'agent
+     */
+    public function entite(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Entite::class,
+            Agent::class,
+            'id',           // Clé étrangère sur agents (id de l'agent)
+            'id',           // Clé étrangère sur entites (id de l'entité)
+            'agent_id',     // Clé locale sur users
+            'entite_id'     // Clé locale sur agents
+        );
     }
 
     public function manager(): BelongsTo
@@ -82,58 +85,17 @@ class User extends Authenticatable{
     {
         return $this->alertes()->wherePivot('lu', false);
     }
-// Relation avec les logs d'audit (Bloc 5)
-public function activites(): HasMany
-{
-    return $this->hasMany(Activite::class);
-}
 
-// Relation N:N vers les rôles
-public function roles(): BelongsToMany
-{
-    return $this->belongsToMany(Role::class, 'role_user')->withTimestamps();
-}
-
-public function hasRole(string $roleSlug): bool
-{
-    return $this->roles()->where('slug', $roleSlug)->exists();
-}
-
-// Relation N:N vers les permissions
-public function permissions(): BelongsToMany
-{
-    return $this->belongsToMany(Permission::class, 'permission_user')->withTimestamps();
-}
-
-/** Cache en mémoire pour éviter plusieurs requêtes DB par permission par requête. */
-private array $permissionCache = [];
-
-/**
- * Vérifie si l'utilisateur a une permission donnée.
- * Contrôle dans l'ordre :
- *   1. Les permissions accordées directement à l'utilisateur (permission_user).
- *   2. Les permissions héritées de ses rôles (role_user → roles_has_permissions).
- */
-public function hasPermission(string $permissionName): bool
-{
-    if (array_key_exists($permissionName, $this->permissionCache)) {
-        return $this->permissionCache[$permissionName];
+    public function activites(): HasMany
+    {
+        return $this->hasMany(Activite::class);
     }
 
-    // 1. Permission directe
-    $direct = $this->permissions()->where('name', $permissionName)->exists();
+    // ── Logique Métier ───────────────────────────────────────────────────────
 
-    // 2. Permission via rôle
-    $viaRole = $direct ? false
-        : $this->roles()
-            ->whereHas('permissions', fn ($q) => $q->where('name', $permissionName))
-            ->exists();
-
-    return $this->permissionCache[$permissionName] = ($direct || $viaRole);
-}
-    // Subordonnés du DG (DGA, assistante DG)
     public function subordonnes()
     {
+        // Maintenant $this->entite fonctionnera car la relation est définie au-dessus
         $entite = $this->entite;
         if (!$entite) {
             return collect();
@@ -152,101 +114,27 @@ public function hasPermission(string $permissionName): bool
         return User::whereIn('id', $ids)->get();
     }
 
-    // Rôles
-    public function isAdmin(): bool
-    {
-        return $this->role === 'Admin';
-    }
+    // ── Rôles ─────────────────────────────────────────────────────────────────
 
-    public function isPca(): bool
-    {
-        return $this->role === 'PCA';
-    }
-
-    public function isDg(): bool
-    {
-        return $this->role === 'DG';
-    }
-
-    public function isAssistanteDg(): bool
-    {
-        return $this->role === 'Assistante_Dg';
-    }
-
-    public function isDga(): bool
-    {
-        return $this->role === 'DGA';
-    }
-
-    public function isSecretaireAssistante(): bool
-    {
-        return $this->role === 'Secretaire_Assistante';
-    }
-
-    public function isSecretaireDirection(): bool
-    {
-        return $this->role === 'Secretaire_Direction';
-    }
-
-    public function isSecretaireTechnique(): bool
-    {
-        return $this->role === 'Secretaire_Technique';
-    }
-
-    public function isSecretaireCaisse(): bool
-    {
-        return $this->role === 'Secretaire_Caisse';
-    }
-
-    public function isSecretaireAgence(): bool
-    {
-        return $this->role === 'Secretaire_Agence';
-    }
-
-    public function isConseillersDg(): bool
-    {
-        return $this->role === 'Conseillers_Dg';
-    }
-
-    public function isDirecteurDirection(): bool
-    {
-        return $this->role === 'Directeur_Direction';
-    }
-
-    public function isDirecteurCaisse(): bool
-    {
-        return $this->role === 'Directeur_Caisse';
-    }
-
-    public function isDirecteurTechnique(): bool
-    {
-        return $this->role === 'Directeur_Technique';
-    }
-
-    public function isChefService(): bool
-    {
-        return $this->role === 'Chef_Service';
-    }
-
-    public function isChefAgence(): bool
-    {
-        return $this->role === 'Chef_Agence';
-    }
-
-    public function isChefGuichet(): bool
-    {
-        return $this->role === 'Chef_Guichet';
-    }
-
-    public function isAgent(): bool
-    {
-        return $this->role === 'Agent';
-    }
-
-    public function isRh(): bool
-    {
-        return $this->role === 'RH';
-    }
+    public function isAdmin(): bool { return $this->role === 'Admin'; }
+    public function isPca(): bool { return $this->role === 'PCA'; }
+    public function isDg(): bool { return $this->role === 'DG'; }
+    public function isAssistanteDg(): bool { return $this->role === 'Assistante_Dg'; }
+    public function isDga(): bool { return $this->role === 'DGA'; }
+    public function isSecretaireAssistante(): bool { return $this->role === 'Secretaire_Assistante'; }
+    public function isSecretaireDirection(): bool { return $this->role === 'Secretaire_Direction'; }
+    public function isSecretaireTechnique(): bool { return $this->role === 'Secretaire_Technique'; }
+    public function isSecretaireCaisse(): bool { return $this->role === 'Secretaire_Caisse'; }
+    public function isSecretaireAgence(): bool { return $this->role === 'Secretaire_Agence'; }
+    public function isConseillersDg(): bool { return $this->role === 'Conseillers_Dg'; }
+    public function isDirecteurDirection(): bool { return $this->role === 'Directeur_Direction'; }
+    public function isDirecteurCaisse(): bool { return $this->role === 'Directeur_Caisse'; }
+    public function isDirecteurTechnique(): bool { return $this->role === 'Directeur_Technique'; }
+    public function isChefService(): bool { return $this->role === 'Chef_Service'; }
+    public function isChefAgence(): bool { return $this->role === 'Chef_Agence'; }
+    public function isChefGuichet(): bool { return $this->role === 'Chef_Guichet'; }
+    public function isAgent(): bool { return $this->role === 'Agent'; }
+    public function isRh(): bool { return $this->role === 'RH'; }
 
     public function isPersonnel(): bool
     {
@@ -255,8 +143,7 @@ public function hasPermission(string $permissionName): bool
             'Directeur_Direction', 'Directeur_Technique', 'Directeur_Caisse',
             'Secretaire_Direction', 'Secretaire_Technique', 'Secretaire_Caisse', 'Secretaire_Agence',
             'Chef_Agence', 'Chef_Guichet', 'Chef_Service',
-            'RH', 'Agent',
+            'Agent',
         ], true);
     }
 }
-

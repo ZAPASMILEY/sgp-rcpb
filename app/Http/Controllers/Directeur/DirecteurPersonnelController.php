@@ -4,62 +4,160 @@ namespace App\Http\Controllers\Directeur;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
-use App\Models\Evaluation;
-use App\Models\Service;
+use App\Models\Caisse;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
-/**
- * ──────────────────────────────────────────────────────────────────────────────
- * DirecteurPersonnelController — Vue du personnel de l'entité du directeur
- * ──────────────────────────────────────────────────────────────────────────────
- *
- * Permet au directeur de consulter l'ensemble des agents rattachés aux services
- * de son entité (Direction, Caisse ou DelegationTechnique), avec :
- *
- *  • Recherche textuelle sur nom, prénom et fonction
- *  • Filtre par service
- *  • Tri : nom (défaut) | service | fonction | note croissante | note décroissante
- *  • Statistiques rapides : total agents, nombre d'évalués, note moyenne
- *
- * Pour chaque agent, on affiche sa dernière évaluation reçue (statut, note,
- * mention) en chargeant la relation eagerly pour éviter les N+1.
- *
- * NOTE : Cette vue est en lecture seule. Le directeur ne peut pas noter les
- * agents depuis ici — il évalue les chefs de service via le module Subordonnés.
- * ──────────────────────────────────────────────────────────────────────────────
- */
 class DirecteurPersonnelController extends Controller
 {
     public function index(Request $request): View
     {
-        // Résolution du contexte : identifie l'entité (Direction/Caisse/Délégation) du directeur
-        $ctx        = DirecteurEntity::resolveOrFail(Auth::user());
-        $direction  = $ctx->entity; // passé à la vue pour compatibilité Blade
-        $serviceIds = $ctx->getServiceIds(); // IDs des services rattachés à l'entité
+        $ctx       = DirecteurEntity::resolveOrFail(Auth::user());
+        $direction = $ctx->entity;
 
-        // Paramètres de tri et de filtrage depuis l'URL
         $sortBy        = $request->query('sort', 'nom');
-        $filterService = $request->query('service');  // ID du service à filtrer (optionnel)
-        $search        = $request->query('search');   // Texte de recherche (optionnel)
+        $filterService = $request->query('service');
+        $filterCaisse  = $request->query('caisse');
+        $search        = $request->query('search');
+        $statut        = $request->query('statut');
 
-        // ── Construction de la requête de base ────────────────────────────
-        // Charge tous les agents appartenant aux services de l'entité.
-        // La relation `evaluations` est filtrée pour ne garder que les évaluations
-        // de type Agent (evaluable_type = Agent::class) et triée par date décroissante.
-        $query = Agent::whereIn('service_id', $serviceIds)
-            ->with(['service', 'evaluations' => function ($q) {
-                $q->where('evaluable_type', Agent::class)
-                  ->orderByDesc('date_debut');
-            }]);
+        $query = $this->baseQuery($ctx, $filterService, $filterCaisse, $search);
 
-        // Filtre par service sélectionné dans le menu déroulant
-        if ($filterService) {
-            $query->where('service_id', (int) $filterService);
+        $agents = $query->get()->map(function (Agent $agent) {
+            $lastEval = $agent->evaluations->first();
+            return [
+                'agent'    => $agent,
+                'service'  => $agent->service,
+                'caisse'   => $agent->caisse,
+                'lastEval' => $lastEval,
+                'note'     => $lastEval ? (float) $lastEval->note_finale : null,
+                'mention'  => $lastEval ? $this->mention((float) $lastEval->note_finale) : null,
+                'statut'   => $lastEval?->statut,
+            ];
+        });
+
+        // Filtre par statut évaluation
+        if ($statut) {
+            $agents = $agents->filter(fn ($a) => $a['statut'] === $statut);
         }
 
-        // Recherche insensible à la casse sur nom, prénom et fonction
+        $agents = match ($sortBy) {
+            'note_asc'  => $agents->sortBy('note'),
+            'note_desc' => $agents->sortByDesc('note'),
+            'service'   => $agents->sortBy(fn ($a) => $a['service']?->nom ?? $a['caisse']?->nom ?? ''),
+            'fonction'  => $agents->sortBy(fn ($a) => $a['agent']->fonction ?? ''),
+            default     => $agents->sortBy(fn ($a) => $a['agent']->nom.' '.$a['agent']->prenom),
+        };
+
+        $services = $ctx->getServices();
+        $caisses  = $ctx->hasCaisses() ? $ctx->getCaisses() : collect();
+
+        $stats = [
+            'total'    => $agents->count(),
+            'evalues'  => $agents->filter(fn ($a) => $a['lastEval'] !== null)->count(),
+            'note_moy' => $agents->filter(fn ($a) => $a['note'] !== null)->avg('note'),
+        ];
+
+        return view('directeur.personnel.index', compact(
+            'ctx', 'direction', 'agents', 'services', 'caisses', 'stats',
+            'sortBy', 'filterService', 'filterCaisse', 'search', 'statut'
+        ));
+    }
+
+    public function export(Request $request): Response
+    {
+        $ctx = DirecteurEntity::resolveOrFail(Auth::user());
+
+        $filterService = $request->query('service');
+        $filterCaisse  = $request->query('caisse');
+        $search        = $request->query('search');
+        $statut        = $request->query('statut');
+
+        $query = $this->baseQuery($ctx, $filterService, $filterCaisse, $search);
+
+        $agents = $query->get()->map(function (Agent $agent) {
+            $lastEval = $agent->evaluations->first();
+            return [
+                'agent'    => $agent,
+                'service'  => $agent->service,
+                'caisse'   => $agent->caisse,
+                'lastEval' => $lastEval,
+                'note'     => $lastEval ? (float) $lastEval->note_finale : null,
+                'mention'  => $lastEval ? $this->mention((float) $lastEval->note_finale) : null,
+                'statut'   => $lastEval?->statut,
+            ];
+        });
+
+        if ($statut) {
+            $agents = $agents->filter(fn ($a) => $a['statut'] === $statut);
+        }
+
+        $filename = 'personnel_'.$ctx->getNom().'_'.now()->format('Ymd').'.csv';
+        $filename = preg_replace('/[^a-zA-Z0-9_\-.]/', '_', $filename);
+
+        $rows   = [];
+        $rows[] = ['Nom', 'Prénom', 'Email', 'Fonction', 'Service', 'Caisse', 'Dernière note', 'Mention', 'Statut éval.'];
+
+        foreach ($agents as $item) {
+            $a = $item['agent'];
+            $rows[] = [
+                $a->nom,
+                $a->prenom,
+                $a->email,
+                $a->fonction,
+                $item['service']?->nom ?? '',
+                $item['caisse']?->nom ?? '',
+                $item['note'] !== null ? number_format($item['note'], 2, '.', '') : '',
+                $item['mention'] ?? '',
+                match($item['statut']) {
+                    'valide'   => 'Validée',
+                    'soumis'   => 'Soumise',
+                    'refuse'   => 'Refusée',
+                    'brouillon'=> 'Brouillon',
+                    default    => '',
+                },
+            ];
+        }
+
+        $csv = implode("\n", array_map(fn ($r) => implode(';', array_map(fn ($c) => '"'.str_replace('"', '""', (string)$c).'"', $r)), $rows));
+
+        return response($csv, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    private function baseQuery(DirecteurEntity $ctx, ?string $filterService, ?string $filterCaisse, ?string $search)
+    {
+        // Pour Directeur_Technique : tous les agents avec delegation_technique_id = DT
+        // Pour les autres : agents dans les services de l'entité
+        if ($ctx->hasCaisses()) {
+            $query = Agent::where('delegation_technique_id', $ctx->entity->id)
+                ->with(['service', 'caisse', 'evaluations' => function ($q) {
+                    $q->where('evaluable_type', Agent::class)->orderByDesc('date_debut');
+                }]);
+
+            if ($filterCaisse) {
+                $query->where('caisse_id', (int) $filterCaisse);
+            }
+            if ($filterService) {
+                $query->where('service_id', (int) $filterService);
+            }
+        } else {
+            $serviceIds = $ctx->getServiceIds();
+            $query = Agent::whereIn('service_id', $serviceIds)
+                ->with(['service', 'caisse', 'evaluations' => function ($q) {
+                    $q->where('evaluable_type', Agent::class)->orderByDesc('date_debut');
+                }]);
+
+            if ($filterService) {
+                $query->where('service_id', (int) $filterService);
+            }
+        }
+
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nom', 'like', "%{$search}%")
@@ -68,55 +166,9 @@ class DirecteurPersonnelController extends Controller
             });
         }
 
-        // ── Enrichissement des données en mémoire ─────────────────────────
-        // On récupère la dernière évaluation de chaque agent pour calculer sa note
-        // et sa mention, sans requêtes supplémentaires grâce au eager loading.
-        $agents = $query->get()->map(function (Agent $agent) {
-            $lastEval = $agent->evaluations->first(); // Déjà trié par date décroissante
-            return [
-                'agent'    => $agent,
-                'service'  => $agent->service,
-                'lastEval' => $lastEval,
-                'note'     => $lastEval ? (float) $lastEval->note_finale : null,
-                'mention'  => $lastEval ? $this->mention((float) $lastEval->note_finale) : null,
-                'statut'   => $lastEval?->statut,
-            ];
-        });
-
-        // ── Tri des résultats (en mémoire, après enrichissement) ──────────
-        $agents = match ($sortBy) {
-            'note_asc'  => $agents->sortBy('note'),
-            'note_desc' => $agents->sortByDesc('note'),
-            'service'   => $agents->sortBy(fn ($a) => $a['service']?->nom ?? ''),
-            'fonction'  => $agents->sortBy(fn ($a) => $a['agent']->fonction ?? ''),
-            default     => $agents->sortBy(fn ($a) => $a['agent']->nom.' '.$a['agent']->prenom),
-        };
-
-        // Services pour le menu déroulant de filtre (tous les services de l'entité)
-        $services = $ctx->getServices();
-
-        // ── Statistiques KPI ──────────────────────────────────────────────
-        $stats = [
-            'total'    => $agents->count(),
-            'evalues'  => $agents->filter(fn ($a) => $a['lastEval'] !== null)->count(),
-            'note_moy' => $agents->filter(fn ($a) => $a['note'] !== null)->avg('note'),
-        ];
-
-        return view('directeur.personnel.index', compact(
-            'direction', 'agents', 'services', 'stats',
-            'sortBy', 'filterService', 'search'
-        ));
+        return $query;
     }
 
-    /**
-     * Traduit une note numérique en mention qualitative.
-     *
-     * Barème :
-     *  ≥ 8,5 → Excellent
-     *  ≥ 7   → Bien
-     *  ≥ 5   → Passable
-     *  < 5   → Insuffisant
-     */
     private function mention(float $note): string
     {
         return match (true) {

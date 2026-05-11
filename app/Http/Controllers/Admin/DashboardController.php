@@ -33,7 +33,14 @@ class DashboardController extends Controller
             ->get();
 
         $recentAgents = Agent::query()
-            ->with(['service.direction.entite'])
+            ->with([
+                'service',
+                'direction',
+                'delegationTechnique',
+                'caisse',
+                'agence',
+                'guichet',
+            ])
             ->latest()
             ->take(6)
             ->get();
@@ -48,7 +55,13 @@ class DashboardController extends Controller
         $delegationDirectionsCount = 0;
         $servicesWithoutDirection = Service::query()->whereNull('direction_id')->count();
         $agentsWithoutService = Agent::query()->whereNull('service_id')->count();
-        $secretairesCount = User::query()->where('role', 'secretaire')->count();
+        $secretairesCount = User::query()->whereIn('role', [
+            'Secretaire_Direction',
+            'Secretaire_Technique',
+            'Secretaire_Caisse',
+            'Secretaire_Agence',
+            'Secretaire_Assistante',
+        ])->count();
         $failedLoginAttemptsCount = LoginFailure::query()->count();
         $failedLoginAttemptsToday = LoginFailure::query()
             ->whereDate('attempted_at', today())

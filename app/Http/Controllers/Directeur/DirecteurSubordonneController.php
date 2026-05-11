@@ -3,16 +3,18 @@
 namespace App\Http\Controllers\Directeur;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agence;
 use App\Models\Alerte;
 use App\Models\Annee;
+use App\Models\Caisse;
+use Carbon\Carbon;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\Service;
-use App\Models\SubjectiveCriteriaTemplate;
 use App\Models\User;
+use App\Services\EvaluationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -45,6 +47,8 @@ use Illuminate\View\View;
  */
 class DirecteurSubordonneController extends Controller
 {
+    public function __construct(private readonly EvaluationService $evaluationService) {}
+
     // ── Authorization helpers ───────────────────────────────────────────────
 
     /**
@@ -95,11 +99,22 @@ class DirecteurSubordonneController extends Controller
     private function authorizeObjectifService(FicheObjectif $fiche): array
     {
         $ctx = $this->getContext();
-        if ($fiche->assignable_type !== Service::class) {
+        if ($fiche->assignable_type !== User::class) {
             abort(403);
         }
-        $service = Service::find($fiche->assignable_id);
-        if (! $service || ! $ctx->serviceOwnedBy($service)) {
+
+        $user = User::find($fiche->assignable_id);
+        if (! $user || ! $user->agent_id) {
+            abort(403);
+        }
+
+        // Le chef doit diriger un service appartenant à ce directeur.
+        $serviceIds = $ctx->getServiceIds();
+        $service = Service::whereIn('id', $serviceIds)
+            ->where('chef_agent_id', $user->agent_id)
+            ->first();
+
+        if (! $service) {
             abort(403);
         }
 
@@ -121,6 +136,91 @@ class DirecteurSubordonneController extends Controller
         }
 
         return $ctx;
+    }
+
+    // ── Index — Chefs de service (persons) ────────────────────────────────
+
+    /**
+     * Liste des chefs de service — affiche la PERSONNE responsable (Agent),
+     * non la structure. Pour chaque service, charge le chef (chef_agent_id),
+     * son compte User, sa dernière éval et ses compteurs.
+     */
+    public function indexChefs(): View
+    {
+        $ctx      = $this->getContext();
+        $direction = $ctx->entity;
+
+        $chefsData = $ctx->getServicesWithAgents()->map(function (Service $service) {
+            $chef     = $service->chef; // Agent|null (via chef_agent_id)
+            $chefUser = $chef ? User::where('agent_id', $chef->id)->first() : null;
+
+            $latestEval = Evaluation::where('evaluable_type', Service::class)
+                ->where('evaluable_id', $service->id)
+                ->where('evaluable_role', 'manager')
+                ->where('evaluateur_id', Auth::id())
+                ->orderByDesc('date_debut')
+                ->first();
+
+            return [
+                'service'     => $service,
+                'chef'        => $chef,
+                'chefUser'    => $chefUser,
+                'latestEval'  => $latestEval,
+                'evalCount'   => Evaluation::where('evaluable_type', Service::class)
+                    ->where('evaluable_id', $service->id)
+                    ->where('evaluateur_id', Auth::id())->count(),
+                'ficheCount'  => ($chefUser)
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->count()
+                    : 0,
+                'agentsCount' => $service->agents->count(),
+            ];
+        });
+
+        return view('directeur.subordonnes.chefs', compact('ctx', 'direction', 'chefsData'));
+    }
+
+    // ── Index — Directeurs de caisse (DT uniquement, persons) ─────────────
+
+    /**
+     * Liste des directeurs de caisse — pour le Directeur Technique uniquement.
+     * Affiche la PERSONNE (Agent directeur_agent_id), pas la structure.
+     */
+    public function indexDirecteurs(): View
+    {
+        $ctx = $this->getContext();
+        if (! $ctx->hasCaisses()) {
+            abort(403, 'Accès réservé au Directeur Technique.');
+        }
+
+        $direction = $ctx->entity;
+
+        $directeursData = $ctx->getCaissesWithDirecteur()->map(function (Caisse $caisse) {
+            $directeurAgent = $caisse->directeur_agent_id ? \App\Models\Agent::find($caisse->directeur_agent_id) : null;
+            $directeurUser  = $caisse->directeur_agent_id ? User::where('agent_id', $caisse->directeur_agent_id)->first() : null;
+
+            $latestEval = Evaluation::where('evaluable_type', Caisse::class)
+                ->where('evaluable_id', $caisse->id)
+                ->where('evaluable_role', 'manager')
+                ->where('evaluateur_id', Auth::id())
+                ->orderByDesc('date_debut')
+                ->first();
+
+            return [
+                'caisse'         => $caisse,
+                'directeurAgent' => $directeurAgent,
+                'directeurUser'  => $directeurUser,
+                'latestEval'     => $latestEval,
+                'evalCount'      => Evaluation::where('evaluable_type', Caisse::class)
+                    ->where('evaluable_id', $caisse->id)
+                    ->where('evaluateur_id', Auth::id())->count(),
+                'ficheCount'     => ($directeurUser)
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->count()
+                    : 0,
+                'agentsCount'    => $caisse->agents_count,
+            ];
+        });
+
+        return view('directeur.subordonnes.directeurs', compact('ctx', 'direction', 'directeursData'));
     }
 
     // ── Index — Vue d'ensemble des subordonnés ─────────────────────────────
@@ -155,10 +255,10 @@ class DirecteurSubordonneController extends Controller
                     ->where('evaluable_id', $service->id)
                     ->where('evaluateur_id', Auth::id())
                     ->count(),
-                // Fiches d'objectifs assignées à ce service (tous auteurs confondus)
-                'ficheCount'  => FicheObjectif::where('assignable_type', Service::class)
-                    ->where('assignable_id', $service->id)
-                    ->count(),
+                // Fiches d'objectifs assignées au chef de service (personne)
+                'ficheCount'  => ($service->chef && ($cuid = User::where('agent_id', $service->chef->id)->value('id')))
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $cuid)->count()
+                    : 0,
                 'agentsCount' => $service->agents->count(),
             ];
         });
@@ -171,9 +271,67 @@ class DirecteurSubordonneController extends Controller
             $secretaireObjectifCount = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->count();
         }
 
+        // Agences (Directeur_Caisse uniquement)
+        $agencesData = collect();
+        if ($ctx->hasAgences()) {
+            $agencesData = $ctx->getAgencesWithGuichets()->map(function (Agence $agence) {
+                $latestEval = Evaluation::where('evaluable_type', Agence::class)
+                    ->where('evaluable_id', $agence->id)
+                    ->where('evaluable_role', 'manager')
+                    ->where('evaluateur_id', Auth::id())
+                    ->orderByDesc('date_debut')
+                    ->first();
+
+                return [
+                    'agence'        => $agence,
+                    'latestEval'    => $latestEval,
+                    'evalCount'     => Evaluation::where('evaluable_type', Agence::class)
+                        ->where('evaluable_id', $agence->id)
+                        ->where('evaluateur_id', Auth::id())
+                        ->count(),
+                    'ficheCount'    => ($agence->chef_agent_id && ($cuid = User::where('agent_id', $agence->chef_agent_id)->value('id')))
+                        ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $cuid)->count()
+                        : 0,
+                    'agentsCount'   => $agence->agents_count,
+                    'guichetsCount' => $agence->guichets->count(),
+                ];
+            });
+        }
+
+        // Caisses (Directeur_Technique uniquement)
+        $caissesData = collect();
+        if ($ctx->hasCaisses()) {
+            $caissesData = $ctx->getCaissesWithDirecteur()->map(function (Caisse $caisse) {
+                $directeurUser = $caisse->directeur_agent_id
+                    ? User::where('agent_id', $caisse->directeur_agent_id)->first()
+                    : null;
+
+                $latestEval = Evaluation::where('evaluable_type', Caisse::class)
+                    ->where('evaluable_id', $caisse->id)
+                    ->where('evaluable_role', 'manager')
+                    ->where('evaluateur_id', Auth::id())
+                    ->orderByDesc('date_debut')
+                    ->first();
+
+                return [
+                    'caisse'        => $caisse,
+                    'directeurUser' => $directeurUser,
+                    'latestEval'    => $latestEval,
+                    'evalCount'     => Evaluation::where('evaluable_type', Caisse::class)
+                        ->where('evaluable_id', $caisse->id)
+                        ->where('evaluateur_id', Auth::id())
+                        ->count(),
+                    'ficheCount'    => ($directeurUser)
+                        ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->count()
+                        : 0,
+                    'agentsCount'   => $caisse->agents_count,
+                ];
+            });
+        }
+
         return view('directeur.subordonnes.index', compact(
-            'direction', 'servicesData', 'secretaire',
-            'secretaireEvalCount', 'secretaireObjectifCount'
+            'ctx', 'direction', 'servicesData', 'secretaire',
+            'secretaireEvalCount', 'secretaireObjectifCount', 'agencesData', 'caissesData'
         ));
     }
 
@@ -199,11 +357,18 @@ class DirecteurSubordonneController extends Controller
             ->orderByDesc('date_debut')
             ->get();
 
-        $fiches = FicheObjectif::where('assignable_type', Service::class)
-            ->where('assignable_id', $service->id)
-            ->withCount('objectifs')
-            ->orderByDesc('date')
-            ->get();
+        $service->load('chef');
+        $chefUser = $service->chef
+            ? User::where('agent_id', $service->chef->id)->first()
+            : null;
+
+        $fiches = $chefUser
+            ? FicheObjectif::where('assignable_type', User::class)
+                ->where('assignable_id', $chefUser->id)
+                ->withCount('objectifs')
+                ->orderByDesc('date')
+                ->get()
+            : collect();
 
         return view('directeur.subordonnes.service', compact(
             'direction', 'service', 'tab', 'evaluations', 'fiches'
@@ -287,7 +452,7 @@ class DirecteurSubordonneController extends Controller
             ])->values()->all(),
         ])->values()->all();
 
-        $subjectiveTemplates = $this->buildSubjectiveTemplates();
+        $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
         // Valeurs précédentes pour les tableaux dynamiques (après erreur de validation)
         $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
@@ -363,7 +528,7 @@ class DirecteurSubordonneController extends Controller
         $identification = $validated['identification'] ?? [];
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
-            $normalized = $this->normalizeDateValue($raw);
+            $normalized = $this->evaluationService->normalizeDateValue($raw);
             if ($normalized === null) {
                 return back()->withInput()->withErrors(['identification.date_evaluation' => 'Format de date invalide. Utilisez JJ/MM/AAAA.']);
             }
@@ -382,14 +547,14 @@ class DirecteurSubordonneController extends Controller
             ->values()->all();
 
         // Normalisation des critères et calcul des scores
-        $normalizedSubjective = $this->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
-        $normalizedObjective  = $this->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
+        $normalizedSubjective = $this->evaluationService->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
+        $normalizedObjective  = $this->evaluationService->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
 
         if ($normalizedSubjective === [] || $normalizedObjective === []) {
             return back()->withInput()->withErrors(['subjective_criteres' => 'Les critères subjectifs et objectifs doivent contenir au moins une ligne notée.']);
         }
 
-        $scores = $this->computeScores($normalizedSubjective, $normalizedObjective);
+        $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
         try {
             $anneeId = Annee::resolveIdForDate($dateDebut);
@@ -423,23 +588,7 @@ class DirecteurSubordonneController extends Controller
             ]);
 
             $evaluation->identification()->create($identification);
-
-            foreach (array_merge($normalizedSubjective, $normalizedObjective) as $criterion) {
-                $critere = $evaluation->criteres()->create([
-                    'type'                              => $criterion['type'],
-                    'ordre'                             => $criterion['ordre'],
-                    'titre'                             => $criterion['titre'],
-                    'description'                       => $criterion['description'],
-                    'note_globale'                      => $criterion['note_globale'],
-                    'observation'                       => $criterion['observation'],
-                    'source_template_id'                => $criterion['source_template_id'],
-                    'source_fiche_objectif_id'          => $criterion['source_fiche_objectif_id'],
-                    'source_fiche_objectif_objectif_id' => $criterion['source_fiche_objectif_objectif_id'],
-                ]);
-                foreach ($criterion['subcriteria'] as $sub) {
-                    $critere->sousCriteres()->create(['ordre' => $sub['ordre'], 'libelle' => $sub['libelle'], 'note' => $sub['note'], 'observation' => $sub['observation']]);
-                }
-            }
+            $this->evaluationService->persistCriteria($evaluation, array_merge($normalizedSubjective, $normalizedObjective));
         });
 
         return redirect()->route('directeur.subordonnes.secretaire', ['tab' => 'evaluations'])
@@ -579,26 +728,48 @@ class DirecteurSubordonneController extends Controller
             'objectifs.*'   => ['required', 'string', 'max:5000'],
         ]);
 
-        $service = Service::findOrFail($validated['service_id']);
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        $service = Service::with('chef')->findOrFail($validated['service_id']);
+
+        // On assigne à la PERSONNE (chef de service), pas à la structure.
+        $chefUser = $service->chef
+            ? User::where('agent_id', $service->chef->id)->first()
+            : null;
+
+        if (! $chefUser) {
+            return back()->withInput()
+                ->with('error', "Aucun chef avec un compte utilisateur n'est assigné au service « {$service->nom} ».");
+        }
 
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
-            'annee'                 => now()->year,
-            'assignable_type'       => Service::class,
-            'assignable_id'         => $service->id,
+            'annee_id'              => Annee::resolveIdForDate(now()),
+            'assignable_type'       => User::class,
+            'assignable_id'         => $chefUser->id,
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
-            'statut'                => 'en_attente', // doit être acceptée par le chef de service
+            'statut'                => 'en_attente',
         ]);
 
-        foreach ($validated['objectifs'] as $desc) {
+        foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
+        Alerte::notifier(
+            $chefUser->id,
+            'Nouvelle fiche d\'objectifs reçue',
+            "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+            'haute'
+        );
+
         return redirect()
             ->route('directeur.subordonnes.service', ['service' => $service->id, 'tab' => 'objectifs'])
-            ->with('status', "Fiche d'objectifs assignée au service « {$service->nom} ».");
+            ->with('status', "Fiche d'objectifs assignée au chef du service « {$service->nom} ».");
     }
 
     /**
@@ -685,9 +856,14 @@ class DirecteurSubordonneController extends Controller
             'objectifs.*'   => ['required', 'string', 'max:5000'],
         ]);
 
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
-            'annee'                 => now()->year,
+            'annee_id'              => Annee::resolveIdForDate(now()),
             'assignable_type'       => User::class,
             'assignable_id'         => $secretaire->id,
             'date'                  => now()->toDateString(),
@@ -696,7 +872,7 @@ class DirecteurSubordonneController extends Controller
             'statut'                => 'en_attente',
         ]);
 
-        foreach ($validated['objectifs'] as $desc) {
+        foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
@@ -743,6 +919,363 @@ class DirecteurSubordonneController extends Controller
             ->with('status', "Fiche d'objectifs supprimée.");
     }
 
+    // ── Agences (Directeur_Caisse) ─────────────────────────────────────────
+
+    private function authorizeAgence(Agence $agence): DirecteurEntity
+    {
+        $ctx = $this->getContext();
+        if (! $ctx->agenceOwnedBy($agence)) {
+            abort(403);
+        }
+
+        return $ctx;
+    }
+
+    private function authorizeObjectifAgence(FicheObjectif $fiche): array
+    {
+        $ctx = $this->getContext();
+        if ($fiche->assignable_type !== User::class) {
+            abort(403);
+        }
+
+        $user = User::find($fiche->assignable_id);
+        if (! $user || ! $user->agent_id) {
+            abort(403);
+        }
+
+        // Le chef doit diriger une agence appartenant à ce directeur.
+        $agence = Agence::where('chef_agent_id', $user->agent_id)
+            ->whereHas('caisse', fn ($q) => $q->where('delegation_technique_id', $ctx->getId()))
+            ->first();
+
+        if (! $agence || ! $ctx->agenceOwnedBy($agence)) {
+            abort(403);
+        }
+
+        return [$ctx, $agence];
+    }
+
+    public function showAgence(Request $request, Agence $agence): View
+    {
+        $ctx       = $this->authorizeAgence($agence);
+        $direction = $ctx->entity;
+        $tab       = $request->get('tab', 'evaluations');
+
+        $agence->load(['chef', 'guichets']);
+
+        $evaluations = Evaluation::where('evaluable_type', Agence::class)
+            ->where('evaluable_id', $agence->id)
+            ->where('evaluable_role', 'manager')
+            ->where('evaluateur_id', Auth::id())
+            ->with('identification')
+            ->orderByDesc('date_debut')
+            ->get();
+
+        $chefAgenceUser = $agence->chef_agent_id
+            ? User::where('agent_id', $agence->chef_agent_id)->first()
+            : null;
+
+        $fiches = $chefAgenceUser
+            ? FicheObjectif::where('assignable_type', User::class)
+                ->where('assignable_id', $chefAgenceUser->id)
+                ->withCount('objectifs')
+                ->orderByDesc('date')
+                ->get()
+            : collect();
+
+        return view('directeur.subordonnes.agence', compact(
+            'direction', 'agence', 'tab', 'evaluations', 'fiches'
+        ));
+    }
+
+    public function createAgenceObjectif(Agence $agence): View
+    {
+        $ctx          = $this->authorizeAgence($agence);
+        $direction    = $ctx->entity;
+        $oldObjectifs = old('objectifs', ['']);
+        if (! is_array($oldObjectifs) || $oldObjectifs === []) {
+            $oldObjectifs = [''];
+        }
+
+        return view('directeur.subordonnes.objectifs.create', [
+            'direction'    => $direction,
+            'service'      => null,
+            'secretaire'   => null,
+            'agence'       => $agence,
+            'oldObjectifs' => $oldObjectifs,
+            'storeRoute'   => 'directeur.subordonnes.agence.objectifs.store',
+            'hiddenField'  => 'agence_id',
+            'hiddenValue'  => $agence->id,
+            'cibleLabel'   => 'Agence — '.$agence->nom,
+            'backRoute'    => route('directeur.subordonnes.agence', ['agence' => $agence->id, 'tab' => 'objectifs']),
+        ]);
+    }
+
+    public function storeAgenceObjectif(Request $request): RedirectResponse
+    {
+        $agenceId = (int) $request->input('agence_id');
+        $agence   = Agence::findOrFail($agenceId);
+        $this->authorizeAgence($agence);
+
+        $validated = $request->validate([
+            'titre_fiche'   => ['required', 'string', 'max:255'],
+            'date_echeance' => ['required', 'date', 'after_or_equal:today'],
+            'objectifs'     => ['required', 'array', 'min:1'],
+            'objectifs.*'   => ['required', 'string', 'max:5000'],
+        ]);
+
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        // On assigne à la PERSONNE (chef d'agence), pas à la structure.
+        $chefAgenceUser = $agence->chef_agent_id
+            ? User::where('agent_id', $agence->chef_agent_id)->first()
+            : null;
+
+        if (! $chefAgenceUser) {
+            return back()->withInput()
+                ->with('error', "Aucun chef avec un compte utilisateur n'est assigné à l'agence « {$agence->nom} ».");
+        }
+
+        $fiche = FicheObjectif::create([
+            'titre'                 => $validated['titre_fiche'],
+            'annee_id'              => Annee::resolveIdForDate(now()),
+            'assignable_type'       => User::class,
+            'assignable_id'         => $chefAgenceUser->id,
+            'date'                  => now()->toDateString(),
+            'date_echeance'         => $validated['date_echeance'],
+            'avancement_percentage' => 0,
+            'statut'                => 'en_attente',
+        ]);
+
+        foreach ($objectifs as $desc) {
+            $fiche->objectifs()->create(['description' => $desc]);
+        }
+
+        Alerte::notifier(
+            $chefAgenceUser->id,
+            'Nouvelle fiche d\'objectifs reçue',
+            "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+            'haute'
+        );
+
+        return redirect()
+            ->route('directeur.subordonnes.agence', ['agence' => $agence->id, 'tab' => 'objectifs'])
+            ->with('status', "Fiche d'objectifs assignée au chef de l'agence « {$agence->nom} ».");
+    }
+
+    public function showAgenceObjectif(FicheObjectif $fiche): View
+    {
+        [$ctx, $agence] = $this->authorizeObjectifAgence($fiche);
+        $direction = $ctx->entity;
+        $fiche->load('objectifs');
+
+        $statusClass = $this->ficheStatusClass($fiche->statut);
+        $statusLabel = $this->ficheStatusLabel($fiche->statut);
+
+        return view('directeur.subordonnes.objectifs.show', compact(
+            'fiche', 'direction', 'statusClass', 'statusLabel'
+        ) + ['service' => null, 'secretaire' => null, 'agence' => $agence]);
+    }
+
+    public function destroyAgenceObjectif(FicheObjectif $fiche): RedirectResponse
+    {
+        [, $agence] = $this->authorizeObjectifAgence($fiche);
+        $fiche->delete();
+
+        return redirect()
+            ->route('directeur.subordonnes.agence', ['agence' => $agence->id, 'tab' => 'objectifs'])
+            ->with('status', "Fiche d'objectifs supprimée.");
+    }
+
+    // ── Helpers Caisse ─────────────────────────────────────────────────────
+
+    private function authorizeCaisse(Caisse $caisse): DirecteurEntity
+    {
+        $ctx = $this->getContext();
+        if (! $ctx->caisseOwnedBy($caisse)) {
+            abort(403);
+        }
+
+        return $ctx;
+    }
+
+    private function authorizeObjectifCaisse(FicheObjectif $fiche): array
+    {
+        $ctx = $this->getContext();
+        if ($fiche->assignable_type !== User::class) {
+            abort(403);
+        }
+
+        $user = User::find($fiche->assignable_id);
+        if (! $user || ! $user->agent_id) {
+            abort(403);
+        }
+
+        // Le directeur doit gérer une caisse appartenant à ce DT.
+        $caisse = Caisse::where('directeur_agent_id', $user->agent_id)
+            ->where('delegation_technique_id', $ctx->getId())
+            ->first();
+
+        if (! $caisse || ! $ctx->caisseOwnedBy($caisse)) {
+            abort(403);
+        }
+
+        return [$ctx, $caisse];
+    }
+
+    // ── Caisse detail ──────────────────────────────────────────────────────
+
+    public function showCaisse(Request $request, Caisse $caisse): View
+    {
+        $ctx = $this->authorizeCaisse($caisse);
+        $tab = $request->get('tab', 'evaluations');
+
+        $evaluations = Evaluation::where('evaluable_type', Caisse::class)
+            ->where('evaluable_id', $caisse->id)
+            ->where('evaluateur_id', Auth::id())
+            ->with('identification')
+            ->orderByDesc('date_debut')
+            ->get();
+
+        $directeurUser = $caisse->directeur_agent_id
+            ? User::where('agent_id', $caisse->directeur_agent_id)->first()
+            : null;
+
+        $fiches = $directeurUser
+            ? FicheObjectif::where('assignable_type', User::class)
+                ->where('assignable_id', $directeurUser->id)
+                ->withCount('objectifs')
+                ->orderByDesc('date')
+                ->get()
+            : collect();
+
+        return view('directeur.subordonnes.caisse', compact('caisse', 'tab', 'evaluations', 'fiches', 'directeurUser', 'ctx'));
+    }
+
+    public function createCaisseObjectif(Caisse $caisse): View
+    {
+        $ctx = $this->authorizeCaisse($caisse);
+
+        $oldObjectifs = old('objectifs', ['']);
+        if (! is_array($oldObjectifs) || $oldObjectifs === []) {
+            $oldObjectifs = [''];
+        }
+
+        return view('directeur.subordonnes.objectifs.create', [
+            'direction'    => $ctx->entity,
+            'service'      => null,
+            'secretaire'   => null,
+            'oldObjectifs' => $oldObjectifs,
+            'storeRoute'   => 'directeur.subordonnes.caisse.objectifs.store',
+            'hiddenField'  => ['name' => 'caisse_id', 'value' => $caisse->id],
+            'cibleLabel'   => 'Caisse — '.$caisse->nom,
+            'backRoute'    => route('directeur.subordonnes.caisse', ['caisse' => $caisse->id, 'tab' => 'objectifs']),
+        ]);
+    }
+
+    public function storeCaisseObjectif(Request $request): RedirectResponse
+    {
+        $ctx = $this->getContext();
+
+        $validated = $request->validate([
+            'caisse_id'     => ['required', 'integer'],
+            'titre_fiche'   => ['required', 'string', 'max:255'],
+            'date_echeance' => ['required', 'date', 'after_or_equal:today'],
+            'objectifs'     => ['required', 'array', 'min:1'],
+            'objectifs.*'   => ['required', 'string', 'max:5000'],
+        ]);
+
+        $caisse = Caisse::findOrFail($validated['caisse_id']);
+        if (! $ctx->caisseOwnedBy($caisse)) {
+            abort(403);
+        }
+
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        // On assigne à la PERSONNE (directeur de caisse), pas à la structure.
+        $directeurUser = $caisse->directeur_agent_id
+            ? User::where('agent_id', $caisse->directeur_agent_id)->first()
+            : null;
+
+        if (! $directeurUser) {
+            return back()->withInput()
+                ->with('error', "Aucun directeur avec un compte utilisateur n'est assigné à la caisse « {$caisse->nom} ».");
+        }
+
+        $fiche = FicheObjectif::create([
+            'titre'                 => $validated['titre_fiche'],
+            'annee_id'              => Annee::resolveIdForDate(now()),
+            'assignable_type'       => User::class,
+            'assignable_id'         => $directeurUser->id,
+            'date'                  => now()->toDateString(),
+            'date_echeance'         => $validated['date_echeance'],
+            'avancement_percentage' => 0,
+            'statut'                => 'en_attente',
+        ]);
+
+        foreach ($objectifs as $desc) {
+            $fiche->objectifs()->create(['description' => $desc]);
+        }
+
+        if ($directeurUser) {
+            Alerte::notifier(
+                $directeurUser->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Le Directeur Technique vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                'haute'
+            );
+        }
+
+        return redirect()
+            ->route('directeur.subordonnes.caisse', ['caisse' => $caisse->id, 'tab' => 'objectifs'])
+            ->with('status', "Fiche d'objectifs assignée à la caisse {$caisse->nom}.");
+    }
+
+    public function showCaisseObjectif(Request $request, FicheObjectif $fiche): View
+    {
+        [$ctx, $caisse] = $this->authorizeObjectifCaisse($fiche);
+        $fiche->load('objectifs');
+
+        $statusClass = match ($fiche->statut) {
+            'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+            'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
+            'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
+            default      => 'border-slate-200 bg-slate-100 text-slate-700',
+        };
+        $statusLabel = match ($fiche->statut) {
+            'acceptee'   => 'Acceptée',
+            'en_attente' => 'En attente',
+            'refusee'    => 'Refusée',
+            default      => ucfirst((string) $fiche->statut),
+        };
+
+        return view('directeur.subordonnes.objectifs.show', [
+            'fiche'       => $fiche,
+            'direction'   => $ctx->entity,
+            'service'     => null,
+            'secretaire'  => null,
+            'statusClass' => $statusClass,
+            'statusLabel' => $statusLabel,
+        ]);
+    }
+
+    public function destroyCaisseObjectif(FicheObjectif $fiche): RedirectResponse
+    {
+        [$ctx, $caisse] = $this->authorizeObjectifCaisse($fiche);
+        $caisse_id = $caisse->id;
+        $fiche->delete();
+
+        return redirect()
+            ->route('directeur.subordonnes.caisse', ['caisse' => $caisse_id, 'tab' => 'objectifs'])
+            ->with('status', "Fiche d'objectifs supprimée.");
+    }
+
     // ── Private helpers ────────────────────────────────────────────────────
 
     /** Retourne la classe CSS du badge de statut d'une fiche d'objectifs. */
@@ -767,91 +1300,4 @@ class DirecteurSubordonneController extends Controller
         };
     }
 
-    /**
-     * Charge les templates de critères subjectifs actifs (triés par ordre).
-     * Le résultat est encodé en JSON dans la vue pour alimenter le moteur JS.
-     */
-    private function buildSubjectiveTemplates(): array
-    {
-        return SubjectiveCriteriaTemplate::query()
-            ->with('subcriteria')
-            ->where('is_active', true)
-            ->orderBy('ordre')
-            ->get()
-            ->map(fn ($t) => [
-                'id'          => $t->id,
-                'ordre'       => $t->ordre,
-                'titre'       => $t->titre,
-                'description' => $t->description,
-                'subcriteria' => $t->subcriteria->map(fn ($s) => ['libelle' => $s->libelle, 'ordre' => $s->ordre])->values()->all(),
-            ])
-            ->values()->all();
-    }
-
-    /**
-     * Normalise les critères bruts issus du formulaire JS.
-     *
-     * @param  bool  $strict  Si false (critères subjectifs), injecte un sous-critère
-     *                        fictif '-' quand aucun libellé n'est renseigné.
-     */
-    private function normalizeCriteria(array $criteria, string $type, int $minNote, int $maxNote, bool $strict = true): array
-    {
-        $normalized = [];
-        foreach (array_values($criteria) as $idx => $criterion) {
-            if (! is_array($criterion)) continue;
-            $title = trim((string) ($criterion['titre'] ?? ''));
-            if ($title === '') continue;
-            $subcriteria = [];
-            foreach (array_values((array) ($criterion['subcriteria'] ?? [])) as $subIdx => $sub) {
-                if (! is_array($sub)) continue;
-                $label = trim((string) ($sub['libelle'] ?? ''));
-                if ($label === '') { if ($strict) continue; $label = '-'; }
-                $note = max($minNote, min($maxNote, (float) ($sub['note'] ?? $minNote)));
-                $subcriteria[] = ['ordre' => $subIdx + 1, 'libelle' => $label, 'note' => $note, 'observation' => filled($sub['observation'] ?? null) ? trim((string) $sub['observation']) : null];
-            }
-            if ($strict && $subcriteria === []) continue;
-            if (! $strict && $subcriteria === []) $subcriteria = [['ordre' => 1, 'libelle' => '-', 'note' => $minNote, 'observation' => null]];
-            $normalized[] = [
-                'type' => $type, 'ordre' => $idx + 1, 'titre' => $title,
-                'description' => filled($criterion['description'] ?? null) ? trim((string) $criterion['description']) : null,
-                'note_globale' => round(collect($subcriteria)->avg('note') ?? 0, 2),
-                'observation'  => filled($criterion['observation'] ?? null) ? trim((string) $criterion['observation']) : null,
-                'source_template_id'                => isset($criterion['source_template_id']) ? (int) $criterion['source_template_id'] : null,
-                'source_fiche_objectif_id'          => isset($criterion['source_fiche_objectif_id']) ? (int) $criterion['source_fiche_objectif_id'] : null,
-                'source_fiche_objectif_objectif_id' => isset($criterion['source_fiche_objectif_objectif_id']) ? (int) $criterion['source_fiche_objectif_objectif_id'] : null,
-                'subcriteria' => $subcriteria,
-            ];
-        }
-        return $normalized;
-    }
-
-    /**
-     * Calcule les scores pondérés à partir des critères normalisés.
-     * Formule : note_finale = (obj×0,75 + subj×0,25) × 2  → sur 10.
-     */
-    private function computeScores(array $sub, array $obj): array
-    {
-        $mObj  = round(collect($obj)->avg('note_globale') ?? 0, 2);
-        $mSubj = round(collect($sub)->avg('note_globale') ?? 0, 2);
-        $nObj  = round($mObj * 0.75, 2);
-        $nSubj = round($mSubj * 0.25, 2);
-        return ['moyenne_objectifs' => $mObj, 'moyenne_subjectifs' => $mSubj, 'note_criteres_objectifs' => $nObj, 'note_criteres_subjectifs' => $nSubj, 'note_finale' => round(($nObj + $nSubj) * 2, 2)];
-    }
-
-    /**
-     * Parse une date saisie librement (JJ/MM/AAAA ou AAAA-MM-JJ) → AAAA-MM-JJ.
-     * Retourne null si le format est invalide.
-     */
-    private function normalizeDateValue(mixed $value): ?string
-    {
-        $value = trim((string) $value);
-        if ($value === '') return null;
-        foreach (['Y-m-d', 'd/m/Y'] as $format) {
-            try {
-                $date = Carbon::createFromFormat($format, $value);
-                if ($date && $date->format($format) === $value) return $date->toDateString();
-            } catch (\Throwable) {}
-        }
-        return null;
-    }
 }

@@ -2,104 +2,139 @@
 @section('title', 'Agences | '.config('app.name'))
 
 @section('content')
-<div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+<div class="min-h-screen bg-[#f8fafc] px-4 pb-12 pt-6 lg:px-10">
+    <div class="mx-auto max-w-7xl flex flex-col gap-8">
 
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {{-- Header Premium avec dégradé --}}
+        <header class="relative overflow-hidden rounded-[32px] bg-slate-950 p-8 shadow-2xl lg:p-10">
+            {{-- Effets de lumière en fond --}}
+            <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-500/20 blur-[80px]"></div>
+            <div class="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-sky-500/10 blur-[60px]"></div>
+
+            <div class="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Espace DG / Réseau RCPB</p>
-                    <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Agences</h1>
-                    <p class="mt-1 text-sm text-slate-500">{{ $agences->total() }} agence(s) dans le réseau.</p>
+                    <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">
+                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+                        Réseau RCPB / Pilotage
+                    </div>
+                    <h1 class="mt-4 text-3xl font-black tracking-tight text-white lg:text-4xl">Agences</h1>
+                    <p class="mt-2 text-sm font-medium text-slate-400">
+                        Supervision de <span class="text-white font-bold underline decoration-emerald-500 decoration-2 underline-offset-4">{{ $agences->total() }} points de vente</span> actifs.
+                    </p>
                 </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 shadow-sm">
-                    <i class="fas fa-store text-xl"></i>
+                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-emerald-400 shadow-inner backdrop-blur-md">
+                    <i class="fas fa-landmark text-2xl"></i>
                 </div>
             </div>
         </header>
 
-        {{-- Filtres --}}
-        <form method="GET" class="admin-panel px-5 py-4">
-            <div class="flex flex-wrap items-end gap-3">
-                <div class="flex-1 min-w-[180px]">
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Recherche</label>
-                    <input type="text" name="search" value="{{ $search }}" placeholder="Nom, chef d'agence…" class="ent-input w-full">
+        {{-- Filtres Stylisés --}}
+        <form method="GET" class="rounded-[28px] bg-white border border-slate-200/60 p-6 shadow-sm">
+            <div class="flex flex-wrap items-end gap-4">
+                <div class="flex-1 min-w-[240px]">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Recherche rapide</label>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" name="search" value="{{ $search }}" placeholder="Nom d'agence, chef..." 
+                            class="w-full rounded-2xl border-none bg-slate-50 pl-11 pr-4 py-3.5 text-sm font-bold text-slate-700 ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 transition-all">
+                    </div>
                 </div>
+                
                 @if ($caisses->isNotEmpty())
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Caisse</label>
-                    <select name="caisse" class="ent-input">
-                        <option value="">Toutes</option>
+                <div class="min-w-[200px]">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Caisse de rattachement</label>
+                    <select name="caisse" class="w-full rounded-2xl border-none bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700 ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Toutes les caisses</option>
                         @foreach ($caisses as $c)
                             <option value="{{ $c->id }}" {{ $caisseId == $c->id ? 'selected' : '' }}>{{ $c->nom }}</option>
                         @endforeach
                     </select>
                 </div>
                 @endif
-                <button type="submit" class="ent-btn ent-btn-primary"><i class="fas fa-filter mr-2"></i>Filtrer</button>
-                @if ($search || $caisseId)
-                    <a href="{{ route('dg.agences') }}" class="ent-btn ent-btn-soft">Réinitialiser</a>
-                @endif
+
+                <div class="flex gap-2">
+                    <button type="submit" class="inline-flex h-[52px] items-center gap-2 rounded-2xl bg-slate-900 px-6 text-xs font-black uppercase tracking-widest text-white transition hover:bg-emerald-600 shadow-lg shadow-slate-200 hover:shadow-emerald-200">
+                        <i class="fas fa-sliders-h"></i> Filtrer
+                    </button>
+                    @if ($search || $caisseId)
+                        <a href="{{ route('dg.agences') }}" class="inline-flex h-[52px] items-center rounded-2xl bg-slate-100 px-6 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition">
+                            <i class="fas fa-undo"></i>
+                        </a>
+                    @endif
+                </div>
             </div>
         </form>
 
-        {{-- Liste --}}
-        <section class="admin-panel overflow-hidden">
-            <div class="border-b border-slate-100 px-6 py-4">
-                <h2 class="text-sm font-black uppercase tracking-widest text-slate-700">Liste des agences</h2>
+        {{-- Table avec design "Card List" --}}
+        <section class="overflow-hidden rounded-[32px] border border-slate-200/60 bg-white shadow-xl shadow-slate-200/40">
+            <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-8 py-5">
+                <h2 class="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Répertoire des Agences</h2>
+                <span class="rounded-lg bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700">LIVE DATA</span>
             </div>
-            @if ($agences->isEmpty())
-                <div class="px-6 py-16 text-center">
-                    <i class="fas fa-inbox text-4xl text-slate-200"></i>
-                    <p class="mt-3 text-sm font-semibold text-slate-400">Aucune agence enregistrée.</p>
-                </div>
-            @else
-                <div class="overflow-x-auto">
-                    <table class="min-w-full text-left text-sm text-slate-700">
-                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
-                            <tr>
-                                <th class="px-4 py-3">Agence</th>
-                                <th class="px-4 py-3">Caisse superviseur</th>
-                                <th class="px-4 py-3">Chef d'agence</th>
-                                <th class="px-4 py-3">Téléphone</th>
-                                <th class="px-4 py-3 text-center">Agents</th>
-                                <th class="px-4 py-3 text-center">Guichets</th>
-                                <th class="px-4 py-3 text-center">Note</th>
-                                <th class="px-4 py-3 text-center">Action</th>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left">
+                    <thead class="bg-white">
+                        <tr>
+                            <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Agence</th>
+                            <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Superviseur</th>
+                            <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Ressources</th>
+                            <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        @foreach ($agences as $agence)
+                            <tr class="group transition-all hover:bg-emerald-50/30">
+                                <td class="px-8 py-6">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-emerald-400 font-black shadow-lg transition-transform group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white">
+                                            {{ substr($agence->nom, 0, 1) }}
+                                        </div>
+                                        <div>
+                                            <p class="text-base font-black text-slate-900 group-hover:text-emerald-700 transition-colors">{{ $agence->nom }}</p>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Point de vente RCPB</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-6">
+                                    <div class="flex flex-col">
+                                        <span class="inline-flex w-fit items-center rounded-md bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-600 ring-1 ring-blue-100 mb-1 italic">
+                                            {{ $agence->caisse?->nom ?? '—' }}
+                                        </span>
+                                        @if($agence->chef)
+                                            <p class="text-sm font-bold text-slate-700">{{ $agence->chef->prenom }} {{ $agence->chef->nom }}</p>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="px-8 py-6">
+                                    <div class="flex justify-center gap-3">
+                                        <div class="flex flex-col items-center">
+                                            <span class="text-xs font-black text-slate-900">{{ $agence->agents_count }}</span>
+                                            <span class="text-[9px] font-bold uppercase text-slate-400">Agents</span>
+                                        </div>
+                                        <div class="h-8 w-[1px] bg-slate-100"></div>
+                                        <div class="flex flex-col items-center">
+                                            <span class="text-xs font-black text-violet-600">{{ $agence->guichets_count }}</span>
+                                            <span class="text-[9px] font-bold uppercase text-slate-400">Guichets</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-6 text-right">
+                                    <a href="{{ route('dg.agences.show', $agence) }}" 
+                                       class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-emerald-600 shadow-md hover:shadow-emerald-100">
+                                        Fiche complète <i class="fas fa-arrow-right text-[8px]"></i>
+                                    </a>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            @foreach ($agences as $agence)
-                                <tr class="hover:bg-slate-50/60 transition-colors">
-                                    <td class="px-4 py-3 font-bold text-slate-900">{{ $agence->nom }}</td>
-                                    <td class="px-4 py-3 text-slate-500">{{ $agence->caisse?->nom ?? '—' }}</td>
-                                    <td class="px-4 py-3">
-                                        <p class="font-semibold">{{ $agence->chef_nom ?? '—' }}</p>
-                                        <p class="text-xs text-slate-400">{{ $agence->chef_email }}</p>
-                                    </td>
-                                    <td class="px-4 py-3 text-slate-500">{{ $agence->chef_telephone ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-center">
-                                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black text-slate-600">{{ $agence->agents_count }}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-center">
-                                        <span class="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-black text-violet-700">{{ $agence->guichets_count }}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-center">
-                                        <span class="text-xs font-bold text-slate-300">—</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-center">
-                                        <a href="{{ route('dg.agences.show', $agence) }}" class="ent-btn ent-btn-soft py-1 px-3 text-xs">
-                                            <i class="fas fa-eye mr-1"></i>Voir
-                                        </a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            
+            @if ($agences->hasPages())
+                <div class="bg-slate-50/50 px-8 py-6 border-t border-slate-100">
+                    {{ $agences->withQueryString()->links() }}
                 </div>
-                @if ($agences->hasPages())
-                    <div class="border-t border-slate-100 px-6 py-4">{{ $agences->withQueryString()->links() }}</div>
-                @endif
             @endif
         </section>
 

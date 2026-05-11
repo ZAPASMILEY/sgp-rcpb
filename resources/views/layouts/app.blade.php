@@ -23,8 +23,9 @@
                 'items' => [
                     ['route' => 'admin.dashboard', 'icon' => 'fas fa-gauge-high', 'label' => 'Tableau de bord'],
                     ['route' => 'admin.entites.index', 'icon' => 'fas fa-university', 'label' => 'Faitiere'],
-                    ['route' => 'admin.direction-generale.index', 'icon' => 'fas fa-user-tie', 'label' => 'Direction Générale'],
-                    ['route' => 'admin.directions.index', 'icon' => 'fas fa-building-columns', 'label' => 'Directions'],
+                    ['route' => 'admin.direction-generale.index', 'icon' => 'fas fa-user-tie',      'label' => 'Direction Générale'],
+                    ['route' => 'admin.direction-dga.index',     'icon' => 'fas fa-sitemap',        'label' => 'Direction DGA'],
+                    ['route' => 'admin.directions.index',        'icon' => 'fas fa-building-columns','label' => 'Directions'],
                     ['route' => 'admin.delegations-techniques.index', 'icon' => 'fas fa-building-circle-arrow-right', 'label' => 'Delegations'],
                 ],
             ],

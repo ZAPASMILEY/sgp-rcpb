@@ -1,25 +1,37 @@
 @php
     $user = auth()->user();
+    $isDt = $user?->role === 'Directeur_Technique';
+
+    $subordonnesItems = [];
+    if ($isDt) {
+        $subordonnesItems[] = ['route' => 'directeur.subordonnes.directeurs', 'icon' => 'fas fa-landmark',        'label' => 'Mes Directeurs de Caisse'];
+    }
+    $subordonnesItems[] = ['route' => 'directeur.subordonnes.chefs',      'icon' => 'fas fa-sitemap',           'label' => 'Mes Chefs de Service'];
+    $subordonnesItems[] = ['route' => 'directeur.subordonnes.secretaire', 'icon' => 'fas fa-user-pen',          'label' => 'Secrétaire'];
+    $subordonnesItems[] = ['route' => 'directeur.evaluations.create', 'icon' => 'fas fa-pen-to-square', 'label' => 'Nouvelle évaluation', 'disabled' => ! $evaluationsEnabled];
+
     $menuSections = [
         [
             'title' => 'Mon espace',
             'items' => [
-                ['route' => 'directeur.mon-espace', 'icon' => 'fas fa-house', 'label' => 'Tableau de bord'],
-                ['route' => 'directeur.mon-espace', 'query' => 'tab=evaluations', 'icon' => 'fas fa-star-half-stroke', 'label' => 'Mes évaluations reçues'],
-                ['route' => 'directeur.mon-espace', 'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye',          'label' => 'Mes objectifs reçus'],
+                ['route' => 'directeur.dashboard',  'icon' => 'fas fa-house',        'label' => 'Tableau de bord'],
+                ['route' => 'directeur.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon espace'],
             ],
         ],
         [
-            'title' => 'Subordonnés',
-            'items' => [
-                ['route' => 'directeur.subordonnes',           'icon' => 'fas fa-users-between-lines', 'label' => 'Vue d\'ensemble'],
-                ['route' => 'directeur.evaluations.create',    'icon' => 'fas fa-pen-to-square',       'label' => 'Nouvelle évaluation'],
-            ],
+            'title' => 'Mes subordonnés',
+            'items' => $subordonnesItems,
         ],
         [
             'title' => 'Personnel',
             'items' => [
                 ['route' => 'directeur.personnel', 'icon' => 'fas fa-id-card-clip', 'label' => 'Personnel de ma direction'],
+            ],
+        ],
+        [
+            'title' => 'Formations',
+            'items' => [
+                ['route' => 'directeur.formations.index', 'icon' => 'fas fa-graduation-cap', 'label' => 'Mes formations'],
             ],
         ],
     ];
@@ -39,8 +51,8 @@
     <style>
         :root {
             --sidebar-width: 260px;
-            --sidebar-color:      #2563eb;
-            --sidebar-color-dark: #1d4ed8;
+            --sidebar-color:      #008751;
+            --sidebar-color-dark: #006837;
         }
 
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
@@ -125,9 +137,9 @@
             <p class="mt-1 text-[11px] font-semibold uppercase tracking-widest text-white/60">
                 @php
                     $roleLabel = match($user?->role) {
-                        'Directeur_Caisse'   => 'Directeur de Caisse',
-                        'Directeur_Tehnique' => 'Directeur Technique',
-                        default              => 'Directeur de Direction',
+                        'Directeur_Caisse'    => 'Directeur de Caisse',
+                        'Directeur_Technique' => 'Directeur Technique',
+                        default               => 'Directeur de Direction',
                     };
                 @endphp
                 {{ $roleLabel }}
@@ -139,24 +151,37 @@
                 <div class="sidebar-label">{{ $section['title'] }}</div>
                 @foreach($section['items'] as $item)
                     @php
-                        $query  = $item['query'] ?? null;
-                        $link   = route($item['route']) . ($query ? '?'.$query : '');
-                        $routeActive = request()->routeIs($item['route']);
-                        if ($query) {
-                            parse_str($query, $qArr);
-                            $isActive = $routeActive && collect($qArr)->every(fn($v,$k) => request()->query($k) === $v);
+                        $isDisabled = $item['disabled'] ?? false;
+                        $query      = $item['query'] ?? null;
+                        if (! $isDisabled) {
+                            $link        = route($item['route']) . ($query ? '?'.$query : '');
+                            $routeActive = request()->routeIs($item['route']);
+                            if ($query) {
+                                parse_str($query, $qArr);
+                                $isActive = $routeActive && collect($qArr)->every(fn($v,$k) => request()->query($k) === $v);
+                            } else {
+                                $isActive = $routeActive && !request()->query('tab');
+                            }
+                            if (! in_array($item['route'], ['directeur.dashboard', 'directeur.mon-espace'])) {
+                                $isActive = request()->routeIs($item['route'].'*');
+                            }
                         } else {
-                            $isActive = $routeActive && !request()->query('tab');
-                        }
-                        // Special: non-mon-espace routes are always just route-matched
-                        if ($item['route'] !== 'directeur.mon-espace') {
-                            $isActive = request()->routeIs($item['route'].'*');
+                            $link     = null;
+                            $isActive = false;
                         }
                     @endphp
-                    <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
-                        <i class="{{ $item['icon'] }}"></i>
-                        <span>{{ $item['label'] }}</span>
-                    </a>
+                    @if($isDisabled)
+                        <span class="nav-link opacity-60 cursor-not-allowed select-none"
+                              title="Fonctionnalité désactivée par l'administrateur">
+                            <i class="{{ $item['icon'] }}"></i>
+                            <span>{{ $item['label'] }}</span>
+                        </span>
+                    @else
+                        <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
+                            <i class="{{ $item['icon'] }}"></i>
+                            <span>{{ $item['label'] }}</span>
+                        </a>
+                    @endif
                 @endforeach
             @endforeach
         </div>
@@ -181,7 +206,7 @@
     </nav>
 
     <div class="main-content">
-        <header class="flex h-12 shrink-0 items-center justify-between border-b border-slate-100 bg-white/80 px-4 backdrop-blur-sm">
+        <header class="relative z-[9999] flex h-12 shrink-0 items-center justify-between border-b border-slate-100 bg-white/80 px-4 backdrop-blur-sm">
             <button class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 text-slate-500 shadow-sm lg:hidden" id="btnToggleSidebar" type="button">
                 <i class="fas fa-bars"></i>
             </button>
@@ -190,6 +215,12 @@
         </header>
 
         <div class="flex-1 w-full overflow-visible">
+            @if(session('feature_disabled'))
+                <div class="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-700 shadow-sm">
+                    <i class="fas fa-ban shrink-0"></i>
+                    <span>{{ session('feature_disabled') }}</span>
+                </div>
+            @endif
             @yield('content')
             @yield('actions')
             @yield('export')

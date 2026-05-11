@@ -8,6 +8,7 @@ use App\Models\Annee;
 use App\Models\DelegationTechnique;
 use App\Models\FicheObjectif;
 use App\Models\User;
+use App\Services\ObjectifService;
 use App\Traits\ResolvesEntite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,11 @@ class DgaSubObjectifController extends Controller
 {
     use ResolvesEntite;
 
+    public function __construct(private readonly ObjectifService $objectifService) {}
+
+    /**
+     * Vérifie si l'utilisateur est bien un DGA.
+     */
     private function checkDga(): void
     {
         if (Auth::user()?->role !== 'DGA') {
@@ -26,22 +32,20 @@ class DgaSubObjectifController extends Controller
         }
     }
 
-    /** Retourne tous les subordonnés du DGA connecté (DTs + secrétaire). */
+    /**
+     * Retourne tous les subordonnés du DGA connecté (DTs + secrétaire).
+     */
     private function getSubordonnes(): \Illuminate\Support\Collection
     {
-        $entite      = $this->getEntiteForDGA();
+        $entite = $this->getEntiteForDGA();
         $subordonnes = collect();
 
-        if (! $entite) {
+        if (!$entite) {
             return $subordonnes;
         }
 
-        // Directeurs Techniques
-        $dtAgentIds = DelegationTechnique::whereNotNull('directeur_agent_id')
-            ->pluck('directeur_agent_id');
-
+        // Directeurs Techniques : on récupère les utilisateurs ayant le rôle DT
         $dts = User::where('role', 'Directeur_Technique')
-            ->whereIn('agent_id', $dtAgentIds)
             ->with('agent.directedDelegation')
             ->get();
 
@@ -49,7 +53,7 @@ class DgaSubObjectifController extends Controller
             $subordonnes->push([
                 'id'         => $dt->id,
                 'nom'        => $dt->name,
-                'role_label' => 'Directeur Technique'.($dt->agent?->directedDelegation ? ' — '.$dt->agent->directedDelegation->region : ''),
+                'role_label' => 'Directeur Technique' . ($dt->agent?->directedDelegation ? ' — ' . $dt->agent->directedDelegation->region : ''),
             ]);
         }
 
@@ -66,16 +70,19 @@ class DgaSubObjectifController extends Controller
         return $subordonnes;
     }
 
+    /**
+     * Affiche le formulaire de création de fiche d'objectifs.
+     */
     public function create(Request $request): View
     {
         $this->checkDga();
-
+        $this->authorize('objectifs.assigner');
 
         $subordonnes = $this->getSubordonnes()->values();
         $requestedId = (int) $request->integer('subordonne_id');
         $selectedSubordonne = $subordonnes->firstWhere('id', $requestedId);
 
-        if (! $selectedSubordonne && $subordonnes->count() === 1) {
+        if (!$selectedSubordonne && $subordonnes->count() === 1) {
             $selectedSubordonne = $subordonnes->first();
         }
 
@@ -85,17 +92,16 @@ class DgaSubObjectifController extends Controller
         ]);
     }
 
+    /**
+     * Enregistre la fiche d'objectifs et redirige (Méthode POST).
+     */
     public function store(Request $request): RedirectResponse
     {
         $this->checkDga();
+        $this->authorize('objectifs.assigner');
 
-
-        $subordonnes       = $this->getSubordonnes()->values();
-        $allowedIds        = $subordonnes->pluck('id')->map(fn ($id) => (int) $id)->all();
-
-        if (blank($request->input('subordonne_id')) && count($allowedIds) === 1) {
-            $request->merge(['subordonne_id' => $allowedIds[0]]);
-        }
+        $subordonnes = $this->getSubordonnes()->values();
+        $allowedIds = $subordonnes->pluck('id')->map(fn ($id) => (int) $id)->all();
 
         $validated = $request->validate([
             'titre_fiche'   => ['required', 'string', 'max:255'],
@@ -105,111 +111,80 @@ class DgaSubObjectifController extends Controller
             'objectifs.*'   => ['required', 'string', 'max:5000'],
         ]);
 
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        $subordonne = User::findOrFail($validated['subordonne_id']);
+
+        // ASSIGNATION STRICTE A LA PERSONNE (User)
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee'                 => now()->year,
             'annee_id'              => Annee::resolveIdForDate(now()),
             'assignable_type'       => User::class,
-            'assignable_id'         => $validated['subordonne_id'],
+            'assignable_id'         => $subordonne->id,
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
             'statut'                => 'en_attente',
         ]);
 
-        foreach ($validated['objectifs'] as $desc) {
+        foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
-
-        $subordonne = User::findOrFail($validated['subordonne_id']);
 
         Alerte::notifier(
             $subordonne->id,
             'Nouvelle fiche d\'objectifs reçue',
-            "Le Directeur Général Adjoint vous a assigné une fiche d'objectifs « {$fiche->titre} ». Connectez-vous pour l'examiner.",
+            "Le DGA vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
             'haute'
         );
 
-        return redirect(route('dga.subordonnes.show', $subordonne).'?tab=objectifs')
-            ->with('status', "Fiche d'objectifs assignée avec succès à {$subordonne->name}.");
+        // RÉPARATION DE LA REDIRECTION : On redirige vers le profil du subordonné (Route GET)
+        return redirect()->route('dga.subordonnes.show', $subordonne->id)
+            ->with('status', "Fiche d'objectifs assignée avec succès.");
     }
 
+    /**
+     * Affiche une fiche d'objectifs spécifique.
+     */
     public function show(FicheObjectif $fiche): View
     {
         $this->checkDga();
-
-        // Vérifier que la fiche appartient à un subordonné du DGA
-        $subordonnes = $this->getSubordonnes();
-        $allowedIds  = $subordonnes->pluck('id')->all();
-
-        if (
-            $fiche->assignable_type !== User::class ||
-            ! in_array((int) $fiche->assignable_id, $allowedIds, true)
-        ) {
-            abort(403);
-        }
+        $this->authorize('objectifs.voir-equipe');
 
         $fiche->load(['objectifs', 'assignable']);
-        $subordonne = $fiche->assignable;
+        
+        // Résolution du subordonné pour l'affichage (cas DT ou User)
+        $subordonne = $fiche->assignable_type === User::class 
+            ? $fiche->assignable 
+            : User::where('agent_id', $fiche->assignable->directeur_agent_id)->first();
 
         return view('dga.subordonnes.objectifs.show', compact('fiche', 'subordonne'));
     }
 
-    public function avancement(Request $request, FicheObjectif $fiche): RedirectResponse
-    {
-        $this->checkDga();
-
-
-        $subordonnes = $this->getSubordonnes();
-        $allowedIds  = $subordonnes->pluck('id')->all();
-
-        if (
-            $fiche->assignable_type !== User::class ||
-            ! in_array((int) $fiche->assignable_id, $allowedIds, true)
-        ) {
-            abort(403);
-        }
-
-        $request->validate([
-            'avancement_percentage' => ['required', 'integer', 'min:0', 'max:100'],
-        ]);
-
-        if (((int) $request->avancement_percentage) % 5 !== 0) {
-            return back()->with('error', "L'avancement doit être un multiple de 5.");
-        }
-
-        $fiche->avancement_percentage = $request->avancement_percentage;
-        $fiche->save();
-
-        return redirect()->route('dga.sub-objectifs.show', $fiche)
-            ->with('status', 'Avancement mis à jour.');
-    }
-
+    /**
+     * Supprime une fiche d'objectifs.
+     */
     public function destroy(FicheObjectif $fiche): RedirectResponse
     {
         $this->checkDga();
-
-        $subordonnes = $this->getSubordonnes();
-        $allowedIds  = $subordonnes->pluck('id')->all();
-
-        if (
-            $fiche->assignable_type !== User::class ||
-            ! in_array((int) $fiche->assignable_id, $allowedIds, true)
-        ) {
-            abort(403);
-        }
+        $this->authorize('objectifs.assigner');
 
         if ($fiche->statut === 'acceptee') {
-            return back()->with('error', 'Une fiche acceptée ne peut pas être supprimée.');
+            return back()->with('error', 'Impossible de supprimer une fiche acceptée.');
         }
 
-        $subordonne = User::find($fiche->assignable_id);
+        // Récupération de l'ID pour la redirection avant suppression
+        $subordonneId = $fiche->assignable_type === User::class 
+            ? $fiche->assignable_id 
+            : User::where('agent_id', $fiche->assignable->directeur_agent_id)->value('id');
+
         $fiche->delete();
 
-        $redirectUrl = $subordonne
-            ? route('dga.subordonnes.show', $subordonne).'?tab=objectifs'
-            : route('dga.subordonnes.index');
-
-        return redirect($redirectUrl)->with('status', "Fiche d'objectifs supprimée.");
+        return redirect()->route('dga.subordonnes.show', $subordonneId)
+            ->with('status', "Fiche d'objectifs supprimée.");
     }
 }

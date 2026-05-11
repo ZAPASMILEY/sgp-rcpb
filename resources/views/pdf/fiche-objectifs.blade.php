@@ -43,7 +43,7 @@
             </td>
             <td>
                 <span class="meta-label">Annee</span>
-                <span class="meta-value">{{ $fiche->annee }}</span>
+                <span class="meta-value">{{ $fiche->annee?->annee ?? $fiche->annee_id }}</span>
             </td>
             <td>
                 <span class="meta-label">Assignee a</span>

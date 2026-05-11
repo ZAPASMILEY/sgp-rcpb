@@ -3,41 +3,116 @@
 @section('title', 'Tableau de bord | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
 
-        {{-- Header --}}
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    {{-- ── Hero Banner ────────────────────────────────────────────────────── --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+
+        {{-- Decorative blurs --}}
+        <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-10 left-1/3 h-48 w-48 rounded-full bg-teal-400/10 blur-2xl"></div>
+
+        <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+
+            {{-- Identity --}}
+            <div class="flex items-center gap-5">
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl font-black text-white shadow-lg ring-1 ring-white/20">
+                    {{ strtoupper(substr(auth()->user()->name ?? 'D', 0, 1)) }}
+                </div>
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Espace DG / Pilotage</p>
-                    <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Tableau de bord — Réseau RCPB</h1>
-                    <p class="mt-1 text-sm text-slate-500">Vue consolidée de toutes les évaluations du réseau.</p>
+                    <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-200">Directeur Général · Pilotage Réseau</p>
+                    <h1 class="mt-0.5 text-2xl font-black text-white">{{ auth()->user()->name }}</h1>
+                    <p class="mt-0.5 text-sm text-emerald-100/80">Vue consolidée de toutes les évaluations du réseau RCPB</p>
                 </div>
             </div>
-        </header>
+
+            {{-- Filters in hero --}}
+            <form method="GET" action="{{ route('dg.dashboard') }}" class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 backdrop-blur-sm ring-1 ring-white/20">
+                    <i class="fas fa-search text-emerald-200 text-xs"></i>
+                    <input type="text" name="search" value="{{ $filters['search'] }}"
+                        placeholder="Rechercher…"
+                        class="w-36 bg-transparent text-sm font-semibold text-white placeholder-emerald-300 outline-none">
+                </div>
+                <select name="statut" onchange="this.form.submit()"
+                    class="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm ring-1 ring-white/20 outline-none cursor-pointer">
+                    <option value="" class="text-slate-900">Tous statuts</option>
+                    <option value="soumis"  class="text-slate-900" {{ $filters['statut'] === 'soumis'  ? 'selected' : '' }}>Soumises</option>
+                    <option value="valide"  class="text-slate-900" {{ $filters['statut'] === 'valide'  ? 'selected' : '' }}>Validées</option>
+                    <option value="refuse"  class="text-slate-900" {{ $filters['statut'] === 'refuse'  ? 'selected' : '' }}>Refusées</option>
+                </select>
+                @if ($annees->isNotEmpty())
+                <select name="annee" onchange="this.form.submit()"
+                    class="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm ring-1 ring-white/20 outline-none cursor-pointer">
+                    <option value="" class="text-slate-900">Toutes années</option>
+                    @foreach ($annees as $annee)
+                        <option value="{{ $annee->id }}" class="text-slate-900" {{ $filters['anneeId'] == $annee->id ? 'selected' : '' }}>
+                            {{ $annee->annee }}
+                        </option>
+                    @endforeach
+                </select>
+                @endif
+                <button type="submit"
+                    class="inline-flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2.5 text-sm font-black text-white ring-1 ring-white/30 transition hover:bg-white/30">
+                    <i class="fas fa-filter text-xs"></i> Filtrer
+                </button>
+                @if ($filters['search'] || $filters['statut'] || $filters['anneeId'])
+                    <a href="{{ route('dg.dashboard') }}"
+                       class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 text-xs font-bold text-emerald-200 ring-1 ring-white/20 transition hover:bg-white/20">
+                        <i class="fas fa-times"></i>
+                    </a>
+                @endif
+            </form>
+        </div>
+
+        {{-- Meta-stats inside hero --}}
+        <div class="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            @php
+                $heroStats = [
+                    ['label' => 'Total évaluations', 'value' => $stats['total'],   'icon' => 'fas fa-clipboard-list'],
+                    ['label' => 'Validées',           'value' => $stats['valide'],  'icon' => 'fas fa-circle-check'],
+                    ['label' => 'En attente',         'value' => $stats['soumis'],  'icon' => 'fas fa-hourglass-half'],
+                    ['label' => 'Note excellente',    'value' => $stats['excellent'],'icon'=> 'fas fa-star'],
+                ];
+            @endphp
+            @foreach ($heroStats as $hs)
+            <div class="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/20">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white text-sm">
+                    <i class="{{ $hs['icon'] }}"></i>
+                </span>
+                <div>
+                    <p class="text-xl font-black text-white">{{ $hs['value'] }}</p>
+                    <p class="text-[10px] font-semibold text-emerald-200">{{ $hs['label'] }}</p>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+
+    <div class="px-4 pt-6 lg:px-8">
+        <div class="flex flex-col gap-6">
 
         @if (session('status'))
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {{ session('status') }}
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+                <i class="fas fa-check-circle mr-2"></i>{{ session('status') }}
             </div>
         @endif
 
         {{-- KPI cards ──────────────────────────────────────────────────────── --}}
         @php
         $kpis = [
-            ['label' => 'Total évaluations', 'value' => $stats['total'],   'icon' => 'fas fa-clipboard-list', 'color' => 'bg-slate-700',   'light' => 'bg-slate-50 border-slate-200'],
-            ['label' => 'Soumises',          'value' => $stats['soumis'],  'icon' => 'fas fa-paper-plane',    'color' => 'bg-amber-500',    'light' => 'bg-amber-50 border-amber-200'],
-            ['label' => 'Validées',          'value' => $stats['valide'],  'icon' => 'fas fa-circle-check',   'color' => 'bg-emerald-600',  'light' => 'bg-emerald-50 border-emerald-200'],
-            ['label' => 'Excellent (≥8,5)',  'value' => $stats['excellent'],'icon'=> 'fas fa-star',           'color' => 'bg-emerald-500',  'light' => 'bg-emerald-50 border-emerald-200'],
-            ['label' => 'Bien (7–8,5)',      'value' => $stats['bien'],    'icon' => 'fas fa-thumbs-up',      'color' => 'bg-sky-500',      'light' => 'bg-sky-50 border-sky-200'],
-            ['label' => 'Passable (5–7)',    'value' => $stats['passable'],'icon' => 'fas fa-minus-circle',   'color' => 'bg-amber-400',    'light' => 'bg-amber-50 border-amber-100'],
-            ['label' => 'Insuffisant (<5)',  'value' => $stats['insuffisant'],'icon'=>'fas fa-triangle-exclamation','color'=>'bg-rose-500', 'light' => 'bg-rose-50 border-rose-200'],
+            ['label' => 'Total',          'value' => $stats['total'],      'icon' => 'fas fa-clipboard-list',        'color' => 'bg-slate-700',   'light' => 'bg-slate-50 border-slate-200'],
+            ['label' => 'Soumises',       'value' => $stats['soumis'],     'icon' => 'fas fa-paper-plane',           'color' => 'bg-amber-500',   'light' => 'bg-amber-50 border-amber-200'],
+            ['label' => 'Validées',       'value' => $stats['valide'],     'icon' => 'fas fa-circle-check',          'color' => 'bg-emerald-600', 'light' => 'bg-emerald-50 border-emerald-200'],
+            ['label' => 'Excellent ≥8,5', 'value' => $stats['excellent'],  'icon' => 'fas fa-star',                  'color' => 'bg-emerald-500', 'light' => 'bg-emerald-50 border-emerald-100'],
+            ['label' => 'Bien 7–8,5',     'value' => $stats['bien'],       'icon' => 'fas fa-thumbs-up',             'color' => 'bg-sky-500',     'light' => 'bg-sky-50 border-sky-200'],
+            ['label' => 'Passable 5–7',   'value' => $stats['passable'],   'icon' => 'fas fa-minus-circle',          'color' => 'bg-amber-400',   'light' => 'bg-amber-50 border-amber-100'],
+            ['label' => 'Insuffisant <5', 'value' => $stats['insuffisant'],'icon' => 'fas fa-triangle-exclamation',  'color' => 'bg-rose-500',    'light' => 'bg-rose-50 border-rose-200'],
         ];
         @endphp
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             @foreach ($kpis as $kpi)
-                <div class="flex flex-col rounded-2xl border px-4 py-4 shadow-sm {{ $kpi['light'] }}">
+                <div class="flex flex-col rounded-[20px] border px-4 py-4 shadow-sm {{ $kpi['light'] }}">
                     <div class="flex items-center justify-between gap-2">
                         <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 leading-tight">{{ $kpi['label'] }}</p>
                         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg {{ $kpi['color'] }} text-white text-xs">
@@ -49,85 +124,91 @@
             @endforeach
         </div>
 
-        {{-- Top / Bottom performers ────────────────────────────────────────── --}}
-        @if ($topEval || $bottomEval)
-        <div class="grid gap-4 sm:grid-cols-2">
-            @if ($topEval)
-            <div class="admin-panel flex items-center gap-4 px-5 py-4">
-                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 text-xl">
-                    <i class="fas fa-trophy"></i>
-                </span>
-                <div class="min-w-0">
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Meilleure note</p>
-                    <p class="truncate text-sm font-bold text-slate-900">{{ $topEval->identification?->nom_prenom ?? '—' }}</p>
-                    <p class="text-xs text-slate-500">{{ $topEval->identification?->emploi ?? $topEval->evaluable_role }}</p>
-                </div>
-                <span class="ml-auto text-2xl font-black text-emerald-600">{{ number_format((float)$topEval->note_finale, 2, ',', ' ') }}</span>
+        {{-- Charts + Performers row ────────────────────────────────────────── --}}
+        <div class="grid gap-4 lg:grid-cols-3">
+
+            {{-- Donut évaluations --}}
+            <div class="rounded-[24px] bg-white px-6 py-5 shadow-sm ring-1 ring-slate-100">
+                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 mb-4">Distribution des statuts</p>
+                <div id="dg-eval-donut" class="h-52"></div>
             </div>
-            @endif
-            @if ($bottomEval)
-            <div class="admin-panel flex items-center gap-4 px-5 py-4">
-                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-500 text-xl">
-                    <i class="fas fa-arrow-trend-down"></i>
-                </span>
-                <div class="min-w-0">
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Note la plus basse</p>
-                    <p class="truncate text-sm font-bold text-slate-900">{{ $bottomEval->identification?->nom_prenom ?? '—' }}</p>
-                    <p class="text-xs text-slate-500">{{ $bottomEval->identification?->emploi ?? $bottomEval->evaluable_role }}</p>
-                </div>
-                <span class="ml-auto text-2xl font-black text-rose-500">{{ number_format((float)$bottomEval->note_finale, 2, ',', ' ') }}</span>
+
+            {{-- Donut mentions --}}
+            <div class="rounded-[24px] bg-white px-6 py-5 shadow-sm ring-1 ring-slate-100">
+                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 mb-4">Distribution des mentions</p>
+                <div id="dg-mention-donut" class="h-52"></div>
             </div>
-            @endif
+
+            {{-- Top / Bottom performers --}}
+            <div class="flex flex-col gap-3">
+                @if ($topEval)
+                <div class="flex items-center gap-4 rounded-[24px] bg-white px-5 py-4 shadow-sm ring-1 ring-slate-100">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 text-xl">
+                        <i class="fas fa-trophy"></i>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Meilleure note</p>
+                        <p class="truncate text-sm font-bold text-slate-900">{{ $topEval->identification?->nom_prenom ?? '—' }}</p>
+                        <p class="text-xs text-slate-500">{{ $topEval->identification?->emploi ?? $topEval->evaluable_role }}</p>
+                    </div>
+                    <span class="text-2xl font-black text-emerald-600">{{ number_format((float)$topEval->note_finale, 2, ',', ' ') }}</span>
+                </div>
+                @endif
+                @if ($bottomEval)
+                <div class="flex items-center gap-4 rounded-[24px] bg-white px-5 py-4 shadow-sm ring-1 ring-slate-100">
+                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-500 text-xl">
+                        <i class="fas fa-arrow-trend-down"></i>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Note la plus basse</p>
+                        <p class="truncate text-sm font-bold text-slate-900">{{ $bottomEval->identification?->nom_prenom ?? '—' }}</p>
+                        <p class="text-xs text-slate-500">{{ $bottomEval->identification?->emploi ?? $bottomEval->evaluable_role }}</p>
+                    </div>
+                    <span class="text-2xl font-black text-rose-500">{{ number_format((float)$bottomEval->note_finale, 2, ',', ' ') }}</span>
+                </div>
+                @endif
+                @if (!$topEval && !$bottomEval)
+                <div class="flex flex-1 items-center justify-center rounded-[24px] bg-white px-5 py-8 shadow-sm ring-1 ring-slate-100 text-center">
+                    <div>
+                        <i class="fas fa-chart-bar text-3xl text-slate-200"></i>
+                        <p class="mt-2 text-xs text-slate-400">Aucune évaluation validée</p>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- Alert pending --}}
+        @if ($stats['soumis'] > 0)
+        <div class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3">
+            <i class="fas fa-hourglass-half text-amber-500"></i>
+            <p class="text-sm font-semibold text-amber-700">
+                <span class="font-black">{{ $stats['soumis'] }}</span> évaluation(s) soumise(s) en attente de validation.
+            </p>
         </div>
         @endif
 
-        {{-- Filtres ────────────────────────────────────────────────────────── --}}
-        <form method="GET" action="{{ route('dg.dashboard') }}" class="admin-panel px-5 py-4">
-            <div class="flex flex-wrap items-end gap-3">
-                <div class="flex-1 min-w-[180px]">
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Recherche</label>
-                    <input type="text" name="search" value="{{ $filters['search'] }}"
-                        placeholder="Nom, emploi…"
-                        class="ent-input w-full">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Statut</label>
-                    <select name="statut" class="ent-input">
-                        <option value="">Tous</option>
-                        <option value="soumis"  {{ $filters['statut'] === 'soumis'  ? 'selected' : '' }}>Soumises</option>
-                        <option value="valide"  {{ $filters['statut'] === 'valide'  ? 'selected' : '' }}>Validées</option>
-                        <option value="refuse"  {{ $filters['statut'] === 'refuse'  ? 'selected' : '' }}>Refusées</option>
-                    </select>
-                </div>
-                @if ($annees->isNotEmpty())
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Année</label>
-                    <select name="annee" class="ent-input">
-                        <option value="">Toutes</option>
-                        @foreach ($annees as $annee)
-                            <option value="{{ $annee->id }}" {{ $filters['anneeId'] == $annee->id ? 'selected' : '' }}>
-                                {{ $annee->annee }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                @endif
-                <button type="submit" class="ent-btn ent-btn-primary">
-                    <i class="fas fa-filter mr-2"></i>Filtrer
-                </button>
-                @if ($filters['search'] || $filters['statut'] || $filters['anneeId'])
-                    <a href="{{ route('dg.dashboard') }}" class="ent-btn ent-btn-soft">Réinitialiser</a>
-                @endif
-            </div>
-        </form>
-
         {{-- Tableau des évaluations ─────────────────────────────────────────── --}}
-        <section class="admin-panel overflow-hidden">
-            <div class="border-b border-slate-100 px-6 py-4">
-                <h2 class="text-sm font-black uppercase tracking-widest text-slate-700">
-                    Évaluations du réseau
-                    <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">{{ $evaluations->total() }}</span>
-                </h2>
+        <section class="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-slate-100">
+            <div class="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Réseau RCPB</p>
+                    <h2 class="mt-0.5 text-sm font-black text-slate-800">
+                        Évaluations du réseau
+                        <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">{{ $evaluations->total() }}</span>
+                    </h2>
+                </div>
+                @if($evaluationsEnabled)
+                    <a href="{{ route('dg.sub-evaluations.create') }}"
+                       class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700">
+                        <i class="fas fa-plus"></i> Nouvelle évaluation
+                    </a>
+                @else
+                    <span title="Fonctionnalité désactivée par l'administrateur"
+                          class="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-slate-300 px-4 py-2 text-xs font-black text-slate-500 opacity-60 select-none">
+                        <i class="fas fa-plus"></i> Nouvelle évaluation
+                    </span>
+                @endif
             </div>
 
             @if ($evaluations->isEmpty())
@@ -188,26 +269,31 @@
                                     <td class="px-4 py-3 text-slate-500">{{ $emploi }}</td>
                                     <td class="px-4 py-3 text-slate-500 whitespace-nowrap">{{ $periode }}</td>
                                     <td class="px-4 py-3 text-right">
-                                        <span class="text-base font-black text-slate-900">{{ number_format($note, 2, ',', ' ') }}</span>
-                                        <div class="mt-1 h-1.5 w-20 rounded-full bg-slate-100 ml-auto">
-                                            <div class="h-1.5 rounded-full {{ $barColor }}" style="width: {{ $pct }}%"></div>
-                                        </div>
+                                        @if ($note > 0)
+                                            <span class="text-base font-black text-slate-900">{{ number_format($note, 2, ',', ' ') }}</span>
+                                            <div class="mt-1 h-1.5 w-20 rounded-full bg-slate-100 ml-auto">
+                                                <div class="h-1.5 rounded-full {{ $barColor }}" style="width: {{ $pct }}%"></div>
+                                            </div>
+                                        @else
+                                            <span class="text-slate-300">—</span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3">
-                                        <span class="rounded-full px-2 py-0.5 text-[11px] font-black {{ $mention['cls'] }}">
-                                            {{ $mention['label'] }}
-                                        </span>
+                                        @if ($note > 0)
+                                            <span class="rounded-full px-2 py-0.5 text-[11px] font-black {{ $mention['cls'] }}">{{ $mention['label'] }}</span>
+                                        @else
+                                            <span class="text-xs text-slate-300">—</span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3">
-                                        <span class="rounded-full px-2 py-0.5 text-[11px] font-black {{ $statutCls }}">
-                                            {{ $statutLabel }}
-                                        </span>
+                                        <span class="rounded-full px-2 py-0.5 text-[11px] font-black {{ $statutCls }}">{{ $statutLabel }}</span>
                                     </td>
                                     <td class="px-4 py-3 text-slate-500">{{ $eval->evaluateur?->name ?? '—' }}</td>
                                     <td class="px-4 py-3 text-center">
                                         @if ($evalRoute)
-                                            <a href="{{ $evalRoute }}" class="ent-btn ent-btn-soft py-1 px-3 text-xs">
-                                                <i class="fas fa-eye mr-1"></i>Voir
+                                            <a href="{{ $evalRoute }}"
+                                               class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700">
+                                                <i class="fas fa-eye text-[10px]"></i> Voir
                                             </a>
                                         @else
                                             <span class="text-xs text-slate-300">—</span>
@@ -227,6 +313,51 @@
             @endif
         </section>
 
+        </div>
     </div>
 </div>
+
+{{-- Chart data --}}
+<script>
+window._dgEvalChart = {!! json_encode([
+    'labels' => ['Validées', 'Soumises', 'Refusées'],
+    'series' => [$stats['valide'], $stats['soumis'], 0],
+    'colors' => ['#10b981', '#f59e0b', '#ef4444'],
+]) !!};
+window._dgMentionChart = {!! json_encode([
+    'labels' => ['Excellent', 'Bien', 'Passable', 'Insuffisant'],
+    'series' => [$stats['excellent'], $stats['bien'], $stats['passable'], $stats['insuffisant']],
+    'colors' => ['#10b981', '#0ea5e9', '#f59e0b', '#ef4444'],
+]) !!};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+(function () {
+    function donutOpts(data, id) {
+        var isEmpty = data.series.every(function(v){ return v === 0; });
+        return {
+            series: isEmpty ? [1] : data.series,
+            labels: isEmpty ? ['Aucune donnée'] : data.labels,
+            colors: isEmpty ? ['#e2e8f0'] : data.colors,
+            chart: { type: 'donut', height: 200, fontFamily: 'inherit', toolbar: { show: false } },
+            legend: { position: 'bottom', fontSize: '10px', fontWeight: 700,
+                offsetY: 4, markers: { radius: 4, width: 8, height: 8 } },
+            dataLabels: { enabled: false },
+            plotOptions: { pie: { donut: { size: '68%',
+                labels: { show: !isEmpty, total: { show: true, label: 'Total',
+                    fontSize: '10px', fontWeight: 700, color: '#64748b',
+                    formatter: function(w){ return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0); }
+                }}}}},
+            stroke: { width: 0 },
+            tooltip: { theme: 'light' },
+        };
+    }
+
+    var evalData    = window._dgEvalChart;
+    var mentionData = window._dgMentionChart;
+
+    new ApexCharts(document.getElementById('dg-eval-donut'), donutOpts(evalData, 'eval')).render();
+    new ApexCharts(document.getElementById('dg-mention-donut'), donutOpts(mentionData, 'mention')).render();
+})();
+</script>
 @endsection

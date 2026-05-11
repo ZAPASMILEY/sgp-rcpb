@@ -6,13 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Alerte;
 use App\Models\Evaluation;
 use App\Models\User;
+use App\Services\EvaluationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class EvaluationController extends Controller
 {
+    public function __construct(private readonly EvaluationService $evaluationService) {}
     public function show(Request $request, Evaluation $evaluation)
     {
+        $this->authorize('evaluations.voir-propres');
         // Le DG ne peut voir l'évaluation qu'une fois soumise ou validée
         if ($evaluation->statut === 'brouillon') {
             abort(403, "Cette évaluation n'a pas encore été soumise.");
@@ -23,6 +27,7 @@ class EvaluationController extends Controller
 
     public function exportPdf(Request $request, Evaluation $evaluation)
     {
+        $this->authorize('evaluations.exporter-pdf');
         if ($evaluation->evaluable_type !== User::class) {
             abort(403);
         }
@@ -37,7 +42,7 @@ class EvaluationController extends Controller
         $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres']);
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
-        $mention    = $this->mentionFromScore((float) $evaluation->note_finale);
+        $mention    = $this->evaluationService->mention((float) $evaluation->note_finale);
         $cibleLabel = $evaluation->identification->nom_prenom ?? 'DG';
         $cibleType  = 'Directeur Général';
 
@@ -55,6 +60,7 @@ class EvaluationController extends Controller
 
     public function statut(Request $request, Evaluation $evaluation): RedirectResponse
     {
+        $this->authorize('evaluations.accepter');
         if ($evaluation->evaluable_type !== User::class) {
             abort(403);
         }
@@ -90,6 +96,7 @@ class EvaluationController extends Controller
 
     public function commentaire(Request $request, Evaluation $evaluation)
     {
+        $this->authorize('evaluations.voir-propres');
         // Seul le DG évalué peut saisir son commentaire
         if ($evaluation->evaluable_type !== User::class) {
             abort(403);
@@ -118,17 +125,4 @@ class EvaluationController extends Controller
             ->with('status', 'Votre commentaire a été enregistré.');
     }
 
-    private function mentionFromScore(float $score): string
-    {
-        if ($score < 5) {
-            return 'Insuffisant';
-        }
-        if ($score < 7) {
-            return 'Passable';
-        }
-        if ($score < 8.5) {
-            return 'Bien';
-        }
-        return 'Excellent';
-    }
 }

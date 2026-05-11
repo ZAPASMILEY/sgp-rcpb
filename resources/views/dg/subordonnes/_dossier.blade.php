@@ -51,7 +51,7 @@
                             @endphp
                             <tr class="border-t border-slate-100 hover:bg-slate-50">
                                 <td class="px-4 py-3 font-semibold">{{ $fiche->titre }}</td>
-                                <td class="px-4 py-3">{{ $fiche->annee }}</td>
+                                <td class="px-4 py-3">{{ $fiche->annee?->annee ?? $fiche->annee_id }}</td>
                                 <td class="px-4 py-3">{{ $fiche->date_echeance ? \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') : '-' }}</td>
                                 <td class="px-4 py-3">
                                     <span class="rounded-full px-2 py-1 text-xs font-bold {{ $statutColors[$fiche->statut] ?? 'bg-slate-100 text-slate-500' }}">

@@ -57,22 +57,127 @@
                             <p class="mt-1 text-sm text-slate-500">Sélectionnez le service évalué, la période concernée et vérifiez les informations.</p>
                         </div>
 
-                        {{-- Service cible --}}
-                        @if ($lockService && $resolvedService)
+                        {{-- Cible de l'évaluation : Caisse (DT), Agence (Dir.Caisse) ou Service --}}
+                        @if ($selectedCaisse ?? false)
+                            @php
+                                $dirCaisseAgent = $selectedCaisse->directeurAgent;
+                                $dirCaisseNom = $dirCaisseAgent
+                                    ? trim($dirCaisseAgent->prenom . ' ' . $dirCaisseAgent->nom)
+                                    : '—';
+                            @endphp
+                            <div class="rounded-2xl border border-violet-100 bg-violet-50/70 px-4 py-4">
+                                <p class="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Directeur de caisse évalué</p>
+                                <p class="mt-2 text-base font-black text-slate-900">{{ $dirCaisseNom }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ $selectedCaisse->nom }}</p>
+                                <input type="hidden" name="caisse_id" value="{{ $selectedCaisse->id }}">
+                            </div>
+                        @elseif ($selectedAgence)
+                            @php
+                                $chefAgenceAgent = $selectedAgence->chef;
+                                $chefAgenceNom = $chefAgenceAgent
+                                    ? trim($chefAgenceAgent->prenom . ' ' . $chefAgenceAgent->nom)
+                                    : '—';
+                            @endphp
+                            <div class="rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-4">
+                                <p class="text-xs font-black uppercase tracking-[0.16em] text-sky-700">Chef d'agence évalué</p>
+                                <p class="mt-2 text-base font-black text-slate-900">{{ $chefAgenceNom }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ $selectedAgence->nom }}</p>
+                                <input type="hidden" name="agence_id" value="{{ $selectedAgence->id }}">
+                            </div>
+                        @elseif ($lockService && $resolvedService)
+                            @php
+                                $chefServiceAgent = $resolvedService->chef;
+                                $chefServiceNom = $chefServiceAgent
+                                    ? trim($chefServiceAgent->prenom . ' ' . $chefServiceAgent->nom)
+                                    : '—';
+                            @endphp
                             <div class="rounded-2xl border border-cyan-100 bg-cyan-50/70 px-4 py-4">
-                                <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Service évalué</p>
-                                <p class="mt-2 text-base font-black text-slate-900">{{ $resolvedService->nom }}</p>
-                                <p class="mt-1 text-sm text-slate-500">Chef de service</p>
+                                <p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Chef de service évalué</p>
+                                <p class="mt-2 text-base font-black text-slate-900">{{ $chefServiceNom }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ $resolvedService->nom }}</p>
                                 <input type="hidden" name="service_id" value="{{ $resolvedService->id }}">
+                            </div>
+                        @elseif (isset($ctx) && $ctx->hasCaisses() && $caisses->isNotEmpty())
+                            <div class="space-y-4">
+                                <div class="space-y-2">
+                                    <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Directeur de caisse évalué</label>
+                                    <select name="caisse_id" class="ent-select">
+                                        <option value="">— Sélectionner un directeur de caisse —</option>
+                                        @foreach ($caisses as $cai)
+                                            @php
+                                                $dirNom = $cai->directeurAgent
+                                                    ? trim($cai->directeurAgent->prenom . ' ' . $cai->directeurAgent->nom)
+                                                    : $cai->nom;
+                                            @endphp
+                                            <option value="{{ $cai->id }}" @selected(old('caisse_id') == $cai->id)>{{ $dirNom }} ({{ $cai->nom }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @if ($services->isNotEmpty())
+                                <div class="space-y-2">
+                                    <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">— ou — Chef de service évalué</label>
+                                    <select name="service_id" class="ent-select">
+                                        <option value="">— Sélectionner un chef de service —</option>
+                                        @foreach ($services as $svc)
+                                            @php
+                                                $chefNom = $svc->chef
+                                                    ? trim($svc->chef->prenom . ' ' . $svc->chef->nom)
+                                                    : $svc->nom;
+                                            @endphp
+                                            <option value="{{ $svc->id }}" @selected(old('service_id') == $svc->id)>{{ $chefNom }} ({{ $svc->nom }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @endif
+                                <p class="text-xs text-slate-400">Sélectionnez soit un directeur de caisse, soit un chef de service — pas les deux.</p>
+                            </div>
+                        @elseif (isset($ctx) && $ctx->hasAgences() && $agences->isNotEmpty())
+                            <div class="space-y-4">
+                                <div class="space-y-2">
+                                    <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Chef d'agence évalué</label>
+                                    <select name="agence_id" class="ent-select">
+                                        <option value="">— Sélectionner un chef d'agence —</option>
+                                        @foreach ($agences as $agc)
+                                            @php
+                                                $chefNom = $agc->chef
+                                                    ? trim($agc->chef->prenom . ' ' . $agc->chef->nom)
+                                                    : $agc->nom;
+                                            @endphp
+                                            <option value="{{ $agc->id }}" @selected(old('agence_id') == $agc->id)>{{ $chefNom }} ({{ $agc->nom }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @if ($services->isNotEmpty())
+                                <div class="space-y-2">
+                                    <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">— ou — Chef de service évalué</label>
+                                    <select name="service_id" class="ent-select">
+                                        <option value="">— Sélectionner un chef de service —</option>
+                                        @foreach ($services as $svc)
+                                            @php
+                                                $chefNom = $svc->chef
+                                                    ? trim($svc->chef->prenom . ' ' . $svc->chef->nom)
+                                                    : $svc->nom;
+                                            @endphp
+                                            <option value="{{ $svc->id }}" @selected(old('service_id') == $svc->id)>{{ $chefNom }} ({{ $svc->nom }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @endif
+                                <p class="text-xs text-slate-400">Sélectionnez soit un chef d'agence, soit un chef de service — pas les deux.</p>
                             </div>
                         @else
                             <div class="space-y-2">
-                                <label for="service_id" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Service évalué</label>
+                                <label for="service_id" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Chef de service évalué</label>
                                 <select id="service_id" name="service_id" class="ent-select" required>
-                                    <option value="">Sélectionner un service</option>
+                                    <option value="">Sélectionner un chef de service</option>
                                     @foreach ($services as $svc)
+                                        @php
+                                            $chefNom = $svc->chef
+                                                ? trim($svc->chef->prenom . ' ' . $svc->chef->nom)
+                                                : $svc->nom;
+                                        @endphp
                                         <option value="{{ $svc->id }}" @selected($resolvedServiceId === (int) $svc->id)>
-                                            {{ $svc->nom }}
+                                            {{ $chefNom }} ({{ $svc->nom }})
                                         </option>
                                     @endforeach
                                 </select>
@@ -115,32 +220,32 @@
                             <div class="space-y-2">
                                 <label for="identification_date_evaluation" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date de l'évaluation</label>
                                 <input id="identification_date_evaluation" name="identification[date_evaluation]" type="text"
-                                       value="{{ old('identification.date_evaluation') }}" class="ent-input" placeholder="JJ/MM/YYYY" autocomplete="off">
+                                       value="{{ old('identification.date_evaluation') }}" class="ent-input bg-slate-50 text-slate-600" placeholder="JJ/MM/YYYY" readonly>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_matricule" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Matricule</label>
                                 <input id="identification_matricule" name="identification[matricule]" type="text"
-                                       value="{{ old('identification.matricule') }}" class="ent-input">
+                                       value="{{ old('identification.matricule') }}" class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_emploi" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Emploi</label>
                                 <input id="identification_emploi" name="identification[emploi]" type="text"
-                                       value="{{ old('identification.emploi', 'Chef de service') }}" class="ent-input">
+                                       value="{{ old('identification.emploi', $prefilledEmploi ?? '') }}" class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_nom_prenom" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Nom et prénom</label>
                                 <input id="identification_nom_prenom" name="identification[nom_prenom]" type="text"
-                                       value="{{ old('identification.nom_prenom') }}" class="ent-input">
+                                       value="{{ old('identification.nom_prenom', $prefilledNomPrenom ?? '') }}" class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_direction" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Entité</label>
                                 <input id="identification_direction" name="identification[direction]" type="text"
-                                       value="{{ old('identification.direction', $direction->nom ?? '') }}" class="ent-input">
+                                       value="{{ old('identification.direction', $entiteNom ?? '') }}" class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_direction_service" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Direction / Service</label>
                                 <input id="identification_direction_service" name="identification[direction_service]" type="text"
-                                       value="{{ old('identification.direction_service', $resolvedService?->nom ?? '') }}" class="ent-input">
+                                       value="{{ old('identification.direction_service', $prefilledDirectionService ?? $resolvedService?->nom ?? '') }}" class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                         </div>
 
@@ -320,6 +425,9 @@
     <script id="dg-eval-objective-old" type="application/json">@json(old('objective_criteres', []))</script>
     <script id="dg-eval-formations-old" type="application/json">@json($oldFormations ?? [['periode'=>'','libelle'=>'','domaine'=>'']])</script>
     <script id="dg-eval-experiences-old" type="application/json">@json($oldExperiences ?? [['periode'=>'','poste'=>'','observations'=>'']])</script>
+    <script id="dg-eval-services-data" type="application/json">@json($servicesJson ?? [])</script>
+    <script id="dg-eval-agences-data" type="application/json">@json($agencesJson ?? [])</script>
+    <script id="dg-eval-caisses-data" type="application/json">@json($caissesJson ?? [])</script>
 
     <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -614,6 +722,60 @@
     });
     </script>
 
+    {{-- Auto-remplissage des champs d'identification selon la cible sélectionnée --}}
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const servicesData = JSON.parse(document.getElementById('dg-eval-services-data')?.textContent || '[]');
+        const agencesData  = JSON.parse(document.getElementById('dg-eval-agences-data')?.textContent || '[]');
+        const caissesData  = JSON.parse(document.getElementById('dg-eval-caisses-data')?.textContent || '[]');
+
+        const fieldNomPrenom       = document.getElementById('identification_nom_prenom');
+        const fieldEmploi          = document.getElementById('identification_emploi');
+        const fieldDirection       = document.getElementById('identification_direction');
+        const fieldDirectionSvc    = document.getElementById('identification_direction_service');
+        const fieldSignatureEvalue = document.getElementById('signature_evalue_nom');
+
+        function fillIdent(data) {
+            if (!data) return;
+            if (fieldNomPrenom)    { fieldNomPrenom.value    = data.nom_prenom  ?? ''; }
+            if (fieldEmploi)       { fieldEmploi.value       = data.emploi      ?? ''; }
+            if (fieldDirection)    { fieldDirection.value    = data.entite_nom  ?? ''; }
+            if (fieldDirectionSvc) { fieldDirectionSvc.value = data.nom         ?? ''; }
+            // Sync vers la signature évalué
+            if (fieldSignatureEvalue && (!fieldSignatureEvalue.value || fieldSignatureEvalue.dataset.autoFilled)) {
+                fieldSignatureEvalue.value = data.nom_prenom ?? '';
+                fieldSignatureEvalue.dataset.autoFilled = '1';
+            }
+        }
+
+        const selService = document.querySelector('select[name="service_id"]');
+        const selAgence  = document.querySelector('select[name="agence_id"]');
+        const selCaisse  = document.querySelector('select[name="caisse_id"]');
+
+        if (selService) {
+            selService.addEventListener('change', function () {
+                const id   = parseInt(this.value, 10);
+                const data = servicesData.find(s => s.id === id) || null;
+                fillIdent(data);
+            });
+        }
+        if (selAgence) {
+            selAgence.addEventListener('change', function () {
+                const id   = parseInt(this.value, 10);
+                const data = agencesData.find(a => a.id === id) || null;
+                fillIdent(data);
+            });
+        }
+        if (selCaisse) {
+            selCaisse.addEventListener('change', function () {
+                const id   = parseInt(this.value, 10);
+                const data = caissesData.find(c => c.id === id) || null;
+                fillIdent(data);
+            });
+        }
+    });
+    </script>
+
     {{-- MM/YYYY date helpers --}}
     <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -663,11 +825,12 @@
             if (el && !el.value) el.value = todayISO();
         });
 
+        // Nom évalué → synchronisation initiale vers signature évalué (readonly, on lit juste la valeur)
         const nomIdent = document.getElementById('identification_nom_prenom');
         const nomSig   = document.getElementById('signature_evalue_nom');
-        if (nomIdent && nomSig) {
-            const syncNom = () => { if (nomSig.value === '' || nomSig.dataset.autoFilled) { nomSig.value = nomIdent.value; nomSig.dataset.autoFilled = '1'; } };
-            nomIdent.addEventListener('input', syncNom);
+        if (nomIdent && nomSig && nomIdent.value && !nomSig.value) {
+            nomSig.value = nomIdent.value;
+            nomSig.dataset.autoFilled = '1';
         }
 
         const dateEval = document.getElementById('identification_date_evaluation');

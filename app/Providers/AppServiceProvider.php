@@ -2,72 +2,112 @@
 
 namespace App\Providers;
 
-use App\Models\Agent;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Permission\Exceptions\RoleDoesNotExist;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
+    // Plus de ROLE_MAP — le nom du rôle Spatie est exactement la valeur de users.role.
+    // Ex : users.role = 'Directeur_Direction' → rôle Spatie 'Directeur_Direction'.
+    // Le seeder RolesAndPermissionsSeeder crée un rôle par valeur users.role.
+
+    public function register(): void {}
+
     /**
-     * Register any application services.
+     * Gate::before #1 — Bypass Admin pour tout sauf evaluations.* et objectifs.*
      */
-    public function register(): void
+    private function registerAdminBypass(): void
     {
-        //
+        Gate::before(function (User $user, string $ability) {
+            if (! $user->isAdmin()) {
+                return null; // pas admin → laisser les autres handlers décider
+            }
+
+            // L'admin gère le système mais n'évalue/n'assigne pas d'objectifs.
+            if (str_starts_with($ability, 'evaluations.') || str_starts_with($ability, 'objectifs.')) {
+                return null;
+            }
+
+            return true; // admin bypass pour tout le reste
+        });
     }
 
     /**
-     * Enregistre les 24 permissions du système comme Gates Laravel.
+     * Gate::before #2 — Pont users.role → permissions du rôle Spatie.
      *
-     * - Les Admins contournent toutes les vérifications (Gate::before).
-     * - Chaque permission est vérifiée via User::hasPermission() qui consulte
-     *   à la fois les permissions directes (permission_user) et celles héritées
-     *   des rôles (role_user → roles_has_permissions).
+     * Le nom du rôle Spatie est exactement la valeur de users.role.
+     * Ex : users.role = 'Directeur_Direction' → rôle Spatie 'Directeur_Direction'.
+     *
+     * Retourne true  si le rôle a la permission (accordé).
+     * Retourne null  sinon (fallthrough : permissions directes, autres handlers).
      */
-    private function registerPermissionGates(): void
+    private function registerRolePermissionBridge(): void
     {
-        // Les administrateurs ont accès à tout sans vérification.
-        Gate::before(fn (User $user, string $ability) => $user->isAdmin() ? true : null);
+        Gate::before(function (User $user, string $ability) {
+            $spatieRoleName = $user->role;
 
-        $permissions = [
-            // Personnel / Agents
-            'agents.voir', 'agents.creer', 'agents.modifier', 'agents.supprimer', 'agents.affecter',
-            // Structures
-            'structures.voir', 'structures.creer', 'structures.modifier',
-            // Évaluations
-            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter',
-            'evaluations.voir-propres', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
-            // Objectifs
-            'objectifs.assigner', 'objectifs.accepter', 'objectifs.avancement',
-            'objectifs.voir-propres', 'objectifs.voir-equipe',
-            // Administration
-            'admin.roles', 'admin.users', 'admin.annees', 'admin.activites', 'admin.alertes',
-        ];
+            if (! $spatieRoleName) {
+                return null;
+            }
 
-        foreach ($permissions as $perm) {
-            Gate::define($perm, fn (User $user) => $user->hasPermission($perm));
-        }
+            try {
+                $role = Role::findByName($spatieRoleName, 'web');
+            } catch (RoleDoesNotExist) {
+                // Rôle pas encore créé dans Spatie (seeder non joué) → fallthrough.
+                return null;
+            }
+
+            return $role->hasPermissionTo($ability) ? true : null;
+        });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        $this->registerPermissionGates();
+        $this->registerAdminBypass();
+        $this->registerRolePermissionBridge();
 
-        View::composer(['layouts.app', 'layouts.pca'], function ($view) {
+        // Partage l'état des fonctionnalités (feature toggles) avec toutes les vues.
+        // Le modèle Setting a un cache en mémoire, donc une seule requête DB par request.
+        View::composer('*', function ($view): void {
+            static $featuresCache = null;
+            if ($featuresCache === null) {
+                try {
+                    $featuresCache = [
+                        'evaluationsEnabled' => Setting::featureEnabled('evaluations'),
+                        'objectifsEnabled'   => Setting::featureEnabled('objectifs'),
+                    ];
+                } catch (\Throwable) {
+                    // Table pas encore créée (ex: première migration)
+                    $featuresCache = ['evaluationsEnabled' => true, 'objectifsEnabled' => true];
+                }
+            }
+            $view->with($featuresCache);
+        });
+
+        // Partage les alertes non lues dans TOUS les layouts qui incluent la cloche (_notif_bell).
+        // Ajouter ici tout nouveau layout qui utilise @include('layouts._notif_bell').
+        View::composer([
+            'layouts.app',
+            'layouts.pca',
+            'layouts.dg',
+            'layouts.dga',
+            'layouts.directeur',
+            'layouts.personnel',
+            'layouts.subordonne',
+            'layouts.chef',
+            'layouts.rh',
+        ], function ($view) {
             $user = auth()->user();
             if ($user) {
-                $alertesNonLues = $user->alertesNonLues()
-                    ->latest('alertes.created_at')
-                    ->take(8)
-                    ->get();
+                $alertesNonLues      = $user->alertesNonLues()->latest('alertes.created_at')->take(8)->get();
                 $alertesNonLuesCount = $user->alertesNonLues()->count();
             } else {
-                $alertesNonLues = collect();
+                $alertesNonLues      = collect();
                 $alertesNonLuesCount = 0;
             }
             $view->with('alertesNonLues', $alertesNonLues);

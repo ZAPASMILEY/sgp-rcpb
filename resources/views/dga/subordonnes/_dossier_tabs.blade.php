@@ -37,12 +37,12 @@
                 </a>
             </div>
 
-            @if ($tab === 'objectifs')
+            @if ($tab === 'objectifs' && $objectifsEnabled)
                 <a href="{{ route('dga.sub-objectifs.create', ['subordonne_id' => $currentSubordonneId]) }}"
                    class="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-emerald-600">
                     <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle fiche
                 </a>
-            @elseif ($tab === 'evaluations')
+            @elseif ($tab === 'evaluations' && $evaluationsEnabled)
                 <a href="{{ route('dga.sub-evaluations.create', ['subordonne_id' => $currentSubordonneId]) }}"
                    class="inline-flex items-center rounded-2xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-cyan-700">
                     <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle evaluation

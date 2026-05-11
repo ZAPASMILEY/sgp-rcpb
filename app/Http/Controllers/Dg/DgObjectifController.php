@@ -8,6 +8,7 @@ use App\Models\Annee;
 use App\Models\Entite;
 use App\Models\FicheObjectif;
 use App\Models\User;
+use App\Services\ObjectifService;
 use App\Traits\ResolvesEntite;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,8 @@ use Illuminate\View\View;
 class DgObjectifController extends Controller
 {
     use ResolvesEntite;
+
+    public function __construct(private readonly ObjectifService $objectifService) {}
 
     /** Retourne tous les subordonnés du DG connecté. */
     private function getSubordonnes(): \Illuminate\Support\Collection
@@ -54,11 +57,7 @@ class DgObjectifController extends Controller
 
     public function create(Request $request): View
     {
-        $user = Auth::user();
-        if (! $user || strtolower((string) $user->role) !== 'dg') {
-            abort(403, 'Accès réservé au Directeur Général.');
-        }
-
+        $this->authorize('objectifs.assigner');
 
         $subordonnes = $this->getSubordonnes()->values();
         $requestedSubordonneId = (int) $request->integer('subordonne_id');
@@ -76,11 +75,7 @@ class DgObjectifController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $user = Auth::user();
-        if (! $user || strtolower((string) $user->role) !== 'dg') {
-            abort(403, 'Accès réservé au Directeur Général.');
-        }
-
+        $this->authorize('objectifs.assigner');
 
         $subordonnes = $this->getSubordonnes()->values();
         $allowedSubordonneIds = $subordonnes
@@ -100,6 +95,11 @@ class DgObjectifController extends Controller
             'objectifs.*'   => ['required', 'string', 'max:5000'],
         ]);
 
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee'                 => now()->year,
@@ -112,7 +112,7 @@ class DgObjectifController extends Controller
             'statut'                => 'en_attente',
         ]);
 
-        foreach ($validated['objectifs'] as $desc) {
+        foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
@@ -137,13 +137,15 @@ class DgObjectifController extends Controller
 
     public function show($fiche): View
     {
+        $this->authorize('objectifs.voir-equipe');
         $fiche = FicheObjectif::with('objectifs')->findOrFail($fiche);
 
         return view('dg.objectifs.show', compact('fiche'));
     }
 
- public function statut(Request $request, $fiche): RedirectResponse
+    public function statut(Request $request, $fiche): RedirectResponse
     {
+        $this->authorize('objectifs.accepter');
         $fiche = FicheObjectif::findOrFail($fiche);
 
         $request->validate([
@@ -159,8 +161,10 @@ class DgObjectifController extends Controller
     }
     public function avancement(Request $request, $fiche): RedirectResponse
     {
-
+        $this->authorize('objectifs.avancement');
         $fiche = FicheObjectif::findOrFail($fiche);
+
+        $this->objectifService->assertUserOwns($fiche, Auth::id());
 
         $request->validate([
             'avancement_percentage' => ['required', 'integer', 'min:0', 'max:100'],
@@ -172,18 +176,15 @@ class DgObjectifController extends Controller
                 ->with('status', "L'avancement doit être un multiple de 5.");
         }
 
-        $fiche->avancement_percentage = $request->avancement_percentage;
-        $fiche->save();
+        $this->objectifService->updateAvancement($fiche, (int) $request->avancement_percentage);
 
         return redirect()->route('dg.objectifs.show', $fiche)->with('status', 'Avancement mis à jour.');
     }
 
     public function exportPdf($ficheId)
     {
+        $this->authorize('objectifs.voir-equipe');
         $user = Auth::user();
-        if (! $user || strtolower((string) $user->role) !== 'dg') {
-            abort(403);
-        }
 
         $fiche      = FicheObjectif::with('objectifs', 'assignable')->findOrFail($ficheId);
         $assignable = $fiche->assignable;
@@ -218,10 +219,7 @@ class DgObjectifController extends Controller
 
     public function destroy($fiche): RedirectResponse
     {
-        $user = Auth::user();
-        if (! $user || strtolower((string) $user->role) !== 'dg') {
-            abort(403, 'Accès réservé au Directeur Général.');
-        }
+        $this->authorize('objectifs.assigner');
 
         $fiche = FicheObjectif::findOrFail($fiche);
         $fiche->delete();

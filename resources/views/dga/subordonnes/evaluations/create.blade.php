@@ -135,12 +135,12 @@
                             <div class="space-y-2">
                                 <label for="identification_direction" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Entite</label>
                                 <input id="identification_direction" name="identification[direction]" type="text"
-                                       value="{{ old('identification.direction') }}" class="ent-input">
+                                       value="{{ old('identification.direction', $resolvedSubordonne['entite_label'] ?? '') }}" class="ent-input">
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_direction_service" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Direction / Service</label>
                                 <input id="identification_direction_service" name="identification[direction_service]" type="text"
-                                       value="{{ old('identification.direction_service') }}" class="ent-input">
+                                       value="{{ old('identification.direction_service', $resolvedSubordonne['service_label'] ?? '') }}" class="ent-input">
                             </div>
                         </div>
 

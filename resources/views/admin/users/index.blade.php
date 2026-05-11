@@ -6,23 +6,57 @@
 <main class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
     <div class="w-full space-y-6">
 
+        {{-- Notification flash --}}
+        @if (session('status'))
+            <div id="flash-msg" class="fixed right-6 top-6 z-50 flex items-center gap-3 rounded-2xl border border-emerald-100 bg-white px-5 py-3.5 shadow-2xl shadow-emerald-100/60 transition-all duration-500">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                    <i class="fas fa-check text-xs"></i>
+                </div>
+                <p class="text-sm font-bold text-slate-700">{{ session('status') }}</p>
+                <button onclick="dismissFlash()" class="ml-2 text-slate-300 hover:text-slate-500 transition">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+            <script>
+                function dismissFlash() {
+                    var el = document.getElementById('flash-msg');
+                    if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; setTimeout(() => el.remove(), 500); }
+                }
+                setTimeout(dismissFlash, 2500);
+            </script>
+        @endif
+
         {{-- En-tête --}}
         <div class="flex items-start justify-between gap-4">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration</p>
                 <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Comptes utilisateurs</h1>
-                <p class="mt-2 text-sm text-slate-600">{{ $users->count() }} compte(s) enregistré(s).</p>
+                <p class="mt-2 text-sm text-slate-600">{{ $users->count() }} compte(s){{ $search ? ' trouvé(s)' : ' enregistré(s)' }}.</p>
             </div>
             <a href="{{ route('admin.users.create') }}" class="ent-btn ent-btn-primary">
                 <i class="fas fa-plus mr-2"></i> Nouveau compte
             </a>
         </div>
 
-        @if (session('status'))
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {{ session('status') }}
+        {{-- Barre de recherche --}}
+        <form method="GET" action="{{ route('admin.users.index') }}" class="flex items-center gap-3">
+            <div class="relative flex-1 max-w-md">
+                <div class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                    <i class="fas fa-search text-sm"></i>
+                </div>
+                <input type="text" name="search" value="{{ $search }}"
+                       placeholder="Nom, email, rôle, fonction..."
+                       class="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm font-semibold text-slate-700 placeholder-slate-300 shadow-sm focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-100 transition">
             </div>
-        @endif
+            <button type="submit" class="ent-btn ent-btn-soft text-xs py-2.5 px-4">
+                Rechercher
+            </button>
+            @if($search)
+                <a href="{{ route('admin.users.index') }}" class="ent-btn text-xs py-2.5 px-4 border border-slate-200 text-slate-500 hover:bg-slate-50">
+                    <i class="fas fa-times mr-1"></i> Effacer
+                </a>
+            @endif
+        </form>
 
         {{-- Tableau --}}
         <section class="admin-panel p-0 overflow-hidden">
@@ -69,6 +103,22 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-2">
+                                        {{-- Activer / Désactiver --}}
+                                        <form method="POST" action="{{ route('admin.users.toggle-active', $user) }}"
+                                              @if(!$user->is_active) onsubmit="return confirm('Activer ce compte ?')" @endif>
+                                            @csrf @method('PATCH')
+                                            @if ($user->is_active)
+                                                <button type="submit" title="Désactiver ce compte"
+                                                    class="ent-btn text-xs py-1 px-3 border border-emerald-300 text-emerald-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700">
+                                                    <i class="fas fa-toggle-on mr-1"></i> Actif
+                                                </button>
+                                            @else
+                                                <button type="submit" title="Activer ce compte"
+                                                    class="ent-btn text-xs py-1 px-3 border border-slate-300 text-slate-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700">
+                                                    <i class="fas fa-toggle-off mr-1"></i> Inactif
+                                                </button>
+                                            @endif
+                                        </form>
                                         <a href="{{ route('admin.users.edit', $user) }}" class="ent-btn ent-btn-soft text-xs py-1 px-3">
                                             <i class="fas fa-pen mr-1"></i> Modifier
                                         </a>

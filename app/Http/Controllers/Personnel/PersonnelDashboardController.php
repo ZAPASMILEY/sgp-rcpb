@@ -9,97 +9,112 @@ use App\Models\FicheObjectif;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
+/**
+ * PersonnelDashboardController — Tableau de bord de l'agent
+ *
+ * Vue d'ensemble avec :
+ *   - Hero banner (identité + KPIs résumés)
+ *   - Graphiques de répartition (évaluations + objectifs)
+ *   - Évaluations récentes (5 dernières)
+ *   - Fiches d'objectifs récentes (5 dernières)
+ *
+ * Pour la liste complète et filtrée, voir PersonnelMonEspaceController → personnel.mon-espace.
+ */
 class PersonnelDashboardController extends Controller
 {
     public function __invoke(Request $request): View
     {
         $user  = $request->user();
-        $tab   = $request->get('tab', 'evaluations');
-        $statut= trim((string) $request->get('statut', ''));
+        $annee = (int) $request->input('annee', now()->year);
 
-        // Trouver l'agent lié au compte utilisateur
-        $agent = Agent::with(['service.direction.entite', 'agence'])
-            ->where('user_id', $user->id)
-            ->first();
+        $agent = $user->agent_id
+            ? Agent::with(['service.direction.entite', 'agence'])->find($user->agent_id)
+            : null;
 
-        // ── Evaluations ──────────────────────────────────────────────────────
-        $evalsQ = null;
-        $evaluationsStats = ['total' => 0, 'brouillon' => 0, 'soumis' => 0, 'valide' => 0];
-        $evaluations = null;
-
-        if ($agent) {
-            $baseE = fn () => Evaluation::where('evaluable_type', Agent::class)
-                ->where('evaluable_id', $agent->id);
-
-            $evalsQ = Evaluation::query()
-                ->with(['evaluateur', 'identification'])
-                ->where('evaluable_type', Agent::class)
-                ->where('evaluable_id', $agent->id)
-                ->orderByDesc('date_debut');
-
-            if ($statut && $tab === 'evaluations') {
-                $evalsQ->where('statut', $statut);
-            }
-
-            $evaluationsStats = [
-                'total'    => $baseE()->count(),
-                'brouillon'=> $baseE()->where('statut', 'brouillon')->count(),
-                'soumis'   => $baseE()->where('statut', 'soumis')->count(),
-                'valide'   => $baseE()->where('statut', 'valide')->count(),
-            ];
-
-            $evaluations = $evalsQ->paginate(10)->withQueryString();
-        }
-
-        // ── Fiches objectifs ─────────────────────────────────────────────────
-        $fichesStats = ['total' => 0, 'acceptees' => 0, 'en_attente' => 0, 'refusees' => 0];
-        $fiches      = null;
-        $search      = trim((string) $request->get('search', ''));
-
-        if ($agent) {
-            $baseF = fn () => FicheObjectif::where('assignable_type', Agent::class)
-                ->where('assignable_id', $agent->id);
-
-            $fichesQ = FicheObjectif::query()
-                ->withCount('objectifs')
-                ->where('assignable_type', Agent::class)
-                ->where('assignable_id', $agent->id)
-                ->orderByDesc('date');
-
-            if ($search && $tab === 'objectifs') {
-                $fichesQ->where(fn ($q) => $q->where('titre', 'like', "%{$search}%")
-                    ->orWhere('annee', 'like', "%{$search}%"));
-            }
-
-            if ($statut && $tab === 'objectifs') {
-                if ($statut === 'en_attente') {
-                    $fichesQ->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'));
-                } else {
-                    $fichesQ->where('statut', $statut);
+        // ── Closure de base : évaluations reçues (filtrées par année) ────────
+        $baseE = function () use ($user, $agent, $annee) {
+            return Evaluation::where(function ($q) use ($user, $agent) {
+                $q->where('evaluable_type', \App\Models\User::class)
+                  ->where('evaluable_id', $user->id);
+                if ($agent) {
+                    $q->orWhere(function ($q2) use ($agent) {
+                        $q2->where('evaluable_type', Agent::class)
+                           ->where('evaluable_id', $agent->id);
+                    });
                 }
-            }
+            })->whereYear('date_debut', $annee);
+        };
 
-            $fichesStats = [
-                'total'     => $baseF()->count(),
-                'acceptees' => $baseF()->where('statut', 'acceptee')->count(),
-                'en_attente'=> $baseF()->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
-                'refusees'  => $baseF()->where('statut', 'refusee')->count(),
-            ];
+        $evaluationsStats = [
+            'total'     => $baseE()->count(),
+            'brouillon' => $baseE()->where('statut', 'brouillon')->count(),
+            'soumis'    => $baseE()->where('statut', 'soumis')->count(),
+            'valide'    => $baseE()->where('statut', 'valide')->count(),
+        ];
 
-            $fiches = $fichesQ->paginate(10)->withQueryString();
-        }
+        // 5 évaluations les plus récentes (pas de pagination sur le dashboard)
+        $evaluationsRecentes = $baseE()
+            ->with(['evaluateur', 'identification'])
+            ->orderByDesc('date_debut')
+            ->take(5)
+            ->get();
 
-        $filters = compact('tab', 'statut', 'search');
+        // ── Closure de base : fiches d'objectifs reçues (filtrées par année) ─
+        $baseF = function () use ($user, $agent, $annee) {
+            return FicheObjectif::where(function ($q) use ($user, $agent) {
+                $q->where('assignable_type', \App\Models\User::class)
+                  ->where('assignable_id', $user->id);
+                if ($agent) {
+                    $q->orWhere(function ($q2) use ($agent) {
+                        $q2->where('assignable_type', Agent::class)
+                           ->where('assignable_id', $agent->id);
+                    });
+                }
+            })->whereYear('date', $annee);
+        };
+
+        $fichesStats = [
+            'total'      => $baseF()->count(),
+            'acceptees'  => $baseF()->where('statut', 'acceptee')->count(),
+            'en_attente' => $baseF()->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
+            'refusees'   => $baseF()->where('statut', 'refusee')->count(),
+        ];
+
+        $tauxAvancement = round($baseF()->avg('avancement_percentage') ?? 0, 1);
+
+        // 5 fiches les plus récentes
+        $fichesRecentes = $baseF()
+            ->withCount('objectifs')
+            ->orderByDesc('date')
+            ->take(5)
+            ->get();
+
+        // Données pour les graphiques ApexCharts
+        $evalsDonut = [
+            'labels' => ['Validées', 'Soumises', 'Brouillon'],
+            'series' => [$evaluationsStats['valide'], $evaluationsStats['soumis'], $evaluationsStats['brouillon']],
+            'colors' => ['#10b981', '#f59e0b', '#94a3b8'],
+        ];
+        $fichesDonut = [
+            'labels' => ['Acceptées', 'En attente', 'Refusées'],
+            'series' => [$fichesStats['acceptees'], $fichesStats['en_attente'], $fichesStats['refusees']],
+            'colors' => ['#10b981', '#f59e0b', '#ef4444'],
+        ];
+
+        $anneesDisponibles = range(now()->year - 2, now()->year + 1);
 
         return view('personnel.dashboard', compact(
             'user',
             'agent',
-            'tab',
-            'evaluations',
+            'annee',
+            'anneesDisponibles',
             'evaluationsStats',
-            'fiches',
+            'evaluationsRecentes',
             'fichesStats',
-            'filters',
+            'fichesRecentes',
+            'tauxAvancement',
+            'evalsDonut',
+            'fichesDonut',
         ));
     }
 }

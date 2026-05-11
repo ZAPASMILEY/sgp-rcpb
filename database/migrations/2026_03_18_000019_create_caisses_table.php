@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('ville_id')->nullable()->constrained('villes')->nullOnDelete();
 
             $table->string('nom')->unique();
-            $table->string('annee_ouverture', 4)->nullable();
+            $table->string('annee_ouverture', 4);
             $table->string('quartier')->nullable();
             $table->string('secretariat_telephone', 30)->nullable();
 

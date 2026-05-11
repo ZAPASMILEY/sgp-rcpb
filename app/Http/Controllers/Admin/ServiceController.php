@@ -197,7 +197,9 @@ class ServiceController extends Controller
             'direction_id'            => ['required_if:parent_type,faitiere', 'nullable', 'integer', 'exists:directions,id'],
             'delegation_technique_id' => ['required_if:parent_type,delegation', 'nullable', 'integer', 'exists:delegation_techniques,id'],
             'caisse_id'               => ['required_if:parent_type,caisse', 'nullable', 'integer', 'exists:caisses,id'],
-            'chef_agent_id'           => ['nullable', 'integer', 'exists:agents,id'],
+            'chef_agent_id'           => [$service ? 'nullable' : 'required', 'integer', 'exists:agents,id'],
+        ], [
+            'chef_agent_id.required' => 'Le chef de service est obligatoire pour créer un Service.',
         ]);
 
         $parentType = $validated['parent_type'];

@@ -38,15 +38,29 @@
             </div>
 
             @if ($tab === 'objectifs')
-                <a href="{{ route('dg.objectifs.create', ['subordonne_id' => $currentSubordonneId]) }}"
-                   class="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-emerald-600">
-                    <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle fiche
-                </a>
+                @if ($objectifsEnabled)
+                    <a href="{{ route('dg.objectifs.create', ['subordonne_id' => $currentSubordonneId]) }}"
+                       class="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-emerald-600">
+                        <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle fiche
+                    </a>
+                @else
+                    <span title="Fonctionnalité désactivée par l'administrateur"
+                          class="inline-flex cursor-not-allowed items-center rounded-2xl bg-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-500 opacity-60 select-none">
+                        <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle fiche
+                    </span>
+                @endif
             @elseif ($tab === 'evaluations')
-                <a href="{{ route('dg.sub-evaluations.create', ['subordonne_id' => $currentSubordonneId]) }}"
-                   class="inline-flex items-center rounded-2xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-cyan-700">
-                    <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle evaluation
-                </a>
+                @if ($evaluationsEnabled)
+                    <a href="{{ route('dg.sub-evaluations.create', ['subordonne_id' => $currentSubordonneId]) }}"
+                       class="inline-flex items-center rounded-2xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-cyan-700">
+                        <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle evaluation
+                    </a>
+                @else
+                    <span title="Fonctionnalité désactivée par l'administrateur"
+                          class="inline-flex cursor-not-allowed items-center rounded-2xl bg-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-500 opacity-60 select-none">
+                        <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle evaluation
+                    </span>
+                @endif
             @endif
         </div>
 

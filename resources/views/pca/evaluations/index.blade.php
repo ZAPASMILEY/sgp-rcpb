@@ -71,10 +71,16 @@
                             <i class="fas fa-rotate-right mr-2 text-xs"></i>
                             Réinitialiser
                         </a>
+                        @if($evaluationsEnabled)
                         <a href="{{ route('pca.evaluations.create') }}" data-open-create-modal data-modal-title="Ajouter une evaluation" class="inline-flex items-center justify-center rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_-18px_rgba(8,145,178,0.8)] transition hover:bg-cyan-700">
                             <i class="fas fa-plus mr-2 text-xs"></i>
                             Nouvelle évaluation
                         </a>
+                        @else
+                        <span class="inline-flex items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-400 cursor-not-allowed" title="Désactivé par l'administrateur">
+                            <i class="fas fa-ban text-xs"></i> Évaluations désactivées
+                        </span>
+                        @endif
                     </div>
                 </div>
 

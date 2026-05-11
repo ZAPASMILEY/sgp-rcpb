@@ -444,8 +444,12 @@
 
                     <div id="topbar-quick-panel" class="admin-topbar__panel admin-topbar__panel--quick hidden" role="menu" aria-label="Actions rapides">
                         <p class="admin-topbar__panel-caption">Actions rapides</p>
+                        @if($evaluationsEnabled)
                         <a href="{{ route('pca.evaluations.create') }}" data-open-create-modal data-modal-title="Nouvelle evaluation" class="admin-topbar__quick-link">Nouvelle evaluation</a>
+                        @endif
+                        @if($objectifsEnabled)
                         <a href="{{ route('pca.objectifs.create') }}" data-open-create-modal data-modal-title="Nouvel objectif" class="admin-topbar__quick-link">Nouvel objectif</a>
+                        @endif
                         <a href="{{ route('pca.settings.edit') }}" class="admin-topbar__quick-link">Ouvrir parametres</a>
                     </div>
 
@@ -461,6 +465,12 @@
             </header>
 
             <div class="flex-1 w-full overflow-visible">
+                @if(session('feature_disabled'))
+                    <div class="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-700 shadow-sm">
+                        <i class="fas fa-ban shrink-0"></i>
+                        <span>{{ session('feature_disabled') }}</span>
+                    </div>
+                @endif
                 @yield('content')
             </div>
         </div>

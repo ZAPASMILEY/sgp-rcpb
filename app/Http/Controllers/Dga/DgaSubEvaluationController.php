@@ -8,13 +8,12 @@ use App\Models\Annee;
 use App\Models\DelegationTechnique;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
-use App\Models\SubjectiveCriteriaTemplate;
 use App\Models\User;
+use App\Services\EvaluationService;
 use App\Traits\ResolvesEntite;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -22,6 +21,8 @@ use Illuminate\View\View;
 class DgaSubEvaluationController extends Controller
 {
     use ResolvesEntite;
+
+    public function __construct(private readonly EvaluationService $evaluationService) {}
 
     private function checkDga(): void
     {
@@ -36,18 +37,36 @@ class DgaSubEvaluationController extends Controller
         $entite      = $this->getEntiteForDGA();
         $subordonnes = collect();
 
-        // Directeurs Techniques
-        $dtAgentIds = DelegationTechnique::whereNotNull('directeur_agent_id')->pluck('directeur_agent_id');
-        $dts = User::whereIn('agent_id', $dtAgentIds)->where('role', 'Directeur_Technique')->get();
-        foreach ($dts as $dt) {
-            $subordonnes->push(['id' => $dt->id, 'nom' => $dt->name, 'role_label' => 'Directeur Technique']);
+        // Directeurs Techniques — on résout leur DelegationTechnique pour l'entité
+        $delegations = DelegationTechnique::whereNotNull('directeur_agent_id')->get();
+        foreach ($delegations as $delegation) {
+            $dt = User::where('agent_id', $delegation->directeur_agent_id)
+                ->where('role', 'Directeur_Technique')
+                ->first();
+            if (! $dt) {
+                continue;
+            }
+            $delegationLabel = trim($delegation->region . ($delegation->ville ? ' — ' . $delegation->ville : ''));
+            $subordonnes->push([
+                'id'             => $dt->id,
+                'nom'            => $dt->name,
+                'role_label'     => 'Directeur Technique',
+                'entite_label'   => $delegationLabel ?: 'Délégation Technique',
+                'service_label'  => '',
+            ]);
         }
 
         // Secrétaire DGA
         if ($entite && $entite->dga_secretaire_agent_id) {
             $sec = User::where('agent_id', $entite->dga_secretaire_agent_id)->first();
             if ($sec) {
-                $subordonnes->push(['id' => $sec->id, 'nom' => $sec->name, 'role_label' => 'Secrétaire DGA']);
+                $subordonnes->push([
+                    'id'            => $sec->id,
+                    'nom'           => $sec->name,
+                    'role_label'    => 'Secrétaire DGA',
+                    'entite_label'  => $entite->nom ?? '',
+                    'service_label' => 'Secrétariat DGA',
+                ]);
             }
         }
 
@@ -57,7 +76,7 @@ class DgaSubEvaluationController extends Controller
     public function create(Request $request): View
     {
         $this->checkDga();
-
+        $this->authorize('evaluations.creer');
 
         $subordonnes        = $this->getSubordonnes();
         $preselectedId      = (int) $request->get('subordonne_id', 0);
@@ -93,7 +112,7 @@ class DgaSubEvaluationController extends Controller
             }
         }
 
-        $subjectiveTemplates = $this->buildSubjectiveTemplates();
+        $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
         $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
         if (! is_array($oldFormations) || $oldFormations === []) {
@@ -118,7 +137,7 @@ class DgaSubEvaluationController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $this->checkDga();
-
+        $this->authorize('evaluations.creer');
 
         $subordonnes = $this->getSubordonnes();
         $allowedIds  = $subordonnes->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -165,7 +184,7 @@ class DgaSubEvaluationController extends Controller
         $identification = $validated['identification'] ?? [];
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
-            $normalized = $this->normalizeDateValue($raw);
+            $normalized = $this->evaluationService->normalizeDateValue($raw);
             if ($normalized === null) {
                 return back()->withInput()->withErrors(['identification.date_evaluation' => 'Format de date invalide. Utilisez JJ/MM/AAAA.']);
             }
@@ -190,8 +209,8 @@ class DgaSubEvaluationController extends Controller
             ->filter(fn ($row) => $row['periode'] !== '' || $row['poste'] !== '' || $row['observations'] !== '')
             ->values()->all();
 
-        $normalizedSubjective = $this->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
-        $normalizedObjective  = $this->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
+        $normalizedSubjective = $this->evaluationService->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
+        $normalizedObjective  = $this->evaluationService->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
 
         if ($normalizedSubjective === [] || $normalizedObjective === []) {
             return back()->withInput()->withErrors([
@@ -199,7 +218,7 @@ class DgaSubEvaluationController extends Controller
             ]);
         }
 
-        $scores  = $this->computeScores($normalizedSubjective, $normalizedObjective);
+        $scores  = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
         $anneeId = null;
         try { $anneeId = Annee::resolveIdForDate($dateDebut); } catch (\Throwable) {}
 
@@ -234,28 +253,7 @@ class DgaSubEvaluationController extends Controller
             ]);
 
             $evaluation->identification()->create($identification);
-
-            foreach (array_merge($normalizedSubjective, $normalizedObjective) as $criterion) {
-                $critere = $evaluation->criteres()->create([
-                    'type'                              => $criterion['type'],
-                    'ordre'                             => $criterion['ordre'],
-                    'titre'                             => $criterion['titre'],
-                    'description'                       => $criterion['description'],
-                    'note_globale'                      => $criterion['note_globale'],
-                    'observation'                       => $criterion['observation'],
-                    'source_template_id'                => $criterion['source_template_id'],
-                    'source_fiche_objectif_id'          => $criterion['source_fiche_objectif_id'],
-                    'source_fiche_objectif_objectif_id' => $criterion['source_fiche_objectif_objectif_id'],
-                ]);
-                foreach ($criterion['subcriteria'] as $sub) {
-                    $critere->sousCriteres()->create([
-                        'ordre'       => $sub['ordre'],
-                        'libelle'     => $sub['libelle'],
-                        'note'        => $sub['note'],
-                        'observation' => $sub['observation'],
-                    ]);
-                }
-            }
+            $this->evaluationService->persistCriteria($evaluation, array_merge($normalizedSubjective, $normalizedObjective));
 
             return $evaluation;
         });
@@ -267,6 +265,7 @@ class DgaSubEvaluationController extends Controller
     public function show(Evaluation $evaluation): View
     {
         $this->checkDga();
+        $this->authorize('evaluations.voir-equipe');
 
         $subordonnes = $this->getSubordonnes();
         if (! $subordonnes->pluck('id')->contains($evaluation->evaluable_id)) {
@@ -276,8 +275,8 @@ class DgaSubEvaluationController extends Controller
         $evaluation->load(['evaluable', 'evaluateur', 'identification', 'criteres.sousCriteres']);
 
         $subordonne         = $evaluation->evaluable;
-        $mention            = $this->mention((float) $evaluation->note_finale);
-        $periodeLabel       = $this->periodeLabel($evaluation);
+        $mention            = $this->evaluationService->mention((float) $evaluation->note_finale);
+        $periodeLabel       = $this->evaluationService->periodeLabel($evaluation);
         $cibleLabel         = trim((string) ($evaluation->identification?->nom_prenom ?? '')) ?: ($subordonne?->name ?? '-');
         $backUrl            = route('dga.subordonnes.show', $subordonne).'?tab=evaluations';
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
@@ -292,7 +291,7 @@ class DgaSubEvaluationController extends Controller
     public function submit(Evaluation $evaluation): RedirectResponse
     {
         $this->checkDga();
-
+        $this->authorize('evaluations.soumettre');
 
         $subordonnes = $this->getSubordonnes();
         if (! $subordonnes->pluck('id')->contains($evaluation->evaluable_id)) {
@@ -320,6 +319,7 @@ class DgaSubEvaluationController extends Controller
     public function destroy(Evaluation $evaluation): RedirectResponse
     {
         $this->checkDga();
+        $this->authorize('evaluations.creer');
 
         $subordonnes = $this->getSubordonnes();
         if (! $subordonnes->pluck('id')->contains($evaluation->evaluable_id)) {
@@ -339,7 +339,7 @@ class DgaSubEvaluationController extends Controller
     public function exportPdf(Evaluation $evaluation)
     {
         $this->checkDga();
-
+        $this->authorize('evaluations.exporter-pdf');
 
         $subordonnes = $this->getSubordonnes();
         if (! $subordonnes->pluck('id')->contains($evaluation->evaluable_id)) {
@@ -351,7 +351,7 @@ class DgaSubEvaluationController extends Controller
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
         $note               = (float) $evaluation->note_finale;
-        $mention            = $this->mention($note);
+        $mention            = $this->evaluationService->mention($note);
         $cibleLabel         = $evaluation->identification->nom_prenom ?? ($evaluable?->name ?? 'Subordonné');
         $cibleType          = str_replace('_', ' ', $evaluable?->role ?? 'Subordonné');
 
@@ -362,108 +362,4 @@ class DgaSubEvaluationController extends Controller
         return $pdf->download('evaluation-'.$evaluation->id.'-dga.pdf');
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-
-    private function mention(float $note): string
-    {
-        return $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
-    }
-
-    private function periodeLabel(Evaluation $evaluation): string
-    {
-        $year     = $evaluation->identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');
-        $semestre = trim((string) ($evaluation->identification?->semestre ?? ''));
-        if ($semestre === '') {
-            $semestre = $evaluation->date_debut->month <= 6 ? '1' : '2';
-        }
-        return $year.' - Semestre '.$semestre;
-    }
-
-    private function buildSubjectiveTemplates(): array
-    {
-        return SubjectiveCriteriaTemplate::query()
-            ->with('subcriteria')
-            ->where('is_active', true)
-            ->orderBy('ordre')
-            ->get()
-            ->map(fn ($t) => [
-                'id'          => $t->id,
-                'ordre'       => $t->ordre,
-                'titre'       => $t->titre,
-                'description' => $t->description,
-                'subcriteria' => $t->subcriteria->map(fn ($s) => [
-                    'libelle' => $s->libelle,
-                    'ordre'   => $s->ordre,
-                ])->values()->all(),
-            ])
-            ->values()->all();
-    }
-
-    private function normalizeCriteria(array $criteria, string $type, int $min, int $max, bool $strict = true): array
-    {
-        $normalized = [];
-        foreach (array_values($criteria) as $idx => $criterion) {
-            if (! is_array($criterion)) continue;
-            $title = trim((string) ($criterion['titre'] ?? ''));
-            if ($title === '') continue;
-
-            $subcriteria = [];
-            foreach (array_values((array) ($criterion['subcriteria'] ?? [])) as $subIdx => $sub) {
-                if (! is_array($sub)) continue;
-                $label = trim((string) ($sub['libelle'] ?? ''));
-                if ($label === '') { if ($strict) continue; $label = '-'; }
-                $subcriteria[] = [
-                    'ordre'       => $subIdx + 1,
-                    'libelle'     => $label,
-                    'note'        => max($min, min($max, (float) ($sub['note'] ?? $min))),
-                    'observation' => filled($sub['observation'] ?? null) ? trim((string) $sub['observation']) : null,
-                ];
-            }
-
-            if ($strict && $subcriteria === []) continue;
-            if (! $strict && $subcriteria === []) {
-                $subcriteria = [['ordre' => 1, 'libelle' => '-', 'note' => $min, 'observation' => null]];
-            }
-
-            $normalized[] = [
-                'type'                              => $type,
-                'ordre'                             => $idx + 1,
-                'titre'                             => $title,
-                'description'                       => filled($criterion['description'] ?? null) ? trim((string) $criterion['description']) : null,
-                'note_globale'                      => round(collect($subcriteria)->avg('note') ?? 0, 2),
-                'observation'                       => filled($criterion['observation'] ?? null) ? trim((string) $criterion['observation']) : null,
-                'source_template_id'                => isset($criterion['source_template_id']) ? (int) $criterion['source_template_id'] : null,
-                'source_fiche_objectif_id'          => isset($criterion['source_fiche_objectif_id']) ? (int) $criterion['source_fiche_objectif_id'] : null,
-                'source_fiche_objectif_objectif_id' => isset($criterion['source_fiche_objectif_objectif_id']) ? (int) $criterion['source_fiche_objectif_objectif_id'] : null,
-                'subcriteria'                       => $subcriteria,
-            ];
-        }
-        return $normalized;
-    }
-
-    private function computeScores(array $subjectiveCriteria, array $objectiveCriteria): array
-    {
-        $moyObj  = round(collect($objectiveCriteria)->avg('note_globale') ?? 0, 2);
-        $moySubj = round(collect($subjectiveCriteria)->avg('note_globale') ?? 0, 2);
-        return [
-            'moyenne_objectifs'        => $moyObj,
-            'moyenne_subjectifs'       => $moySubj,
-            'note_criteres_objectifs'  => round($moyObj * 0.75, 2),
-            'note_criteres_subjectifs' => round($moySubj * 0.25, 2),
-            'note_finale'              => round(($moyObj * 0.75 + $moySubj * 0.25) * 2, 2),
-        ];
-    }
-
-    private function normalizeDateValue(mixed $value): ?string
-    {
-        $value = trim((string) $value);
-        if ($value === '') return null;
-        foreach (['Y-m-d', 'd/m/Y'] as $format) {
-            try {
-                $date = Carbon::createFromFormat($format, $value);
-                if ($date && $date->format($format) === $value) return $date->toDateString();
-            } catch (\Throwable) {}
-        }
-        return null;
-    }
 }

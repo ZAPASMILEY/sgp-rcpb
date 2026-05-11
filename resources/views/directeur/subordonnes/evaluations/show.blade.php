@@ -1,4 +1,4 @@
-@extends('layouts.directeur')
+@extends($layout ?? 'layouts.directeur')
 
 @section('title', 'Évaluation secrétaire | '.config('app.name', 'SGP-RCPB'))
 
@@ -81,15 +81,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse (($ident->formations ?? []) as $row)
-                                <tr class="border-t border-slate-200">
-                                    <td class="px-3 py-2">{{ $row['periode'] ?? '-' }}</td>
-                                    <td class="px-3 py-2">{{ $row['libelle'] ?? '-' }}</td>
-                                    <td class="px-3 py-2">{{ $row['domaine'] ?? '-' }}</td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="3" class="px-3 py-3 text-slate-400">Aucune formation renseignée.</td></tr>
-                            @endforelse
+                            @include('evaluations._formations_auto')
                         </tbody>
                     </table>
                 </div>

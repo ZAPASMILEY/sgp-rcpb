@@ -10,9 +10,16 @@
         [
             'title' => 'Réseau',
             'items' => [
-                ['route' => 'rh.dashboard', 'query' => 'tab=agents',      'icon' => 'fas fa-users',            'label' => 'Agents'],
-                ['route' => 'rh.dashboard', 'query' => 'tab=evaluations', 'icon' => 'fas fa-star-half-stroke', 'label' => 'Évaluations'],
-                ['route' => 'rh.dashboard', 'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye',         'label' => 'Objectifs'],
+                ['route' => 'rh.dashboard',    'query' => 'tab=agents',      'icon' => 'fas fa-users',            'label' => 'Agents'],
+                ['route' => 'rh.dashboard',    'query' => 'tab=evaluations', 'icon' => 'fas fa-star-half-stroke', 'label' => 'Évaluations'],
+                ['route' => 'rh.dashboard',    'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye',         'label' => 'Objectifs'],
+                ['route' => 'rh.structures',                                  'icon' => 'fas fa-building',         'label' => 'Structures'],
+            ],
+        ],
+        [
+            'title' => 'Formations',
+            'items' => [
+                ['route' => 'rh.formations.index', 'icon' => 'fas fa-graduation-cap', 'label' => 'Gérer les formations'],
             ],
         ],
     ];
@@ -32,8 +39,8 @@
     <style>
         :root {
             --sidebar-width: 260px;
-            --sidebar-color:      #5b21b6;
-            --sidebar-color-dark: #3b0764;
+            --sidebar-color:      #008751;
+            --sidebar-color-dark: #006837;
         }
 
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; overflow-x: hidden; }
@@ -161,7 +168,7 @@
     </nav>
 
     <div class="main-content">
-        <header class="flex h-12 shrink-0 items-center justify-between border-b border-slate-100 bg-white/80 px-4 backdrop-blur-sm">
+        <header class="relative z-[9999] flex h-12 shrink-0 items-center justify-between border-b border-slate-100 bg-white/80 px-4 backdrop-blur-sm">
             <button class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-50 text-slate-500 shadow-sm lg:hidden" id="btnToggleSidebar" type="button">
                 <i class="fas fa-bars"></i>
             </button>

@@ -9,6 +9,7 @@ use App\Models\Annee;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Evaluation;
+use App\Models\FicheObjectif;
 use App\Models\Guichet;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -26,9 +27,10 @@ class DgaDashboardController extends Controller
             abort(403, 'Accès réservé au DGA.');
         }
 
+        $annee   = (int) $request->query('annee', now()->year);
         $statut  = trim((string) $request->get('statut', ''));
         $search  = trim((string) $request->get('search', ''));
-        $anneeId = (int) $request->get('annee', 0);
+        $anneeId = (int) $request->get('annee_id', 0);
 
         // ── Réseau : comptages ───────────────────────────────────────────────
         $reseauStats = [
@@ -95,12 +97,59 @@ class DgaDashboardController extends Controller
             ->orderBy('note_finale')
             ->first();
 
+        // ── Évaluations REÇUES par le DGA (de la part du DG) ────────────────
+        $evalsRecBase = fn () => Evaluation::where('evaluable_type', User::class)
+            ->where('evaluable_id', $user->id)
+            ->whereYear('date_debut', $annee);
+
+        $evalsRecStats = [
+            'total'     => $evalsRecBase()->count(),
+            'soumis'    => $evalsRecBase()->where('statut', 'soumis')->count(),
+            'valide'    => $evalsRecBase()->where('statut', 'valide')->count(),
+            'refuse'    => $evalsRecBase()->where('statut', 'refuse')->count(),
+            'brouillon' => $evalsRecBase()->where('statut', 'brouillon')->count(),
+        ];
+
+        // ── Fiches d'objectifs REÇUES par le DGA ─────────────────────────────
+        $fichesRecBase = fn () => FicheObjectif::where('assignable_type', User::class)
+            ->where('assignable_id', $user->id)
+            ->whereYear('date', $annee);
+
+        $fichesRecStats = [
+            'total'      => $fichesRecBase()->count(),
+            'acceptees'  => $fichesRecBase()->where('statut', 'acceptee')->count(),
+            'en_attente' => $fichesRecBase()->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
+            'refusees'   => $fichesRecBase()->where('statut', 'refusee')->count(),
+        ];
+        $tauxAvancement = round($fichesRecBase()->avg('avancement_percentage') ?? 0, 1);
+
+        // ── Données pour ApexCharts ───────────────────────────────────────────
+        $evalsDonut = [
+            'labels' => ['Validées', 'Soumises', 'Brouillon', 'Refusées'],
+            'series' => [$evalsRecStats['valide'], $evalsRecStats['soumis'], $evalsRecStats['brouillon'], $evalsRecStats['refuse']],
+            'colors' => ['#10b981', '#f59e0b', '#94a3b8', '#ef4444'],
+        ];
+        $fichesDonut = [
+            'labels' => ['Acceptées', 'En attente', 'Refusées'],
+            'series' => [$fichesRecStats['acceptees'], $fichesRecStats['en_attente'], $fichesRecStats['refusees']],
+            'colors' => ['#10b981', '#f59e0b', '#ef4444'],
+        ];
+
+        $anneesDisponibles = range(now()->year - 2, now()->year + 1);
+
         $filters = compact('statut', 'search', 'anneeId');
 
         return view('dga.dashboard', compact(
+            'annee',
+            'anneesDisponibles',
             'reseauStats',
             'noteReseau',
             'subStats',
+            'evalsRecStats',
+            'fichesRecStats',
+            'tauxAvancement',
+            'evalsDonut',
+            'fichesDonut',
             'evaluations',
             'annees',
             'topEval',

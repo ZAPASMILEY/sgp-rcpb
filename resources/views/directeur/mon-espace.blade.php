@@ -1,26 +1,24 @@
 @extends('layouts.directeur')
 
-@section('title', 'Mon Espace Directeur | '.config('app.name', 'SGP-RCPB'))
+@section('title', 'Mon Espace | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
+<div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
     <div class="w-full flex flex-col gap-6">
 
         {{-- Header --}}
         <header class="admin-panel px-6 py-6 lg:px-8">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mon Espace / Directeur</p>
-                    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">{{ $user->name }}</h1>
-                    <p class="mt-1 text-sm text-slate-500">Direction : <span class="font-semibold text-blue-700">{{ $direction->nom }}</span></p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Mon Espace / {{ $ctx->getRoleLabel() }}</p>
+                    <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">{{ $user->name }}</h1>
+                    <p class="mt-1 text-sm text-slate-500">
+                        {{ $ctx->getTypeLabel() }} :
+                        <span class="font-semibold text-blue-700">{{ $ctx->getNom() }}</span>
+                    </p>
                 </div>
-                <div class="flex flex-col items-end gap-2">
-                    <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 font-black text-xl shadow-sm">
-                        {{ strtoupper(substr($user->name, 0, 1)) }}
-                    </div>
-                    <a href="{{ route('directeur.evaluations.create') }}" class="ent-btn ent-btn-primary text-xs">
-                        <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
-                    </a>
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 font-black text-xl shadow-sm">
+                    {{ strtoupper(substr($user->name, 0, 1)) }}
                 </div>
             </div>
         </header>
@@ -37,332 +35,413 @@
         @endif
 
         {{-- KPI rapides --}}
+        @php
+        $kpis = [
+            ['label' => 'Évaluations reçues', 'value' => $evaluationsStats['total'],  'icon' => 'fas fa-star-half-stroke', 'color' => 'bg-blue-600',    'light' => 'bg-blue-50 border-blue-100'],
+            ['label' => 'Acceptées',           'value' => $evaluationsStats['valide'], 'icon' => 'fas fa-circle-check',     'color' => 'bg-emerald-600', 'light' => 'bg-emerald-50 border-emerald-100'],
+            ['label' => 'Objectifs reçus',     'value' => $fichesStats['total'],       'icon' => 'fas fa-bullseye',          'color' => 'bg-slate-700',   'light' => 'bg-slate-50 border-slate-200'],
+            ['label' => 'Objectifs acceptés',  'value' => $fichesStats['acceptees'],   'icon' => 'fas fa-circle-check',     'color' => 'bg-teal-600',    'light' => 'bg-teal-50 border-teal-100'],
+        ];
+        @endphp
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            @php
-            $quickCards = [
-                ['label'=>'Services',       'value'=> $servicesOverview->count(),    'icon'=>'fas fa-building-user',  'tone'=>'border-blue-100 bg-blue-50/80 text-blue-900',    'iconWrap'=>'bg-white text-blue-600'],
-                ['label'=>'Note moyenne',   'value'=> $noteMoyenne !== null ? number_format($noteMoyenne,2,',',' ').' /10' : '—', 'icon'=>'fas fa-chart-line', 'tone'=>'border-emerald-100 bg-emerald-50/80 text-emerald-900','iconWrap'=>'bg-white text-emerald-600'],
-                ['label'=>'Évaluations',    'value'=> $evaluationsStats['total'],    'icon'=>'fas fa-star',           'tone'=>'border-blue-100 bg-blue-50/80 text-blue-900',    'iconWrap'=>'bg-white text-blue-500'],
-                ['label'=>'Objectifs',      'value'=> $fichesStats['total'],         'icon'=>'fas fa-bullseye',       'tone'=>'border-slate-100 bg-white text-slate-900',       'iconWrap'=>'bg-slate-100 text-slate-600'],
-            ];
-            @endphp
-            @foreach ($quickCards as $card)
-                <div class="rounded-2xl border px-4 py-4 shadow-sm {{ $card['tone'] }}">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.18em] opacity-60">{{ $card['label'] }}</p>
-                            <p class="mt-1 text-2xl font-black leading-none">{{ $card['value'] }}</p>
-                        </div>
-                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $card['iconWrap'] }}">
-                            <i class="{{ $card['icon'] }}"></i>
+            @foreach ($kpis as $kpi)
+                <div class="flex flex-col rounded-2xl border px-4 py-4 shadow-sm {{ $kpi['light'] }}">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 leading-tight">{{ $kpi['label'] }}</p>
+                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg {{ $kpi['color'] }} text-white text-xs">
+                            <i class="{{ $kpi['icon'] }}"></i>
                         </span>
                     </div>
+                    <p class="mt-3 text-3xl font-black text-slate-900">{{ $kpi['value'] }}</p>
                 </div>
             @endforeach
         </div>
 
         {{-- Tabs --}}
-        <div class="admin-panel px-6 py-6">
+        <div class="admin-panel px-6 py-6 lg:px-8">
+
+            {{-- Tab nav --}}
             <div class="mb-6 flex flex-wrap items-center gap-4">
                 <div class="inline-flex gap-1 rounded-2xl border border-slate-200 bg-slate-100/70 p-1">
-                    @foreach ([
-                        ['key'=>'dashboard',   'icon'=>'fas fa-chart-bar',        'label'=>'Tableau de bord'],
-                        ['key'=>'evaluations', 'icon'=>'fas fa-star-half-stroke',  'label'=>'Mes évaluations'],
-                        ['key'=>'objectifs',   'icon'=>'fas fa-bullseye',          'label'=>'Mes objectifs'],
-                    ] as $t)
-                        <a href="{{ route('directeur.mon-espace') }}?tab={{ $t['key'] }}"
-                           class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition
-                               {{ $tab === $t['key'] ? 'border border-slate-200 bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-800' }}">
-                            <i class="{{ $t['icon'] }} text-xs"></i> {{ $t['label'] }}
-                        </a>
-                    @endforeach
+                    <a href="{{ route('directeur.mon-espace') }}?tab=evaluations"
+                       class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition
+                           {{ $tab === 'evaluations'
+                               ? 'border border-slate-200 bg-white text-blue-700 shadow-sm'
+                               : 'text-slate-500 hover:text-slate-800' }}">
+                        <i class="fas fa-star-half-stroke text-xs"></i>
+                        Mes évaluations reçues
+                        <span class="rounded-full px-2 py-0.5 text-[11px] font-black
+                            {{ $tab === 'evaluations' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600' }}">
+                            {{ $evaluationsStats['total'] }}
+                        </span>
+                    </a>
+                    <a href="{{ route('directeur.mon-espace') }}?tab=objectifs"
+                       class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition
+                           {{ $tab === 'objectifs'
+                               ? 'border border-slate-200 bg-white text-blue-700 shadow-sm'
+                               : 'text-slate-500 hover:text-slate-800' }}">
+                        <i class="fas fa-bullseye text-xs"></i>
+                        Mes objectifs reçus
+                        <span class="rounded-full px-2 py-0.5 text-[11px] font-black
+                            {{ $tab === 'objectifs' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600' }}">
+                            {{ $fichesStats['total'] }}
+                        </span>
+                    </a>
                 </div>
             </div>
 
-            {{-- ── TAB DASHBOARD ── --}}
-            @if ($tab === 'dashboard')
+            {{-- ══ TAB : ÉVALUATIONS REÇUES ══ --}}
+            @if ($tab === 'evaluations')
 
-                {{-- Services / Chefs de service --}}
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-base font-black text-slate-900">Vue d'ensemble des services</h2>
-                        <a href="{{ route('directeur.evaluations.create') }}" class="ent-btn ent-btn-primary text-xs">
-                            <i class="fas fa-plus mr-1"></i> Évaluer un chef
-                        </a>
-                    </div>
-
-                    @if ($servicesOverview->isEmpty())
-                        <div class="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
-                            Aucun service rattaché à votre direction.
+                {{-- Stats évaluations --}}
+                <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    @php
+                    $evalCards = [
+                        ['label' => 'Total',    'value' => $evaluationsStats['total'],    'icon' => 'fas fa-clipboard-list', 'tone' => 'border-slate-100 bg-white text-slate-900',            'iconWrap' => 'bg-slate-100 text-slate-600'],
+                        ['label' => 'Soumises', 'value' => $evaluationsStats['soumis'],   'icon' => 'fas fa-paper-plane',    'tone' => 'border-amber-100 bg-amber-50/80 text-amber-900',      'iconWrap' => 'bg-white text-amber-600'],
+                        ['label' => 'Acceptées','value' => $evaluationsStats['valide'],   'icon' => 'fas fa-circle-check',   'tone' => 'border-emerald-100 bg-emerald-50/80 text-emerald-900','iconWrap' => 'bg-white text-emerald-600'],
+                        ['label' => 'Refusées', 'value' => $evaluationsStats['refuse'],   'icon' => 'fas fa-circle-xmark',   'tone' => 'border-rose-100 bg-rose-50/80 text-rose-900',         'iconWrap' => 'bg-white text-rose-500'],
+                    ];
+                    @endphp
+                    @foreach ($evalCards as $card)
+                        <div class="rounded-2xl border px-4 py-4 shadow-sm {{ $card['tone'] }}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[0.18em] opacity-60">{{ $card['label'] }}</p>
+                                    <p class="mt-1 text-3xl font-black leading-none">{{ $card['value'] }}</p>
+                                </div>
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $card['iconWrap'] }}">
+                                    <i class="{{ $card['icon'] }}"></i>
+                                </span>
+                            </div>
                         </div>
-                    @else
-                        <div class="overflow-x-auto rounded-2xl border border-slate-200">
-                            <table class="w-full text-left text-sm text-slate-700">
-                                <thead>
-                                    <tr class="border-b border-slate-100 bg-slate-50">
-                                        <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Service</th>
-                                        <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Chef de service</th>
-                                        <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Agents</th>
-                                        <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Dernière note chef</th>
-                                        <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Statut éval.</th>
-                                        <th class="px-4 py-3 text-right text-[11px] font-black uppercase tracking-wider text-slate-400">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($servicesOverview as $item)
-                                        @php
-                                            $svc  = $item['service'];
-                                            $eval = $item['eval'];
-                                            $chef = trim(($svc->chef_prenom ?? '').' '.($svc->chef_nom ?? ''));
-                                            $note = $eval ? number_format((float) $eval->note_finale, 2, ',', ' ') : null;
-                                            $noteClass = $eval ? match(true) {
-                                                (float) $eval->note_finale >= 8.5 => 'bg-emerald-100 text-emerald-700',
-                                                (float) $eval->note_finale >= 7   => 'bg-sky-100 text-sky-700',
-                                                (float) $eval->note_finale >= 5   => 'bg-amber-100 text-amber-700',
-                                                default                            => 'bg-rose-100 text-rose-700',
-                                            } : null;
-                                        @endphp
-                                        <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
-                                            <td class="px-4 py-3 font-semibold text-slate-900">{{ $svc->nom }}</td>
-                                            <td class="px-4 py-3">{{ $chef ?: '—' }}</td>
-                                            <td class="px-4 py-3">
-                                                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">
-                                                    <i class="fas fa-users text-[9px]"></i> {{ $item['agents_count'] }}
-                                                </span>
-                                            </td>
-                                            <td class="px-4 py-3">
-                                                @if ($note)
-                                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-black {{ $noteClass }}">
-                                                        {{ $note }} /10
+                    @endforeach
+                </div>
+
+                {{-- Filtre --}}
+                <form method="GET" action="{{ route('directeur.mon-espace') }}"
+                      class="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <input type="hidden" name="tab" value="evaluations">
+                    <div class="space-y-1.5">
+                        <label class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Statut</label>
+                        <select name="statut"
+                                class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100">
+                            <option value="">Tous les statuts</option>
+                            <option value="soumis"  @selected(request('statut') === 'soumis')>Soumise</option>
+                            <option value="valide"  @selected(request('statut') === 'valide')>Acceptée</option>
+                            <option value="refuse"  @selected(request('statut') === 'refuse')>Refusée</option>
+                        </select>
+                    </div>
+                    <button type="submit"
+                            class="inline-flex items-center rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
+                        <i class="fas fa-filter mr-2 text-xs"></i> Filtrer
+                    </button>
+                    <a href="{{ route('directeur.mon-espace') }}?tab=evaluations"
+                       class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300">
+                        Effacer
+                    </a>
+                </form>
+
+                {{-- Tableau évaluations --}}
+                <div class="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-left text-sm text-slate-700">
+                            <thead class="bg-slate-50/80">
+                                <tr class="border-b border-slate-200 text-slate-500">
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Période</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Note finale</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Mention</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Évaluateur</th>
+                                    <th class="px-4 py-4 text-center text-xs font-black uppercase tracking-[0.16em]">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @php
+                                    $filtreStatut = request('statut');
+                                    $evalsFiltrees = $filtreStatut
+                                        ? $evaluationsRecues->where('statut', $filtreStatut)
+                                        : $evaluationsRecues;
+                                @endphp
+                                @forelse ($evalsFiltrees as $evaluation)
+                                    @php
+                                        $note = (float) $evaluation->note_finale;
+                                        $mention = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
+                                        $mentionClass = match ($mention) {
+                                            'Excellent' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                                            'Bien'      => 'border-sky-200 bg-sky-50 text-sky-700',
+                                            'Passable'  => 'border-amber-200 bg-amber-50 text-amber-700',
+                                            default     => 'border-rose-200 bg-rose-50 text-rose-700',
+                                        };
+                                        $statusClass = match ($evaluation->statut) {
+                                            'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                                            'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
+                                            'refuse' => 'border-rose-200 bg-rose-50 text-rose-700',
+                                            default  => 'border-slate-200 bg-slate-100 text-slate-700',
+                                        };
+                                        $statusLabel = match ($evaluation->statut) {
+                                            'valide' => 'Acceptée', 'soumis' => 'Soumise',
+                                            'refuse' => 'Refusée', default => 'Brouillon',
+                                        };
+                                        $identification = $evaluation->identification;
+                                        $anneeEval    = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');
+                                        $semestreEval = trim((string)($identification?->semestre ?? ''));
+                                        if ($semestreEval === '') {
+                                            $semestreEval = $evaluation->date_debut->month <= 6 ? '1' : '2';
+                                        }
+                                        $noteValue    = number_format($note, 2, ',', ' ');
+                                        $notePercent  = max(0, min(100, ($note / 10) * 100));
+                                        $noteBarClass = $notePercent >= 85 ? 'bg-emerald-500' : ($notePercent >= 70 ? 'bg-sky-500' : ($notePercent >= 50 ? 'bg-amber-400' : 'bg-rose-400'));
+                                    @endphp
+                                    <tr class="align-top hover:bg-slate-50/60">
+                                        <td class="px-4 py-4 font-black text-slate-900">{{ $evaluation->id }}</td>
+                                        <td class="px-4 py-4 whitespace-nowrap">
+                                            <p class="font-semibold text-slate-700">{{ $anneeEval }} — Sem. {{ $semestreEval }}</p>
+                                            <p class="mt-1 text-xs text-slate-400">{{ $evaluation->date_debut->format('m/Y') }} → {{ $evaluation->date_fin->format('m/Y') }}</p>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <div class="min-w-[130px]">
+                                                <div class="mb-1.5 flex items-center justify-between gap-2">
+                                                    <span class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Score</span>
+                                                    <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-black text-slate-700">
+                                                        {{ $noteValue }}/10
                                                     </span>
-                                                @else
-                                                    <span class="text-slate-300 text-xs">Non évalué</span>
-                                                @endif
-                                            </td>
-                                            <td class="px-4 py-3">
-                                                @if ($eval)
-                                                    @php
-                                                        $sc = match($eval->statut) {
-                                                            'valide' => 'bg-emerald-100 text-emerald-700',
-                                                            'soumis' => 'bg-amber-100 text-amber-700',
-                                                            'refuse' => 'bg-rose-100 text-rose-700',
-                                                            default  => 'bg-slate-100 text-slate-600',
-                                                        };
-                                                        $sl = match($eval->statut) {
-                                                            'valide' => 'Validée', 'soumis' => 'Soumise',
-                                                            'refuse' => 'Refusée', default => 'Brouillon',
-                                                        };
-                                                    @endphp
-                                                    <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold {{ $sc }}">{{ $sl }}</span>
-                                                @else
-                                                    <span class="text-slate-300 text-xs">—</span>
-                                                @endif
-                                            </td>
-                                            <td class="px-4 py-3 text-right">
-                                                <div class="flex justify-end gap-2">
-                                                    @if ($eval)
-                                                        <a href="{{ route('directeur.evaluations.show', $eval) }}"
-                                                           class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition" title="Voir">
-                                                            <i class="fas fa-eye text-xs"></i>
-                                                        </a>
-                                                    @endif
-                                                    <a href="{{ route('directeur.evaluations.create', ['service_id' => $svc->id]) }}"
-                                                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition" title="Nouvelle évaluation">
-                                                        <i class="fas fa-plus text-xs"></i>
-                                                    </a>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
-
-                    {{-- Évaluations créées par le directeur --}}
-                    @if ($evaluationsCreees->isNotEmpty())
-                        <div class="mt-6">
-                            <h2 class="mb-3 text-base font-black text-slate-900">Toutes les évaluations créées</h2>
-                            <div class="overflow-x-auto rounded-2xl border border-slate-200">
-                                <table class="w-full text-left text-sm text-slate-700">
-                                    <thead>
-                                        <tr class="border-b border-slate-100 bg-slate-50">
-                                            <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Service</th>
-                                            <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Période</th>
-                                            <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Note</th>
-                                            <th class="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Statut</th>
-                                            <th class="px-4 py-3 text-right text-[11px] font-black uppercase tracking-wider text-slate-400">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($evaluationsCreees as $eval)
-                                            @php
-                                                $sc = match($eval->statut) {
-                                                    'valide' => 'bg-emerald-100 text-emerald-700',
-                                                    'soumis' => 'bg-amber-100 text-amber-700',
-                                                    'refuse' => 'bg-rose-100 text-rose-700',
-                                                    default  => 'bg-slate-100 text-slate-600',
-                                                };
-                                                $sl = match($eval->statut) {
-                                                    'valide' => 'Validée', 'soumis' => 'Soumise',
-                                                    'refuse' => 'Refusée', default => 'Brouillon',
-                                                };
-                                            @endphp
-                                            <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
-                                                <td class="px-4 py-3 font-semibold text-slate-900">{{ $eval->evaluable?->nom ?? '—' }}</td>
-                                                <td class="px-4 py-3 text-slate-500">{{ $eval->date_debut->format('m/Y') }} — {{ $eval->date_fin->format('m/Y') }}</td>
-                                                <td class="px-4 py-3 font-bold">{{ number_format((float) $eval->note_finale, 2, ',', ' ') }} /10</td>
-                                                <td class="px-4 py-3"><span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold {{ $sc }}">{{ $sl }}</span></td>
-                                                <td class="px-4 py-3 text-right">
-                                                    <div class="flex justify-end gap-1">
-                                                        <a href="{{ route('directeur.evaluations.show', $eval) }}"
-                                                           class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition">
-                                                            <i class="fas fa-eye text-xs"></i>
-                                                        </a>
-                                                        @if ($eval->statut === 'brouillon')
-                                                            <form method="POST" action="{{ route('directeur.evaluations.submit', $eval) }}">
-                                                                @csrf @method('PATCH')
-                                                                <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition" title="Soumettre">
-                                                                    <i class="fas fa-paper-plane text-xs"></i>
-                                                                </button>
-                                                            </form>
-                                                            <form method="POST" action="{{ route('directeur.evaluations.destroy', $eval) }}" onsubmit="return confirm('Supprimer cette évaluation ?')">
-                                                                @csrf @method('DELETE')
-                                                                <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-500 transition" title="Supprimer">
-                                                                    <i class="fas fa-trash text-xs"></i>
-                                                                </button>
-                                                            </form>
-                                                        @endif
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    @endif
+                                                <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                                                    <div class="h-full rounded-full {{ $noteBarClass }}" style="width: {{ $notePercent }}%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $mentionClass }}">
+                                                {{ $mention }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statusClass }}">
+                                                {{ $statusLabel }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-4 text-slate-600 text-sm">
+                                            {{ $evaluation->evaluateur?->name ?? '—' }}
+                                        </td>
+                                        <td class="px-4 py-4 text-center">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <a href="{{ route('directeur.evaluations.show', $evaluation) }}"
+                                                   class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-blue-100 hover:text-blue-600"
+                                                   title="Voir">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                @if (in_array($evaluation->statut, ['soumis']))
+                                                    <form method="POST" action="{{ route('directeur.evaluations.statut', $evaluation) }}">
+                                                        @csrf @method('PATCH')
+                                                        <input type="hidden" name="statut" value="valide">
+                                                        <button type="submit"
+                                                                class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-emerald-100 hover:text-emerald-600"
+                                                                title="Accepter" onclick="return confirm('Accepter cette évaluation ?')">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form method="POST" action="{{ route('directeur.evaluations.statut', $evaluation) }}">
+                                                        @csrf @method('PATCH')
+                                                        <input type="hidden" name="statut" value="refuse">
+                                                        <button type="submit"
+                                                                class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-rose-100 hover:text-rose-500"
+                                                                title="Refuser" onclick="return confirm('Refuser cette évaluation ?')">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="px-4 py-12 text-center">
+                                            <div class="mx-auto max-w-sm rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-8">
+                                                <i class="fas fa-star-half-stroke text-2xl text-slate-300"></i>
+                                                <p class="mt-2 text-sm font-black text-slate-700">Aucune évaluation reçue</p>
+                                                <p class="mt-1 text-xs text-slate-500">Vous n'avez pas encore d'évaluation reçue du DG.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-            {{-- ── TAB ÉVALUATIONS REÇUES ── --}}
-            @elseif ($tab === 'evaluations')
+            {{-- ══ TAB : OBJECTIFS REÇUS ══ --}}
+            @else
 
-                <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    @foreach ([
-                        ['label'=>'Total',    'value'=>$evaluationsStats['total'],    'color'=>'bg-slate-100 text-slate-700'],
-                        ['label'=>'Soumises', 'value'=>$evaluationsStats['soumis'],   'color'=>'bg-amber-100 text-amber-700'],
-                        ['label'=>'Acceptées','value'=>$evaluationsStats['valide'],   'color'=>'bg-emerald-100 text-emerald-700'],
-                        ['label'=>'Refusées', 'value'=>$evaluationsStats['refuse'],   'color'=>'bg-rose-100 text-rose-700'],
-                    ] as $c)
-                        <div class="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm text-center">
-                            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ $c['label'] }}</p>
-                            <p class="mt-1 text-2xl font-black"><span class="inline-flex rounded-full px-3 py-0.5 {{ $c['color'] }}">{{ $c['value'] }}</span></p>
+                {{-- Stats objectifs --}}
+                <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    @php
+                    $objCards = [
+                        ['label' => 'Total',      'value' => $fichesStats['total'],       'icon' => 'fas fa-clipboard-list', 'tone' => 'border-slate-100 bg-white text-slate-900',            'iconWrap' => 'bg-slate-100 text-slate-600'],
+                        ['label' => 'En attente', 'value' => $fichesStats['en_attente'],  'icon' => 'fas fa-clock',          'tone' => 'border-amber-100 bg-amber-50/80 text-amber-900',      'iconWrap' => 'bg-white text-amber-600'],
+                        ['label' => 'Acceptés',   'value' => $fichesStats['acceptees'],   'icon' => 'fas fa-circle-check',   'tone' => 'border-emerald-100 bg-emerald-50/80 text-emerald-900','iconWrap' => 'bg-white text-emerald-600'],
+                        ['label' => 'Refusés',    'value' => $fichesStats['refusees'],    'icon' => 'fas fa-circle-xmark',   'tone' => 'border-rose-100 bg-rose-50/80 text-rose-900',         'iconWrap' => 'bg-white text-rose-500'],
+                    ];
+                    @endphp
+                    @foreach ($objCards as $card)
+                        <div class="rounded-2xl border px-4 py-4 shadow-sm {{ $card['tone'] }}">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-[0.18em] opacity-60">{{ $card['label'] }}</p>
+                                    <p class="mt-1 text-3xl font-black leading-none">{{ $card['value'] }}</p>
+                                </div>
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $card['iconWrap'] }}">
+                                    <i class="{{ $card['icon'] }}"></i>
+                                </span>
+                            </div>
                         </div>
                     @endforeach
                 </div>
 
-                @forelse ($evaluationsRecues as $eval)
-                    @php
-                        $ident = $eval->identification;
-                        $periode = $eval->date_debut->format('m/Y').' — '.$eval->date_fin->format('m/Y');
-                        $sc = match($eval->statut) {
-                            'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                            'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-                            'refuse' => 'border-rose-200 bg-rose-50 text-rose-700',
-                            default  => 'border-slate-200 bg-slate-100 text-slate-600',
-                        };
-                        $sl = match($eval->statut) {
-                            'valide' => 'Acceptée', 'soumis' => 'Soumise', 'refuse' => 'Refusée', default => 'Brouillon',
-                        };
-                        $mention = match(true) {
-                            (float)$eval->note_finale >= 8.5 => 'Excellent',
-                            (float)$eval->note_finale >= 7   => 'Bien',
-                            (float)$eval->note_finale >= 5   => 'Passable',
-                            default                          => 'Insuffisant',
-                        };
-                        $mentionClass = match($mention) {
-                            'Excellent' => 'bg-emerald-100 text-emerald-700',
-                            'Bien'      => 'bg-sky-100 text-sky-700',
-                            'Passable'  => 'bg-amber-100 text-amber-700',
-                            default     => 'bg-rose-100 text-rose-700',
-                        };
-                    @endphp
-                    <div class="mb-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                                <p class="text-xs font-black uppercase tracking-wider text-slate-400">Évaluation reçue</p>
-                                <p class="mt-1 text-base font-black text-slate-900">{{ $periode }}</p>
-                                <p class="mt-0.5 text-sm text-slate-500">Évaluateur : {{ $eval->evaluateur?->name ?? '—' }}</p>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="inline-flex rounded-full border px-3 py-1 text-[11px] font-black {{ $sc }}">{{ $sl }}</span>
-                                <span class="inline-flex rounded-full px-3 py-1 text-[11px] font-black {{ $mentionClass }}">{{ $mention }}</span>
-                                <span class="text-lg font-black text-slate-900">{{ number_format((float) $eval->note_finale, 2, ',', ' ') }}/10</span>
-                                <a href="{{ route('directeur.evaluations.show', $eval) }}" class="ent-btn ent-btn-soft text-xs">Voir</a>
-                            </div>
-                        </div>
+                {{-- Filtre --}}
+                <form method="GET" action="{{ route('directeur.mon-espace') }}"
+                      class="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                    <input type="hidden" name="tab" value="objectifs">
+                    <div class="space-y-1.5">
+                        <label class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Statut</label>
+                        <select name="statut_obj"
+                                class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100">
+                            <option value="">Tous</option>
+                            <option value="en_attente" @selected(request('statut_obj') === 'en_attente')>En attente</option>
+                            <option value="acceptee"   @selected(request('statut_obj') === 'acceptee')>Accepté</option>
+                            <option value="refusee"    @selected(request('statut_obj') === 'refusee')>Refusé</option>
+                        </select>
                     </div>
-                @empty
-                    <div class="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-400">
-                        Aucune évaluation reçue pour le moment.
+                    <button type="submit"
+                            class="inline-flex items-center rounded-2xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
+                        <i class="fas fa-filter mr-2 text-xs"></i> Filtrer
+                    </button>
+                    <a href="{{ route('directeur.mon-espace') }}?tab=objectifs"
+                       class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300">
+                        Effacer
+                    </a>
+                </form>
+
+                {{-- Tableau objectifs --}}
+                <div class="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-left text-sm text-slate-700">
+                            <thead class="bg-slate-50/80">
+                                <tr class="border-b border-slate-200 text-slate-500">
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Fiche</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Période</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Objectifs</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Avancement</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
+                                    <th class="px-4 py-4 text-center text-xs font-black uppercase tracking-[0.16em]">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @php
+                                    $filtreObj = request('statut_obj');
+                                    $fichesFiltrees = $filtreObj
+                                        ? $fichesObjectifs->where('statut', $filtreObj)
+                                        : $fichesObjectifs;
+                                @endphp
+                                @forelse ($fichesFiltrees as $fiche)
+                                    @php
+                                        $statutClass = match ($fiche->statut ?? 'en_attente') {
+                                            'acceptee' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                                            'refusee'  => 'border-rose-200 bg-rose-50 text-rose-700',
+                                            default    => 'border-amber-200 bg-amber-50 text-amber-700',
+                                        };
+                                        $statutLabel = match ($fiche->statut ?? 'en_attente') {
+                                            'acceptee' => 'Accepté', 'refusee' => 'Refusé', default => 'En attente',
+                                        };
+                                        $avancement = (int) ($fiche->avancement_percentage ?? 0);
+                                        $avancementColor = $avancement >= 80 ? 'bg-emerald-500' : ($avancement >= 50 ? 'bg-sky-500' : ($avancement >= 25 ? 'bg-amber-400' : 'bg-slate-300'));
+                                    @endphp
+                                    <tr class="hover:bg-slate-50/60">
+                                        <td class="px-4 py-4 font-black text-slate-900">{{ $fiche->id }}</td>
+                                        <td class="px-4 py-4">
+                                            <p class="font-semibold text-slate-700">{{ $fiche->titre }}</p>
+                                            <p class="mt-1 text-xs text-slate-400">Année {{ $fiche->annee?->annee ?? $fiche->annee_id }}</p>
+                                        </td>
+                                        <td class="px-4 py-4 whitespace-nowrap text-slate-600">
+                                            <p>{{ \Carbon\Carbon::parse($fiche->date)->format('d/m/Y') }}</p>
+                                            <p class="mt-1 text-xs text-slate-400">
+                                                Échéance : {{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}
+                                            </p>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-700">
+                                                <i class="fas fa-list text-[10px]"></i>
+                                                {{ $fiche->objectifs->count() }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <div class="min-w-[120px]">
+                                                <div class="mb-1.5 flex items-center justify-between gap-2">
+                                                    <span class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Progress</span>
+                                                    <span class="text-xs font-black text-slate-700">{{ $avancement }}%</span>
+                                                </div>
+                                                <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                                                    <div class="h-full rounded-full {{ $avancementColor }}" style="width: {{ $avancement }}%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statutClass }}">
+                                                {{ $statutLabel }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-4 text-center">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <a href="{{ route('directeur.objectifs.show', $fiche) }}"
+                                                   class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-blue-100 hover:text-blue-600"
+                                                   title="Voir">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                @if (in_array($fiche->statut, ['en_attente', null]))
+                                                    <form method="POST" action="{{ route('directeur.objectifs.statut', $fiche) }}">
+                                                        @csrf @method('PATCH')
+                                                        <input type="hidden" name="statut" value="acceptee">
+                                                        <button type="submit"
+                                                                class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-emerald-100 hover:text-emerald-600"
+                                                                title="Accepter" onclick="return confirm('Accepter cette fiche ?')">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form method="POST" action="{{ route('directeur.objectifs.statut', $fiche) }}">
+                                                        @csrf @method('PATCH')
+                                                        <input type="hidden" name="statut" value="refusee">
+                                                        <button type="submit"
+                                                                class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-rose-100 hover:text-rose-500"
+                                                                title="Refuser" onclick="return confirm('Refuser cette fiche ?')">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="px-4 py-12 text-center">
+                                            <div class="mx-auto max-w-sm rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-8">
+                                                <i class="fas fa-bullseye text-2xl text-slate-300"></i>
+                                                <p class="mt-2 text-sm font-black text-slate-700">Aucun objectif reçu</p>
+                                                <p class="mt-1 text-xs text-slate-500">Vous n'avez pas encore de fiche d'objectifs assignée.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
-                @endforelse
-
-            {{-- ── TAB OBJECTIFS REÇUS ── --}}
-            @elseif ($tab === 'objectifs')
-
-                <div class="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    @foreach ([
-                        ['label'=>'Total',      'value'=>$fichesStats['total'],      'color'=>'bg-slate-100 text-slate-700'],
-                        ['label'=>'Acceptées',  'value'=>$fichesStats['acceptees'],  'color'=>'bg-emerald-100 text-emerald-700'],
-                        ['label'=>'En attente', 'value'=>$fichesStats['en_attente'], 'color'=>'bg-amber-100 text-amber-700'],
-                    ] as $c)
-                        <div class="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm text-center">
-                            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ $c['label'] }}</p>
-                            <p class="mt-1 text-2xl font-black"><span class="inline-flex rounded-full px-3 py-0.5 {{ $c['color'] }}">{{ $c['value'] }}</span></p>
-                        </div>
-                    @endforeach
                 </div>
-
-                @forelse ($fichesObjectifs as $fiche)
-                    @php
-                        $sc = match($fiche->statut) {
-                            'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                            'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
-                            'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
-                            default      => 'border-slate-200 bg-slate-100 text-slate-600',
-                        };
-                        $sl = match($fiche->statut) {
-                            'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', default => ucfirst($fiche->statut),
-                        };
-                    @endphp
-                    <div class="mb-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                                <p class="text-base font-black text-slate-900">{{ $fiche->titre }}</p>
-                                <p class="mt-0.5 text-sm text-slate-500">
-                                    Année : {{ $fiche->annee }}
-                                    @if ($fiche->date_echeance)
-                                        · Échéance : {{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}
-                                    @endif
-                                </p>
-                                <p class="mt-1 text-sm text-slate-400">{{ $fiche->objectifs->count() }} objectif(s)</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="inline-flex rounded-full border px-3 py-1 text-[11px] font-black {{ $sc }}">{{ $sl }}</span>
-                                <a href="{{ route('directeur.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft text-xs">Voir</a>
-                            </div>
-                        </div>
-                    </div>
-                @empty
-                    <div class="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-400">
-                        Aucune fiche d'objectifs reçue pour le moment.
-                    </div>
-                @endforelse
 
             @endif
-
         </div>
+
     </div>
 </div>
 @endsection

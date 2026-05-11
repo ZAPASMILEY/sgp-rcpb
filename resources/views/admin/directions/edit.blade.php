@@ -35,9 +35,15 @@
 
                         <div class="space-y-2">
                             <label for="directeur_agent_id" class="text-sm font-semibold text-slate-700">Directeur</label>
+                            @if ($directeurs->isEmpty())
+                                <p class="text-xs text-amber-600 flex items-center gap-1">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Aucun directeur disponible (tous déjà affectés ou aucun agent avec la fonction Directeur).
+                                </p>
+                            @endif
                             <select id="directeur_agent_id" name="directeur_agent_id" class="ent-select">
                                 <option value="">— Aucun —</option>
-                                @foreach ($agents as $agent)
+                                @foreach ($directeurs as $agent)
                                     <option value="{{ $agent->id }}" @selected((string) old('directeur_agent_id', $direction->directeur_agent_id) === (string) $agent->id)>
                                         {{ $agent->nom }} {{ $agent->prenom }}{{ $agent->fonction ? ' — '.$agent->fonction : '' }}
                                     </option>
@@ -47,9 +53,15 @@
 
                         <div class="space-y-2">
                             <label for="secretaire_agent_id" class="text-sm font-semibold text-slate-700">Secrétaire</label>
+                            @if ($secretaires->isEmpty())
+                                <p class="text-xs text-amber-600 flex items-center gap-1">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Aucune secrétaire disponible (toutes déjà affectées ou aucun agent avec la fonction Secrétaire).
+                                </p>
+                            @endif
                             <select id="secretaire_agent_id" name="secretaire_agent_id" class="ent-select">
                                 <option value="">— Aucun —</option>
-                                @foreach ($agents as $agent)
+                                @foreach ($secretaires as $agent)
                                     <option value="{{ $agent->id }}" @selected((string) old('secretaire_agent_id', $direction->secretaire_agent_id) === (string) $agent->id)>
                                         {{ $agent->nom }} {{ $agent->prenom }}{{ $agent->fonction ? ' — '.$agent->fonction : '' }}
                                     </option>

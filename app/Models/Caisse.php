@@ -38,6 +38,11 @@ class Caisse extends Model
         return $this->belongsTo(Agent::class, 'directeur_agent_id');
     }
 
+    public function directeurAgent(): BelongsTo
+    {
+        return $this->belongsTo(Agent::class, 'directeur_agent_id');
+    }
+
     public function secretaire(): BelongsTo
     {
         return $this->belongsTo(Agent::class, 'secretaire_agent_id');
@@ -63,6 +68,11 @@ class Caisse extends Model
     public function agences(): HasMany
     {
         return $this->hasMany(Agence::class, 'caisse_id');
+    }
+
+    public function agents(): HasMany
+    {
+        return $this->hasMany(Agent::class, 'caisse_id');
     }
 
     public function services(): HasMany

@@ -193,8 +193,11 @@ class DirectionController extends Controller
             'region'               => ['required', 'string', 'max:255'],
             'ville'                => ['required', 'string', 'max:255'],
             'secretariat_telephone' => ['required', 'string', 'max:30'],
-            'directeur_agent_id'   => ['nullable', 'integer', 'exists:agents,id'],
-            'secretaire_agent_id'  => ['nullable', 'integer', 'exists:agents,id'],
+            'directeur_agent_id'   => ['required', 'integer', 'exists:agents,id'],
+            'secretaire_agent_id'  => ['required', 'integer', 'exists:agents,id'],
+        ], [
+            'directeur_agent_id.required'  => 'Le directeur est obligatoire pour créer une Délégation Technique.',
+            'secretaire_agent_id.required' => 'Le secrétaire est obligatoire pour créer une Délégation Technique.',
         ]);
 
         $alreadyExists = DelegationTechnique::query()
@@ -229,8 +232,10 @@ class DirectionController extends Controller
             'annee_ouverture'         => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
             'quartier'                => ['nullable', 'string', 'max:255'],
             'secretariat_telephone'   => ['nullable', 'string', 'max:30'],
-            'directeur_agent_id'      => ['nullable', 'integer', 'exists:agents,id'],
+            'directeur_agent_id'      => ['required', 'integer', 'exists:agents,id'],
             'secretaire_agent_id'     => ['nullable', 'integer', 'exists:agents,id'],
+        ], [
+            'directeur_agent_id.required' => 'Le directeur est obligatoire pour créer une Caisse.',
         ]);
 
         Caisse::query()->create($validated);
@@ -266,7 +271,9 @@ class DirectionController extends Controller
         $validated = $request->validate([
             'delegation_technique_id' => ['required', 'exists:delegation_techniques,id'],
             'nom'                     => ['required', 'string', 'max:255'],
-            'chef_agent_id'           => ['nullable', 'integer', 'exists:agents,id'],
+            'chef_agent_id'           => ['required', 'integer', 'exists:agents,id'],
+        ], [
+            'chef_agent_id.required' => 'Le chef de service est obligatoire pour créer un Service.',
         ]);
 
         Service::query()->create($validated);
@@ -343,44 +350,102 @@ class DirectionController extends Controller
 
     public function create(): View
     {
+        // IDs déjà affectés comme directeur ou secrétaire dans une direction existante
+        $prisDirecteurIds   = Direction::whereNotNull('directeur_agent_id')->pluck('directeur_agent_id');
+        $prisSecretaireIds  = Direction::whereNotNull('secretaire_agent_id')->pluck('secretaire_agent_id');
+
         return view('admin.directions.create', [
             'delegations' => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
-            'directeurs'  => Agent::query()->where('fonction', 'Directeur de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
-            'secretaires' => Agent::query()->where('fonction', 'Secrétaire de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
+
+            // Seuls les agents "Directeur de Direction" pas encore affectés à une direction
+            'directeurs'  => Agent::query()
+                ->where('fonction', 'Directeur de Direction')
+                ->whereNotIn('id', $prisDirecteurIds)
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'fonction']),
+
+            // Seules les agents "Secrétaire de Direction" pas encore affectées
+            'secretaires' => Agent::query()
+                ->where('fonction', 'Secrétaire de Direction')
+                ->whereNotIn('id', $prisSecretaireIds)
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'fonction']),
         ]);
     }
 
-    public function show(Direction $direction): View
+    public function show(Direction $direction, Request $request): View
     {
-        $direction->load(['entite', 'directeur', 'secretaire']);
+        $direction->load(['entite', 'directeur', 'secretaire', 'services']);
 
-        // Récupérer les évaluations validées et les dernières
-        $evaluations = Evaluation::query()
-            ->where('evaluable_type', Direction::class)
-            ->where('evaluable_id', $direction->id)
-            ->where('statut', 'valide')
-            ->latest()
-            ->get();
+        // ── Services de la direction (pour le filtre) ─────────────────────
+        $services    = $direction->services()->orderBy('nom')->get(['id', 'nom']);
+        $serviceId   = $request->query('service_id'); // null = tous les services
 
-        // Récupérer les objectifs assignés à cette direction
-        $objectifs = Objectif::query()
-            ->where('assignable_type', Direction::class)
-            ->where('assignable_id', $direction->id)
-            ->latest()
-            ->get();
+        // ── Agents travaillant dans cette direction ────────────────────────
+        // Un agent peut être rattaché directement à la direction (direction_id)
+        // ou à l'un de ses services (service_id → service.direction_id).
+        $serviceIds = $services->pluck('id');
+
+        $agents = Agent::query()
+            ->where(function ($q) use ($direction, $serviceIds) {
+                $q->where('direction_id', $direction->id)
+                  ->orWhereIn('service_id', $serviceIds);
+            })
+            // Filtre additionnel si un service est sélectionné
+            ->when($serviceId, fn ($q) => $q->where('service_id', $serviceId))
+            ->with('service')           // évite N+1 pour afficher le service de chaque agent
+            ->orderBy('nom')
+            ->orderBy('prenom')
+            ->get(['id', 'nom', 'prenom', 'fonction', 'email', 'service_id', 'direction_id']);
 
         return view('admin.directions.show', [
-            'direction'   => $direction,
-            'evaluations' => $evaluations,
-            'objectifs'   => $objectifs,
+            'direction'       => $direction,
+            'services'        => $services,
+            'agents'          => $agents,
+            'selectedService' => $serviceId,
         ]);
     }
 
     public function edit(Direction $direction): View
     {
+        // IDs déjà pris dans UNE AUTRE direction (on exclut la direction en cours d'édition)
+        $prisDirecteurIds  = Direction::where('id', '!=', $direction->id)
+            ->whereNotNull('directeur_agent_id')
+            ->pluck('directeur_agent_id');
+
+        $prisSecretaireIds = Direction::where('id', '!=', $direction->id)
+            ->whereNotNull('secretaire_agent_id')
+            ->pluck('secretaire_agent_id');
+
+        // Directeurs disponibles : uniquement "Directeur de Direction" + pas pris dans une autre direction.
+        // Le directeur actuellement en poste est toujours inclus pour qu'il reste sélectionnable.
+        $directeurs = Agent::query()
+            ->where(function ($q) use ($prisDirecteurIds, $direction) {
+                $q->where('fonction', 'Directeur de Direction')
+                  ->whereNotIn('id', $prisDirecteurIds);
+                if ($direction->directeur_agent_id) {
+                    $q->orWhere('id', $direction->directeur_agent_id);
+                }
+            })
+            ->orderBy('nom')->orderBy('prenom')
+            ->get(['id', 'nom', 'prenom', 'fonction']);
+
+        // Secrétaires disponibles : uniquement "Secrétaire de Direction" + pas prises ailleurs.
+        $secretaires = Agent::query()
+            ->where(function ($q) use ($prisSecretaireIds, $direction) {
+                $q->where('fonction', 'Secrétaire de Direction')
+                  ->whereNotIn('id', $prisSecretaireIds);
+                if ($direction->secretaire_agent_id) {
+                    $q->orWhere('id', $direction->secretaire_agent_id);
+                }
+            })
+            ->orderBy('nom')->orderBy('prenom')
+            ->get(['id', 'nom', 'prenom', 'fonction']);
+
         return view('admin.directions.edit', [
-            'direction' => $direction,
-            'agents'    => Agent::query()->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']),
+            'direction'  => $direction,
+            'directeurs' => $directeurs,
+            'secretaires' => $secretaires,
         ]);
     }
 
@@ -395,8 +460,10 @@ class DirectionController extends Controller
 
         $validated = $request->validate([
             'nom'                 => ['required', 'string', 'max:255', Rule::unique('directions')->where('entite_id', $entite->id)],
-            'directeur_agent_id'  => ['nullable', 'integer', 'exists:agents,id'],
+            'directeur_agent_id'  => ['required', 'integer', 'exists:agents,id'],
             'secretaire_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
+        ], [
+            'directeur_agent_id.required' => 'Le directeur est obligatoire pour créer une Direction.',
         ]);
 
         $validated['entite_id'] = $entite->id;
