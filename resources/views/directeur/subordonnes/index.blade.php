@@ -3,15 +3,21 @@
 @section('title', 'Mes subordonnés | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-slate-50 px-4 pb-10 pt-4 lg:px-8">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
     <div class="w-full flex flex-col gap-6">
 
-        {{-- Header --}}
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Espace Directeur / Subordonnés</p>
-            <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950">Mes subordonnés</h1>
-            <p class="mt-1 text-sm text-slate-500">{{ $ctx->getNom() }} · {{ $ctx->getRoleLabel() }}</p>
-        </header>
+        {{-- Hero --}}
+        <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+            <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-10 left-1/3 h-40 w-40 rounded-full bg-teal-300/10 blur-2xl"></div>
+            <div class="relative">
+                <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">Espace Directeur · Subordonnés</p>
+                <h1 class="mt-1 text-2xl font-black tracking-tight text-white">Mes subordonnés</h1>
+                <p class="mt-1 text-sm text-emerald-100/80">{{ $ctx->getNom() }} · {{ $ctx->getRoleLabel() }}</p>
+            </div>
+        </div>
+
+        <div class="px-4 lg:px-8 flex flex-col gap-6">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
@@ -100,7 +106,7 @@
                                     </a>
                                 @else
                                     <span title="Fonctionnalité désactivée"
-                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                          class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
@@ -111,7 +117,7 @@
                                     </a>
                                 @else
                                     <span title="Fonctionnalité désactivée"
-                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                          class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
                                 @endif
@@ -207,7 +213,7 @@
                                     </a>
                                 @else
                                     <span title="Fonctionnalité désactivée"
-                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                          class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
@@ -218,7 +224,7 @@
                                     </a>
                                 @else
                                     <span title="Fonctionnalité désactivée"
-                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                          class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
                                 @endif
@@ -309,7 +315,7 @@
                                     </a>
                                 @else
                                     <span title="Fonctionnalité désactivée"
-                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                          class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
@@ -320,7 +326,7 @@
                                     </a>
                                 @else
                                     <span title="Fonctionnalité désactivée"
-                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                          class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
                                 @endif
@@ -381,7 +387,7 @@
                             </a>
                         @else
                             <span title="Fonctionnalité désactivée"
-                                  class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                  class="ent-btn-disabled-light">
                                 <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                             </span>
                         @endif
@@ -392,7 +398,7 @@
                             </a>
                         @else
                             <span title="Fonctionnalité désactivée"
-                                  class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                  class="ent-btn-disabled-light">
                                 <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                             </span>
                         @endif
@@ -410,6 +416,7 @@
             @endif
         </section>
 
+        </div>
     </div>
 </div>
 @endsection

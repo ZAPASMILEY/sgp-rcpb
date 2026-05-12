@@ -8,57 +8,58 @@
 @section('title', $direction->nom.' | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="admin-shell min-h-screen px-4 py-6 sm:px-6 lg:px-10">
-    <div class="w-full flex-col gap-6">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
 
-        {{-- En-tête --}}
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        <a href="{{ route('dg.directions') }}" class="hover:text-emerald-600">Mes Directeurs</a>
-                        <span class="mx-1 text-slate-300">/</span>
-                        {{ $direction->nom }}
-                    </p>
-                    <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $direction->nom }}</h1>
-                    @if ($directeurNom)
-                        <p class="mt-1 text-sm text-slate-500">
-                            <i class="fas fa-user mr-1 text-slate-400"></i>{{ $directeurNom }}
-                            @if ($directeur->fonction)
-                                <span class="ml-1 text-slate-400">— {{ $directeur->fonction }}</span>
+    {{-- Hero --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 px-6 py-10 lg:px-10">
+        <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-10 left-1/3 h-48 w-48 rounded-full bg-emerald-400/10 blur-2xl"></div>
+
+        <div class="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <a href="{{ route('dg.directions') }}" class="mb-2 inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white transition-colors">
+                    <i class="fas fa-arrow-left text-[10px]"></i> Mes Directeurs
+                </a>
+                <h1 class="text-2xl font-black tracking-tight text-white">{{ $direction->nom }}</h1>
+                @if ($directeurNom)
+                    <div class="mt-2 flex items-center gap-2">
+                        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/30 text-[10px] font-black text-emerald-200">
+                            {{ strtoupper(substr($directeurNom, 0, 1)) }}
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-300">{{ $directeurNom }}</p>
+                            @if($directeur->fonction)
+                                <p class="text-xs text-slate-500">{{ $directeur->fonction }}</p>
                             @endif
-                        </p>
-                    @else
-                        <p class="mt-1 text-sm text-slate-400 italic">Directeur non affecté</p>
-                    @endif
-                </div>
-                <div class="flex shrink-0 flex-wrap items-center gap-2">
-                    @if($evaluationsEnabled)
-                        <a href="{{ route('dg.directions.evaluations.create', $direction) }}" class="ent-btn ent-btn-primary">
-                            <i class="fas fa-pen-to-square mr-2"></i>Nouvelle évaluation
-                        </a>
-                    @else
-                        <span title="Fonctionnalité désactivée par l'administrateur"
-                              class="ent-btn ent-btn-primary cursor-not-allowed opacity-60 select-none pointer-events-none">
-                            <i class="fas fa-pen-to-square mr-2"></i>Nouvelle évaluation
-                        </span>
-                    @endif
-                    @if($objectifsEnabled)
-                        <a href="{{ route('dg.directions.objectifs.create', $direction) }}" class="ent-btn ent-btn-soft">
-                            <i class="fas fa-bullseye mr-2"></i>Assigner des objectifs
-                        </a>
-                    @else
-                        <span title="Fonctionnalité désactivée par l'administrateur"
-                              class="ent-btn ent-btn-soft cursor-not-allowed opacity-60 select-none pointer-events-none">
-                            <i class="fas fa-bullseye mr-2"></i>Assigner des objectifs
-                        </span>
-                    @endif
-                    <a href="{{ route('dg.directions') }}" class="ent-btn ent-btn-soft">
-                        <i class="fas fa-arrow-left mr-2"></i>Retour
-                    </a>
-                </div>
+                        </div>
+                    </div>
+                @else
+                    <p class="mt-1 text-sm italic text-slate-500">Directeur non affecté</p>
+                @endif
             </div>
-        </header>
+            <div class="flex shrink-0 flex-wrap items-center gap-2 mt-2 sm:mt-0">
+                @if($evaluationsEnabled)
+                    <a href="{{ route('dg.directions.evaluations.create', $direction) }}"
+                       class="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-black text-white shadow transition hover:bg-emerald-400">
+                        <i class="fas fa-pen-to-square text-xs"></i>Évaluer
+                    </a>
+                @else
+                    <span class="ent-btn-disabled-dark"><i class="fas fa-pen-to-square text-xs"></i>Évaluer</span>
+                @endif
+                @if($objectifsEnabled)
+                    <a href="{{ route('dg.directions.objectifs.create', $direction) }}"
+                       class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+                        <i class="fas fa-bullseye text-xs"></i>Objectifs
+                    </a>
+                @else
+                    <span class="ent-btn-disabled-dark"><i class="fas fa-bullseye text-xs"></i>Objectifs</span>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="px-4 lg:px-8">
+    <div class="w-full flex-col gap-6">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -72,7 +73,7 @@
         @endif
 
         {{-- Onglets --}}
-        <div class="flex gap-1 border-b border-slate-200 bg-white px-6">
+        <div class="flex gap-1 border-b border-slate-200 bg-white px-6 mt-4 rounded-t-2xl">
             <a href="{{ route('dg.directions.show', ['direction' => $direction->id, 'tab' => 'evaluations']) }}"
                class="border-b-2 px-4 py-3 text-sm font-bold transition {{ $tab === 'evaluations' ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
                 <i class="fas fa-star mr-2"></i>Évaluations ({{ $evaluations->count() }})
@@ -94,7 +95,7 @@
                         </a>
                     @else
                         <span title="Fonctionnalité désactivée par l'administrateur"
-                              class="ent-btn ent-btn-primary cursor-not-allowed opacity-60 select-none pointer-events-none">
+                              class="ent-btn ent-btn-primary cursor-not-allowed opacity-75 select-none pointer-events-none">
                             <i class="fas fa-plus mr-2"></i>Nouvelle évaluation
                         </span>
                     @endif
@@ -192,7 +193,7 @@
                         </a>
                     @else
                         <span title="Fonctionnalité désactivée par l'administrateur"
-                              class="ent-btn ent-btn-primary cursor-not-allowed opacity-60 select-none pointer-events-none">
+                              class="ent-btn ent-btn-primary cursor-not-allowed opacity-75 select-none pointer-events-none">
                             <i class="fas fa-plus mr-2"></i>Assigner des objectifs
                         </span>
                     @endif
@@ -261,6 +262,7 @@
             </section>
         @endif
 
+    </div>
     </div>
 </div>
 @endsection

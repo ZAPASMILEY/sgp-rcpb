@@ -5,21 +5,26 @@
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
     <div class="w-full flex flex-col gap-6">
 
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div>
-                <a href="{{ route('dga.reseau.caisses') }}" class="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-violet-600">
-                    <i class="fas fa-arrow-left"></i> Caisses
-                </a>
-                <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">{{ $caisse->nom }}</h1>
-                <p class="mt-1 text-sm text-slate-500">{{ $caisse->delegationTechnique?->region ?? '' }}</p>
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+            <div class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5"></div>
+            <div class="absolute -bottom-6 right-16 h-20 w-20 rounded-full bg-white/5"></div>
+            <a href="{{ route('dga.reseau.caisses') }}" class="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-200 hover:text-white transition-colors">
+                <i class="fas fa-arrow-left text-[10px]"></i> Caisses
+            </a>
+            <h1 class="text-2xl font-black tracking-tight text-white">{{ $caisse->nom }}</h1>
+            <p class="mt-1 text-sm text-emerald-100/80">{{ $caisse->delegationTechnique?->region ?? '' }}</p>
+            <div class="absolute right-6 top-1/2 -translate-y-1/2 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
+                <i class="fas fa-landmark text-2xl text-white"></i>
             </div>
-        </header>
+        </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div class="admin-panel px-5 py-4">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Directeur</p>
-                <p class="mt-1 font-bold text-slate-800">{{ $caisse->directeur_nom ?? '—' }}</p>
-                <p class="text-xs text-slate-400">{{ $caisse->directeur_telephone ?? '' }}</p>
+                <p class="mt-1 font-bold text-slate-800">
+                    {{ $caisse->directeur ? $caisse->directeur->prenom.' '.$caisse->directeur->nom : '—' }}
+                </p>
+                <p class="text-xs text-slate-400">{{ $caisse->directeur?->numero_telephone ?? '' }}</p>
             </div>
             <div class="admin-panel px-5 py-4">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Secrétariat</p>
@@ -62,7 +67,9 @@
                             @foreach($caisse->agences as $agence)
                                 <tr class="hover:bg-slate-50/60">
                                     <td class="px-4 py-3 font-bold text-slate-900">{{ $agence->nom }}</td>
-                                    <td class="px-4 py-3 text-slate-500">{{ $agence->chef_nom ?? '—' }}</td>
+                                    <td class="px-4 py-3 text-slate-600">
+                                        {{ $agence->chef ? $agence->chef->prenom.' '.$agence->chef->nom : '—' }}
+                                    </td>
                                     <td class="px-4 py-3 text-center">
                                         <a href="{{ route('dga.reseau.agences.show', $agence) }}" class="ent-btn ent-btn-soft py-1 px-3 text-xs">
                                             <i class="fas fa-eye mr-1"></i>Voir

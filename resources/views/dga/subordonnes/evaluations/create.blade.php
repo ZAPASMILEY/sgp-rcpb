@@ -69,11 +69,16 @@
                             <div class="space-y-2">
                                 <label for="subordonne_id" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Collaborateur evalue</label>
                                 <select id="subordonne_id" name="subordonne_id" class="ent-select" required>
-                                    <option value="">Selectionner un collaborateur</option>
-                                    @foreach ($subordonnes as $sub)
-                                        <option value="{{ $sub['id'] }}" @selected($resolvedSubordonneId === (int) $sub['id'])>
-                                            {{ $sub['nom'] }} ({{ $sub['role_label'] ?? '' }})
-                                        </option>
+                                    <option value="">Sélectionner un collaborateur</option>
+                                    @foreach ($subordonnes->groupBy('groupe') as $groupe => $membres)
+                                        <optgroup label="{{ $groupe }}">
+                                            @foreach ($membres as $sub)
+                                                <option value="{{ $sub['id'] }}" @selected($resolvedSubordonneId === (int) $sub['id'])>
+                                                    {{ $sub['nom'] }}
+                                                    @if($sub['service_label']) — {{ $sub['service_label'] }} @endif
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
                                     @endforeach
                                 </select>
                             </div>

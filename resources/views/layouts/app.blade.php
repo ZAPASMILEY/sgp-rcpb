@@ -573,6 +573,17 @@
             background-color: var(--rcpb-green) !important;
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
+    <style>
+    .ts-wrapper.single .ts-control{background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.55rem 1rem;font-size:.875rem;color:#1e293b;box-shadow:none;cursor:pointer;}
+    .ts-wrapper.single.focus .ts-control{border-color:#34d399;background:#fff;box-shadow:0 0 0 3px rgba(52,211,153,.15);}
+    .ts-wrapper .ts-control input{color:#1e293b;font-size:.875rem;}
+    .ts-dropdown{border:1px solid #e2e8f0;border-radius:.75rem;box-shadow:0 10px 30px rgba(0,0,0,.1);overflow:hidden;font-size:.875rem;}
+    .ts-dropdown .option{padding:.5rem 1rem;color:#334155;}
+    .ts-dropdown .option:hover,.ts-dropdown .option.active{background:#f0fdf4;color:#065f46;}
+    .ts-dropdown .option.selected{background:#d1fae5;color:#065f46;font-weight:700;}
+    .ts-dropdown-content{max-height:220px;}
+    </style>
 </head>
 
 @php
@@ -767,5 +778,23 @@
         });
     </script>
     @stack('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+    (function(){
+        var tsOpts={placeholder:'— Rechercher un agent —',searchField:['text'],maxOptions:300,render:{
+            option:function(d,e){return'<div>'+e(d.text)+'</div>';},
+            item:function(d,e){return'<div>'+e(d.text)+'</div>';},
+            no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun agent trouvé</div>';}
+        }};
+        function initAgentSelects(){
+            document.querySelectorAll('select[name="agent_id"],select[name$="_agent_id"]').forEach(function(el){
+                if(el.tomselect)return;
+                new TomSelect(el,tsOpts);
+            });
+        }
+        if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initAgentSelects);}
+        else{initAgentSelects();}
+    })();
+    </script>
 </body>
 </html>

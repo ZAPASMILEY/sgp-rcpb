@@ -189,7 +189,7 @@
                                 <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400"><i class="fas fa-key text-sm"></i></span>
                                 <div class="text-left">
                                     <p class="text-xs font-black uppercase tracking-wider">Mot de passe</p>
-                                    <p class="text-[10px] text-white/40">Changer votre mot de passe</p>
+                                    <p class="text-[10px] text-white/60">Changer votre mot de passe</p>
                                 </div>
                             </div>
                             <i class="fas fa-chevron-right text-xs text-white/20"></i>
@@ -199,7 +199,7 @@
                                 <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400"><i class="fas fa-users-cog text-sm"></i></span>
                                 <div class="text-left">
                                     <p class="text-xs font-black uppercase tracking-wider">Gerer les mots de passe</p>
-                                    <p class="text-[10px] text-white/40">Modifier le mot de passe du personnel</p>
+                                    <p class="text-[10px] text-white/60">Modifier le mot de passe du personnel</p>
                                 </div>
                             </div>
                             <i class="fas fa-chevron-right text-xs text-white/20"></i>

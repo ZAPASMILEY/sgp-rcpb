@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Rh;
+namespace App\Http\Controllers\Gerer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
@@ -11,15 +11,42 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
-class RhFormationController extends Controller
+/**
+ * Contrôleur de gestion des formations accessible à tout utilisateur
+ * disposant de la permission 'formations.assigner', quelle que soit son rôle.
+ *
+ * Les routes sont protégées par le middleware can:formations.assigner.
+ */
+class FormationGererController extends Controller
 {
-    // ── Liste ─────────────────────────────────────────────────────────────────
+    /**
+     * Détermine le layout Blade à utiliser selon le rôle de l'utilisateur connecté.
+     */
+    private function layout(): string
+    {
+        $role = Auth::user()?->role ?? '';
+
+        return match (true) {
+            $role === 'Admin'                                    => 'layouts.app',
+            $role === 'DG'                                       => 'layouts.dg',
+            $role === 'DGA'                                      => 'layouts.dga',
+            $role === 'PCA'                                      => 'layouts.pca',
+            $role === 'RH'                                       => 'layouts.rh',
+            str_starts_with($role, 'Directeur_')                => 'layouts.directeur',
+            str_starts_with($role, 'Chef_')                     => 'layouts.chef',
+            str_starts_with($role, 'Secretaire_')               => 'layouts.personnel',
+            in_array($role, ['Assistante_Dg', 'Conseillers_Dg', 'Secretaire_Assistante'], true)
+                                                                 => 'layouts.personnel',
+            default                                              => 'layouts.app',
+        };
+    }
+
+    // ── Liste ──────────────────────────────────────────────────────────────────
 
     public function index(Request $request): View
     {
         $query = Formation::with(['agent', 'createdBy']);
 
-        // Filtres
         if ($search = trim((string) $request->get('search'))) {
             $query->where(function ($q) use ($search) {
                 $q->where('titre', 'like', "%{$search}%")
@@ -43,16 +70,18 @@ class RhFormationController extends Controller
         }
 
         $formations = $query->orderByDesc('date_debut')->paginate(15)->withQueryString();
+        $agents     = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+        $annees     = range(now()->year + 1, now()->year - 4);
+        $domaines   = Formation::DOMAINES;
+        $layout     = $this->layout();
 
-        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
-        $annees      = range(now()->year + 1, now()->year - 4);
-        $domaines    = Formation::DOMAINES;
-        $routePrefix = 'rh';
+        // Routes pour les actions CRUD dans la vue (on réutilise les routes gerer.*)
+        $routePrefix = 'gerer';
 
-        return view('rh.formations.index', compact('formations', 'agents', 'annees', 'domaines', 'routePrefix'));
+        return view('rh.formations.index', compact('formations', 'agents', 'annees', 'domaines', 'layout', 'routePrefix'));
     }
 
-    // ── Créer ─────────────────────────────────────────────────────────────────
+    // ── Créer ──────────────────────────────────────────────────────────────────
 
     public function create(Request $request): View
     {
@@ -60,9 +89,10 @@ class RhFormationController extends Controller
         $domaines            = Formation::DOMAINES;
         $preselectedAgentId  = (int) $request->get('agent_id', 0);
         $titresExistants     = Formation::distinct()->orderBy('titre')->pluck('titre');
-        $routePrefix         = 'rh';
+        $layout              = $this->layout();
+        $routePrefix         = 'gerer';
 
-        return view('rh.formations.create', compact('agents', 'domaines', 'preselectedAgentId', 'titresExistants', 'routePrefix'));
+        return view('rh.formations.create', compact('agents', 'domaines', 'preselectedAgentId', 'titresExistants', 'layout', 'routePrefix'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -82,19 +112,20 @@ class RhFormationController extends Controller
         ]);
 
         return redirect()
-            ->route('rh.formations.index')
+            ->route('gerer.formations.index')
             ->with('status', 'Formation « ' . $formation->titre . ' » enregistrée.');
     }
 
-    // ── Modifier ──────────────────────────────────────────────────────────────
+    // ── Modifier ───────────────────────────────────────────────────────────────
 
     public function edit(Formation $formation): View
     {
         $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
         $domaines    = Formation::DOMAINES;
-        $routePrefix = 'rh';
+        $layout      = $this->layout();
+        $routePrefix = 'gerer';
 
-        return view('rh.formations.edit', compact('formation', 'agents', 'domaines', 'routePrefix'));
+        return view('rh.formations.edit', compact('formation', 'agents', 'domaines', 'layout', 'routePrefix'));
     }
 
     public function update(Request $request, Formation $formation): RedirectResponse
@@ -111,11 +142,11 @@ class RhFormationController extends Controller
         $formation->update($validated);
 
         return redirect()
-            ->route('rh.formations.index')
+            ->route('gerer.formations.index')
             ->with('status', 'Formation mise à jour.');
     }
 
-    // ── Supprimer ─────────────────────────────────────────────────────────────
+    // ── Supprimer ──────────────────────────────────────────────────────────────
 
     public function destroy(Formation $formation): RedirectResponse
     {
@@ -123,11 +154,11 @@ class RhFormationController extends Controller
         $formation->delete();
 
         return redirect()
-            ->route('rh.formations.index')
+            ->route('gerer.formations.index')
             ->with('status', 'Formation « ' . $titre . ' » supprimée.');
     }
 
-    // ── PDF ───────────────────────────────────────────────────────────────────
+    // ── PDF ────────────────────────────────────────────────────────────────────
 
     public function pdf(Formation $formation): \Illuminate\Http\Response
     {

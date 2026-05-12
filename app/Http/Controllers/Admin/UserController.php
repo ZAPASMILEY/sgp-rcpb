@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Spatie\Permission\Models\Permission;
 
 class UserController extends Controller
 {
@@ -63,6 +64,14 @@ class UserController extends Controller
         'Chef_Service'          => 'Chef de Service',
         'RH'                    => 'Responsable RH',
         'Agent'                 => 'Agent',
+    ];
+
+    /**
+     * Permissions que l'admin peut attribuer individuellement à n'importe quel utilisateur.
+     * Format : permission_name => libellé affiché.
+     */
+    public const GRANTABLE_PERMISSIONS = [
+        'formations.assigner' => 'Gérer les formations (créer, modifier, supprimer)',
     ];
 
     public function index(Request $request): View
@@ -164,11 +173,16 @@ class UserController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'role']);
 
+        // Permissions individuelles actuelles de l'utilisateur (hors rôle)
+        $userDirectPermissions = $user->getDirectPermissions()->pluck('name')->toArray();
+
         return view('admin.users.edit', [
-            'user'     => $user->load('agent'),
-            'managers' => $managers,
-            'roles'    => self::ROLES,
-            'entites'  => \App\Models\Entite::query()->orderBy('nom')->get(['id', 'nom']),
+            'user'                  => $user->load('agent'),
+            'managers'              => $managers,
+            'roles'                 => self::ROLES,
+            'entites'               => \App\Models\Entite::query()->orderBy('nom')->get(['id', 'nom']),
+            'grantablePermissions'  => self::GRANTABLE_PERMISSIONS,
+            'userDirectPermissions' => $userDirectPermissions,
         ]);
     }
 
@@ -199,6 +213,16 @@ class UserController extends Controller
         }
 
         $user->update($data);
+
+        // ── Permissions individuelles (grantable) ────────────────────────────
+        $requestedPerms = (array) $request->input('extra_permissions', []);
+        $permissionsToSync = [];
+        foreach (array_keys(self::GRANTABLE_PERMISSIONS) as $perm) {
+            if (in_array($perm, $requestedPerms, true)) {
+                $permissionsToSync[] = Permission::findOrCreate($perm, 'web');
+            }
+        }
+        $user->syncPermissions($permissionsToSync);
 
         // entite_id est désormais sur agents (PCA et Conseillers_Dg)
         if ($user->agent_id) {

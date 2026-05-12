@@ -134,7 +134,7 @@
                                 Acceder aux services rattaches a la direction de cette caisse.
                             </p>
                             <a
-                                href="{{ route('admin.services.caisse', $caisse) }}"
+                                href="{{ route('admin.caisses.services.index', $caisse) }}"
                                 class="ent-btn ent-btn-soft"
                             >
                                 Voir les services

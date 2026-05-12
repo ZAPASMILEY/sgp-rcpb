@@ -112,7 +112,7 @@ class DgaReseauController extends Controller
     {
         $this->checkDga();
 
-        $delegation->load(['directeur', 'secretaire', 'caisses', 'agences']);
+        $delegation->load(['directeur', 'secretaire', 'caisses.directeur', 'agences']);
 
         $agentIds  = Agent::where('delegation_technique_id', $delegation->id)->pluck('id')->all();
         $noteStats = $this->noteStats($agentIds);
@@ -129,7 +129,7 @@ class DgaReseauController extends Controller
         $search  = trim((string) $request->get('search', ''));
         $delegId = (int) $request->get('delegation', 0);
 
-        $query = Caisse::with(['delegationTechnique'])
+        $query = Caisse::with(['directeur', 'delegationTechnique'])
             ->withCount('agences')
             ->orderBy('nom');
 
@@ -157,7 +157,7 @@ class DgaReseauController extends Controller
     {
         $this->checkDga();
 
-        $caisse->load(['delegationTechnique', 'agences']);
+        $caisse->load(['directeur', 'delegationTechnique', 'agences.chef']);
 
         $agenceIds = $caisse->agences()->pluck('id')->all();
         $agentIds  = Agent::whereIn('agence_id', $agenceIds)->pluck('id')->all();
@@ -175,7 +175,7 @@ class DgaReseauController extends Controller
         $search   = trim((string) $request->get('search', ''));
         $caisseId = (int) $request->get('caisse', 0);
 
-        $query = Agence::with(['caisse', 'delegationTechnique'])
+        $query = Agence::with(['chef', 'caisse', 'delegationTechnique'])
             ->withCount(['agents', 'guichets'])
             ->orderBy('nom');
 
@@ -202,7 +202,7 @@ class DgaReseauController extends Controller
     {
         $this->checkDga();
 
-        $agence->load(['caisse', 'delegationTechnique', 'guichets']);
+        $agence->load(['chef', 'secretaire', 'caisse', 'delegationTechnique', 'guichets.chef']);
 
         $agentIds  = Agent::where('agence_id', $agence->id)->pluck('id')->all();
         $noteStats = $this->noteStats($agentIds);
@@ -219,7 +219,7 @@ class DgaReseauController extends Controller
         $search   = trim((string) $request->get('search', ''));
         $agenceId = (int) $request->get('agence', 0);
 
-        $query = Guichet::with('agence.caisse')->orderBy('nom');
+        $query = Guichet::with(['chef', 'agence.caisse'])->orderBy('nom');
 
         if ($search !== '') {
             $query->where('nom', 'like', "%{$search}%");
@@ -244,7 +244,7 @@ class DgaReseauController extends Controller
     {
         $this->checkDga();
 
-        $guichet->load('agence.caisse');
+        $guichet->load(['chef', 'agence.caisse']);
 
         $agentIds  = Agent::where('agence_id', $guichet->agence_id)->pluck('id')->all();
         $noteStats = $this->noteStats($agentIds);

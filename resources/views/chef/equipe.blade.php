@@ -3,49 +3,43 @@
 @section('title', 'Mon Équipe | ' . config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
     <div class="w-full flex flex-col gap-6">
 
-        {{-- En-tête --}}
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-start justify-between gap-4">
+        {{-- Hero --}}
+        <div class="relative overflow-hidden bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-600 px-6 py-8 lg:px-10">
+            <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-10 left-1/3 h-40 w-40 rounded-full bg-indigo-300/10 blur-2xl"></div>
+            <div class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                        Mon équipe / {{ $ctx->getTypeLabel() }}
-                    </p>
-                    <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">
-                        {{ $ctx->getNom() }}
-                    </h1>
+                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-blue-200">Mon Équipe · {{ $ctx->getTypeLabel() }}</p>
+                    <h1 class="mt-1 text-2xl font-black tracking-tight text-white">{{ $ctx->getNom() }}</h1>
                     @if ($ctx->getParentNom())
-                        <p class="mt-1 text-sm text-slate-500">{{ $ctx->getParentNom() }}</p>
+                        <p class="mt-1 text-sm text-blue-100/80">{{ $ctx->getParentNom() }}</p>
                     @endif
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 mt-2 sm:mt-0">
                     @if($evaluationsEnabled)
                         <a href="{{ route('chef.evaluations.create') }}"
-                           class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
-                            <i class="fas fa-star-half-stroke"></i> Évaluer
+                           class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+                            <i class="fas fa-star-half-stroke text-xs"></i> Évaluer
                         </a>
                     @else
-                        <span title="Fonctionnalité désactivée par l'administrateur"
-                              class="inline-flex cursor-not-allowed items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-black text-slate-400 opacity-60 select-none">
-                            <i class="fas fa-star-half-stroke"></i> Évaluer
-                        </span>
+                        <span class="ent-btn-disabled-dark"><i class="fas fa-star-half-stroke text-xs"></i> Évaluer</span>
                     @endif
                     @if($objectifsEnabled)
                         <a href="{{ route('chef.objectifs.create') }}"
-                           class="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-blue-700">
-                            <i class="fas fa-list-check"></i> Assigner objectifs
+                           class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-black text-blue-700 shadow transition hover:bg-blue-50">
+                            <i class="fas fa-list-check text-xs"></i> Assigner objectifs
                         </a>
                     @else
-                        <span title="Fonctionnalité désactivée par l'administrateur"
-                              class="inline-flex cursor-not-allowed items-center gap-2 rounded-2xl bg-slate-300 px-4 py-2.5 text-xs font-black text-slate-500 opacity-60 select-none">
-                            <i class="fas fa-list-check"></i> Assigner objectifs
-                        </span>
+                        <span class="ent-btn-disabled-dark"><i class="fas fa-list-check text-xs"></i> Assigner objectifs</span>
                     @endif
                 </div>
             </div>
-        </header>
+        </div>
+
+        <div class="px-4 lg:px-8 flex flex-col gap-6">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -184,7 +178,7 @@
                                     </a>
                                 @else
                                     <span title="Fonctionnalité désactivée"
-                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                          class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
@@ -195,7 +189,7 @@
                                     </a>
                                 @else
                                     <span title="Fonctionnalité désactivée"
-                                          class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                          class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
                                 @endif
@@ -212,6 +206,7 @@
             @endif
         </div>
 
+    </div>
     </div>
 </div>
 @endsection

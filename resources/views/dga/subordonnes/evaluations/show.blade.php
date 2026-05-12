@@ -15,9 +15,11 @@
                     <p class="mt-2 text-sm text-slate-600">{{ $periodeLabel }}</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <a href="{{ route('dga.sub-evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">
-                        <i class="fas fa-file-pdf mr-2"></i>PDF
-                    </a>
+                    @if(!($readOnly ?? false))
+                        <a href="{{ route('dga.sub-evaluations.pdf', $evaluation) }}" class="ent-btn ent-btn-soft">
+                            <i class="fas fa-file-pdf mr-2"></i>PDF
+                        </a>
+                    @endif
                     <a href="{{ $backUrl }}" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
             </div>
@@ -295,6 +297,7 @@
                 <div><span class="text-xs uppercase text-slate-500">Evalue</span><p class="mt-1 text-sm text-slate-800">{{ $evaluation->signature_evalue_nom ?: $cibleLabel }}</p></div>
                 <div><span class="text-xs uppercase text-slate-500">Evaluateur</span><p class="mt-1 text-sm text-slate-800">{{ $evaluation->signature_evaluateur_nom ?: ($evaluation->evaluateur?->name ?? '-') }}</p></div>
             </div>
+            @if(!($readOnly ?? false))
             <div class="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-6">
                 @if ($evaluation->statut === 'brouillon')
                     <form method="POST" action="{{ route('dga.sub-evaluations.submit', $evaluation) }}">
@@ -311,6 +314,7 @@
                     </form>
                 @endif
             </div>
+            @endif
         </section>
 
         {{-- Commentaire de l'evalue (lecture seule pour le DG) --}}

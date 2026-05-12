@@ -1,4 +1,4 @@
-@extends('layouts.rh')
+@extends($layout ?? 'layouts.rh')
 
 @section('title', 'Modifier formation | SGP-RCPB')
 
@@ -8,7 +8,7 @@
 
     <header class="admin-panel px-6 py-5">
         <div class="flex items-center gap-3">
-            <a href="{{ route('rh.formations.index') }}"
+            <a href="{{ route(($routePrefix ?? 'rh').'.formations.index') }}"
                class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200">
                 <i class="fas fa-arrow-left text-sm"></i>
             </a>
@@ -29,7 +29,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('rh.formations.update', $formation) }}"
+    <form method="POST" action="{{ route(($routePrefix ?? 'rh').'.formations.update', $formation) }}"
           class="admin-panel px-6 py-6 flex flex-col gap-5">
         @csrf @method('PUT')
 
@@ -92,7 +92,7 @@
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
-            <a href="{{ route('rh.formations.index') }}"
+            <a href="{{ route(($routePrefix ?? 'rh').'.formations.index') }}"
                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-black text-slate-600 transition hover:bg-slate-50">
                 Annuler
             </a>

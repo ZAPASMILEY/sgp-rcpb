@@ -21,6 +21,13 @@
                         <div class="flex flex-wrap gap-2">
                             <a href="{{ route('admin.entites.index') }}" class="ent-btn ent-btn-soft">Retour</a>
                             <a href="{{ route('admin.entites.edit', $entite) }}" class="ent-btn ent-btn-primary">Modifier</a>
+                            <form method="POST" action="{{ route('admin.entites.destroy', $entite) }}"
+                                  onsubmit="return confirm('Supprimer cette faitière ? Cette action est irréversible.')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="ent-btn ent-btn-destructive">
+                                    <i class="fas fa-trash text-xs mr-1"></i> Supprimer
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </header>

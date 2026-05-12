@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agence;
 use App\Models\Agent;
 use App\Models\Guichet;
 use App\Models\DelegationTechnique;
@@ -34,6 +35,63 @@ class GuichetController extends Controller
 
             return view('admin.guichets.index', compact('guichets', 'stats'));
         }
+
+    public function create(): View
+    {
+        return view('admin.guichets.create', [
+            'chefs'   => Agent::where('fonction', 'Chef de Guichet')->orderBy('nom')->get(['id', 'nom', 'prenom']),
+            'agences' => Agence::with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'nom'           => ['required', 'string', 'max:255'],
+            'agence_id'     => ['required', 'integer', 'exists:agences,id'],
+            'chef_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
+        ]);
+
+        $guichet = Guichet::create($validated);
+
+        return redirect()
+            ->route('admin.guichets.index')
+            ->with('status', 'Guichet « '.$guichet->nom.' » créé.');
+    }
+
+    public function edit(Guichet $guichet): View
+    {
+        return view('admin.guichets.edit', [
+            'guichet' => $guichet,
+            'chefs'   => Agent::where('fonction', 'Chef de Guichet')->orderBy('nom')->get(['id', 'nom', 'prenom']),
+            'agences' => Agence::with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
+        ]);
+    }
+
+    public function update(Request $request, Guichet $guichet): RedirectResponse
+    {
+        $validated = $request->validate([
+            'nom'           => ['required', 'string', 'max:255'],
+            'agence_id'     => ['required', 'integer', 'exists:agences,id'],
+            'chef_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
+        ]);
+
+        $guichet->update($validated);
+
+        return redirect()
+            ->route('admin.guichets.index')
+            ->with('status', 'Guichet « '.$guichet->nom.' » modifié.');
+    }
+
+    public function destroy(Guichet $guichet): RedirectResponse
+    {
+        $nom = $guichet->nom;
+        $guichet->delete();
+
+        return redirect()
+            ->route('admin.guichets.index')
+            ->with('status', 'Guichet « '.$nom.' » supprimé.');
+    }
 
     public function agentsIndex(Guichet $guichet): View
     {

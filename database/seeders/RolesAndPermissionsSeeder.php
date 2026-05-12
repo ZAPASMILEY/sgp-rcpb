@@ -56,6 +56,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'objectifs.voir-propres', // Consulter ses propres fiches d'objectifs
         'objectifs.voir-equipe',  // Consulter les fiches de son équipe
 
+        // ── Formations ────────────────────────────────────────────────────
+        'formations.assigner', // Créer, modifier et supprimer des formations pour n'importe quel agent
+
         // ── Administration ─────────────────────────────────────────────────
         'admin.roles',     // Gérer les rôles et leurs permissions
         'admin.users',     // Gérer les comptes utilisateurs
@@ -248,6 +251,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'structures.voir',
             'evaluations.voir-propres', 'evaluations.exporter-pdf',
             'objectifs.voir-propres', 'objectifs.avancement',
+            'formations.assigner', // Par défaut, le RH gère les formations
         ],
 
         // ── Agent de base ──────────────────────────────────────────────────

@@ -5,28 +5,33 @@
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
     <div class="w-full flex flex-col gap-6">
 
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div>
-                <a href="{{ route('dga.reseau.guichets') }}" class="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-violet-600">
-                    <i class="fas fa-arrow-left"></i> Guichets
-                </a>
-                <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">{{ $guichet->nom }}</h1>
-                <p class="mt-1 text-sm text-slate-500">
-                    {{ $guichet->agence?->nom ?? '' }}
-                    @if($guichet->agence?->caisse) — {{ $guichet->agence->caisse->nom }} @endif
-                </p>
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+            <div class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5"></div>
+            <div class="absolute -bottom-6 right-16 h-20 w-20 rounded-full bg-white/5"></div>
+            <a href="{{ route('dga.reseau.guichets') }}" class="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-emerald-200 hover:text-white transition-colors">
+                <i class="fas fa-arrow-left text-[10px]"></i> Guichets
+            </a>
+            <h1 class="text-2xl font-black tracking-tight text-white">{{ $guichet->nom }}</h1>
+            <p class="mt-1 text-sm text-emerald-100/80">
+                {{ $guichet->agence?->nom ?? '' }}
+                @if($guichet->agence?->caisse) — {{ $guichet->agence->caisse->nom }} @endif
+            </p>
+            <div class="absolute right-6 top-1/2 -translate-y-1/2 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
+                <i class="fas fa-cash-register text-2xl text-white"></i>
             </div>
-        </header>
+        </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div class="admin-panel px-5 py-4">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Chef de guichet</p>
-                <p class="mt-1 font-bold text-slate-800">{{ $guichet->chef_nom ?? '—' }}</p>
-                <p class="text-xs text-slate-400">{{ $guichet->chef_email ?? '' }}</p>
+                <p class="mt-1 font-bold text-slate-800">
+                    {{ $guichet->chef ? $guichet->chef->prenom.' '.$guichet->chef->nom : '—' }}
+                </p>
+                <p class="text-xs text-slate-400">{{ $guichet->chef?->fonction ?? '' }}</p>
             </div>
             <div class="admin-panel px-5 py-4">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Téléphone</p>
-                <p class="mt-1 font-bold text-slate-800">{{ $guichet->chef_telephone ?? '—' }}</p>
+                <p class="mt-1 font-bold text-slate-800">{{ $guichet->chef?->numero_telephone ?? '—' }}</p>
             </div>
             <div class="admin-panel px-5 py-4">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Agence parente</p>

@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Dga;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agent;
 use App\Models\Alerte;
 use App\Models\Annee;
 use App\Models\DelegationTechnique;
+use App\Models\Direction;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
+use App\Models\Service;
 use App\Models\User;
 use App\Services\EvaluationService;
 use App\Traits\ResolvesEntite;
@@ -31,13 +34,34 @@ class DgaSubEvaluationController extends Controller
         }
     }
 
-    /** Retourne les subordonnés du DGA : Directeurs Techniques + secrétaire. */
+    /**
+     * Direction du DGA (celle dont il est directeur_agent_id).
+     */
+    private function directionDga(): ?Direction
+    {
+        $agentId = Auth::user()?->agent_id;
+        if (! $agentId) {
+            return null;
+        }
+
+        return Direction::where('directeur_agent_id', $agentId)->first();
+    }
+
+    /**
+     * Retourne tous les subordonnés évaluables par le DGA :
+     *   – Directeurs Techniques
+     *   – Secrétaire DGA
+     *   – Chefs de services de la direction DGA
+     *
+     * Chaque entrée contient une clé 'groupe' pour distinguer les catégories.
+     */
     private function getSubordonnes(): \Illuminate\Support\Collection
     {
         $entite      = $this->getEntiteForDGA();
+        $direction   = $this->directionDga();
         $subordonnes = collect();
 
-        // Directeurs Techniques — on résout leur DelegationTechnique pour l'entité
+        // ── Directeurs Techniques ─────────────────────────────────────────
         $delegations = DelegationTechnique::whereNotNull('directeur_agent_id')->get();
         foreach ($delegations as $delegation) {
             $dt = User::where('agent_id', $delegation->directeur_agent_id)
@@ -48,15 +72,17 @@ class DgaSubEvaluationController extends Controller
             }
             $delegationLabel = trim($delegation->region . ($delegation->ville ? ' — ' . $delegation->ville : ''));
             $subordonnes->push([
-                'id'             => $dt->id,
-                'nom'            => $dt->name,
-                'role_label'     => 'Directeur Technique',
-                'entite_label'   => $delegationLabel ?: 'Délégation Technique',
-                'service_label'  => '',
+                'id'            => $dt->id,
+                'nom'           => $dt->name,
+                'role_label'    => 'Directeur Technique',
+                'entite_label'  => $delegationLabel ?: 'Délégation Technique',
+                'service_label' => '',
+                'groupe'        => 'Directeurs Techniques',
+                'redirect_to'   => 'subordonnes',
             ]);
         }
 
-        // Secrétaire DGA
+        // ── Secrétaire DGA ────────────────────────────────────────────────
         if ($entite && $entite->dga_secretaire_agent_id) {
             $sec = User::where('agent_id', $entite->dga_secretaire_agent_id)->first();
             if ($sec) {
@@ -66,11 +92,74 @@ class DgaSubEvaluationController extends Controller
                     'role_label'    => 'Secrétaire DGA',
                     'entite_label'  => $entite->nom ?? '',
                     'service_label' => 'Secrétariat DGA',
+                    'groupe'        => 'Secrétariat',
+                    'redirect_to'   => 'subordonnes',
+                ]);
+            }
+        }
+
+        // ── Chefs de services de la direction DGA ─────────────────────────
+        if ($direction) {
+            $services = Service::where('direction_id', $direction->id)
+                ->whereNotNull('chef_agent_id')
+                ->with('chef')
+                ->get();
+
+            foreach ($services as $service) {
+                if (! $service->chef) {
+                    continue;
+                }
+                $chefUser = User::where('agent_id', $service->chef_agent_id)->first();
+                if (! $chefUser) {
+                    continue;
+                }
+                $subordonnes->push([
+                    'id'            => $chefUser->id,
+                    'nom'           => $chefUser->name,
+                    'role_label'    => 'Chef de Service',
+                    'entite_label'  => $direction->nom ?? 'Direction DGA',
+                    'service_label' => $service->nom,
+                    'groupe'        => 'Chefs de Services',
+                    'redirect_to'   => 'direction',
+                ]);
+            }
+
+            // ── Collaborateurs directs (agents direction sans service) ────
+            $exclusions = array_filter([
+                $direction->directeur_agent_id,
+                $direction->secretaire_agent_id,
+            ]);
+            $agentsDirects = Agent::where('direction_id', $direction->id)
+                ->whereNull('service_id')
+                ->whereNotIn('id', $exclusions)
+                ->get();
+
+            foreach ($agentsDirects as $agent) {
+                $agentUser = User::where('agent_id', $agent->id)->first();
+                if (! $agentUser) {
+                    continue;
+                }
+                $subordonnes->push([
+                    'id'            => $agentUser->id,
+                    'nom'           => $agentUser->name,
+                    'role_label'    => $agent->fonction ?? 'Collaborateur',
+                    'entite_label'  => $direction->nom ?? 'Direction DGA',
+                    'service_label' => 'Collaborateur direct',
+                    'groupe'        => 'Collaborateurs directs',
+                    'redirect_to'   => 'direction',
                 ]);
             }
         }
 
         return $subordonnes;
+    }
+
+    /**
+     * Retourne les IDs de tous les subordonnés évaluables.
+     */
+    private function getAllowedUserIds(): array
+    {
+        return $this->getSubordonnes()->pluck('id')->map(fn ($id) => (int) $id)->all();
     }
 
     public function create(Request $request): View
@@ -141,9 +230,10 @@ class DgaSubEvaluationController extends Controller
 
         $subordonnes = $this->getSubordonnes();
         $allowedIds  = $subordonnes->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $allowedIds  = $allowedIds ?: [0];
 
         $validated = $request->validate([
-            'subordonne_id'                    => ['required', 'integer', 'in:'.implode(',', $allowedIds ?: [0])],
+            'subordonne_id'                    => ['required', 'integer', 'in:'.implode(',', $allowedIds)],
             'date_debut'                       => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'date_fin'                         => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'identification.nom_prenom'        => ['nullable', 'string', 'max:255'],
@@ -258,7 +348,15 @@ class DgaSubEvaluationController extends Controller
             return $evaluation;
         });
 
-        return redirect(route('dga.subordonnes.show', $subordonne).'?tab=evaluations')
+        // Redirection selon le type de subordonné
+        $entry       = $subordonnes->firstWhere('id', $subordonne->id);
+        $redirectTo  = $entry['redirect_to'] ?? 'subordonnes';
+
+        $redirectUrl = $redirectTo === 'direction'
+            ? route('dga.direction', ['tab' => 'evaluations'])
+            : route('dga.subordonnes.show', $subordonne).'?tab=evaluations';
+
+        return redirect($redirectUrl)
             ->with('status', "Évaluation créée pour {$subordonne->name}.");
     }
 
@@ -267,8 +365,7 @@ class DgaSubEvaluationController extends Controller
         $this->checkDga();
         $this->authorize('evaluations.voir-equipe');
 
-        $subordonnes = $this->getSubordonnes();
-        if (! $subordonnes->pluck('id')->contains($evaluation->evaluable_id)) {
+        if (! in_array($evaluation->evaluable_id, $this->getAllowedUserIds(), true)) {
             abort(403);
         }
 
@@ -277,8 +374,11 @@ class DgaSubEvaluationController extends Controller
         $subordonne         = $evaluation->evaluable;
         $mention            = $this->evaluationService->mention((float) $evaluation->note_finale);
         $periodeLabel       = $this->evaluationService->periodeLabel($evaluation);
-        $cibleLabel         = trim((string) ($evaluation->identification?->nom_prenom ?? '')) ?: ($subordonne?->name ?? '-');
-        $backUrl            = route('dga.subordonnes.show', $subordonne).'?tab=evaluations';
+        $cibleLabel  = trim((string) ($evaluation->identification?->nom_prenom ?? '')) ?: ($subordonne?->name ?? '-');
+        $entry       = $this->getSubordonnes()->firstWhere('id', $evaluation->evaluable_id);
+        $backUrl     = ($entry['redirect_to'] ?? 'subordonnes') === 'direction'
+            ? route('dga.direction', ['tab' => 'evaluations'])
+            : route('dga.subordonnes.show', $subordonne).'?tab=evaluations';
         $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
         $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
 
@@ -293,8 +393,7 @@ class DgaSubEvaluationController extends Controller
         $this->checkDga();
         $this->authorize('evaluations.soumettre');
 
-        $subordonnes = $this->getSubordonnes();
-        if (! $subordonnes->pluck('id')->contains($evaluation->evaluable_id)) {
+        if (! in_array($evaluation->evaluable_id, $this->getAllowedUserIds(), true)) {
             abort(403);
         }
         if ($evaluation->statut !== 'brouillon') {
@@ -312,8 +411,12 @@ class DgaSubEvaluationController extends Controller
             );
         }
 
-        return redirect(route('dga.subordonnes.show', $evaluation->evaluable).'?tab=evaluations')
-            ->with('status', 'Évaluation soumise avec succès.');
+        $entry      = $this->getSubordonnes()->firstWhere('id', $evaluation->evaluable_id);
+        $redirectUrl = ($entry['redirect_to'] ?? 'subordonnes') === 'direction'
+            ? route('dga.direction', ['tab' => 'evaluations'])
+            : route('dga.subordonnes.show', $evaluation->evaluable).'?tab=evaluations';
+
+        return redirect($redirectUrl)->with('status', 'Évaluation soumise avec succès.');
     }
 
     public function destroy(Evaluation $evaluation): RedirectResponse
@@ -321,19 +424,22 @@ class DgaSubEvaluationController extends Controller
         $this->checkDga();
         $this->authorize('evaluations.creer');
 
-        $subordonnes = $this->getSubordonnes();
-        if (! $subordonnes->pluck('id')->contains($evaluation->evaluable_id)) {
+        if (! in_array($evaluation->evaluable_id, $this->getAllowedUserIds(), true)) {
             abort(403);
         }
         if ($evaluation->statut === 'valide') {
             return back()->with('error', 'Une évaluation validée ne peut pas être supprimée.');
         }
 
-        $subordonne = $evaluation->evaluable;
+        $entry       = $this->getSubordonnes()->firstWhere('id', $evaluation->evaluable_id);
+        $subordonne  = $evaluation->evaluable;
         $evaluation->delete();
 
-        return redirect(route('dga.subordonnes.show', $subordonne).'?tab=evaluations')
-            ->with('status', 'Évaluation supprimée.');
+        $redirectUrl = ($entry['redirect_to'] ?? 'subordonnes') === 'direction'
+            ? route('dga.direction', ['tab' => 'evaluations'])
+            : route('dga.subordonnes.show', $subordonne).'?tab=evaluations';
+
+        return redirect($redirectUrl)->with('status', 'Évaluation supprimée.');
     }
 
     public function exportPdf(Evaluation $evaluation)
@@ -341,8 +447,7 @@ class DgaSubEvaluationController extends Controller
         $this->checkDga();
         $this->authorize('evaluations.exporter-pdf');
 
-        $subordonnes = $this->getSubordonnes();
-        if (! $subordonnes->pluck('id')->contains($evaluation->evaluable_id)) {
+        if (! in_array($evaluation->evaluable_id, $this->getAllowedUserIds(), true)) {
             abort(403);
         }
 

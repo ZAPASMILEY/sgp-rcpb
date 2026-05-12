@@ -83,7 +83,7 @@
                     </div>
 
                     <div class="mt-6">
-                        <p class="text-[10px] font-bold text-white/40 leading-relaxed uppercase tracking-widest">
+                        <p class="text-[10px] font-bold text-white/60 leading-relaxed uppercase tracking-widest">
                             En validant ce formulaire, un accès sécurisé sera créé pour le nouveau directeur.
                         </p>
                     </div>

@@ -45,7 +45,7 @@
                     </a>
                 @else
                     <span title="Fonctionnalité désactivée par l'administrateur"
-                          class="inline-flex cursor-not-allowed items-center rounded-2xl bg-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-500 opacity-60 select-none">
+                          class="ent-btn-disabled-light">
                         <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle fiche
                     </span>
                 @endif
@@ -57,7 +57,7 @@
                     </a>
                 @else
                     <span title="Fonctionnalité désactivée par l'administrateur"
-                          class="inline-flex cursor-not-allowed items-center rounded-2xl bg-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-500 opacity-60 select-none">
+                          class="ent-btn-disabled-light">
                         <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle evaluation
                     </span>
                 @endif

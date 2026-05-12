@@ -254,7 +254,7 @@
                             </a>
                         @else
                             <span title="Fonctionnalité désactivée par l'administrateur"
-                                  class="ent-btn ent-btn-soft cursor-not-allowed opacity-60 select-none pointer-events-none">
+                                  class="ent-btn ent-btn-soft cursor-not-allowed opacity-75 select-none pointer-events-none">
                                 <i class="fas fa-star-half-stroke mr-2"></i>Évaluer un agent
                             </span>
                         @endif
@@ -264,7 +264,7 @@
                             </a>
                         @else
                             <span title="Fonctionnalité désactivée par l'administrateur"
-                                  class="ent-btn ent-btn-primary cursor-not-allowed opacity-60 select-none pointer-events-none">
+                                  class="ent-btn ent-btn-primary cursor-not-allowed opacity-75 select-none pointer-events-none">
                                 <i class="fas fa-list-check mr-2"></i>Assigner des objectifs
                             </span>
                         @endif
@@ -348,7 +348,7 @@
                                                     </a>
                                                 @else
                                                     <span title="Fonctionnalité désactivée"
-                                                          class="ent-btn ent-btn-soft py-1 text-xs cursor-not-allowed opacity-60 select-none pointer-events-none">
+                                                          class="ent-btn ent-btn-soft py-1 text-xs cursor-not-allowed opacity-75 select-none pointer-events-none">
                                                         Évaluer
                                                     </span>
                                                 @endif
@@ -359,7 +359,7 @@
                                                     </a>
                                                 @else
                                                     <span title="Fonctionnalité désactivée"
-                                                          class="ent-btn ent-btn-soft py-1 text-xs cursor-not-allowed opacity-60 select-none pointer-events-none">
+                                                          class="ent-btn ent-btn-soft py-1 text-xs cursor-not-allowed opacity-75 select-none pointer-events-none">
                                                         Objectifs
                                                     </span>
                                                 @endif

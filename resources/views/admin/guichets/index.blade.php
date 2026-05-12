@@ -74,8 +74,10 @@
                                 <td class="px-3 py-3 font-semibold text-slate-800">{{ $guichet->nom }}</td>
                                 <td class="px-3 py-3">
                                     <div class="flex flex-col">
-                                        <span class="font-bold text-slate-700">{{ $guichet->chef?->nom ?? 'Non assigné' }} {{ $guichet->chef?->prenom }}</span>
-                                        <span class="text-xs text-slate-400">{{ $guichet->chef?->email }}</span>
+                                        <span class="font-bold text-slate-700">
+                                            {{ $guichet->chef ? $guichet->chef->prenom.' '.$guichet->chef->nom : 'Non assigné' }}
+                                        </span>
+                                        <span class="text-xs text-slate-400">{{ $guichet->chef?->numero_telephone ?? '' }}</span>
                                     </div>
                                 </td>
                                 <td class="px-3 py-3">

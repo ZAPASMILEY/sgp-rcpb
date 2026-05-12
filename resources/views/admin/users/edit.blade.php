@@ -119,6 +119,21 @@
                     </div>
                 </fieldset>
 
+                {{-- Lien vers droits individuels --}}
+                <div class="flex items-center gap-3 rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                        <i class="fas fa-user-lock text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-slate-800">Permissions additionnelles</p>
+                        <p class="text-xs text-slate-500">Gérez les droits individuels depuis les paramètres système.</p>
+                    </div>
+                    <a href="{{ route('admin.settings.edit', ['tab' => 'droits', 'user_id' => $user->id]) }}"
+                       class="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white transition hover:bg-violet-700">
+                        <i class="fas fa-key text-[10px]"></i> Gérer
+                    </a>
+                </div>
+
                 <button type="submit" class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm">
                     Enregistrer les modifications
                 </button>

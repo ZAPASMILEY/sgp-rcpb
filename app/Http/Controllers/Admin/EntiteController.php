@@ -125,6 +125,27 @@ class EntiteController extends Controller
     }
 
     /**
+     * Affiche la fiche détail d'une faitière.
+     */
+    public function show(Entite $entite): View
+    {
+        return view('admin.entites.show', compact('entite'));
+    }
+
+    /**
+     * Supprime une faitière.
+     */
+    public function destroy(Entite $entite): RedirectResponse
+    {
+        $nom = $entite->nom;
+        $entite->delete();
+
+        return redirect()
+            ->route('admin.entites.index')
+            ->with('status', 'Faitière « '.$nom.' » supprimée.');
+    }
+
+    /**
      * Affiche le formulaire d'edition d'une faitiere.
      */
     public function edit(Entite $entite): View

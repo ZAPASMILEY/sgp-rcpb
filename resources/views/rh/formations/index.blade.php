@@ -1,4 +1,4 @@
-@extends('layouts.rh')
+@extends($layout ?? 'layouts.rh')
 
 @section('title', 'Formations | SGP-RCPB')
 
@@ -14,7 +14,7 @@
                 <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Formations</h1>
                 <p class="mt-1 text-sm text-slate-500">{{ $formations->total() }} formation(s) enregistrée(s)</p>
             </div>
-            <a href="{{ route('rh.formations.create') }}"
+            <a href="{{ route(($routePrefix ?? 'rh').'.formations.create') }}"
                class="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700">
                 <i class="fas fa-plus text-xs"></i> Nouvelle formation
             </a>
@@ -28,7 +28,7 @@
     @endif
 
     {{-- Filtres --}}
-    <form method="GET" action="{{ route('rh.formations.index') }}"
+    <form method="GET" action="{{ route(($routePrefix ?? 'rh').'.formations.index') }}"
           class="admin-panel px-6 py-4 lg:px-8">
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <input type="text" name="search" value="{{ request('search') }}"
@@ -63,7 +63,7 @@
                     class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white transition hover:bg-emerald-700">
                 <i class="fas fa-filter text-[10px]"></i> Filtrer
             </button>
-            <a href="{{ route('rh.formations.index') }}"
+            <a href="{{ route(($routePrefix ?? 'rh').'.formations.index') }}"
                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50">
                 <i class="fas fa-times text-[10px]"></i> Effacer
             </a>
@@ -76,7 +76,7 @@
             <div class="px-6 py-16 text-center">
                 <i class="fas fa-graduation-cap text-4xl text-slate-200"></i>
                 <p class="mt-3 text-sm font-semibold text-slate-400">Aucune formation trouvée.</p>
-                <a href="{{ route('rh.formations.create') }}"
+                <a href="{{ route(($routePrefix ?? 'rh').'.formations.create') }}"
                    class="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white transition hover:bg-emerald-700">
                     <i class="fas fa-plus text-[10px]"></i> Enregistrer une formation
                 </a>
@@ -131,17 +131,17 @@
                                 </td>
                                 <td class="px-4 py-4">
                                     <div class="flex items-center justify-end gap-2">
-                                        <a href="{{ route('rh.formations.pdf', $f) }}"
+                                        <a href="{{ route(($routePrefix ?? 'rh').'.formations.pdf', $f) }}"
                                            title="Télécharger PDF"
                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500 transition hover:bg-red-50 hover:text-red-600">
                                             <i class="fas fa-file-pdf text-xs"></i>
                                         </a>
-                                        <a href="{{ route('rh.formations.edit', $f) }}"
+                                        <a href="{{ route(($routePrefix ?? 'rh').'.formations.edit', $f) }}"
                                            title="Modifier"
                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-500 transition hover:bg-blue-50 hover:text-blue-600">
                                             <i class="fas fa-pen text-xs"></i>
                                         </a>
-                                        <form method="POST" action="{{ route('rh.formations.destroy', $f) }}"
+                                        <form method="POST" action="{{ route(($routePrefix ?? 'rh').'.formations.destroy', $f) }}"
                                               onsubmit="return confirm('Supprimer cette formation ?')">
                                             @csrf @method('DELETE')
                                             <button type="submit"

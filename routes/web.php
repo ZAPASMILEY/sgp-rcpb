@@ -254,6 +254,17 @@ Route::middleware(['auth', 'personnel'])->group(function (): void {
     Route::get('/personnel/evaluations/{evaluation}/pdf',          [\App\Http\Controllers\Personnel\PersonnelEvaluationController::class, 'exportPdf'])->name('personnel.evaluations.pdf');
 });
 
+// ── Gestion Formations (accessible à tout user ayant formations.assigner) ──────
+Route::middleware(['auth', 'can:formations.assigner'])->prefix('gerer')->name('gerer.')->group(function (): void {
+    Route::get('/formations',                      [\App\Http\Controllers\Gerer\FormationGererController::class, 'index'])->name('formations.index');
+    Route::get('/formations/creer',                [\App\Http\Controllers\Gerer\FormationGererController::class, 'create'])->name('formations.create');
+    Route::post('/formations',                     [\App\Http\Controllers\Gerer\FormationGererController::class, 'store'])->name('formations.store');
+    Route::get('/formations/{formation}/editer',   [\App\Http\Controllers\Gerer\FormationGererController::class, 'edit'])->name('formations.edit');
+    Route::put('/formations/{formation}',          [\App\Http\Controllers\Gerer\FormationGererController::class, 'update'])->name('formations.update');
+    Route::delete('/formations/{formation}',       [\App\Http\Controllers\Gerer\FormationGererController::class, 'destroy'])->name('formations.destroy');
+    Route::get('/formations/{formation}/pdf',      [\App\Http\Controllers\Gerer\FormationGererController::class, 'pdf'])->name('formations.pdf');
+});
+
 // Routes RH
 Route::middleware(['auth', 'rh'])->prefix('rh')->name('rh.')->group(function (): void {
     Route::post('/logout', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
@@ -408,6 +419,13 @@ Route::middleware(['auth', 'dga_espace'])->prefix('espace-dga')->name('dga.')->g
     Route::get('/subordonne-evaluations/{evaluation}/pdf',          [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'exportPdf'])->name('sub-evaluations.pdf');
     Route::patch('/subordonne-evaluations/{evaluation}/soumettre',  [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'submit'])->name('sub-evaluations.submit');
     Route::delete('/subordonne-evaluations/{evaluation}',           [\App\Http\Controllers\Dga\DgaSubEvaluationController::class, 'destroy'])->name('sub-evaluations.destroy');
+
+    // Notes du réseau (subordonnés directs + tous les agents des délégations)
+    Route::get('/notes-reseau',              [\App\Http\Controllers\Dga\DgaNotesReseauController::class, 'index'])->name('notes-reseau.index');
+    Route::get('/notes-reseau/{evaluation}', [\App\Http\Controllers\Dga\DgaNotesReseauController::class, 'show'])->name('notes-reseau.show');
+
+    // Structures (vue hiérarchique par DT avec onglets)
+    Route::get('/structures', [\App\Http\Controllers\Dga\DgaStructuresController::class, 'index'])->name('structures.index');
 
     // Réseau (lecture seule — délégations, caisses, agences, guichets)
     Route::prefix('reseau')->name('reseau.')->group(function (): void {

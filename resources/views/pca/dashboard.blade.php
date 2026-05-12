@@ -49,7 +49,7 @@
                     </a>
                 @else
                     <span title="Fonctionnalité désactivée par l'administrateur"
-                          class="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-black text-white/40 opacity-60 select-none">
+                          class="ent-btn-disabled-dark">
                         <i class="fas fa-plus text-xs"></i> Évaluer DG
                     </span>
                 @endif
@@ -241,7 +241,7 @@
                                 </a>
                             @else
                                 <span title="Fonctionnalité désactivée par l'administrateur"
-                                      class="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-slate-300 px-4 py-2 text-xs font-black text-slate-500 opacity-60 select-none">
+                                      class="ent-btn-disabled-light">
                                     <i class="fas fa-plus text-[10px]"></i> Nouvelle fiche objectifs
                                 </span>
                             @endif
@@ -252,7 +252,7 @@
                                 </a>
                             @else
                                 <span title="Fonctionnalité désactivée par l'administrateur"
-                                      class="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-400 opacity-60 select-none">
+                                      class="ent-btn-disabled-light">
                                     <i class="fas fa-star text-[10px]"></i> Évaluer le DG
                                 </span>
                             @endif
@@ -279,7 +279,7 @@
                             </a>
                         @else
                             <span title="Fonctionnalité désactivée par l'administrateur"
-                                  class="mt-3 inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl bg-slate-300 px-3 py-1.5 text-xs font-black text-slate-500 opacity-60 select-none">
+                                  class="ent-btn-disabled-light mt-3">
                                 <i class="fas fa-plus text-[10px]"></i> Créer
                             </span>
                         @endif
