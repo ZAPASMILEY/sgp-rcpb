@@ -263,16 +263,18 @@
     <script id="dg-eval-objective-options" type="application/json">@json($objectiveOptions ?? [])</script>
     <script id="dg-eval-subjective-templates" type="application/json">@json(old('subjective_criteres', $subjectiveTemplates ?? []))</script>
     <script id="dg-eval-objective-old" type="application/json">@json(old('objective_criteres', []))</script>
-    <script id="dg-eval-formations-old" type="application/json">@json($oldFormations ?? [['periode'=>'','libelle'=>'','domaine'=>'']])</script>
+    <script id="dg-eval-formations-old" type="application/json">@json($oldFormations)</script>
     <script id="dg-eval-experiences-old" type="application/json">@json($oldExperiences ?? [['periode'=>'','poste'=>'','observations'=>'']])</script>
+    <script id="dg-eval-prefilled-agent" type="application/json">@json($prefilledAgentId ?? null)</script>
 
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const objectiveOptions    = JSON.parse(document.getElementById('dg-eval-objective-options').textContent || '[]');
-        const subjectiveTemplates = JSON.parse(document.getElementById('dg-eval-subjective-templates').textContent || '[]');
+        const objectiveOptions     = JSON.parse(document.getElementById('dg-eval-objective-options').textContent || '[]');
+        const subjectiveTemplates  = JSON.parse(document.getElementById('dg-eval-subjective-templates').textContent || '[]');
         const oldObjectiveCriteria = JSON.parse(document.getElementById('dg-eval-objective-old').textContent || '[]');
-        const oldFormations  = JSON.parse(document.getElementById('dg-eval-formations-old').textContent || '[]');
-        const oldExperiences = JSON.parse(document.getElementById('dg-eval-experiences-old').textContent || '[]');
+        const oldFormations        = JSON.parse(document.getElementById('dg-eval-formations-old').textContent || 'null');
+        const oldExperiences       = JSON.parse(document.getElementById('dg-eval-experiences-old').textContent || '[]');
+        const prefilledAgentId     = JSON.parse(document.getElementById('dg-eval-prefilled-agent').textContent || 'null');
 
         let subjectiveIndexCounter = 0, objectiveIndexCounter = 0, formationIndexCounter = 0, experienceIndexCounter = 0;
 
@@ -372,6 +374,22 @@
         }
         function addFormationRow(row) { formationsRows.appendChild(makeFormationRow(row || {}, formationIndexCounter)); formationIndexCounter++; }
 
+        // ── Auto-remplissage formations depuis la base ────────────────────────
+        window.sgpFillFormations = function (agentId) {
+            if (!agentId) return;
+            fetch('/formations/agent/' + agentId, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            })
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (formations) {
+                formationsRows.innerHTML = '';
+                formationIndexCounter = 0;
+                (formations.length ? formations : [{}]).forEach(function (f) { addFormationRow(f); });
+            })
+            .catch(function () {});
+        };
+
         function makeExperienceRow(row, idx) {
             const tr = document.createElement('tr'); tr.className = 'border-t border-slate-200';
             tr.innerHTML = `<td class="p-2"><input type="text" name="identification[experiences][${idx}][periode]" value="${escapeHtml(row.periode ?? '')}" class="ent-input"></td><td class="p-2"><input type="text" name="identification[experiences][${idx}][poste]" value="${escapeHtml(row.poste ?? '')}" class="ent-input"></td><td class="p-2"><input type="text" name="identification[experiences][${idx}][observations]" value="${escapeHtml(row.observations ?? '')}" class="ent-input"></td><td class="p-2"><button type="button" class="ent-btn ent-btn-soft" data-rm>Supprimer</button></td>`;
@@ -385,7 +403,13 @@
         document.addEventListener('input', e => { if (e.target.matches('input[name^="objective_criteres"][name$="[note]"], input[name^="subjective_criteres"][name$="[note]"]')) updateScoreSummary(); });
 
         populateObjectiveSelector();
-        (Array.isArray(oldFormations) && oldFormations.length ? oldFormations : [{}]).forEach(r => addFormationRow(r));
+        // Formations : données saisies (après erreur) ou auto-fetch depuis la BDD
+        (function () {
+            var hasOld = Array.isArray(oldFormations) && oldFormations.some(function (f) { return f && f.libelle && String(f.libelle).trim(); });
+            if (hasOld) { oldFormations.forEach(function (r) { addFormationRow(r || {}); }); }
+            else if (prefilledAgentId) { window.sgpFillFormations(prefilledAgentId); }
+            else { addFormationRow({}); }
+        })();
         (Array.isArray(oldExperiences) && oldExperiences.length ? oldExperiences : [{}]).forEach(r => addExperienceRow(r));
         renderSubjectiveCriteria(Array.isArray(subjectiveTemplates) ? subjectiveTemplates : []);
         if (Array.isArray(oldObjectiveCriteria) && oldObjectiveCriteria.length) { oldObjectiveCriteria.forEach((c, i) => { objectiveContainer.appendChild(renderCriterion('objective_criteres', c, i, { titleReadonly: true, allowRemoveCriterion: true })); objectiveIndexCounter++; }); }

@@ -454,20 +454,16 @@ class DirecteurSubordonneController extends Controller
 
         $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
-        // Valeurs précédentes pour les tableaux dynamiques (après erreur de validation)
-        $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
-        if (! is_array($oldFormations) || $oldFormations === []) {
-            $oldFormations = [['periode' => '', 'libelle' => '', 'domaine' => '']];
-        }
-        $oldExperiences = old('identification.experiences', [['periode' => '', 'poste' => '', 'observations' => '']]);
-        if (! is_array($oldExperiences) || $oldExperiences === []) {
-            $oldExperiences = [['periode' => '', 'poste' => '', 'observations' => '']];
-        }
-        $displayYear = now()->year;
+        // Valeurs précédentes (null = formulaire vierge → auto-fetch depuis la BDD)
+        $oldFormations    = old('identification.formations');
+        $oldExperiences   = old('identification.experiences');
+        $displayYear      = now()->year;
+        $prefilledAgentId = $secretaire->agent_id;
 
         return view('directeur.subordonnes.evaluations.create', compact(
             'direction', 'secretaire', 'objectiveOptions',
-            'subjectiveTemplates', 'oldFormations', 'oldExperiences', 'displayYear'
+            'subjectiveTemplates', 'oldFormations', 'oldExperiences', 'displayYear',
+            'prefilledAgentId'
         ));
     }
 

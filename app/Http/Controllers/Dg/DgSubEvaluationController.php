@@ -40,20 +40,20 @@ class DgSubEvaluationController extends Controller
         if ($entite->dga_agent_id) {
             $dga = User::where('role', 'DGA')->where('agent_id', $entite->dga_agent_id)->first();
             if ($dga) {
-                $subordonnes->push(['id' => $dga->id, 'nom' => $dga->name, 'role_label' => 'DGA', 'entite_label' => $entiteNom, 'service_label' => 'Direction Générale']);
+                $subordonnes->push(['id' => $dga->id, 'agent_id' => $dga->agent_id, 'nom' => $dga->name, 'role_label' => 'DGA', 'entite_label' => $entiteNom, 'service_label' => 'Direction Générale']);
             }
         }
 
         if ($entite->assistante_agent_id) {
             $assistante = User::where('role', 'Assistante_Dg')->where('agent_id', $entite->assistante_agent_id)->first();
             if ($assistante) {
-                $subordonnes->push(['id' => $assistante->id, 'nom' => $assistante->name, 'role_label' => 'Assistante', 'entite_label' => $entiteNom, 'service_label' => 'Secrétariat DG']);
+                $subordonnes->push(['id' => $assistante->id, 'agent_id' => $assistante->agent_id, 'nom' => $assistante->name, 'role_label' => 'Assistante', 'entite_label' => $entiteNom, 'service_label' => 'Secrétariat DG']);
             }
         }
 
         $conseillers = User::where('role', 'Conseillers_Dg')->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))->get();
         foreach ($conseillers as $c) {
-            $subordonnes->push(['id' => $c->id, 'nom' => $c->name, 'role_label' => 'Conseiller', 'entite_label' => $entiteNom, 'service_label' => 'Direction Générale']);
+            $subordonnes->push(['id' => $c->id, 'agent_id' => $c->agent_id, 'nom' => $c->name, 'role_label' => 'Conseiller', 'entite_label' => $entiteNom, 'service_label' => 'Direction Générale']);
         }
 
         return $subordonnes;
@@ -101,15 +101,10 @@ class DgSubEvaluationController extends Controller
 
         $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
-        $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
-        if (! is_array($oldFormations) || $oldFormations === []) {
-            $oldFormations = [['periode' => '', 'libelle' => '', 'domaine' => '']];
-        }
+        $oldFormations  = old('identification.formations');
+        $oldExperiences = old('identification.experiences');
 
-        $oldExperiences = old('identification.experiences', [['periode' => '', 'poste' => '', 'observations' => '']]);
-        if (! is_array($oldExperiences) || $oldExperiences === []) {
-            $oldExperiences = [['periode' => '', 'poste' => '', 'observations' => '']];
-        }
+        $prefilledAgentId = $selectedSubordonne['agent_id'] ?? null;
 
         return view('dg.subordonnes.evaluations.create', compact(
             'subordonnes',
@@ -118,6 +113,7 @@ class DgSubEvaluationController extends Controller
             'subjectiveTemplates',
             'oldFormations',
             'oldExperiences',
+            'prefilledAgentId',
         ));
     }
 

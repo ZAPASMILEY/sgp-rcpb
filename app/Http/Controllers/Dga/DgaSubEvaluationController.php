@@ -73,6 +73,7 @@ class DgaSubEvaluationController extends Controller
             $delegationLabel = trim($delegation->region . ($delegation->ville ? ' — ' . $delegation->ville : ''));
             $subordonnes->push([
                 'id'            => $dt->id,
+                'agent_id'      => $dt->agent_id,
                 'nom'           => $dt->name,
                 'role_label'    => 'Directeur Technique',
                 'entite_label'  => $delegationLabel ?: 'Délégation Technique',
@@ -88,6 +89,7 @@ class DgaSubEvaluationController extends Controller
             if ($sec) {
                 $subordonnes->push([
                     'id'            => $sec->id,
+                    'agent_id'      => $sec->agent_id,
                     'nom'           => $sec->name,
                     'role_label'    => 'Secrétaire DGA',
                     'entite_label'  => $entite->nom ?? '',
@@ -115,6 +117,7 @@ class DgaSubEvaluationController extends Controller
                 }
                 $subordonnes->push([
                     'id'            => $chefUser->id,
+                    'agent_id'      => $chefUser->agent_id,
                     'nom'           => $chefUser->name,
                     'role_label'    => 'Chef de Service',
                     'entite_label'  => $direction->nom ?? 'Direction DGA',
@@ -141,6 +144,7 @@ class DgaSubEvaluationController extends Controller
                 }
                 $subordonnes->push([
                     'id'            => $agentUser->id,
+                    'agent_id'      => $agentUser->agent_id,
                     'nom'           => $agentUser->name,
                     'role_label'    => $agent->fonction ?? 'Collaborateur',
                     'entite_label'  => $direction->nom ?? 'Direction DGA',
@@ -203,15 +207,10 @@ class DgaSubEvaluationController extends Controller
 
         $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
-        $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
-        if (! is_array($oldFormations) || $oldFormations === []) {
-            $oldFormations = [['periode' => '', 'libelle' => '', 'domaine' => '']];
-        }
+        $oldFormations  = old('identification.formations');
+        $oldExperiences = old('identification.experiences');
 
-        $oldExperiences = old('identification.experiences', [['periode' => '', 'poste' => '', 'observations' => '']]);
-        if (! is_array($oldExperiences) || $oldExperiences === []) {
-            $oldExperiences = [['periode' => '', 'poste' => '', 'observations' => '']];
-        }
+        $prefilledAgentId = $selectedSubordonne['agent_id'] ?? null;
 
         return view('dga.subordonnes.evaluations.create', compact(
             'subordonnes',
@@ -220,6 +219,7 @@ class DgaSubEvaluationController extends Controller
             'subjectiveTemplates',
             'oldFormations',
             'oldExperiences',
+            'prefilledAgentId',
         ));
     }
 

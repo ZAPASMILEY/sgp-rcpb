@@ -284,18 +284,12 @@ class DgDirectionController extends Controller
 
         $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
-        $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
-        if (! is_array($oldFormations) || $oldFormations === []) {
-            $oldFormations = [['periode' => '', 'libelle' => '', 'domaine' => '']];
-        }
+        $oldFormations  = old('identification.formations');
+        $oldExperiences = old('identification.experiences');
 
-        $oldExperiences = old('identification.experiences', [['periode' => '', 'poste' => '', 'observations' => '']]);
-        if (! is_array($oldExperiences) || $oldExperiences === []) {
-            $oldExperiences = [['periode' => '', 'poste' => '', 'observations' => '']];
-        }
-
-        $displayYear = now()->year;
-        $entiteNom   = \App\Models\Entite::find($this->getEntiteId())?->nom ?? '';
+        $displayYear      = now()->year;
+        $entiteNom        = \App\Models\Entite::find($this->getEntiteId())?->nom ?? '';
+        $prefilledAgentId = $direction->directeur_agent_id;
 
         return view('dg.directions.evaluations.create', compact(
             'direction',
@@ -305,6 +299,7 @@ class DgDirectionController extends Controller
             'oldExperiences',
             'displayYear',
             'entiteNom',
+            'prefilledAgentId',
         ));
     }
 

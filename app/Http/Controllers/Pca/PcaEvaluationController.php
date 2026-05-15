@@ -84,14 +84,19 @@ class PcaEvaluationController extends Controller
             'user' => $dg ? [['id' => $dg->id, 'label' => $dg->name ?? 'Directeur Général']] : [],
         ];
 
+        $oldFormations    = old('identification.formations');
+        $prefilledAgentId = $dg?->agent_id;
+
         return view('pca.evaluations.create', [
-            'dg' => $dg,
-            'entiteFaitiere' => $entiteFaitiere,
+            'dg'               => $dg,
+            'entiteFaitiere'   => $entiteFaitiere,
             'directionGenerale' => $directionGenerale,
             'assignmentOptions' => $assignmentOptions,
-            'targetProfiles' => $this->buildTargetProfiles($entiteFaitiere->id),
+            'targetProfiles'   => $this->buildTargetProfiles($entiteFaitiere->id),
             'objectiveOptions' => $this->buildObjectiveOptions($entiteFaitiere->id),
             'subjectiveTemplates' => $this->evaluationService->buildSubjectiveTemplates(),
+            'oldFormations'    => $oldFormations,
+            'prefilledAgentId' => $prefilledAgentId,
         ]);
     }
 
