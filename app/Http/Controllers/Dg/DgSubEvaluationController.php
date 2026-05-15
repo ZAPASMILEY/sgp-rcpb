@@ -51,9 +51,9 @@ class DgSubEvaluationController extends Controller
             }
         }
 
-        $conseillers = User::where('role', 'Conseillers_Dg')->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))->get();
+        $conseillers = User::with('agent')->where('role', 'Conseillers_Dg')->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))->get();
         foreach ($conseillers as $c) {
-            $subordonnes->push(['id' => $c->id, 'agent_id' => $c->agent_id, 'nom' => $c->name, 'role_label' => 'Conseiller', 'entite_label' => $entiteNom, 'service_label' => 'Direction Générale']);
+            $subordonnes->push(['id' => $c->id, 'agent_id' => $c->agent_id, 'nom' => $c->name, 'role_label' => $c->agent?->fonction ?? 'Conseiller', 'entite_label' => $entiteNom, 'service_label' => 'Direction Générale']);
         }
 
         return $subordonnes;
