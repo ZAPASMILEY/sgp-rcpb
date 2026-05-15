@@ -146,9 +146,9 @@ class DgaSubEvaluationController extends Controller
                     'id'            => $agentUser->id,
                     'agent_id'      => $agentUser->agent_id,
                     'nom'           => $agentUser->name,
-                    'role_label'    => $agent->fonction ?? 'Collaborateur',
+                    'role_label'    => 'Agent',
                     'entite_label'  => $direction->nom ?? 'Direction DGA',
-                    'service_label' => 'Collaborateur direct',
+                    'service_label' => $agent->fonction ?? '',
                     'groupe'        => 'Collaborateurs directs',
                     'redirect_to'   => 'direction',
                 ]);
