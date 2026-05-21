@@ -26,8 +26,18 @@ class ChefEquipeController extends Controller
         $ctx   = ChefEntity::resolveOrFail($user);
         $agent = $ctx->agent;
 
+        $sexe    = trim((string) $request->query('sexe', ''));
+        $fonction = trim((string) $request->query('fonction', ''));
+
         // Agents subordonnés de la structure gérée par ce chef
         $agentsRaw = $ctx->getAgents();
+
+        if ($sexe !== '') {
+            $agentsRaw = $agentsRaw->filter(fn (Agent $a) => $a->sexe === $sexe);
+        }
+        if ($fonction !== '') {
+            $agentsRaw = $agentsRaw->filter(fn (Agent $a) => $a->role === $fonction);
+        }
 
         // Enrichissement : dernière évaluation créée PAR ce chef pour chaque agent
         $agentsOverview = $agentsRaw->map(function (Agent $a) use ($user) {
@@ -57,12 +67,17 @@ class ChefEquipeController extends Controller
             'evaluations_creees' => $evaluationsCreees,
         ];
 
+        $fonctions = Agent::ROLES;
+
         return view('chef.equipe', compact(
             'user',
             'ctx',
             'agent',
             'agentsOverview',
             'stats',
+            'sexe',
+            'fonction',
+            'fonctions',
         ));
     }
 }

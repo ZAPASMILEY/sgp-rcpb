@@ -19,6 +19,7 @@ class Evaluation extends Model
         'evaluable_id',
         'evaluable_role',
         'annee_id',
+        'semestre_id',
         'evaluateur_id',
         'date_debut',
         'date_fin',
@@ -40,6 +41,9 @@ class Evaluation extends Model
         'date_signature_directeur',
         'date_signature_evaluateur',
         'statut',
+        'motif_refus',
+        'reclamation',
+        'statut_reclamation',
     ];
 
     /** @var array<string, string> */
@@ -71,6 +75,11 @@ class Evaluation extends Model
     public function annee(): BelongsTo
     {
         return $this->belongsTo(Annee::class);
+    }
+
+    public function semestre(): BelongsTo
+    {
+        return $this->belongsTo(Semestre::class);
     }
 
     public function identification(): HasOne

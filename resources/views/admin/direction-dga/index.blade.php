@@ -14,13 +14,30 @@
         <script>setTimeout(() => document.getElementById('status-msg')?.remove(), 3000);</script>
     @endif
 
+    @if (session('error'))
+        <div class="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-5 py-4">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-500"><i class="fas fa-exclamation-triangle text-sm"></i></div>
+            <p class="text-sm font-semibold text-rose-700">{{ session('error') }}</p>
+        </div>
+    @endif
+
     @if (! $direction)
         <div class="rounded-2xl bg-white p-10 shadow-sm text-center">
-            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
-                <i class="fas fa-sitemap text-2xl text-slate-300"></i>
+            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-100">
+                <i class="fas fa-sitemap text-2xl text-purple-400"></i>
             </div>
             <p class="font-bold text-slate-600">Direction DGA introuvable.</p>
-            <p class="mt-1 text-xs text-slate-400">Vérifiez qu'un agent avec la fonction « DGA » est bien affecté comme directeur d'une direction.</p>
+            <p class="mt-1 text-xs text-slate-400">La direction « Direction Générale Adjointe » n'existe pas encore ou aucun DGA n'y est affecté.</p>
+            <div class="mt-6 flex flex-wrap justify-center gap-3">
+                <a href="{{ route('admin.directions.create') }}"
+                   class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50">
+                    <i class="fas fa-plus text-xs text-slate-400"></i> Créer la direction
+                </a>
+                <a href="{{ route('admin.direction-dga.configurer') }}"
+                   class="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-200 transition hover:bg-purple-700">
+                    <i class="fas fa-user-tie text-xs"></i> Configurer le DGA
+                </a>
+            </div>
         </div>
     @else
 
@@ -32,6 +49,9 @@
                 <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">{{ $direction->nom }}</h1>
             </div>
             <div class="flex gap-2">
+                <a href="{{ route('admin.direction-dga.configurer') }}" class="ent-btn ent-btn-soft text-xs py-1.5 px-4">
+                    <i class="fas fa-user-tie mr-1.5"></i>Configurer DGA
+                </a>
                 <a href="{{ route('admin.directions.edit', $direction) }}" class="ent-btn ent-btn-primary text-xs py-1.5 px-4">
                     <i class="fas fa-pen mr-1.5"></i>Modifier
                 </a>
@@ -113,7 +133,7 @@
                                 <p class="mt-0.5 text-sm text-slate-500">
                                     <i class="fas fa-user-tie mr-1 text-purple-400"></i>
                                     <span class="font-semibold text-slate-700">{{ $chef->prenom }} {{ $chef->nom }}</span>
-                                    <span class="text-xs text-slate-400 ml-1">— {{ $chef->fonction }}</span>
+                                    <span class="text-xs text-slate-400 ml-1">— {{ $chef->role }}</span>
                                 </p>
                             @else
                                 <p class="mt-0.5 text-sm italic text-slate-400">Chef non affecté</p>
@@ -154,7 +174,7 @@
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-bold text-slate-800 truncate">{{ $agent->prenom }} {{ $agent->nom }}</p>
-                                    <p class="text-xs text-slate-400 truncate">{{ $agent->fonction }}</p>
+                                    <p class="text-xs text-slate-400 truncate">{{ $agent->role }}</p>
                                 </div>
                                 @if($agentUser)
                                     <span class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold
@@ -194,7 +214,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="font-bold text-slate-800 text-sm truncate">{{ $agent->prenom }} {{ $agent->nom }}</p>
-                    <p class="text-xs text-slate-400">{{ $agent->fonction }}</p>
+                    <p class="text-xs text-slate-400">{{ $agent->role }}</p>
                 </div>
                 @if($agent->user)
                     <span class="inline-flex items-center gap-1 rounded-full {{ $agent->user->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600' }} px-2.5 py-0.5 text-[11px] font-semibold">

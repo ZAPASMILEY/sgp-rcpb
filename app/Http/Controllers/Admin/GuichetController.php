@@ -7,39 +7,44 @@ use App\Models\Agence;
 use App\Models\Agent;
 use App\Models\Guichet;
 use App\Models\DelegationTechnique;
+use App\Models\Poste;
+use App\Services\AgentAccountService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class GuichetController extends Controller
 {
-        public function index()
-        {
-            $guichets = Guichet::with(['chef', 'agence.delegationTechnique'])
-                ->latest()
-                ->paginate(10);
+    public function __construct(private AgentAccountService $accounts) {}
 
-            // On récupère les délégations et on compte manuellement pour éviter l'erreur de méthode
-            $delegations = DelegationTechnique::all()->map(function($dt) {
-                // On compte les guichets qui appartiennent aux agences de cette DT
-                $dt->guichets_count = Guichet::whereHas('agence', function($q) use ($dt) {
-                    $q->where('delegation_technique_id', $dt->id);
-                })->count();
-                return $dt;
-            });
+    /**
+     * Liste des guichets avec statistiques
+     */
+    public function index()
+    {
+        $guichets = Guichet::with(['chef', 'agence.delegationTechnique'])
+            ->latest()
+            ->paginate(10);
 
-            $stats = [
-                'total' => Guichet::count(),
-                'par_delegation' => $delegations
-            ];
+        $delegations = DelegationTechnique::all()->map(function($dt) {
+            $dt->guichets_count = Guichet::whereHas('agence', function($q) use ($dt) {
+                $q->where('delegation_technique_id', $dt->id);
+            })->count();
+            return $dt;
+        });
 
-            return view('admin.guichets.index', compact('guichets', 'stats'));
-        }
+        $stats = [
+            'total' => Guichet::count(),
+            'par_delegation' => $delegations
+        ];
+
+        return view('admin.guichets.index', compact('guichets', 'stats'));
+    }
 
     public function create(): View
     {
         return view('admin.guichets.create', [
-            'chefs'   => Agent::where('fonction', 'Chef de Guichet')->orderBy('nom')->get(['id', 'nom', 'prenom']),
+            'chefs'   => Agent::where('role', 'Chef de Guichet')->orderBy('nom')->get(['id', 'nom', 'prenom']),
             'agences' => Agence::with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
         ]);
     }
@@ -47,12 +52,19 @@ class GuichetController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nom'           => ['required', 'string', 'max:255'],
-            'agence_id'     => ['required', 'integer', 'exists:agences,id'],
-            'chef_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
+            'nom'               => ['required', 'string', 'max:255'],
+            'agence_id'         => ['required', 'integer', 'exists:agences,id'],
+            'chef_agent_id'     => ['nullable', 'integer', 'exists:agents,id'],
+            'telephone_accueil' => ['required', 'string', 'max:30'],
+        ], [
+            'telephone_accueil.required' => "Le numéro de téléphone d'accueil est obligatoire.",
         ]);
 
         $guichet = Guichet::create($validated);
+
+        if ($validated['chef_agent_id']) {
+            Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => 'Chef de Guichet de ' . $guichet->nom]);
+        }
 
         return redirect()
             ->route('admin.guichets.index')
@@ -63,7 +75,7 @@ class GuichetController extends Controller
     {
         return view('admin.guichets.edit', [
             'guichet' => $guichet,
-            'chefs'   => Agent::where('fonction', 'Chef de Guichet')->orderBy('nom')->get(['id', 'nom', 'prenom']),
+            'chefs'   => Agent::where('role', 'Chef de Guichet')->orderBy('nom')->get(['id', 'nom', 'prenom']),
             'agences' => Agence::with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
         ]);
     }
@@ -71,12 +83,17 @@ class GuichetController extends Controller
     public function update(Request $request, Guichet $guichet): RedirectResponse
     {
         $validated = $request->validate([
-            'nom'           => ['required', 'string', 'max:255'],
-            'agence_id'     => ['required', 'integer', 'exists:agences,id'],
-            'chef_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
+            'nom'               => ['required', 'string', 'max:255'],
+            'agence_id'         => ['required', 'integer', 'exists:agences,id'],
+            'chef_agent_id'     => ['nullable', 'integer', 'exists:agents,id'],
+            'telephone_accueil' => ['required', 'string', 'max:30'],
         ]);
 
         $guichet->update($validated);
+
+        if ($validated['chef_agent_id']) {
+            Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => 'Chef de Guichet de ' . $guichet->nom]);
+        }
 
         return redirect()
             ->route('admin.guichets.index')
@@ -93,6 +110,9 @@ class GuichetController extends Controller
             ->with('status', 'Guichet « '.$nom.' » supprimé.');
     }
 
+    /**
+     * Liste des agents d'un guichet spécifique
+     */
     public function agentsIndex(Guichet $guichet): View
     {
         return view('admin.guichets.agents.index', [
@@ -104,6 +124,9 @@ class GuichetController extends Controller
         ]);
     }
 
+    /**
+     * Formulaire d'affectation d'un agent au guichet
+     */
     public function createAgent(Guichet $guichet): View
     {
         return view('admin.guichets.agents.create', [
@@ -112,22 +135,50 @@ class GuichetController extends Controller
                 ->where('agence_id', $guichet->agence_id)
                 ->whereNull('guichet_id')
                 ->where('id', '!=', $guichet->chef_agent_id)
+                // SECURITÉ : On filtre les rôles interdits (Direction/Admin Agence)
+                ->whereNotIn('role', ["Chef d'Agence", "Secrétaire d'Agence"])
                 ->orderBy('nom')->orderBy('prenom')
-                ->get(['id', 'nom', 'prenom', 'fonction']),
+                ->get(['id', 'nom', 'prenom', 'role', 'matricule', 'poste']),
+            'postes'  => Poste::where('fonction', 'Agent')->orderBy('libelle')->pluck('libelle'),
         ]);
     }
 
+    /**
+     * Enregistrement de l'affectation
+     */
     public function storeAgent(Request $request, Guichet $guichet): RedirectResponse
     {
         $validated = $request->validate([
             'agent_id' => ['required', 'integer', 'exists:agents,id'],
+            'poste'    => ['required', 'string', 'max:150'],
         ], [
             'agent_id.required' => 'Veuillez sélectionner un agent.',
-            'agent_id.exists'   => 'Agent introuvable.',
+            'poste.required'    => 'La fonction occupée est obligatoire.',
         ]);
 
         $agent = Agent::findOrFail($validated['agent_id']);
-        $agent->update(['guichet_id' => $guichet->id]);
+
+        // LOGIQUE MÉTIER : Empêcher les rôles administratifs d'agence au guichet
+        $fonctionsInterdites = ["Chef d'Agence", "Secrétaire d'Agence"];
+        if (in_array($agent->role, $fonctionsInterdites)) {
+            return back()->withErrors([
+                'agent_id' => "Action impossible : le rôle de « {$agent->role} » est rattaché au siège de l'agence."
+            ]);
+        }
+
+        // LOGIQUE MÉTIER : Unicité du Chef de Guichet
+        if ($agent->role === "Chef de Guichet") {
+            $dejaUnChef = Agent::where('guichet_id', $guichet->id)
+                               ->where('role', 'Chef de Guichet')
+                               ->exists();
+
+            if ($guichet->chef_agent_id || $dejaUnChef) {
+                return back()->withErrors(['agent_id' => "Ce guichet possède déjà un Chef de Guichet."]);
+            }
+        }
+
+        $agent->update(['guichet_id' => $guichet->id, 'poste' => $validated['poste'] ?? null]);
+        $this->accounts->ensureAccount($agent->fresh());
 
         return redirect()
             ->route('admin.guichets.agents.index', $guichet)

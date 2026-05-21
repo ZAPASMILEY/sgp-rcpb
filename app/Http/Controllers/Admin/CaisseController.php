@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\Service;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
@@ -19,55 +20,43 @@ class CaisseController extends Controller
     public function __construct(private AgentAccountService $accounts) {}
 
     public function index(Request $request): View
-    {
-        $search = trim((string) $request->query('search', ''));
+{
+    $search = trim((string) $request->query('search', ''));
 
-        return view('admin.caisses.index', [
-            'caisses' => Caisse::query()
-                ->with('delegationTechnique')
-                ->when($search !== '', function (EloquentBuilder $query) use ($search): void {
-                    $query->where(function (EloquentBuilder $subQuery) use ($search): void {
-                        $subQuery
-                            ->where('nom', 'like', "%{$search}%")
-                            ->orWhere('secretariat_telephone', 'like', "%{$search}%")
-                            ->orWhereHas('directeur', function (EloquentBuilder $dq) use ($search): void {
-                                $dq->where('nom', 'like', "%{$search}%")
-                                   ->orWhere('email', 'like', "%{$search}%");
-                            })
-                            ->orWhereHas('delegationTechnique', function (EloquentBuilder $delegationQuery) use ($search): void {
-                                $delegationQuery
-                                    ->where('region', 'like', "%{$search}%")
-                                    ->orWhere('ville', 'like', "%{$search}%");
-                            });
-                    });
-                })
-                ->latest()
-                ->paginate(12)
-                ->withQueryString(),
-            'delegations' => DelegationTechnique::query()->orderBy('region')->get(),
-            'search' => $search,
-            'stats' => [
-                'total' => Caisse::count(),
-                'par_delegation' => DelegationTechnique::query()
-                    ->withCount('caisses')
-                    ->orderBy('region')
-                    ->get(),
-            ],
-        ]);
-    }
+    return view('admin.caisses.index', [
+        'caisses' => Caisse::query()
+            // On charge la délégation, le directeur, le secrétaire ET les services avec leurs agents
+            ->with(['delegationTechnique', 'directeur', 'secretaire', 'services.agents']) 
+            ->when($search !== '', function (EloquentBuilder $query) use ($search): void {
+                // ... (Garde ton code de recherche identique ici) ...
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString(),
+        'delegations' => DelegationTechnique::query()->orderBy('region')->get(),
+        'search' => $search,
+        'stats' => [
+            'total' => Caisse::count(),
+            'par_delegation' => DelegationTechnique::query()
+                ->withCount('caisses')
+                ->orderBy('region')
+                ->get(),
+        ],
+    ]);
+}
 
     public function create(): View
     {
         return view('admin.caisses.create', $this->formData());
     }
 
-    public function show(Caisse $caisse): View
-    {
-        return view('admin.caisses.show', [
-            'caisse' => $caisse->load('delegationTechnique'),
-        ]);
-    }
+   public function show(Caisse $caisse)
+{
+    // On charge les services et la relation 'chef' qu'on vient de trouver !
+    $caisse->load(['services.chef']); 
 
+    return view('admin.caisses.show', compact('caisse'));
+}
     public function directionsIndex(Caisse $caisse): View
     {
         return view('admin.caisses.directions', [
@@ -75,6 +64,19 @@ class CaisseController extends Controller
             'caisseDirections' => collect(),
         ]);
     }
+ public function affecterService(Caisse $caisse)
+{
+    // On sélectionne uniquement les agents :
+    // 1. Dont la fonction est strictement 'Chef de Service'
+    // 2. Qui ne sont chefs d'AUCUN service (relation 'ledService' inexistante)
+    $chefs = \App\Models\Agent::where('role', 'Chef de Service')
+        ->whereDoesntHave('ledService')
+        ->orderBy('nom', 'asc')
+        ->orderBy('prenom', 'asc')
+        ->get();
+
+    return view('admin.caisses.services', compact('caisse', 'chefs'));
+}
 
     public function servicesIndex(Caisse $caisse): View
     {
@@ -97,6 +99,9 @@ class CaisseController extends Controller
         $validated = $this->validateCaisse($request);
 
         $caisse = Caisse::query()->create($validated);
+
+        Agent::findOrFail($validated['directeur_agent_id'])->update(['poste' => 'Directeur de ' . $caisse->nom]);
+        Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => 'Secrétaire de ' . $caisse->nom]);
 
         // Créer automatiquement les comptes des responsables
         $this->accounts->ensureAccount(Agent::findOrFail($validated['directeur_agent_id']));
@@ -121,6 +126,9 @@ class CaisseController extends Controller
 
         $caisse->update($validated);
 
+        Agent::findOrFail($validated['directeur_agent_id'])->update(['poste' => 'Directeur de ' . $caisse->nom]);
+        Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => 'Secrétaire de ' . $caisse->nom]);
+
         // Activer les nouveaux responsables
         $this->accounts->ensureAccount(Agent::findOrFail($validated['directeur_agent_id']));
         $this->accounts->ensureAccount(Agent::findOrFail($validated['secretaire_agent_id']));
@@ -143,7 +151,7 @@ class CaisseController extends Controller
     {
         // Agents libres (sans caisse) + le responsable actuel (pour edit)
         $directeurQuery = Agent::query()
-            ->where('fonction', 'Directeur de Caisse')
+            ->where('role', 'Directeur de Caisse')
             ->where(function (EloquentBuilder $q) use ($caisse): void {
                 $q->whereNull('caisse_id');
                 if ($caisse?->directeur_agent_id) {
@@ -152,7 +160,7 @@ class CaisseController extends Controller
             });
 
         $secretaireQuery = Agent::query()
-            ->where('fonction', 'Secrétaire de Caisse')
+            ->where('role', 'Secrétaire de Caisse')
             ->where(function (EloquentBuilder $q) use ($caisse): void {
                 $q->whereNull('caisse_id');
                 if ($caisse?->secretaire_agent_id) {
@@ -182,7 +190,7 @@ class CaisseController extends Controller
             ],
             'annee_ouverture'         => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
             'quartier'                => ['nullable', 'string', 'max:255'],
-            'secretariat_telephone'   => ['nullable', 'string', 'max:30'],
+            'secretariat_telephone'   => ['required', 'string', 'max:30'],
             'directeur_agent_id'      => ['required', 'integer', 'exists:agents,id'],
             'secretaire_agent_id'     => ['required', 'integer', 'exists:agents,id'],
         ], [

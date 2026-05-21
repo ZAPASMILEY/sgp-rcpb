@@ -98,43 +98,104 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($caisses as $caisse)
-                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($caisse->nom.' '.$caisse->directeur_prenom.' '.$caisse->directeur_nom.' '.$caisse->directeur_email.' '.$caisse->secretariat_telephone.' '.($caisse->delegationTechnique?->region ?? '').' '.($caisse->delegationTechnique?->ville ?? ''))) }}">
-                                <td class="whitespace-nowrap px-3 py-3">{{ ($caisses->firstItem() ?? 1) + $loop->index }}</td>
-                                <td class="whitespace-nowrap px-3 py-3 font-semibold text-slate-800">{{ $caisse->nom }}</td>
-                                <td class="whitespace-nowrap px-3 py-3">{{ $caisse->directeur_prenom }} {{ $caisse->directeur_nom }}</td>
-                                <td class="whitespace-nowrap px-3 py-3">{{ $caisse->directeur_email }}</td>
-                                <td class="whitespace-nowrap px-3 py-3">{{ $caisse->secretariat_telephone }}</td>
-                                <td class="px-3 py-3">
-                                    @if ($caisse->delegationTechnique)
-                                        <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{{ $caisse->delegationTechnique->region }} / {{ $caisse->delegationTechnique->ville }}</span>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                                <td class="whitespace-nowrap px-3 py-3 text-center">
-                                    <span class="text-xs font-bold text-slate-300">—</span>
-                                </td>
-                                <td class="whitespace-nowrap px-3 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-1">
-                                        <a href="{{ route('admin.caisses.show', $caisse) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Voir"><i class="fas fa-eye text-xs"></i></a>
-                                        <a href="{{ route('admin.caisses.edit', $caisse) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-50 hover:text-blue-500" title="Modifier"><i class="fas fa-pen text-xs"></i></a>
-                                        <form method="POST" action="{{ route('admin.caisses.destroy', $caisse) }}" onsubmit="return confirm('Supprimer cette caisse ?');" class="inline-flex">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer"><i class="fas fa-trash text-xs"></i></button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="py-10 text-center text-sm text-slate-400">
-                                    Aucune caisse enregistrée.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
+    @forelse ($caisses as $caisse)
+        <tr class="border-b border-slate-50 transition hover:bg-slate-50" 
+            data-search-content="{{ strtolower(trim($caisse->nom.' '.($caisse->directeur?->prenom).' '.($caisse->directeur?->nom).' '.($caisse->directeur?->email).' '.$caisse->secretariat_telephone.' '.($caisse->delegationTechnique?->region ?? '').' '.($caisse->delegationTechnique?->ville ?? ''))) }}">
+            
+            {{-- Numéro d'index --}}
+            <td class="whitespace-nowrap px-3 py-3">{{ ($caisses->firstItem() ?? 1) + $loop->index }}</td>
+            
+            {{-- Nom de la Caisse --}}
+            <td class="whitespace-nowrap px-3 py-3 font-semibold text-slate-800">{{ $caisse->nom }}</td>
+            
+            {{-- Directeur de caisse --}}
+            <td class="whitespace-nowrap px-3 py-3 font-medium text-slate-700">
+                @if($caisse->directeur)
+                    {{ $caisse->directeur->prenom }} {{ $caisse->directeur->nom }}
+                @else
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                        Non assigné
+                    </span>
+                @endif
+            </td>
+            
+            {{-- Contact directeur (Email) --}}
+            <td class="whitespace-nowrap px-3 py-3 text-slate-500">
+                @if($caisse->directeur && $caisse->directeur->email)
+                    <a href="mailto:{{ $caisse->directeur->email }}" class="text-sky-600 hover:text-sky-700 hover:underline transition">
+                        {{ $caisse->directeur->email }}
+                    </a>
+                @else
+                    <span class="text-xs text-slate-400">—</span>
+                @endif
+            </td>
+            
+            {{-- Secrétariat (Téléphone) --}}
+            <td class="whitespace-nowrap px-3 py-3 text-slate-600 font-medium">
+                @if($caisse->secretariat_telephone)
+                    <div class="flex items-center gap-2">
+                        <span class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-400">
+                            <i class="fas fa-phone text-[10px]"></i>
+                        </span>
+                        <span>{{ $caisse->secretaire->telephone }}</span>
+                    </div>
+                @else
+                    {{-- Si vide, on tente d'afficher le téléphone de l'agent secrétaire rattaché --}}
+                    @if($caisse->secretaire && $caisse->secretaire->telephone)
+                        <div class="flex items-center gap-2">
+                            <span class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-400">
+                                <i class="fas fa-phone text-[10px]"></i>
+                            </span>
+                            <span>{{ $caisse->secretaire->telephone }}</span>
+                        </div>
+                    @else
+                        <span class="text-xs text-slate-400">—</span>
+                    @endif
+                @endif
+            </td>
+            
+            {{-- Délégation --}}
+            <td class="px-3 py-3">
+                @if ($caisse->delegationTechnique)
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                        {{ $caisse->delegationTechnique->region }} / {{ $caisse->delegationTechnique->ville }}
+                    </span>
+                @else
+                    <span class="text-xs text-slate-400">—</span>
+                @endif
+            </td>
+            
+            {{-- Effectif des agents --}}
+           {{-- Effectif des agents (Total Réel) --}}
+<td class="whitespace-nowrap px-3 py-3 text-center">
+    <span class="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-100/50">
+        <i class="fas fa-users text-[10px]"></i>
+        {{ $caisse->effectif_reel }} agents
+    </span>
+</td>
+            
+            {{-- Actions --}}
+            <td class="whitespace-nowrap px-3 py-3 text-right">
+                <div class="flex items-center justify-end gap-1">
+                    <a href="{{ route('admin.caisses.show', $caisse) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Voir les agents"><i class="fas fa-eye text-xs"></i></a>
+                    <a href="{{ route('admin.caisses.edit', $caisse) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-50 hover:text-blue-500" title="Modifier"><i class="fas fa-pen text-xs"></i></a>
+                    <form method="POST" action="{{ route('admin.caisses.destroy', $caisse) }}" onsubmit="return confirm('Supprimer cette caisse ?');" class="inline-flex">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer"><i class="fas fa-trash text-xs"></i></button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+    @empty
+        <tr>
+            <td colspan="8" class="py-10 text-center text-sm text-slate-400">
+                Aucune caisse enregistrée.
+            </td>
+        </tr>
+    @endforelse
+</tbody>
                 </table>
             </div>
 

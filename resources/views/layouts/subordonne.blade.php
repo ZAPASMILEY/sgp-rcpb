@@ -20,6 +20,9 @@
             ],
         ],
     ];
+
+    // ── Sections conditionnelles selon permissions ───────────────────────────
+    $menuSections = array_merge($menuSections, \App\Helpers\PermissionMenu::extraSections());
 @endphp
 
 <!DOCTYPE html>
@@ -172,6 +175,12 @@
                 <div class="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-700 shadow-sm">
                     <i class="fas fa-ban shrink-0"></i>
                     <span>{{ session('feature_disabled') }}</span>
+                </div>
+            @endif
+            @if(session('periode_fermee'))
+                <div class="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 shadow-sm">
+                    <i class="fas fa-calendar-times shrink-0"></i>
+                    <span>{{ session('periode_fermee') }}</span>
                 </div>
             @endif
             @yield('content')

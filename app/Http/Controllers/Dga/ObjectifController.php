@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Alerte;
 use App\Models\Entite;
 use App\Models\FicheObjectif;
+use App\Models\LigneFicheObjectif;
 use App\Models\User;
 use App\Traits\ResolvesEntite;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -69,6 +70,9 @@ class ObjectifController extends Controller
 
         $action      = $request->input('action');
         $fiche->statut = $action === 'accepter' ? 'acceptee' : 'refusee';
+        if ($action === 'accepter') {
+            $fiche->date_validation = now()->toDateString();
+        }
         $fiche->save();
 
         // Notifier le DG (créateur de la fiche)
@@ -110,6 +114,60 @@ class ObjectifController extends Controller
         return redirect()
             ->route($this->espaceRoutePrefix().'.objectifs.show', $fiche)
             ->with('status', 'Avancement mis à jour.');
+    }
+
+    public function avancementLigne(Request $request, $ficheId, $ligneId): RedirectResponse
+    {
+        $fiche = FicheObjectif::findOrFail($ficheId);
+        $this->authorizeObjectif($fiche);
+
+        if ($fiche->statut !== 'acceptee') {
+            return redirect()->route($this->espaceRoutePrefix().'.objectifs.show', $fiche)
+                ->with('status', "L'avancement ne peut être modifié que sur une fiche acceptée.");
+        }
+
+        $request->validate(['avancement_percentage' => ['required', 'integer', 'min:0', 'max:100']]);
+        $val = (int) $request->avancement_percentage;
+        if ($val % 5 !== 0) {
+            return redirect()->route($this->espaceRoutePrefix().'.objectifs.show', $fiche)
+                ->with('status', "L'avancement doit être un multiple de 5.");
+        }
+
+        $ligne = LigneFicheObjectif::where('fiche_objectif_id', $ficheId)->findOrFail($ligneId);
+        $ligne->update(['avancement_percentage' => $val]);
+        $fiche->recalculateAvancement();
+
+        return redirect()->route($this->espaceRoutePrefix().'.objectifs.show', $fiche)
+            ->with('status', 'Avancement mis à jour.');
+    }
+
+    public function contesterLigne(Request $request, $ficheId, $ligneId): RedirectResponse
+    {
+        $fiche = FicheObjectif::findOrFail($ficheId);
+        $this->authorizeObjectif($fiche);
+
+        if ($fiche->statut === 'acceptee') {
+            return redirect()->route($this->espaceRoutePrefix().'.objectifs.show', $fiche)
+                ->with('status', 'Impossible de contester une fiche déjà acceptée.');
+        }
+
+        $ligne = LigneFicheObjectif::where('fiche_objectif_id', $ficheId)->findOrFail($ligneId);
+        $ligne->update(['statut' => 'contesté']);
+        $fiche->update(['statut' => 'contesté']);
+
+        $evalue  = Auth::user();
+        $dgUsers = User::where('role', 'DG')->get();
+        foreach ($dgUsers as $dg) {
+            Alerte::notifier(
+                $dg->id,
+                'Objectif contesté',
+                "{$evalue->name} a contesté un objectif dans la fiche « {$fiche->titre} ».",
+                'haute'
+            );
+        }
+
+        return redirect()->route($this->espaceRoutePrefix().'.objectifs.show', $fiche)
+            ->with('status', 'Objectif contesté. Le DG a été notifié.');
     }
 
     public function exportPdf(FicheObjectif $fiche)

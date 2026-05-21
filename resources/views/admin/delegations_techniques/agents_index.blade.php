@@ -46,7 +46,7 @@
                             <tr>
                                 <th>#</th>
                                 <th>Agent</th>
-                                <th>Fonction</th>
+                                <th>Rôle</th>
                                 <th>Service</th>
                                 <th>Delegation</th>
                             </tr>
@@ -56,7 +56,7 @@
                                 <tr>
                                     <td>{{ ($agents->firstItem() ?? 1) + $loop->index }}</td>
                                     <td>{{ $agent->prenom }} {{ $agent->nom }}</td>
-                                    <td>{{ $agent->fonction }}</td>
+                                    <td>{{ $agent->role }}</td>
                                     <td>{{ $agent->service?->nom ?? '-' }}</td>
                                     <td>{{ $agent->service?->direction?->delegationTechnique?->region }} / {{ $agent->service?->direction?->delegationTechnique?->ville }}</td>
                                 </tr>

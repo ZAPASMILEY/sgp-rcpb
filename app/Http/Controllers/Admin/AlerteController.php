@@ -9,11 +9,13 @@ use App\Models\Alerte;
 use App\Models\Entite;
 use App\Models\LoginFailure;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AlerteController extends Controller
 {
@@ -223,14 +225,34 @@ class AlerteController extends Controller
             ->with('status', 'Toutes les alertes ont été supprimées.');
     }
 
-    public function lireTout(Request $request): RedirectResponse
+    public function nonLues(Request $request): JsonResponse
     {
-        // BelongsToMany->update() mettrait à jour la table "alertes", pas le pivot.
-        // On cible directement la table pivot alerte_user pour changer lu → true.
+        $user   = $request->user();
+        $alertes = $user->alertesNonLues()->latest('alertes.created_at')->take(8)->get();
+        $count   = $user->alertesNonLues()->count();
+
+        return response()->json([
+            'count' => $count,
+            'items' => $alertes->map(fn ($a) => [
+                'id'      => $a->id,
+                'titre'   => $a->titre,
+                'message' => Str::limit($a->message ?? '', 70),
+                'priorite'=> $a->priorite,
+                'age'     => $a->created_at->diffForHumans(),
+            ]),
+        ]);
+    }
+
+    public function lireTout(Request $request): RedirectResponse|JsonResponse
+    {
         DB::table('alerte_user')
             ->where('user_id', $request->user()->id)
             ->where('lu', false)
             ->update(['lu' => true, 'lu_at' => now()]);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['ok' => true]);
+        }
 
         return back()->with('status', 'Toutes les notifications ont été marquées comme lues.');
     }

@@ -17,9 +17,9 @@
         default  => 'border-slate-200 bg-slate-100 text-slate-700',
     };
     $statusLabel = match ($evaluation->statut) {
-        'valide' => 'Acceptee',
+        'valide' => 'Acceptée',
         'soumis' => 'Soumise',
-        'refuse' => 'Refusee',
+        'refuse' => 'Refusée',
         default  => 'Brouillon',
     };
     $note = (float) $evaluation->note_finale;
@@ -353,38 +353,119 @@
         </section>
 
         {{-- Actions : Accepter / Refuser (uniquement si statut = soumis) --}}
-        <section class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut de l'evaluation</p>
-                    <span class="mt-1 inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statusClass }}">
-                        {{ $statusLabel }}
-                    </span>
+        @if ($evaluation->statut === 'soumis')
+        <div class="flex flex-col gap-4 rounded-[24px] border-2 border-amber-200 bg-amber-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+                    <i class="fas fa-hourglass-half text-xl"></i>
                 </div>
-                @if ($evaluation->statut === 'soumis')
-                    <div class="flex flex-wrap gap-3">
-                        <form method="POST" action="{{ route('subordonne.evaluations.statut', $evaluation) }}">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="action" value="accepter">
-                            <button type="submit" class="ent-btn ent-btn-primary">
-                                <i class="fas fa-check mr-2"></i>Accepter l'evaluation
-                            </button>
-                        </form>
-                        <form method="POST" action="{{ route('subordonne.evaluations.statut', $evaluation) }}"
-                              onsubmit="return confirm('Confirmer le refus de cette evaluation ?')">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="action" value="refuser">
-                            <button type="submit" class="ent-btn bg-rose-600 text-white hover:bg-rose-700">
-                                <i class="fas fa-times mr-2"></i>Refuser l'evaluation
-                            </button>
-                        </form>
-                    </div>
-                @endif
+                <div>
+                    <p class="font-black text-amber-900">Validation requise</p>
+                    <p class="mt-0.5 text-sm text-amber-700">Consultez votre fiche d'évaluation puis acceptez ou refusez-la.</p>
+                </div>
             </div>
-        </section>
+            <div class="flex flex-wrap gap-3">
+                <button type="button"
+                        onclick="document.getElementById('modalRefusSub').classList.remove('hidden');document.getElementById('modalRefusSub').classList.add('flex')"
+                        class="inline-flex items-center gap-2 rounded-xl border-2 border-rose-200 bg-white px-5 py-2.5 text-sm font-black text-rose-600 transition hover:bg-rose-50">
+                    <i class="fas fa-times text-xs"></i> Refuser
+                </button>
+                <form method="POST" action="{{ route('subordonne.evaluations.statut', $evaluation) }}">
+                    @csrf @method('PATCH')
+                    <input type="hidden" name="action" value="accepter">
+                    <button type="submit" onclick="return confirm('Accepter cette évaluation ?')"
+                            class="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-5 py-2.5 text-sm font-black text-white shadow-md transition hover:bg-slate-800">
+                        <i class="fas fa-check text-xs"></i> Accepter
+                    </button>
+                </form>
+            </div>
+        </div>
+        @endif
+
+        {{-- Bandeau refus + réclamation --}}
+        @if($evaluation->statut === 'refuse')
+        <div class="flex flex-col gap-4 rounded-[24px] border-2 border-rose-200 bg-rose-50 px-6 py-5">
+            <div class="flex items-start gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
+                    <i class="fas fa-ban text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="font-black text-rose-900">Évaluation refusée</p>
+                    @if($evaluation->motif_refus)
+                    <p class="mt-1 text-sm font-semibold text-rose-700">Motif :</p>
+                    <p class="mt-0.5 text-sm text-rose-800">{{ $evaluation->motif_refus }}</p>
+                    @endif
+                    @if($evaluation->statut_reclamation)
+                    <p class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-700">
+                        @if($evaluation->statut_reclamation === 'en_attente') <i class="fas fa-clock"></i> Réclamation en attente
+                        @elseif($evaluation->statut_reclamation === 'maintenu') <i class="fas fa-ban"></i> Refus maintenu par le RH
+                        @elseif($evaluation->statut_reclamation === 'rouvert') <i class="fas fa-rotate-left"></i> Rouvert pour correction
+                        @endif
+                    </p>
+                    @endif
+                </div>
+            </div>
+            @if(!$evaluation->reclamation && $evaluation->statut_reclamation !== 'maintenu')
+            <form action="{{ route('subordonne.evaluations.reclamer', $evaluation) }}" method="POST" class="mt-2 flex flex-col gap-3">
+                @csrf
+                <label class="text-sm font-semibold text-rose-800">Soumettre une réclamation</label>
+                <textarea name="reclamation" rows="3"
+                    class="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-100"
+                    placeholder="Expliquez les raisons de votre réclamation…" required maxlength="1000"></textarea>
+                <div class="flex justify-end">
+                    <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-md transition hover:bg-rose-700">
+                        <i class="fas fa-paper-plane text-xs"></i> Envoyer la réclamation
+                    </button>
+                </div>
+            </form>
+            @elseif($evaluation->reclamation)
+            <div class="mt-2 rounded-xl border border-rose-200 bg-white px-4 py-3">
+                <p class="text-xs font-black uppercase tracking-[0.15em] text-rose-400">Votre réclamation</p>
+                <p class="mt-1 text-sm text-slate-700">{{ $evaluation->reclamation }}</p>
+            </div>
+            @endif
+        </div>
+        @endif
 
     </div>
 </div>
+
+{{-- Modal Refus --}}
+<div id="modalRefusSub" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/50" onclick="this.parentElement.classList.add('hidden');this.parentElement.classList.remove('flex')"></div>
+    <div class="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl mx-4">
+        <h3 class="text-lg font-black text-slate-900">Refuser l'évaluation</h3>
+        <p class="mt-1 text-sm text-slate-500">Indiquez le motif de votre refus (obligatoire).</p>
+        <form action="{{ route('subordonne.evaluations.statut', $evaluation) }}" method="POST" class="mt-5 flex flex-col gap-4">
+            @csrf @method('PATCH')
+            <input type="hidden" name="action" value="refuser">
+            <div class="flex flex-col gap-1.5">
+                <label for="motif_refus_sub" class="text-sm font-semibold text-slate-700">Motif du refus</label>
+                <textarea id="motif_refus_sub" name="motif_refus" rows="4" required maxlength="1000"
+                    class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-100"
+                    placeholder="Expliquez pourquoi vous refusez cette évaluation…"></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button"
+                        onclick="document.getElementById('modalRefusSub').classList.add('hidden');document.getElementById('modalRefusSub').classList.remove('flex')"
+                        class="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                    <i class="fas fa-times mr-1.5 text-xs"></i> Confirmer le refus
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.getElementById('modalRefusSub').classList.add('hidden');
+        document.getElementById('modalRefusSub').classList.remove('flex');
+    }
+});
+</script>
 @endsection

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomRole;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -10,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Permission; // Remplace l'ancien App\Models\Permission
 use Spatie\Permission\Models\Role;       // Remplace l'ancien App\Models\Role
@@ -80,6 +82,16 @@ class SettingsController extends Controller
                     'structures.modifier' => 'Modifier une structure',
                 ],
             ],
+            'statistiques' => [
+                'label' => 'Rapports',
+                'icon'  => 'fas fa-chart-bar',
+                'color' => 'teal',
+                'items' => [],
+                'labels' => [
+                    'statistiques.voir' => 'Consulter les statistiques du personnel (notes)',
+                    'tableaux.voir'     => 'Consulter et exporter les tableaux Excel personnalisés',
+                ],
+            ],
             'admin' => [
                 'label' => 'Administration',
                 'icon'  => 'fas fa-cog',
@@ -103,7 +115,7 @@ class SettingsController extends Controller
         }
 
         // ── Onglet Rôles : affiche les permissions d'un rôle sélectionné ──
-        $allRoles        = UserController::ROLES; // Tableau role_slug => label
+        $allRoles        = UserController::allRoles(); // Tableau role_slug => label
         $selectedRoleSlug = $request->query('role');
         $selectedRole     = null;
         $rolePermissions  = collect(); // IDs des permissions déjà accordées au rôle
@@ -150,6 +162,7 @@ class SettingsController extends Controller
                 'evaluations' => Setting::featureEnabled('evaluations'),
                 'objectifs'   => Setting::featureEnabled('objectifs'),
             ],
+            'rhUsers'           => User::where('role', 'RH')->orderBy('name')->get(),
         ]);
     }
 
@@ -253,7 +266,7 @@ class SettingsController extends Controller
     {
         $validated = $request->validate([
             'user_id' => ['required', 'exists:users,id'],
-            'role'    => ['required', 'string', 'in:'.implode(',', array_keys(UserController::ROLES))],
+            'role'    => ['required', 'string', 'in:'.implode(',', array_keys(UserController::allRoles()))],
         ]);
 
         $user = User::findOrFail($validated['user_id']);
@@ -314,8 +327,8 @@ class SettingsController extends Controller
      */
     public function syncRolePermissions(Request $request, string $roleSlug): RedirectResponse
     {
-        $allRoles = UserController::ROLES;
-        abort_unless(isset($allRoles[$roleSlug]), 404, 'Rôle inconnu.');
+        $allRoles = UserController::allRoles();
+        abort_unless(array_key_exists($roleSlug, $allRoles), 404, 'Rôle inconnu.');
 
         $validated = $request->validate([
             'permissions'   => ['nullable', 'array'],
@@ -349,12 +362,54 @@ class SettingsController extends Controller
      * Ces permissions s'ajoutent à celles héritées de son rôle Spatie.
      * Le formulaire soumet les IDs des permissions cochées.
      */
+    // ── Gestion des rôles personnalisés ──────────────────────────────────────
+
+    /**
+     * Crée un nouveau rôle personnalisé.
+     */
+    public function storeRole(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'slug'  => [
+                'required', 'string', 'max:100',
+                'regex:/^[A-Za-z0-9_]+$/',
+                'unique:custom_roles,slug',
+                function ($_attribute, $value, $fail): void {
+                    if (isset(UserController::ROLES[$value])) {
+                        $fail('Ce slug est déjà utilisé par un rôle système.');
+                    }
+                },
+            ],
+            'label' => ['required', 'string', 'max:150'],
+        ], [
+            'slug.regex'  => 'Le slug ne doit contenir que des lettres, chiffres et underscores.',
+            'slug.unique' => 'Ce slug est déjà utilisé par un rôle personnalisé.',
+        ]);
+
+        CustomRole::create($validated);
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'roles'])
+            ->with('status', 'Rôle « '.$validated['label'].' » créé avec succès.');
+    }
+
+    /**
+     * Supprime un rôle personnalisé (impossible pour les rôles système).
+     */
+    public function destroyRole(CustomRole $customRole): RedirectResponse
+    {
+        $label = $customRole->label;
+        $customRole->delete();
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'roles'])
+            ->with('status', 'Rôle « '.$label.' » supprimé.');
+    }
+
     // ── Feature toggles ───────────────────────────────────────────────────────
 
     /**
      * Active ou désactive une fonctionnalité globale (evaluations / objectifs).
      */
-    public function toggleFeature(Request $request, string $feature): RedirectResponse
+    public function toggleFeature(string $feature): RedirectResponse
     {
         abort_unless(in_array($feature, ['evaluations', 'objectifs'], true), 404);
 
@@ -387,5 +442,37 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings.edit', ['tab' => 'droits', 'user_id' => $user->id])
             ->with('status', 'Permissions de '.$user->name.' mises à jour.');
+    }
+
+    // ── Compte RH ─────────────────────────────────────────────────────────────
+
+    /**
+     * Crée un compte utilisateur avec le rôle RH depuis la page des paramètres.
+     * Le RH est un compte système (comme Admin) : pas de lien obligatoire avec un agent.
+     */
+    public function storeRhAccount(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name'     => ['required', 'string', 'max:191'],
+            'email'    => ['required', 'email', 'max:191', Rule::unique('users', 'email')],
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ], [
+            'name.required'  => 'Le nom complet est obligatoire.',
+            'email.unique'   => 'Cette adresse email est déjà utilisée.',
+            'password.min'   => 'Le mot de passe doit contenir au moins 8 caractères.',
+            'password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
+        ]);
+
+        User::create([
+            'agent_id'             => null,
+            'name'                 => trim($validated['name']),
+            'email'                => $validated['email'],
+            'password'             => Hash::make($validated['password']),
+            'role'                 => 'RH',
+            'must_change_password' => true,
+        ]);
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'comptes'])
+            ->with('status', 'Compte RH « '.$validated['name'].' » créé avec succès.');
     }
 }

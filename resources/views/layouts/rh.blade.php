@@ -4,7 +4,10 @@
         [
             'title' => 'Tableau de bord',
             'items' => [
-                ['route' => 'rh.dashboard', 'icon' => 'fas fa-chart-pie', 'label' => 'Vue d\'ensemble'],
+                ['route' => 'rh.dashboard',          'icon' => 'fas fa-chart-pie',   'label' => 'Vue d\'ensemble'],
+                ['route' => 'rh.comparaison.index',  'icon' => 'fas fa-code-compare','label' => 'Comparaison inter-période'],
+                ['route' => 'rh.statistiques',       'icon' => 'fas fa-chart-bar',   'label' => 'Statistiques'],
+                ['route' => 'rh.tableaux.index',     'icon' => 'fas fa-file-excel',  'label' => 'Tableaux Excel'],
             ],
         ],
         [
@@ -12,6 +15,7 @@
             'items' => [
                 ['route' => 'rh.dashboard',    'query' => 'tab=agents',      'icon' => 'fas fa-users',            'label' => 'Agents'],
                 ['route' => 'rh.dashboard',    'query' => 'tab=evaluations', 'icon' => 'fas fa-star-half-stroke', 'label' => 'Évaluations'],
+                ['route' => 'rh.reclamations.index',                          'icon' => 'fas fa-triangle-exclamation', 'label' => 'Réclamations'],
                 ['route' => 'rh.dashboard',    'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye',         'label' => 'Objectifs'],
                 ['route' => 'rh.structures',                                  'icon' => 'fas fa-building',         'label' => 'Structures'],
             ],
@@ -23,6 +27,9 @@
             ],
         ],
     ];
+
+    // ── Sections conditionnelles selon permissions ───────────────────────────
+    $menuSections = array_merge($menuSections, \App\Helpers\PermissionMenu::extraSections());
 @endphp
 
 <!DOCTYPE html>
@@ -219,19 +226,17 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
     (function(){
-        var tsOpts={placeholder:'— Rechercher un agent —',searchField:['text'],maxOptions:300,render:{
-            option:function(d,e){return'<div>'+e(d.text)+'</div>';},
-            item:function(d,e){return'<div>'+e(d.text)+'</div>';},
-            no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun agent trouvé</div>';}
+        var tsOpts={searchField:['text'],maxOptions:300,render:{
+            no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
-        function initAgentSelects(){
-            document.querySelectorAll('select[name="agent_id"],select[name$="_agent_id"]').forEach(function(el){
+        function initSelects(){
+            document.querySelectorAll('select:not([data-no-ts]):not([multiple])').forEach(function(el){
                 if(el.tomselect)return;
                 new TomSelect(el,tsOpts);
             });
         }
-        if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initAgentSelects);}
-        else{initAgentSelects();}
+        if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initSelects);}
+        else{initSelects();}
     })();
     </script>
 </body>

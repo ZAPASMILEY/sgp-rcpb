@@ -32,24 +32,6 @@
     $resolvedAgentId = (int) old('agent_id', $selectedAgent?->id ?? 0);
     $resolvedAgent   = $agents->firstWhere('id', $resolvedAgentId) ?? $selectedAgent;
     $lockAgent       = $agents->count() === 1 || $selectedAgent !== null;
-
-    {{-- Calcul de l'année d'affichage depuis les valeurs old() --}}
-    $extractYear = static function (?string $value, string $format): ?int {
-        if (! filled($value)) return null;
-        try {
-            return match ($format) {
-                'd/m/Y' => \Carbon\Carbon::createFromFormat('d/m/Y', $value)->year,
-                'm/Y'   => (int) substr($value, -4),
-                default => \Carbon\Carbon::parse($value)->year,
-            };
-        } catch (\Throwable) {
-            return null;
-        }
-    };
-
-    $displayYear = $extractYear(old('identification.date_evaluation'), 'd/m/Y')
-        ?? $extractYear(old('date_debut'), 'm/Y')
-        ?? now()->year;
 @endphp
 
 @section('content')
@@ -104,7 +86,7 @@
                                 <p class="mt-2 text-base font-black text-slate-900">
                                     {{ trim($resolvedAgent->prenom . ' ' . $resolvedAgent->nom) }}
                                 </p>
-                                <p class="mt-1 text-sm text-slate-500">{{ $resolvedAgent->fonction ?? 'Agent' }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ $resolvedAgent->role ?? 'Agent' }}</p>
                                 <input type="hidden" name="agent_id" value="{{ $resolvedAgent->id }}">
                             </div>
                         @else
@@ -117,7 +99,7 @@
                                     <option value="">— Sélectionner un agent —</option>
                                     @foreach ($agents as $ag)
                                         <option value="{{ $ag->id }}" @selected($resolvedAgentId === (int) $ag->id)>
-                                            {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->fonction ?? 'Agent' }}
+                                            {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->role ?? 'Agent' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -127,26 +109,7 @@
                             </div>
                         @endif
 
-                        {{-- Période de l'évaluation (format MM/YYYY) --}}
-                        <div class="grid gap-5 md:grid-cols-2">
-                            <div class="space-y-2">
-                                <label for="date_debut" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                                    Date début
-                                </label>
-                                <input id="date_debut" name="date_debut" type="text"
-                                       value="{{ old('date_debut') }}"
-                                       class="ent-input" placeholder="MM/YYYY" required autocomplete="off" maxlength="7">
-                                <div id="date_debut_error" class="text-rose-600 text-xs mt-1" style="display:none"></div>
-                            </div>
-                            <div class="space-y-2">
-                                <label for="date_fin" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                                    Date fin <span class="text-slate-400 font-normal">(calculée auto)</span>
-                                </label>
-                                <input id="date_fin" name="date_fin" type="text"
-                                       value="{{ old('date_fin') }}"
-                                       class="ent-input" placeholder="MM/YYYY" required readonly>
-                            </div>
-                        </div>
+
 
                         {{-- Identification de l'évalué --}}
                         <div>
@@ -161,18 +124,14 @@
                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                             <div class="space-y-2">
                                 <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Année</label>
-                                <input id="annee_field" type="text" value="{{ $displayYear }}"
+                                <input type="text" value="{{ $openAnnee?->annee ?? now()->year }}"
                                        class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
-                                <label for="identification_semestre" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                                    Semestre
-                                </label>
-                                <select id="identification_semestre" name="identification[semestre]" required class="ent-select">
-                                    <option value="">Sélectionner</option>
-                                    <option value="1" @selected(old('identification.semestre') === '1')>Semestre 1</option>
-                                    <option value="2" @selected(old('identification.semestre') === '2')>Semestre 2</option>
-                                </select>
+                                <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Semestre</label>
+                                <input type="text" value="{{ $openSemestre ? 'Semestre '.$openSemestre->numero : '—' }}"
+                                       name="identification[semestre]"
+                                       class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_date_evaluation" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
@@ -187,8 +146,16 @@
                                     Matricule
                                 </label>
                                 <input id="identification_matricule" name="identification[matricule]" type="text"
-                                       value="{{ old('identification.matricule') }}"
-                                       class="ent-input bg-slate-50 text-slate-600" readonly>
+                                       value="{{ $prefilledMatricule ?? old('identification.matricule', '') }}"
+                                       class="ent-input bg-slate-50 text-slate-600" readonly placeholder="Renseigné automatiquement">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="identification_grade" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+                                    Grade <span class="text-red-500">*</span>
+                                </label>
+                                <input id="identification_grade" name="identification[grade]" type="text"
+                                       value="{{ old('identification.grade') }}"
+                                       class="ent-input" placeholder="Grade de l'évalué" required>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_emploi" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
@@ -431,9 +398,10 @@
     <script id="chef-eval-objective-options" type="application/json">@json($objectiveOptions ?? [])</script>
     <script id="chef-eval-subjective-templates" type="application/json">@json(old('subjective_criteres', $subjectiveTemplates ?? []))</script>
     <script id="chef-eval-objective-old" type="application/json">@json(old('objective_criteres', []))</script>
-    <script id="chef-eval-formations-old" type="application/json">@json($oldFormations ?? [['periode'=>'','libelle'=>'','domaine'=>'']])</script>
+    <script id="chef-eval-formations-old" type="application/json">@json($oldFormations)</script>
     <script id="chef-eval-experiences-old" type="application/json">@json($oldExperiences ?? [['periode'=>'','poste'=>'','observations'=>'']])</script>
     <script id="chef-eval-agents-data" type="application/json">@json($agentsJson ?? [])</script>
+    <script id="chef-eval-prefilled-agent" type="application/json">@json($prefilledAgentId ?? null)</script>
 
     {{-- ══════════════════════════════════════════════════════════════════════
          Script principal — identique à directeur/evaluations/create.blade.php
@@ -444,8 +412,9 @@
         const objectiveOptions     = JSON.parse(document.getElementById('chef-eval-objective-options').textContent || '[]');
         const subjectiveTemplates  = JSON.parse(document.getElementById('chef-eval-subjective-templates').textContent || '[]');
         const oldObjectiveCriteria = JSON.parse(document.getElementById('chef-eval-objective-old').textContent || '[]');
-        const oldFormations        = JSON.parse(document.getElementById('chef-eval-formations-old').textContent || '[]');
+        const oldFormations        = JSON.parse(document.getElementById('chef-eval-formations-old').textContent || 'null');
         const oldExperiences       = JSON.parse(document.getElementById('chef-eval-experiences-old').textContent || '[]');
+        const prefilledAgentId     = JSON.parse(document.getElementById('chef-eval-prefilled-agent').textContent || 'null');
 
         let subjectiveIndexCounter = 0;
         let objectiveIndexCounter  = 0;
@@ -694,6 +663,22 @@
             formationIndexCounter++;
         }
 
+        // ── Auto-remplissage formations depuis la base ────────────────────────
+        window.sgpFillFormations = function (agentId) {
+            if (!agentId) return;
+            fetch('/formations/agent/' + agentId, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+            })
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (formations) {
+                formationsRows.innerHTML = '';
+                formationIndexCounter = 0;
+                (formations.length ? formations : [{}]).forEach(function (f) { addFormationRow(f); });
+            })
+            .catch(function () {});
+        };
+
         // Ligne d'expérience dynamique
         function makeExperienceRow(row, idx) {
             const tr = document.createElement('tr');
@@ -727,7 +712,12 @@
 
         // Initialisation
         populateObjectiveSelector();
-        (Array.isArray(oldFormations) && oldFormations.length ? oldFormations : [{}]).forEach(r => addFormationRow(r));
+        (function () {
+            var hasOld = Array.isArray(oldFormations) && oldFormations.some(function (f) { return f && f.libelle && String(f.libelle).trim(); });
+            if (hasOld) { oldFormations.forEach(function (r) { addFormationRow(r || {}); }); }
+            else if (prefilledAgentId) { window.sgpFillFormations(prefilledAgentId); }
+            else { addFormationRow({}); }
+        })();
         (Array.isArray(oldExperiences) && oldExperiences.length ? oldExperiences : [{}]).forEach(r => addExperienceRow(r));
         renderSubjectiveCriteria(Array.isArray(subjectiveTemplates) ? subjectiveTemplates : []);
         if (Array.isArray(oldObjectiveCriteria) && oldObjectiveCriteria.length) {
@@ -757,6 +747,8 @@
             if (fieldEmploi)       { fieldEmploi.value       = data.emploi     ?? ''; }
             if (fieldDirection)    { fieldDirection.value    = data.entite_nom ?? ''; }
             if (fieldDirectionSvc) { fieldDirectionSvc.value = data.entite_nom ?? ''; }
+            const fieldMatricule = document.getElementById('identification_matricule');
+            if (fieldMatricule) fieldMatricule.value = data.matricule ?? '';
             // Sync vers le champ de signature de l'évalué
             if (fieldSignatureEvalue && (!fieldSignatureEvalue.value || fieldSignatureEvalue.dataset.autoFilled)) {
                 fieldSignatureEvalue.value = data.nom_prenom ?? '';
@@ -770,56 +762,15 @@
                 const id   = parseInt(this.value, 10);
                 const data = agentsData.find(a => a.id === id) || null;
                 fillIdent(data);
+                if (id && window.sgpFillFormations) window.sgpFillFormations(id);
             });
         }
     });
     </script>
 
-    {{-- Helpers pour les champs date MM/YYYY et synchronisations --}}
+    {{-- Helpers pour les champs date et synchronisations --}}
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const debut = document.getElementById('date_debut');
-        const fin   = document.getElementById('date_fin');
-        const error = document.getElementById('date_debut_error');
-
-        // Formatage automatique et calcul de la date de fin (+ 6 mois)
-        if (debut && fin) {
-            debut.addEventListener('input', function () {
-                let val = debut.value.replace(/[^0-9]/g, '');
-                if (val.length > 6) val = val.slice(0, 6);
-                if (val.length > 2) val = val.slice(0, 2) + '/' + val.slice(2);
-                debut.value = val;
-                const match = val.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
-                if (match) {
-                    let month = parseInt(match[1], 10) + 6;
-                    let year  = parseInt(match[2], 10);
-                    if (month > 12) { year += Math.floor((month - 1) / 12); month = ((month - 1) % 12) + 1; }
-                    fin.value = (month < 10 ? '0' : '') + month + '/' + year;
-                    if (error) error.style.display = 'none';
-                } else {
-                    fin.value = '';
-                    if (error && val.length === 7) {
-                        error.textContent = 'Format invalide. Utilisez MM/YYYY.';
-                        error.style.display = 'block';
-                    } else if (error) {
-                        error.style.display = 'none';
-                    }
-                }
-            });
-        }
-
-        // Mise à jour de l'année depuis la date de début
-        const dateDebut  = document.getElementById('date_debut');
-        const anneeField = document.getElementById('annee_field');
-        if (dateDebut && anneeField) {
-            dateDebut.addEventListener('input', function () {
-                const v = dateDebut.value;
-                anneeField.value = /^(0[1-9]|1[0-2])\/(\d{4})$/.test(v) ? v.split('/')[1] : '';
-            });
-            if (/^(0[1-9]|1[0-2])\/(\d{4})$/.test(dateDebut.value)) {
-                anneeField.value = dateDebut.value.split('/')[1];
-            }
-        }
 
         // Pré-remplissage des dates de signature avec la date du jour
         function todayISO() { const d = new Date(); return d.toISOString().slice(0, 10); }

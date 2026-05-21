@@ -72,7 +72,7 @@
                                     <td class="px-4 py-3">
                                         @if($guichet->chef)
                                             <p class="font-semibold">{{ $guichet->chef->prenom }} {{ $guichet->chef->nom }}</p>
-                                            <p class="text-xs text-slate-400">{{ $guichet->chef->fonction ?? '' }}</p>
+                                            <p class="text-xs text-slate-400">{{ $guichet->chef->role ?? '' }}</p>
                                         @else
                                             <p class="font-semibold text-slate-400">—</p>
                                         @endif

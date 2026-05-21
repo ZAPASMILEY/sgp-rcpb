@@ -6,7 +6,7 @@
 <div class="min-h-screen bg-[#f1f5f9] pb-12">
 
     {{-- ══════════════════════════ HERO ══════════════════════════════════════ --}}
-    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+    <div class="relative overflow-hidden px-6 py-8 lg:px-10" style="background:linear-gradient(135deg,#003d20 0%,#005c30 50%,#008751 100%)">
         <div class="pointer-events-none absolute inset-0 opacity-10">
             <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/30 blur-3xl"></div>
             <div class="absolute -bottom-16 left-10 h-48 w-48 rounded-full bg-teal-300/40 blur-2xl"></div>
@@ -18,11 +18,11 @@
                     {{ strtoupper(substr($user->name, 0, 1)) }}
                 </div>
                 <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">
+                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-white/70">
                         {{ $ctx->getNom() }} · Pilotage
                     </p>
                     <h1 class="mt-0.5 text-2xl font-black tracking-tight text-white">{{ $user->name }}</h1>
-                    <p class="mt-1 text-sm text-emerald-100/80">
+                    <p class="mt-1 text-sm text-white/60">
                         {{ match($user->role) {
                             'Chef_Service' => 'Chef de Service',
                             'Chef_Agence'  => 'Chef d\'Agence',
@@ -35,7 +35,7 @@
 
             {{-- Sélecteur d'année --}}
             <div class="flex shrink-0 items-center gap-3">
-                <span class="text-[11px] font-black uppercase tracking-widest text-emerald-200">Année</span>
+                <span class="text-[11px] font-black uppercase tracking-widest text-white/70">Année</span>
                 <form method="GET" action="{{ route('chef.dashboard') }}" id="year-form">
                     <select name="annee" onchange="document.getElementById('year-form').submit()"
                             class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none transition hover:bg-white/20">
@@ -71,7 +71,7 @@
                     <i class="{{ $m['icon'] }}"></i>
                 </span>
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{{ $m['label'] }}</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-white/70">{{ $m['label'] }}</p>
                     <p class="text-lg font-black text-white">{{ $m['value'] }}</p>
                 </div>
             </div>
@@ -87,29 +87,99 @@
             </div>
         @endif
 
+        {{-- ── Alerte agents sans évaluation ──────────────────────────────── --}}
+        @if ($openAnnee && $agentsSansEval > 0)
+            <div class="mb-4 flex items-center gap-4 rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-orange-800">
+                        {{ $agentsSansEval }} agent{{ $agentsSansEval > 1 ? 's' : '' }} sans évaluation validée — Année {{ $openAnnee->annee }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-orange-600">
+                        Ces agents n'ont pas encore de note validée pour l'exercice en cours. Pensez à finaliser leurs évaluations avant la clôture.
+                    </p>
+                </div>
+                <span class="flex h-10 min-w-[2.5rem] items-center justify-center rounded-xl bg-orange-500 px-2 text-xl font-black text-white shadow-sm">
+                    {{ $agentsSansEval }}
+                </span>
+            </div>
+        @endif
+
+        {{-- ══════════════════════ COUVERTURE ÉVALUATION ══════════════════════ --}}
+        @if($openAnnee && $totalAgents > 0)
+        @php $tauxCouv = $totalAgents > 0 ? round($agentsEvalues / $totalAgents * 100) : 0; @endphp
+        <div class="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $agentsSansEval === 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600' }}">
+                        <i class="fas fa-users-viewfinder"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Couverture · {{ $openAnnee->annee }}</p>
+                        <p class="text-sm font-black text-slate-900">Évaluation des agents</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="text-center">
+                        <p class="text-2xl font-black text-emerald-600">{{ $agentsEvalues }}</p>
+                        <p class="text-[10px] font-bold uppercase text-slate-400">Évalués</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-black {{ $agentsSansEval > 0 ? 'text-amber-500' : 'text-slate-300' }}">{{ $agentsSansEval }}</p>
+                        <p class="text-[10px] font-bold uppercase text-slate-400">Restants</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-black text-slate-700">{{ $totalAgents }}</p>
+                        <p class="text-[10px] font-bold uppercase text-slate-400">Total</p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 pb-4">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1.5">
+                    <span>Progression</span>
+                    <span class="{{ $tauxCouv === 100 ? 'text-emerald-600' : ($tauxCouv >= 50 ? 'text-amber-600' : 'text-rose-600') }}">{{ $tauxCouv }}%</span>
+                </div>
+                <div class="h-3 overflow-hidden rounded-full bg-slate-100">
+                    <div class="h-full rounded-full transition-all {{ $tauxCouv === 100 ? 'bg-emerald-500' : ($tauxCouv >= 50 ? 'bg-amber-400' : 'bg-rose-500') }}"
+                         style="width:{{ $tauxCouv }}%"></div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         {{-- ══════════════════════ KPI CARDS ═══════════════════════════════════ --}}
         @php
         $kpis = [
-            ['label' => 'Fiches reçues',    'value' => $fichesRecStats['total'],      'icon' => 'fas fa-clipboard-list',   'color' => 'bg-slate-700',   'light' => 'bg-slate-50 border-slate-200'],
-            ['label' => 'Acceptées',         'value' => $fichesRecStats['acceptees'], 'icon' => 'fas fa-circle-check',     'color' => 'bg-emerald-600', 'light' => 'bg-emerald-50 border-emerald-100'],
-            ['label' => 'En attente',        'value' => $fichesRecStats['en_attente'],'icon' => 'fas fa-clock',            'color' => 'bg-amber-500',   'light' => 'bg-amber-50 border-amber-100'],
-            ['label' => 'Avancement moy.',   'value' => $tauxAvancement.'%',          'icon' => 'fas fa-gauge-high',       'color' => 'bg-sky-600',     'light' => 'bg-sky-50 border-sky-100'],
-            ['label' => 'Évaluations reçues','value' => $evalsRecStats['total'],      'icon' => 'fas fa-star',             'color' => 'bg-indigo-600',  'light' => 'bg-indigo-50 border-indigo-100'],
-            ['label' => 'Validées',          'value' => $evalsRecStats['valide'],     'icon' => 'fas fa-check',            'color' => 'bg-teal-600',    'light' => 'bg-teal-50 border-teal-100'],
-            ['label' => 'Évals. données',    'value' => $evalsGivStats['total'],      'icon' => 'fas fa-pen-to-square',    'color' => 'bg-rose-500',    'light' => 'bg-rose-50 border-rose-100'],
+            ['label' => 'Fiches reçues',    'value' => $fichesRecStats['total'],      'meta' => 'Objectifs assignés au chef',           'icon' => 'fas fa-clipboard-list', 'valueClass' => 'text-slate-700',   'iconClass' => 'bg-slate-100 text-slate-600',    'href' => route('chef.dashboard')],
+            ['label' => 'Acceptées',        'value' => $fichesRecStats['acceptees'],  'meta' => 'Fiches objectifs acceptées',           'icon' => 'fas fa-circle-check',   'valueClass' => 'text-emerald-600', 'iconClass' => 'bg-emerald-50 text-emerald-600', 'href' => route('chef.dashboard')],
+            ['label' => 'En attente',       'value' => $fichesRecStats['en_attente'], 'meta' => 'Fiches en cours de traitement',        'icon' => 'fas fa-clock',          'valueClass' => 'text-amber-500',   'iconClass' => 'bg-amber-50 text-amber-500',     'href' => route('chef.dashboard')],
+            ['label' => 'Avancement moy.',  'value' => $tauxAvancement.'%',           'meta' => 'Taux moyen de réalisation',            'icon' => 'fas fa-gauge-high',     'valueClass' => 'text-sky-500',     'iconClass' => 'bg-sky-50 text-sky-500',         'href' => route('chef.dashboard')],
+            ['label' => 'Évals. reçues',    'value' => $evalsRecStats['total'],       'meta' => 'Évaluations reçues du directeur',      'icon' => 'fas fa-star',           'valueClass' => 'text-indigo-500',  'iconClass' => 'bg-indigo-50 text-indigo-500',   'href' => route('chef.dashboard')],
+            ['label' => 'Validées',         'value' => $evalsRecStats['valide'],      'meta' => 'Évaluations acceptées et validées',    'icon' => 'fas fa-check',          'valueClass' => 'text-teal-600',    'iconClass' => 'bg-teal-50 text-teal-600',       'href' => route('chef.dashboard')],
+            ['label' => 'Évals. données',   'value' => $evalsGivStats['total'],       'meta' => 'Évaluations données à vos agents',     'icon' => 'fas fa-pen-to-square',  'valueClass' => 'text-rose-500',    'iconClass' => 'bg-rose-50 text-rose-500',       'href' => route('chef.evaluations.create')],
         ];
         @endphp
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             @foreach ($kpis as $kpi)
-                <div class="flex flex-col rounded-2xl border px-4 py-4 shadow-sm {{ $kpi['light'] }}">
-                    <div class="flex items-center justify-between gap-2">
-                        <p class="text-[10px] font-black uppercase tracking-[0.13em] text-slate-500 leading-tight">{{ $kpi['label'] }}</p>
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg {{ $kpi['color'] }} text-white text-xs">
-                            <i class="{{ $kpi['icon'] }}"></i>
-                        </span>
+                <article class="rounded-[20px] border border-slate-100 bg-white px-4 py-3 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.3)]">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 leading-tight">{{ $kpi['label'] }}</p>
+                            <p class="mt-2 text-3xl font-black tracking-tight {{ $kpi['valueClass'] }}">{{ $kpi['value'] }}</p>
+                            <p class="mt-1 line-clamp-1 text-[11px] font-bold text-slate-400">{{ $kpi['meta'] }}</p>
+                        </div>
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl {{ $kpi['iconClass'] }}">
+                            <i class="{{ $kpi['icon'] }} text-base"></i>
+                        </div>
                     </div>
-                    <p class="mt-3 text-3xl font-black text-slate-900">{{ $kpi['value'] }}</p>
-                </div>
+                    <div class="mt-3 flex justify-end">
+                        <a href="{{ $kpi['href'] }}" class="inline-flex h-8 items-center rounded-xl bg-slate-50 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-900 hover:text-white">
+                            Ouvrir
+                        </a>
+                    </div>
+                </article>
             @endforeach
         </div>
 
@@ -201,7 +271,7 @@
                                 </div>
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-bold text-slate-800">{{ trim($ao['agent']->prenom.' '.$ao['agent']->nom) }}</p>
-                                    <p class="text-[10px] text-slate-400">{{ $ao['agent']->fonction ?? '—' }}</p>
+                                    <p class="text-[10px] text-slate-400">{{ $ao['agent']->role ?? '—' }}</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">

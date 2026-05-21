@@ -19,6 +19,7 @@ return new class extends Migration
             // Responsables : FK vers agents
             $table->foreignId('chef_agent_id')->nullable()->constrained('agents')->nullOnDelete();
             $table->foreignId('secretaire_agent_id')->nullable()->constrained('agents')->nullOnDelete();
+            $table->string('telephone_accueil', 30)->nullable();
 
             $table->unique(['delegation_technique_id', 'nom'], 'agences_delegation_nom_unique');
             $table->timestamps();

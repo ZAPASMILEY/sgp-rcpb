@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Chef;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\Annee;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\User;
@@ -117,6 +118,20 @@ class ChefDashboardController extends Controller
 
         $anneesDisponibles = range(now()->year - 2, now()->year + 1);
 
+        // ── Agents sans évaluation validée pour l'année ouverte ──────────────
+        $openAnnee      = Annee::currentOpen();
+        $agentsSansEval = 0;
+        $totalAgents    = $ctx->getAgents()->count();
+        $agentsEvalues  = 0;
+        if ($openAnnee) {
+            $agentIds = $ctx->getAgents()->pluck('id');
+            $agentsSansEval = Agent::whereIn('id', $agentIds)
+                ->whereDoesntHave('evaluations', function ($q) use ($openAnnee) {
+                    $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
+                })->count();
+            $agentsEvalues = $totalAgents - $agentsSansEval;
+        }
+
         return view('chef.dashboard', compact(
             'user',
             'ctx',
@@ -132,6 +147,10 @@ class ChefDashboardController extends Controller
             'fichesDonut',
             'fichesRecentes',
             'agentsOverview',
+            'openAnnee',
+            'agentsSansEval',
+            'totalAgents',
+            'agentsEvalues',
         ));
     }
 }

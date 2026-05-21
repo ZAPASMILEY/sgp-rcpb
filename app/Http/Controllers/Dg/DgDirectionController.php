@@ -185,9 +185,16 @@ class DgDirectionController extends Controller
                 ->with('error', "Aucun directeur avec un compte utilisateur n'est assigné à la direction « {$direction->nom} ».");
         }
 
+        try {
+            $anneeIdFiche = Annee::resolveOpenYearId(now());
+            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
-            'annee_id'              => Annee::resolveIdForDate(now()),
+            'annee_id'              => $anneeIdFiche,
             'assignable_type'       => User::class,
             'assignable_id'         => $directeurUser->id,
             'date'                  => now()->toDateString(),
@@ -287,9 +294,12 @@ class DgDirectionController extends Controller
         $oldFormations  = old('identification.formations');
         $oldExperiences = old('identification.experiences');
 
-        $displayYear      = now()->year;
         $entiteNom        = \App\Models\Entite::find($this->getEntiteId())?->nom ?? '';
         $prefilledAgentId = $direction->directeur_agent_id;
+
+        $openAnnee     = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $openSemestre  = $openSemestres->first();
 
         return view('dg.directions.evaluations.create', compact(
             'direction',
@@ -297,9 +307,11 @@ class DgDirectionController extends Controller
             'subjectiveTemplates',
             'oldFormations',
             'oldExperiences',
-            'displayYear',
             'entiteNom',
             'prefilledAgentId',
+            'openAnnee',
+            'openSemestres',
+            'openSemestre',
         ));
     }
 
@@ -311,12 +323,10 @@ class DgDirectionController extends Controller
 
         $validated = $request->validate([
             'direction_id'                     => ['required', 'integer', 'in:'.implode(',', $directionIds ?: [0])],
-            'date_debut'                       => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'date_fin'                         => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'identification.nom_prenom'        => ['nullable', 'string', 'max:255'],
-            'identification.semestre'          => ['required', 'in:1,2'],
             'identification.date_evaluation'   => ['nullable', 'string', 'max:20'],
             'identification.matricule'         => ['nullable', 'string', 'max:255'],
+            'identification.grade'             => ['required', 'string', 'max:255'],
             'identification.emploi'            => ['nullable', 'string', 'max:255'],
             'identification.direction'         => ['nullable', 'string', 'max:255'],
             'identification.direction_service' => ['nullable', 'string', 'max:255'],
@@ -341,14 +351,21 @@ class DgDirectionController extends Controller
 
         $direction = Direction::findOrFail($validated['direction_id']);
 
-        $dateDebut = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_debut']);
-        $dateFin   = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_fin']);
-
-        if (strtotime($dateFin) < strtotime($dateDebut)) {
-            return back()->withInput()->withErrors(['date_fin' => 'La date de fin doit être postérieure à la date de début.']);
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
         }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+        $dateDebut  = $semestre->dateDebut()->toDateString();
+        $dateFin    = $semestre->dateFin()->toDateString();
+        $anneeId    = $openAnnee->id;
+        $semestreId = $semestre->id;
 
         $identification = $validated['identification'] ?? [];
+        $identification['semestre'] = (string) $semestre->numero;
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -385,14 +402,8 @@ class DgDirectionController extends Controller
 
         $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
-        try {
-            $anneeId = Annee::resolveIdForDate($dateDebut);
-        } catch (\Throwable) {
-            $anneeId = null;
-        }
-
         $evaluation = DB::transaction(function () use (
-            $user, $direction, $dateDebut, $dateFin, $anneeId,
+            $user, $direction, $dateDebut, $dateFin, $anneeId, $semestreId,
             $scores, $validated, $identification,
             $normalizedSubjective, $normalizedObjective
         ) {
@@ -401,6 +412,7 @@ class DgDirectionController extends Controller
                 'evaluable_id'              => $direction->id,
                 'evaluable_role'            => 'manager',
                 'annee_id'                  => $anneeId,
+                'semestre_id'               => $semestreId,
                 'evaluateur_id'             => $user->id,
                 'date_debut'                => $dateDebut,
                 'date_fin'                  => $dateFin,

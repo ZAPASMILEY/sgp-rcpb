@@ -146,10 +146,17 @@ class PersonnelEvaluationController extends Controller
             return back()->with('error', "Cette action n'est possible que sur une évaluation soumise.");
         }
 
-        $request->validate(['action' => ['required', 'in:accepter,refuser']]);
+        $request->validate([
+            'action'      => ['required', 'in:accepter,refuser'],
+            'motif_refus' => ['required_if:action,refuser', 'nullable', 'string', 'max:1000'],
+        ]);
 
         $action             = $request->input('action');
         $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
+        if ($action === 'refuser') {
+            $evaluation->motif_refus        = $request->input('motif_refus');
+            $evaluation->statut_reclamation = 'en_attente';
+        }
         $evaluation->save();
 
         // Notification à l'évaluateur du résultat
@@ -169,6 +176,29 @@ class PersonnelEvaluationController extends Controller
         return redirect()
             ->route('personnel.evaluations.show', $evaluation)
             ->with('status', $msg);
+    }
+
+    /**
+     * Soumet une réclamation sur une évaluation refusée.
+     */
+    public function reclamer(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        $this->authorizeEval($evaluation);
+
+        if ($evaluation->statut !== 'refuse') {
+            return back()->with('error', "La réclamation n'est possible que sur une évaluation refusée.");
+        }
+
+        $request->validate([
+            'reclamation' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $evaluation->reclamation = $request->input('reclamation');
+        $evaluation->save();
+
+        return redirect()
+            ->route('personnel.evaluations.show', $evaluation)
+            ->with('status', 'Votre réclamation a été enregistrée.');
     }
 
     /**

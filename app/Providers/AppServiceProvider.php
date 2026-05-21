@@ -2,8 +2,15 @@
 
 namespace App\Providers;
 
+use App\Models\Agent;
+use App\Models\Evaluation;
+use App\Models\Formation;
 use App\Models\Setting;
 use App\Models\User;
+use App\Observers\AgentObserver;
+use App\Observers\EvaluationObserver;
+use App\Observers\FormationObserver;
+use App\Observers\UserObserver;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -70,6 +77,12 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registerAdminBypass();
         $this->registerRolePermissionBridge();
+
+        // Observers pour l'historique d'audit
+        Evaluation::observe(EvaluationObserver::class);
+        User::observe(UserObserver::class);
+        Agent::observe(AgentObserver::class);
+        Formation::observe(FormationObserver::class);
 
         // Partage l'état des fonctionnalités (feature toggles) avec toutes les vues.
         // Le modèle Setting a un cache en mémoire, donc une seule requête DB par request.

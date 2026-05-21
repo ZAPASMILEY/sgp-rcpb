@@ -23,9 +23,15 @@
                 @csrf
                 @method('PUT')
 
-                <div>
-                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom du guichet <span class="text-rose-500">*</span></label>
-                    <input type="text" name="nom" value="{{ old('nom', $guichet->nom) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom du guichet <span class="text-rose-500">*</span></label>
+                        <input type="text" name="nom" value="{{ old('nom', $guichet->nom) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone d'accueil <span class="text-rose-500">*</span></label>
+                        <input type="text" name="telephone_accueil" value="{{ old('telephone_accueil', $guichet->telephone_accueil) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400" placeholder="+226 25 00 00 00">
+                    </div>
                 </div>
 
                 <div>

@@ -61,7 +61,7 @@ class Formation extends Model
     {
         return $this->date_debut->translatedFormat('d M Y')
             . ' – '
-            . $this->date_fin->translatedFormat('d M Y');
+            . ($this->date_fin ? $this->date_fin->translatedFormat('d M Y') : 'en cours');
     }
 
     // ── Scopes ────────────────────────────────────────────────────────────────

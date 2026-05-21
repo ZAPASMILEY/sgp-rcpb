@@ -137,6 +137,19 @@ class DgaDashboardController extends Controller
 
         $anneesDisponibles = range(now()->year - 2, now()->year + 1);
 
+        // ── Agents sans évaluation validée pour l'année ouverte ──────────────
+        $openAnnee      = Annee::currentOpen();
+        $agentsSansEval = 0;
+        $totalAgents    = Agent::personnel()->count();
+        $agentsEvalues  = 0;
+        if ($openAnnee) {
+            $agentsSansEval = Agent::personnel()
+                ->whereDoesntHave('evaluations', function ($q) use ($openAnnee) {
+                    $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
+                })->count();
+            $agentsEvalues = $totalAgents - $agentsSansEval;
+        }
+
         $filters = compact('statut', 'search', 'anneeId');
 
         return view('dga.dashboard', compact(
@@ -155,6 +168,10 @@ class DgaDashboardController extends Controller
             'topEval',
             'bottomEval',
             'filters',
+            'openAnnee',
+            'agentsSansEval',
+            'totalAgents',
+            'agentsEvalues',
         ));
     }
 }

@@ -57,7 +57,7 @@
                         <p class="mt-1 text-lg font-bold text-slate-900">
                             {{ trim($directeur->prenom . ' ' . $directeur->nom) }}
                         </p>
-                        <p class="text-xs text-slate-500 mt-0.5">{{ $directeur->fonction }}</p>
+                        <p class="text-xs text-slate-500 mt-0.5">{{ $directeur->role }}</p>
                         @if ($directeur->email)
                             <p class="text-xs text-emerald-600 mt-1">
                                 <i class="far fa-envelope mr-1 opacity-60"></i>{{ $directeur->email }}
@@ -85,7 +85,7 @@
                         <p class="mt-1 text-lg font-bold text-slate-900">
                             {{ trim($secretaire->prenom . ' ' . $secretaire->nom) }}
                         </p>
-                        <p class="text-xs text-slate-500 mt-0.5">{{ $secretaire->fonction }}</p>
+                        <p class="text-xs text-slate-500 mt-0.5">{{ $secretaire->role }}</p>
                         @if ($secretaire->email)
                             <p class="text-xs text-emerald-600 mt-1">
                                 <i class="far fa-envelope mr-1 opacity-60"></i>{{ $secretaire->email }}
@@ -176,7 +176,7 @@
                             <tr class="border-b border-slate-100">
                                 <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">#</th>
                                 <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Nom & Prénom</th>
-                                <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Fonction</th>
+                                <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Rôle</th>
                                 <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Service</th>
                                 <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Email</th>
                                 <th class="pb-3 text-right text-[11px] font-black uppercase tracking-wider text-slate-400">Action</th>
@@ -196,7 +196,7 @@
                                         </span>
                                     </div>
                                 </td>
-                                <td class="py-3 text-slate-600">{{ $agent->fonction ?: '—' }}</td>
+                                <td class="py-3 text-slate-600">{{ $agent->role ?: '—' }}</td>
                                 <td class="py-3">
                                     @if ($agent->service)
                                         <span class="inline-block rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-600">

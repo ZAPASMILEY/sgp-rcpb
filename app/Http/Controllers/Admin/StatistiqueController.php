@@ -36,13 +36,12 @@ class StatistiqueController extends Controller
         $caissesCount = Caisse::query()->whereYear('created_at', $selectedYear)->count();
         $agencesCount = Agence::query()->whereYear('created_at', $selectedYear)->count();
         $guichetsCount = Guichet::query()->whereYear('created_at', $selectedYear)->count();
-        $agentsCount = Agent::query()
-            ->whereYear('date_debut_fonction', $selectedYear)
-            ->count();
+        $agentsCount = Agent::query()->count();
 
         $agentsBySexe = [
-            'Hommes' => Agent::query()->where('sexe', 'homme')->count(),
-            'Femmes' => Agent::query()->where('sexe', 'femme')->count(),
+            'Hommes'         => Agent::query()->where('sexe', 'homme')->count(),
+            'Femmes'         => Agent::query()->where('sexe', 'femme')->count(),
+            'Non renseigné'  => Agent::query()->whereNull('sexe')->orWhere('sexe', '')->count(),
         ];
 
         return view('admin.statistiques.index', compact(

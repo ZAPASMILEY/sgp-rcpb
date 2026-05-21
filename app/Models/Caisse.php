@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 class Caisse extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $fillable = [
         'delegation_technique_id',
@@ -47,6 +48,39 @@ class Caisse extends Model
     {
         return $this->belongsTo(Agent::class, 'secretaire_agent_id');
     }
+    /**
+ * Calcule l'effectif réel et total de la caisse
+ */
+public function getEffectifReelAttribute(): int
+{
+    $total = 0;
+
+    // 1. On compte le directeur s'il est assigné
+    if ($this->directeur_agent_id) {
+        $total++;
+    }
+
+    // 2. On compte le secrétaire s'il est assigné
+    if ($this->secretaire_agent_id) {
+        $total++;
+    }
+
+    // 3. On ajoute tous les agents qui travaillent dans les services de cette caisse
+    // (Cette relation 'services' existe déjà d'après ton controller et charge ses agents)
+    foreach ($this->services as $service) {
+        // Compte le chef de service s'il existe
+        if ($service->chef_agent_id) {
+            $total++;
+        }
+        
+        // Compte les autres agents du service s'il y a une relation agents sur le service
+        if ($service->agents) {
+            $total += $service->agents->count();
+        }
+    }
+
+    return $total;
+}
 
     // ── Hiérarchie ─────────────────────────────────────────────────────────
 

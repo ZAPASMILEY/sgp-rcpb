@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Chef;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\Alerte;
 use App\Models\FicheObjectif;
+use App\Models\LigneFicheObjectif;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -133,6 +135,9 @@ class ChefReceivedFicheController extends Controller
 
         $action        = $request->input('action');
         $fiche->statut = $action === 'accepter' ? 'acceptee' : 'refusee';
+        if ($action === 'accepter') {
+            $fiche->date_validation = now()->toDateString();
+        }
         $fiche->save();
 
         $msg = $action === 'accepter'
@@ -169,6 +174,68 @@ class ChefReceivedFicheController extends Controller
         return redirect()
             ->route('chef.mes-fiches.show', $fiche)
             ->with('status', 'Avancement mis à jour.');
+    }
+
+    /**
+     * Met à jour l'avancement d'une ligne d'objectif.
+     */
+    public function avancementLigne(Request $request, $ficheId, $ligneId): RedirectResponse
+    {
+        $ctx   = $this->getContext();
+        $fiche = FicheObjectif::findOrFail($ficheId);
+        $this->checkOwnership($fiche, $ctx);
+
+        if ($fiche->statut !== 'acceptee') {
+            return redirect()->route('chef.mes-fiches.show', $fiche)
+                ->with('status', "L'avancement ne peut être modifié que sur une fiche acceptée.");
+        }
+
+        $request->validate(['avancement_percentage' => ['required', 'integer', 'min:0', 'max:100']]);
+        $val = (int) $request->avancement_percentage;
+        if ($val % 5 !== 0) {
+            return redirect()->route('chef.mes-fiches.show', $fiche)
+                ->with('status', "L'avancement doit être un multiple de 5.");
+        }
+
+        $ligne = LigneFicheObjectif::where('fiche_objectif_id', $ficheId)->findOrFail($ligneId);
+        $ligne->update(['avancement_percentage' => $val]);
+        $fiche->recalculateAvancement();
+
+        return redirect()->route('chef.mes-fiches.show', $fiche)
+            ->with('status', 'Avancement mis à jour.');
+    }
+
+    /**
+     * Conteste un objectif d'une ligne de fiche.
+     */
+    public function contesterLigne(Request $request, $ficheId, $ligneId): RedirectResponse
+    {
+        $ctx   = $this->getContext();
+        $fiche = FicheObjectif::findOrFail($ficheId);
+        $this->checkOwnership($fiche, $ctx);
+
+        if ($fiche->statut === 'acceptee') {
+            return redirect()->route('chef.mes-fiches.show', $fiche)
+                ->with('status', 'Impossible de contester une fiche déjà acceptée.');
+        }
+
+        $ligne = LigneFicheObjectif::where('fiche_objectif_id', $ficheId)->findOrFail($ligneId);
+        $ligne->update(['statut' => 'contesté']);
+        $fiche->update(['statut' => 'contesté']);
+
+        $evalue     = Auth::user();
+        $directeurs = User::where('role', 'Directeur')->get();
+        foreach ($directeurs as $directeur) {
+            Alerte::notifier(
+                $directeur->id,
+                'Objectif contesté',
+                "{$evalue->name} (Chef) a contesté un objectif dans la fiche « {$fiche->titre} ».",
+                'haute'
+            );
+        }
+
+        return redirect()->route('chef.mes-fiches.show', $fiche)
+            ->with('status', 'Objectif contesté. Le directeur a été notifié.');
     }
 
     /**

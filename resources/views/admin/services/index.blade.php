@@ -98,7 +98,7 @@
                         name="search"
                         type="text"
                         value="{{ $filters['search'] }}"
-                        placeholder="Service, direction, chef, email"
+                        placeholder="Service, direction, caisse, delegation, chef, email"
                         class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400"
                         autocomplete="off"
                         aria-autocomplete="list"
@@ -128,8 +128,8 @@
                         <tr class="border-b border-slate-100">
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">#</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Service</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Direction</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Entité</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Structure</th>
+                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Type d'entité</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Chef de service</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Email</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Téléphone</th>
@@ -138,11 +138,47 @@
                     </thead>
                     <tbody>
                         @forelse ($services as $service)
-                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($service->nom.' '.$service->direction?->nom.' '.$service->direction?->entite?->nom.' '.$service->chef?->prenom.' '.$service->chef?->nom.' '.$service->chef?->email.' '.$service->chef?->numero_telephone)) }}">
+                            @php
+                                // Détermination dynamique du nom de la structure et du type pour le moteur de recherche JS
+                                $structureNom = $service->direction?->nom ?? ($service->delegationTechnique?->region ?? $service->caisse?->nom ?? '');
+                                $typeEntite = $service->direction ? 'Direction Faîtière' : ($service->delegationTechnique ? 'Délégation' : ($service->caisse ? 'Caisse' : ''));
+                            @endphp
+                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($service->nom.' '.$structureNom.' '.$typeEntite.' '.$service->chef?->prenom.' '.$service->chef?->nom.' '.$service->chef?->email.' '.$service->chef?->numero_telephone)) }}">
                                 <td class="whitespace-nowrap px-3 py-3">{{ ($services->firstItem() ?? 1) + $loop->index }}</td>
                                 <td class="px-3 py-3 font-semibold text-slate-800">{{ $service->nom }}</td>
-                                <td class="px-3 py-3">{{ $service->direction?->nom }}</td>
-                                <td class="px-3 py-3">{{ $service->direction?->entite?->nom }}</td>
+                                
+                                {{-- Structure parente --}}
+                                <td class="px-3 py-3 font-medium text-slate-700">
+                                    @if($service->direction)
+                                        {{ $service->direction->nom }}
+                                    @elseif($service->delegationTechnique)
+                                        {{ $service->delegationTechnique->region }} @if($service->delegationTechnique->ville) — {{ $service->delegationTechnique->ville }} @endif
+                                    @elseif($service->caisse)
+                                        {{ $service->caisse->nom }}
+                                    @else
+                                        <span class="text-slate-400 italic text-xs">Aucun rattachement</span>
+                                    @endif
+                                </td>
+
+                                {{-- Type d'Entité (Badge) --}}
+                                <td class="px-3 py-3">
+                                    @if($service->direction)
+                                        <span class="inline-flex items-center rounded-xl bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-600 ring-1 ring-inset ring-blue-600/20">
+                                            <i class="fas fa-building mr-1 text-[10px]"></i> Direction Faîtière
+                                        </span>
+                                    @elseif($service->delegationTechnique)
+                                        <span class="inline-flex items-center rounded-xl bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-600 ring-1 ring-inset ring-purple-600/20">
+                                            <i class="fas fa-map-marker-alt mr-1 text-[10px]"></i> Délégation
+                                        </span>
+                                    @elseif($service->caisse)
+                                        <span class="inline-flex items-center rounded-xl bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-600 ring-1 ring-inset ring-amber-600/20">
+                                            <i class="fas fa-wallet mr-1 text-[10px]"></i> Caisse
+                                        </span>
+                                    @else
+                                        <span class="text-slate-300 italic text-xs">—</span>
+                                    @endif
+                                </td>
+
                                 <td class="px-3 py-3 font-semibold text-slate-700">
                                     @if($service->chef)
                                         {{ $service->chef->prenom }} {{ $service->chef->nom }}

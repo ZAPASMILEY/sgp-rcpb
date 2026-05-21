@@ -29,14 +29,19 @@
                         <input type="text" name="nom" value="{{ old('nom', $agence->nom) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                     </div>
                     <div>
-                        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Délégation <span class="text-rose-500">*</span></label>
-                        <select name="delegation_technique_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            <option value="">-- Choisir --</option>
-                            @foreach ($delegations as $d)
-                                <option value="{{ $d->id }}" @selected(old('delegation_technique_id', $agence->delegation_technique_id) == $d->id)>{{ $d->region }} — {{ $d->ville }}</option>
-                            @endforeach
-                        </select>
+                        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone d'accueil <span class="text-rose-500">*</span></label>
+                        <input type="text" name="telephone_accueil" value="{{ old('telephone_accueil', $agence->telephone_accueil) }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400" placeholder="+226 25 00 00 00">
                     </div>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Délégation <span class="text-rose-500">*</span></label>
+                    <select name="delegation_technique_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                        <option value="">-- Choisir --</option>
+                        @foreach ($delegations as $d)
+                            <option value="{{ $d->id }}" @selected(old('delegation_technique_id', $agence->delegation_technique_id) == $d->id)>{{ $d->region }} — {{ $d->ville }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div>

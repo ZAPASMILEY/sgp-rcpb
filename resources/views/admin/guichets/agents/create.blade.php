@@ -54,15 +54,31 @@
                             Agent à affecter <span class="text-red-500">*</span>
                         </label>
                         <select id="agent_id" name="agent_id" required class="ent-select" @disabled($agents->isEmpty())>
-                            <option value="">— Sélectionner un agent —</option>
+                            <option value="" data-poste="">— Sélectionner un agent —</option>
                             @foreach ($agents as $agent)
-                                <option value="{{ $agent->id }}" @selected(old('agent_id') == $agent->id)>
+                                <option value="{{ $agent->id }}" data-poste="{{ $agent->poste ?? '' }}" @selected(old('agent_id') == $agent->id)>
                                     {{ $agent->prenom }} {{ $agent->nom }}
-                                    @if ($agent->fonction) — {{ $agent->fonction }} @endif
+                                    @if ($agent->matricule) · [{{ $agent->matricule }}] @endif
                                 </option>
                             @endforeach
                         </select>
                         <p class="text-xs text-slate-500">Seuls les agents de l'agence sans rattachement à un guichet apparaissent ici.</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="poste" class="text-sm font-semibold text-slate-700">Fonction <span class="text-red-500">*</span></label>
+                        <input id="poste" name="poste" type="text"
+                               value="{{ old('poste') }}"
+                               list="postes-list"
+                               required
+                               class="ent-input w-full"
+                               placeholder="Ex : Caissier, Chargé de crédit, Développeur…">
+                        <datalist id="postes-list">
+                            @foreach ($postes as $libelle)
+                                <option value="{{ $libelle }}">
+                            @endforeach
+                        </datalist>
+                        <p id="poste-hint" class="text-xs text-slate-500">Saisissez ou choisissez parmi les fonctions existantes.</p>
                     </div>
 
                     <button type="submit" @disabled($agents->isEmpty()) class="ent-btn ent-btn-primary justify-center px-5 py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed">
@@ -74,3 +90,33 @@
         </div>
     </main>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var sel  = document.getElementById('agent_id');
+    var inp  = document.getElementById('poste');
+    var hint = document.getElementById('poste-hint');
+
+    function syncPoste() {
+        if (!sel || !inp) return;
+        var opt = sel.options[sel.selectedIndex];
+        var agentPoste = opt ? (opt.getAttribute('data-poste') || '') : '';
+        if (agentPoste) {
+            inp.value    = agentPoste;
+            inp.readOnly = true;
+            inp.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
+            if (hint) hint.textContent = 'Fonction issue du profil de l\'agent (non modifiable ici).';
+        } else {
+            if (inp.readOnly) inp.value = '';
+            inp.readOnly = false;
+            inp.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
+            if (hint) hint.textContent = 'Saisissez ou choisissez parmi les fonctions existantes.';
+        }
+    }
+
+    if (sel) sel.addEventListener('change', syncPoste);
+    syncPoste();
+})();
+</script>
+@endpush

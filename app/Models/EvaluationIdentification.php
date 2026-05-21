@@ -18,6 +18,7 @@ class EvaluationIdentification extends Model
         'date_evaluation',
         'date_titularisation',
         'matricule',
+        'grade',
         'poste',
         'emploi',
         'niveau',

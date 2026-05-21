@@ -78,7 +78,7 @@
                                 <td class="px-4 py-3">
                                     @if ($user->agent)
                                         <span class="font-semibold text-slate-800">{{ $user->agent->prenom }} {{ $user->agent->nom }}</span>
-                                        <span class="block text-xs text-slate-500">{{ $user->agent->fonction }}</span>
+                                        <span class="block text-xs text-slate-500">{{ $user->agent->role }}</span>
                                     @else
                                         <span class="text-slate-400 italic">Sans agent lié</span>
                                     @endif

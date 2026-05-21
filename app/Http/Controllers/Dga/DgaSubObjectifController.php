@@ -119,10 +119,17 @@ class DgaSubObjectifController extends Controller
         $subordonne = User::findOrFail($validated['subordonne_id']);
 
         // ASSIGNATION STRICTE A LA PERSONNE (User)
+        try {
+            $anneeId = Annee::resolveOpenYearId(now());
+            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee'                 => now()->year,
-            'annee_id'              => Annee::resolveIdForDate(now()),
+            'annee_id'              => $anneeId,
             'assignable_type'       => User::class,
             'assignable_id'         => $subordonne->id,
             'date'                  => now()->toDateString(),

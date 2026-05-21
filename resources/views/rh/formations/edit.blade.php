@@ -40,7 +40,7 @@
                     class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
                 @foreach($agents as $ag)
                     <option value="{{ $ag->id }}" @selected(old('agent_id', $formation->agent_id) == $ag->id)>
-                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->fonction }}
+                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->role }}
                     </option>
                 @endforeach
             </select>

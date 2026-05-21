@@ -19,7 +19,9 @@ class EnsurePca
             return redirect()->route('login');
         }
 
-        if ($request->user()->agent?->entite_id === null) {
+        // Le PCA est lié à l'entité via entites.pca_agent_id (pas agents.entite_id)
+        $agent = $request->user()->agent;
+        if (! $agent || ! $agent->pcaedEntite()->exists()) {
             return redirect()->route('pca.pending');
         }
 

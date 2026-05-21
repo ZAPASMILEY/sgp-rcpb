@@ -45,7 +45,7 @@
                                 <option value="">— Aucun —</option>
                                 @foreach ($directeurs as $agent)
                                     <option value="{{ $agent->id }}" @selected((string) old('directeur_agent_id', $direction->directeur_agent_id) === (string) $agent->id)>
-                                        {{ $agent->nom }} {{ $agent->prenom }}{{ $agent->fonction ? ' — '.$agent->fonction : '' }}
+                                        {{ $agent->nom }} {{ $agent->prenom }}{{ $agent->role ? ' — '.$agent->role : '' }}
                                     </option>
                                 @endforeach
                             </select>
@@ -63,7 +63,7 @@
                                 <option value="">— Aucun —</option>
                                 @foreach ($secretaires as $agent)
                                     <option value="{{ $agent->id }}" @selected((string) old('secretaire_agent_id', $direction->secretaire_agent_id) === (string) $agent->id)>
-                                        {{ $agent->nom }} {{ $agent->prenom }}{{ $agent->fonction ? ' — '.$agent->fonction : '' }}
+                                        {{ $agent->nom }} {{ $agent->prenom }}{{ $agent->role ? ' — '.$agent->role : '' }}
                                     </option>
                                 @endforeach
                             </select>

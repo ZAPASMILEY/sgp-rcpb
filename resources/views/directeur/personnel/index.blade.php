@@ -82,6 +82,25 @@
                 @endif
 
                 <div class="space-y-1">
+                    <label class="text-xs font-black uppercase tracking-[0.15em] text-slate-500">Sexe</label>
+                    <select name="sexe" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100 w-36">
+                        <option value="">Tous</option>
+                        <option value="homme" @selected($sexe === 'homme')>Homme</option>
+                        <option value="femme" @selected($sexe === 'femme')>Femme</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-black uppercase tracking-[0.15em] text-slate-500">Fonction</label>
+                    <select name="fonction" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100 w-52">
+                        <option value="">Toutes</option>
+                        @foreach ($fonctions as $key => $label)
+                            <option value="{{ $key }}" @selected($fonction === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="space-y-1">
                     <label class="text-xs font-black uppercase tracking-[0.15em] text-slate-500">Statut éval.</label>
                     <select name="statut" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100 w-40">
                         <option value="">Tous</option>
@@ -135,7 +154,7 @@
                         <thead>
                             <tr class="border-b border-slate-100 bg-slate-50/80">
                                 <th class="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Agent</th>
-                                <th class="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Fonction</th>
+                                <th class="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Rôle</th>
                                 <th class="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Structure</th>
                                 <th class="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Dernière note</th>
                                 <th class="px-5 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400">Mention</th>
@@ -198,7 +217,7 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-5 py-3 text-slate-500">{{ $agent->fonction ?: '—' }}</td>
+                                    <td class="px-5 py-3 text-slate-500">{{ $agent->role ?: '—' }}</td>
                                     <td class="px-5 py-3">
                                         <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold {{ $structureColor }}">
                                             {{ $structure }}

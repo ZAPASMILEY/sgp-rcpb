@@ -71,8 +71,8 @@
                     </div>
 
                     <div class="space-y-2">
-                        <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Numero du secretariat</label>
-                        <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone', $caisse->secretariat_telephone) }}" class="ent-input" placeholder="+226 25 00 00 00">
+                        <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Numéro d'accueil <span class="text-red-500">*</span></label>
+                        <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone', $caisse->secretariat_telephone) }}" required class="ent-input" placeholder="+226 25 00 00 00">
                     </div>
 
                     <div class="space-y-2">

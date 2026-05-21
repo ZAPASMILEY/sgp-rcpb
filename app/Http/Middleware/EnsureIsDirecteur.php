@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Controllers\Directeur\DirecteurEntity;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,19 +13,16 @@ use Symfony\Component\HttpFoundation\Response;
  * ──────────────────────────────────────────────────────────────────────────────
  *
  * Vérifie que l'utilisateur connecté possède l'un des trois rôles directeur
- * reconnus dans l'application.
+ * reconnus dans l'application, ET qu'une structure lui est associée.
  *
- * Les trois types de directeurs partagent le même espace (mêmes routes, mêmes
- * vues, mêmes controllers). La distinction de l'entité gérée est réalisée en
- * amont par DirecteurEntity::resolve() qui s'appuie sur le rôle et le user_id.
+ * Si le rôle est correct mais qu'aucune structure n'est trouvée via
+ * DirecteurEntity::resolve(), l'utilisateur est redirigé vers la page d'attente
+ * (directeur.pending) plutôt que de recevoir une erreur 403.
  *
  * Rôles acceptés :
  *  • Directeur_Direction  → directeur d'une direction de la faîtière
  *  • Directeur_Caisse     → directeur d'une caisse
  *  • Directeur_Technique  → directeur d'une délégation technique
- *
- * Si l'utilisateur n'est pas connecté ou n'a pas le bon rôle, il est redirigé
- * vers la page de connexion.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 class EnsureIsDirecteur
@@ -36,16 +34,16 @@ class EnsureIsDirecteur
         'Directeur_Technique',
     ];
 
-    /**
-     * Traite la requête entrante.
-     *
-     * Redirige vers la page de connexion si l'utilisateur n'est pas authentifié
-     * ou si son rôle ne figure pas dans la liste ROLES.
-     */
     public function handle(Request $request, Closure $next): Response
     {
+        // Authentifié ET rôle directeur reconnu ?
         if (! auth()->check() || ! in_array(auth()->user()->role, self::ROLES, true)) {
             return redirect()->route('login');
+        }
+
+        // Structure associée ? Sinon → page d'attente (pas de 403)
+        if (! DirecteurEntity::resolve(auth()->user())) {
+            return redirect()->route('directeur.pending');
         }
 
         return $next($request);

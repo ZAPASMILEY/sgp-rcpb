@@ -41,16 +41,14 @@
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="space-y-1.5">
-                        <label class="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Date</label>
-                        <input type="date" value="{{ $today }}" readonly
-                               class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 cursor-not-allowed outline-none">
+                        <label class="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Date d'assignation</label>
+                        <input type="text" value="{{ \Carbon\Carbon::parse($today)->translatedFormat('d/m/Y') }}" readonly tabindex="-1"
+                               class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 cursor-not-allowed outline-none select-none">
                     </div>
                     <div class="space-y-1.5">
-                        <label for="date_echeance" class="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Date d'échéance</label>
-                        <input id="date_echeance" name="date_echeance" type="date"
-                               value="{{ old('date_echeance', \Carbon\Carbon::parse($today)->addYear()->toDateString()) }}"
-                               required
-                               class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100">
+                        <label class="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Année</label>
+                        <input type="text" value="{{ now()->year }}" readonly tabindex="-1"
+                               class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 cursor-not-allowed outline-none select-none">
                     </div>
                 </div>
 
@@ -79,10 +77,14 @@
                     </button>
                 </div>
 
-                <div class="border-t border-slate-100 pt-4">
-                    <button type="submit"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3.5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700">
-                        <i class="fas fa-paper-plane text-xs"></i> Créer les objectifs
+                <div class="border-t border-slate-100 pt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    <button type="submit" name="action" value="brouillon"
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-6 py-3 text-sm font-black text-amber-700 shadow-sm transition hover:bg-amber-100">
+                        <i class="fas fa-floppy-disk text-xs"></i> Enregistrer en brouillon
+                    </button>
+                    <button type="submit" name="action" value="soumettre"
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700">
+                        <i class="fas fa-paper-plane text-xs"></i> Envoyer au DG
                     </button>
                 </div>
             </form>

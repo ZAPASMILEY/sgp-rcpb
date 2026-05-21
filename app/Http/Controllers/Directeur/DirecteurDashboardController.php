@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Directeur;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agent;
+use App\Models\Annee;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\Service;
@@ -112,8 +114,22 @@ class DirecteurDashboardController extends Controller
             'colors' => ['#10b981', '#f59e0b', '#ef4444'],
         ];
 
-        $direction           = $ctx->entity;
-        $anneesDisponibles   = range(now()->year - 2, now()->year + 1);
+        $direction         = $ctx->entity;
+        $anneesDisponibles = range(now()->year - 2, now()->year + 1);
+
+        // ── Agents sans évaluation validée pour l'année ouverte ──────────────
+        $openAnnee      = Annee::currentOpen();
+        $agentsSansEval = 0;
+        $allAgentIds    = $ctx->getServicesWithAgents()->flatMap(fn ($s) => $s->agents)->pluck('id')->unique();
+        $totalAgents    = $allAgentIds->count();
+        $agentsEvalues  = 0;
+        if ($openAnnee) {
+            $agentsSansEval = Agent::whereIn('id', $allAgentIds)
+                ->whereDoesntHave('evaluations', function ($q) use ($openAnnee) {
+                    $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
+                })->count();
+            $agentsEvalues = $totalAgents - $agentsSansEval;
+        }
 
         return view('directeur.dashboard', compact(
             'user',
@@ -130,6 +146,10 @@ class DirecteurDashboardController extends Controller
             'fichesDonut',
             'fichesRecentes',
             'servicesOverview',
+            'openAnnee',
+            'agentsSansEval',
+            'totalAgents',
+            'agentsEvalues',
         ));
     }
 }

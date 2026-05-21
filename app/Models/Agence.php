@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Agence extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $fillable = [
         'nom',
@@ -23,6 +24,7 @@ class Agence extends Model
         // Responsables : FK vers agents
         'chef_agent_id',
         'secretaire_agent_id',
+        'telephone_accueil',
     ];
 
     // ── Responsables ───────────────────────────────────────────────────────

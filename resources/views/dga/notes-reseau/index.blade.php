@@ -18,11 +18,16 @@
                     Subordonnés directs · Services DGA · Délégations · Caisses · Agences
                 </p>
             </div>
-            @if($noteMoyenne !== null)
+            @if ($notesVisibles && $noteMoyenne !== null)
                 <div class="shrink-0 rounded-2xl bg-white/15 px-6 py-4 text-center ring-1 ring-white/20">
                     <p class="text-[10px] font-black uppercase tracking-widest text-emerald-200">Note moy. réseau</p>
                     <p class="mt-0.5 text-4xl font-black text-white">{{ number_format($noteMoyenne, 2) }}</p>
                     <p class="text-[10px] text-emerald-100/60">/ 10</p>
+                </div>
+            @elseif (! $notesVisibles)
+                <div class="shrink-0 rounded-2xl bg-white/10 px-6 py-4 text-center ring-1 ring-white/10">
+                    <p class="text-[10px] font-black uppercase tracking-widest text-amber-300">Année en cours</p>
+                    <p class="mt-0.5 text-xl font-black text-white/50">En exercice</p>
                 </div>
             @else
                 <div class="shrink-0 rounded-2xl bg-white/10 px-6 py-4 text-center ring-1 ring-white/10">
@@ -34,6 +39,29 @@
     </div>
 
     <div class="mx-auto max-w-screen-xl px-4 pt-6 lg:px-8 space-y-5">
+
+        {{-- Bannière année ouverte --}}
+        @if (! $notesVisibles)
+            <div class="flex items-start gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    @if ($anneeSelectionnee)
+                        <p class="text-sm font-bold text-amber-800">Notes indisponibles — Année {{ $anneeSelectionnee->annee }} en cours d'exercice</p>
+                        <p class="mt-0.5 text-xs text-amber-600">
+                            Sélectionnez une année <strong>clôturée</strong> pour consulter les notes du réseau.
+                        </p>
+                    @else
+                        <p class="text-sm font-bold text-amber-800">Notes indisponibles — Une année d'exercice est en cours</p>
+                        <p class="mt-0.5 text-xs text-amber-600">
+                            Les notes seront affichées après clôture de l'année en cours par l'administrateur.
+                            Filtrez par une année clôturée pour consulter les résultats passés.
+                        </p>
+                    @endif
+                </div>
+            </div>
+        @endif
 
         {{-- KPI row --}}
         <div class="flex gap-2">
@@ -114,11 +142,32 @@
                 </select>
             </div>
 
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Sexe</label>
+                <select name="sexe" onchange="this.form.submit()"
+                        class="rounded-xl border border-slate-200 py-2.5 px-3 text-sm text-slate-700 focus:border-emerald-400 focus:outline-none">
+                    <option value="">Tous</option>
+                    <option value="homme" @selected($filters['sexe']==='homme')>Homme</option>
+                    <option value="femme" @selected($filters['sexe']==='femme')>Femme</option>
+                </select>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Fonction</label>
+                <select name="fonction" onchange="this.form.submit()"
+                        class="rounded-xl border border-slate-200 py-2.5 px-3 text-sm text-slate-700 focus:border-emerald-400 focus:outline-none max-w-[220px]">
+                    <option value="">Toutes</option>
+                    @foreach($fonctions as $key => $label)
+                        <option value="{{ $key }}" @selected($filters['fonction']===$key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+
             <button type="submit"
                     class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition">
                 <i class="fas fa-search mr-1.5 text-xs"></i>Filtrer
             </button>
-            @if($filters['search'] || $filters['statut'] || $filters['delegId'] || $filters['caisseId'] || $filters['anneeId'])
+            @if($filters['search'] || $filters['statut'] || $filters['delegId'] || $filters['caisseId'] || $filters['anneeId'] || $filters['sexe'] || $filters['fonction'])
                 <a href="{{ route('dga.notes-reseau.index') }}"
                    class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-50 transition">
                     <i class="fas fa-times mr-1 text-xs"></i>Effacer

@@ -150,9 +150,12 @@ class ChefObjectifController extends Controller
             ]);
         }
 
-        // Résolution de l'année depuis la date d'échéance
+        // Résolution de l'année et vérification du semestre ouvert
         try {
-            $anneeId = Annee::resolveIdForDate($validated['date_echeance']);
+            $anneeId = Annee::resolveOpenYearId($validated['date_echeance']);
+            Annee::resolveOpenSemestreId($validated['date_echeance']); // bloque si semestre clôturé
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         } catch (\Throwable) {
             $anneeId = null;
         }

@@ -16,7 +16,7 @@
                     <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Modification</p>
                     <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $user->name }}</h1>
                     @if ($user->agent)
-                        <p class="mt-1 text-sm text-slate-500">{{ $user->agent->fonction }}</p>
+                        <p class="mt-1 text-sm text-slate-500">{{ $user->agent->role }}</p>
                     @endif
                 </div>
                 <a href="{{ route('admin.users.index') }}" class="ent-btn ent-btn-soft">Retour</a>
@@ -37,7 +37,7 @@
                     <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Agent lié</p>
                         <p class="mt-1 font-semibold text-slate-800">{{ $user->agent->prenom }} {{ $user->agent->nom }}</p>
-                        <p class="text-xs text-slate-500">{{ $user->agent->email }} — {{ $user->agent->fonction }}</p>
+                        <p class="text-xs text-slate-500">{{ $user->agent->email }} — {{ $user->agent->role }}</p>
                     </div>
                 @endif
 

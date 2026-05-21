@@ -5,7 +5,7 @@
 <div class="min-h-screen bg-[#f1f5f9] pb-12">
 
     {{-- ══════════════════════════ HERO ══════════════════════════════════════ --}}
-    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+    <div class="relative overflow-hidden px-6 py-8 lg:px-10" style="background:linear-gradient(135deg,#003d20 0%,#005c30 50%,#008751 100%)">
         <div class="pointer-events-none absolute inset-0 opacity-10">
             <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/30 blur-3xl"></div>
             <div class="absolute -bottom-16 left-10 h-48 w-48 rounded-full bg-teal-300/40 blur-2xl"></div>
@@ -17,15 +17,15 @@
                     {{ strtoupper(substr(auth()->user()->name ?? 'A', 0, 1)) }}
                 </div>
                 <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">Réseau RCPB · Directeur Général Adjoint</p>
+                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-white/70">Réseau RCPB · Directeur Général Adjoint</p>
                     <h1 class="mt-0.5 text-2xl font-black tracking-tight text-white">{{ auth()->user()->name }}</h1>
-                    <p class="mt-1 text-sm text-emerald-100/80">Synthèse du {{ now()->translatedFormat('d F Y') }}</p>
+                    <p class="mt-1 text-sm text-white/60">Synthèse du {{ now()->translatedFormat('d F Y') }}</p>
                 </div>
             </div>
 
             {{-- Sélecteur d'année --}}
             <div class="flex shrink-0 flex-wrap items-center gap-3">
-                <span class="text-[11px] font-black uppercase tracking-widest text-emerald-200">Année</span>
+                <span class="text-[11px] font-black uppercase tracking-widest text-white/70">Année</span>
                 <form method="GET" action="{{ route('dga.dashboard') }}" id="year-form">
                     <select name="annee" onchange="document.getElementById('year-form').submit()"
                             class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none transition hover:bg-white/20">
@@ -54,7 +54,7 @@
                     <i class="{{ $m['icon'] }}"></i>
                 </span>
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{{ $m['label'] }}</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-white/70">{{ $m['label'] }}</p>
                     <p class="text-lg font-black text-white">{{ $m['value'] }}</p>
                 </div>
             </div>
@@ -68,6 +68,68 @@
             <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
                 <i class="fas fa-check-circle mr-2"></i>{{ session('status') }}
             </div>
+        @endif
+
+        {{-- ── Alerte agents sans évaluation ──────────────────────────────── --}}
+        @if ($openAnnee && $agentsSansEval > 0)
+            <div class="mb-4 flex items-center gap-4 rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-orange-800">
+                        {{ $agentsSansEval }} agent{{ $agentsSansEval > 1 ? 's' : '' }} sans évaluation validée — Année {{ $openAnnee->annee }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-orange-600">
+                        Ces agents n'ont pas encore de note validée pour l'exercice en cours. Pensez à finaliser leurs évaluations avant la clôture.
+                    </p>
+                </div>
+                <span class="flex h-10 min-w-[2.5rem] items-center justify-center rounded-xl bg-orange-500 px-2 text-xl font-black text-white shadow-sm">
+                    {{ $agentsSansEval }}
+                </span>
+            </div>
+        @endif
+
+        {{-- ══════════════════════ COUVERTURE ÉVALUATION ══════════════════════ --}}
+        @if($openAnnee && $totalAgents > 0)
+        @php $tauxCouv = $totalAgents > 0 ? round($agentsEvalues / $totalAgents * 100) : 0; @endphp
+        <div class="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $agentsSansEval === 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600' }}">
+                        <i class="fas fa-users-viewfinder"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Couverture réseau · {{ $openAnnee->annee }}</p>
+                        <p class="text-sm font-black text-slate-900">Évaluation des agents</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6">
+                    <div class="text-center">
+                        <p class="text-2xl font-black text-emerald-600">{{ $agentsEvalues }}</p>
+                        <p class="text-[10px] font-bold uppercase text-slate-400">Évalués</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-black {{ $agentsSansEval > 0 ? 'text-amber-500' : 'text-slate-300' }}">{{ $agentsSansEval }}</p>
+                        <p class="text-[10px] font-bold uppercase text-slate-400">Restants</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-2xl font-black text-slate-700">{{ $totalAgents }}</p>
+                        <p class="text-[10px] font-bold uppercase text-slate-400">Total</p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 pb-4">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-500 mb-1.5">
+                    <span>Progression réseau</span>
+                    <span class="{{ $tauxCouv === 100 ? 'text-emerald-600' : ($tauxCouv >= 50 ? 'text-amber-600' : 'text-rose-600') }}">{{ $tauxCouv }}%</span>
+                </div>
+                <div class="h-3 overflow-hidden rounded-full bg-slate-100">
+                    <div class="h-full rounded-full transition-all {{ $tauxCouv === 100 ? 'bg-emerald-500' : ($tauxCouv >= 50 ? 'bg-amber-400' : 'bg-rose-500') }}"
+                         style="width:{{ $tauxCouv }}%"></div>
+                </div>
+            </div>
+        </div>
         @endif
 
         {{-- ══════════════════════ KPI CARDS ═══════════════════════════════════ --}}

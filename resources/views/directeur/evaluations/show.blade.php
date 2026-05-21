@@ -293,19 +293,15 @@
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="action" value="accepter">
-                            <button type="submit" class="ent-btn ent-btn-primary">
+                            <button type="submit" onclick="return confirm('Accepter cette évaluation ?')" class="ent-btn ent-btn-primary">
                                 <i class="fas fa-check mr-2"></i>Accepter l'évaluation
                             </button>
                         </form>
-                        <form method="POST" action="{{ route('directeur.evaluations.statut', $evaluation) }}"
-                              onsubmit="return confirm('Confirmer le refus de cette évaluation ?')">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="action" value="refuser">
-                            <button type="submit" class="ent-btn bg-rose-600 text-white hover:bg-rose-700">
-                                <i class="fas fa-times mr-2"></i>Refuser l'évaluation
-                            </button>
-                        </form>
+                        <button type="button"
+                                onclick="document.getElementById('modalRefusDir').classList.remove('hidden');document.getElementById('modalRefusDir').classList.add('flex')"
+                                class="ent-btn bg-rose-600 text-white hover:bg-rose-700">
+                            <i class="fas fa-times mr-2"></i>Refuser l'évaluation
+                        </button>
                     @endif
 
                     {{-- Boutons pour évaluation créée : Soumettre / Supprimer --}}
@@ -333,4 +329,85 @@
 
     </div>
 </div>
+
+{{-- Modal Refus --}}
+<div id="modalRefusDir" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/50" onclick="this.parentElement.classList.add('hidden');this.parentElement.classList.remove('flex')"></div>
+    <div class="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl mx-4">
+        <h3 class="text-lg font-black text-slate-900">Refuser l'évaluation</h3>
+        <p class="mt-1 text-sm text-slate-500">Indiquez le motif de votre refus (obligatoire).</p>
+        <form action="{{ route('directeur.evaluations.statut', $evaluation) }}" method="POST" class="mt-5 flex flex-col gap-4">
+            @csrf @method('PATCH')
+            <input type="hidden" name="action" value="refuser">
+            <div class="flex flex-col gap-1.5">
+                <label for="motif_refus_dir" class="text-sm font-semibold text-slate-700">Motif du refus</label>
+                <textarea id="motif_refus_dir" name="motif_refus" rows="4" required maxlength="1000"
+                    class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-100"
+                    placeholder="Expliquez pourquoi vous refusez cette évaluation…"></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button"
+                        onclick="document.getElementById('modalRefusDir').classList.add('hidden');document.getElementById('modalRefusDir').classList.remove('flex')"
+                        class="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                    <i class="fas fa-times mr-1.5 text-xs"></i> Confirmer le refus
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Bandeau refus/réclamation pour directeur évalué --}}
+@if($isReceived && $evaluation->statut === 'refuse')
+<div class="fixed bottom-0 inset-x-0 z-30 mx-auto max-w-2xl px-4 pb-6">
+    <div class="flex flex-col gap-3 rounded-[24px] border-2 border-rose-200 bg-white shadow-2xl px-6 py-5">
+        <div class="flex items-start gap-4">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
+                <i class="fas fa-ban"></i>
+            </div>
+            <div class="flex-1">
+                <p class="font-black text-rose-900">Évaluation refusée</p>
+                @if($evaluation->motif_refus)
+                <p class="mt-0.5 text-sm text-rose-700">{{ $evaluation->motif_refus }}</p>
+                @endif
+                @if($evaluation->statut_reclamation)
+                <span class="mt-2 inline-flex items-center gap-1 rounded-full border border-rose-100 bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-600">
+                    @if($evaluation->statut_reclamation === 'en_attente') Réclamation en attente
+                    @elseif($evaluation->statut_reclamation === 'maintenu') Refus maintenu
+                    @elseif($evaluation->statut_reclamation === 'rouvert') Rouvert
+                    @endif
+                </span>
+                @endif
+            </div>
+        </div>
+        @if(!$evaluation->reclamation && $evaluation->statut_reclamation !== 'maintenu')
+        <form action="{{ route('directeur.evaluations.reclamer', $evaluation) }}" method="POST" class="flex flex-col gap-2">
+            @csrf
+            <textarea name="reclamation" rows="2" required maxlength="1000"
+                class="w-full rounded-xl border border-rose-200 px-3 py-2 text-sm text-slate-800 focus:border-rose-400 focus:outline-none"
+                placeholder="Votre réclamation…"></textarea>
+            <div class="flex justify-end">
+                <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-black text-white">
+                    <i class="fas fa-paper-plane"></i> Envoyer
+                </button>
+            </div>
+        </form>
+        @elseif($evaluation->reclamation)
+        <p class="text-sm text-slate-600 italic">Réclamation envoyée : {{ $evaluation->reclamation }}</p>
+        @endif
+    </div>
+</div>
+@endif
+
+<script>
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.getElementById('modalRefusDir').classList.add('hidden');
+        document.getElementById('modalRefusDir').classList.remove('flex');
+    }
+});
+</script>
 @endsection

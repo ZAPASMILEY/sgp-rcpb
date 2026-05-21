@@ -362,24 +362,23 @@
                             @csrf
                             @method('PATCH')
                             <input type="hidden" name="action" value="accepter">
-                            <button type="submit" class="ent-btn ent-btn-primary">
+                            <button type="submit" onclick="return confirm('Accepter cette évaluation ?')" class="ent-btn ent-btn-primary">
                                 <i class="fas fa-check mr-2"></i>Accepter l'évaluation
                             </button>
                         </form>
-                        <form method="POST"
-                              action="{{ route('chef.evaluations.statut', $evaluation) }}"
-                              onsubmit="return confirm('Confirmer le refus de cette évaluation ?')">
-                            @csrf
-                            @method('PATCH')
-                            <input type="hidden" name="action" value="refuser">
-                            <button type="submit" class="ent-btn bg-rose-600 text-white hover:bg-rose-700">
-                                <i class="fas fa-times mr-2"></i>Refuser l'évaluation
-                            </button>
-                        </form>
+                        <button type="button"
+                                onclick="document.getElementById('modalRefusChef').classList.remove('hidden');document.getElementById('modalRefusChef').classList.add('flex')"
+                                class="ent-btn bg-rose-600 text-white hover:bg-rose-700">
+                            <i class="fas fa-times mr-2"></i>Refuser l'évaluation
+                        </button>
                     @endif
 
-                    {{-- ── Évaluation CRÉÉE : Soumettre / Supprimer (si brouillon) ── --}}
+                    {{-- ── Évaluation CRÉÉE : Modifier / Soumettre / Supprimer (si brouillon) ── --}}
                     @if ($isCreated && $evaluation->statut === 'brouillon')
+                        <a href="{{ route('chef.evaluations.edit', $evaluation) }}"
+                           class="ent-btn ent-btn-soft">
+                            <i class="fas fa-pencil-alt mr-2"></i>Modifier
+                        </a>
                         <form method="POST"
                               action="{{ route('chef.evaluations.submit', $evaluation) }}"
                               onsubmit="return confirm('Soumettre cette évaluation à l\'agent ?')">
@@ -408,4 +407,47 @@
 
     </div>
 </div>
+
+{{-- Modal Refus (chef reçoit une évaluation de son directeur) --}}
+<div id="modalRefusChef" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-black/50" onclick="this.parentElement.classList.add('hidden');this.parentElement.classList.remove('flex')"></div>
+    <div class="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl mx-4">
+        <h3 class="text-lg font-black text-slate-900">Refuser l'évaluation</h3>
+        <p class="mt-1 text-sm text-slate-500">Indiquez le motif de votre refus (obligatoire).</p>
+        <form action="{{ route('chef.evaluations.statut', $evaluation) }}" method="POST" class="mt-5 flex flex-col gap-4">
+            @csrf @method('PATCH')
+            <input type="hidden" name="action" value="refuser">
+            <div class="flex flex-col gap-1.5">
+                <label for="motif_refus_chef" class="text-sm font-semibold text-slate-700">Motif du refus</label>
+                <textarea id="motif_refus_chef" name="motif_refus" rows="4" required maxlength="1000"
+                    class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 shadow-sm focus:border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-100"
+                    placeholder="Expliquez pourquoi vous refusez cette évaluation…"></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button"
+                        onclick="document.getElementById('modalRefusChef').classList.add('hidden');document.getElementById('modalRefusChef').classList.remove('flex')"
+                        class="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                    <i class="fas fa-times mr-1.5 text-xs"></i> Confirmer le refus
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Bandeau refus visible --}}
+@if($evaluation->statut === 'refuse' && $isReceived)
+<div class="fixed bottom-0 inset-x-0 z-40 hidden"></div>
+@endif
+<script>
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.getElementById('modalRefusChef').classList.add('hidden');
+        document.getElementById('modalRefusChef').classList.remove('flex');
+    }
+});
+</script>
 @endsection

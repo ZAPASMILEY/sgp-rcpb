@@ -28,14 +28,19 @@
             </div>
         @endif
 
-        @php
+           @php
+            //  Pour le select des services
+            $services = $services ?? \App\Models\Service::all();
+
+            // Pour le select du Chef de Service (On récupère les agents concernés)
+            $chefs_service = $chefs_service ?? \App\Models\Agent::where('role', 'Chef de Service')->orderBy('nom')->get();
+
             $kpis = [
                 ['label' => 'Caisses', 'count' => $stats['caisses'], 'gradient' => 'from-emerald-400 to-teal-500', 'icon' => 'fas fa-building-columns', 'form' => 'caisse-form'],
                 ['label' => 'Services', 'count' => $stats['services'], 'gradient' => 'from-sky-500 to-blue-600', 'icon' => 'fas fa-briefcase', 'form' => 'service-form'],
                 ['label' => 'Agents', 'count' => $stats['agents'], 'gradient' => 'from-amber-400 to-orange-500', 'icon' => 'fas fa-users', 'form' => 'agent-form'],
             ];
         @endphp
-
         {{-- Header --}}
         <div class="rounded-2xl bg-white p-5 shadow-sm">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -28,7 +28,7 @@ class EntiteController extends Controller
     public function create(): View
     {
         return view('admin.entites.create', [
-            'pca_agents' => Agent::query()->where('fonction', 'PCA')->orderBy('nom')->orderBy('prenom')->get(),
+            'pca_agents' => Agent::query()->where('role', 'PCA')->orderBy('nom')->orderBy('prenom')->get(),
         ]);
     }
     /**
@@ -89,9 +89,9 @@ class EntiteController extends Controller
         $ageIds = (clone $agentsQuery)->pluck('id');
         $secIds = (clone $secretairesQuery)->pluck('id');
 
-        $directeurs_direction  = Agent::query()->where('fonction', 'Directeur de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']);
-        $secretaires_direction = Agent::query()->where('fonction', 'Secrétaire de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']);
-        $agents_disponibles    = Agent::query()->whereNull('service_id')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+        $directeurs_direction  = Agent::query()->where('role', 'Directeur de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']);
+        $secretaires_direction = Agent::query()->where('role', 'Secrétaire de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']);
+        $agents_disponibles    = Agent::query()->whereNull('service_id')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
 
         return view('admin.entites.index', [
             'entite' => $entite,
@@ -199,6 +199,23 @@ class EntiteController extends Controller
                 'pca',
                 ['entite_id' => $entite->id]
             );
+
+            // Assigner direction_id "Direction Générale" aux agents DG/DGA/Assistante
+            $dirGen = Direction::where('entite_id', $entite->id)
+                ->whereRaw('LOWER(nom) LIKE ?', ['%direction g%n%rale%'])
+                ->first();
+            if ($dirGen) {
+                $emails = array_filter([
+                    $validated['directrice_generale_email'] ?? null,
+                    $validated['dga_email']                 ?? null,
+                    $validated['assistante_dg_email']       ?? null,
+                ]);
+                User::whereIn('email', $emails)
+                    ->whereNotNull('agent_id')
+                    ->get()
+                    ->each(fn ($u) => Agent::where('id', $u->agent_id)
+                        ->update(['direction_id' => $dirGen->id]));
+            }
         });
 
         return redirect()->route('admin.entites.index')->with('success', 'Faitiere modifiee avec succes.');
@@ -362,7 +379,7 @@ class EntiteController extends Controller
                     $subQuery
                         ->where('nom', 'like', "%{$search}%")
                         ->orWhere('prenom', 'like', "%{$search}%")
-                        ->orWhere('fonction', 'like', "%{$search}%")
+                        ->orWhere('role', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhereHas('service', function ($serviceQuery) use ($search): void {
                             $serviceQuery->where('nom', 'like', "%{$search}%");
@@ -382,37 +399,52 @@ class EntiteController extends Controller
 
     public function indexSecretaires(Request $request): View
     {
-        $entite = Entite::query()->latest()->first();
-        $search = trim((string) $request->query('search', ''));
+        $search  = trim((string) $request->query('search', ''));
+        $type    = trim((string) $request->query('type', ''));
+        $sortBy  = $request->query('sort', 'nom');
+        $sortDir = $request->query('dir', 'asc') === 'desc' ? 'desc' : 'asc';
 
-        $directions = Direction::query()
-            ->when($entite, fn ($query) => $query->where('entite_id', $entite->id))
-            ->orderBy('nom')
-            ->get();
+        $fonctionsSecretaires = [
+            'Secrétaire Assistante',
+            'Secrétaire de Direction',
+            'Secrétaire Technique',
+            'Secrétaire de Caisse',
+            "Secrétaire d'Agence",
+        ];
 
-        $secretaires = Direction::query()
-            ->when($entite, fn ($query) => $query->where('entite_id', $entite->id))
-            ->whereNotNull('secretaire_agent_id')
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where(function ($subQuery) use ($search): void {
-                    $subQuery
-                        ->where('nom', 'like', "%{$search}%")
-                        ->orWhereHas('secretaire', fn ($sq) => $sq
-                            ->where('nom', 'like', "%{$search}%")
-                            ->orWhere('prenom', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%")
-                        );
-                });
-            })
-            ->latest()
-            ->paginate(12)
-            ->withQueryString();
+        $q = Agent::query()
+            ->whereIn('role', $fonctionsSecretaires)
+            ->with(['user:id,agent_id,role', 'entite:id,nom', 'direction:id,nom', 'delegationTechnique:id,region,ville', 'caisse:id,nom', 'agence:id,nom']);
+
+        if ($type !== '') {
+            $q->where('role', $type);
+        }
+
+        if ($search !== '') {
+            $q->where(fn ($s) =>
+                $s->where('nom', 'like', "%{$search}%")
+                  ->orWhere('prenom', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('numero_telephone', 'like', "%{$search}%")
+            );
+        }
+
+        $allowedSorts = ['nom', 'prenom', 'role'];
+        if (in_array($sortBy, $allowedSorts)) {
+            $q->orderBy($sortBy, $sortDir);
+        } else {
+            $q->orderBy('nom')->orderBy('prenom');
+        }
+
+        $secretaires = $q->paginate(20)->withQueryString();
 
         return view('admin.entites.secretaires.index', [
-            'entite' => $entite,
-            'directions' => $directions,
-            'secretaires' => $secretaires,
-            'search' => $search,
+            'secretaires'         => $secretaires,
+            'fonctionsSecretaires' => $fonctionsSecretaires,
+            'search'              => $search,
+            'type'                => $type,
+            'sortBy'              => $sortBy,
+            'sortDir'             => $sortDir,
         ]);
     }
 
@@ -621,8 +653,8 @@ class EntiteController extends Controller
         return view('admin.directions.create', [
             'entite'     => $entite,
             'faitiere'   => true,
-            'directeurs' => Agent::query()->where('fonction', 'Directeur de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
-            'secretaires'=> Agent::query()->where('fonction', 'Secrétaire de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
+            'directeurs' => Agent::query()->where('role', 'Directeur de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
+            'secretaires'=> Agent::query()->where('role', 'Secrétaire de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
         ]);
     }
 

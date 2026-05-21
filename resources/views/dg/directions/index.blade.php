@@ -61,17 +61,17 @@
         @else
             @php
             $palettes = [
-                ['from' => 'from-emerald-500', 'to' => 'to-teal-500',   'light' => 'bg-emerald-50',  'text' => 'text-emerald-600',  'border' => 'border-emerald-200', 'hover' => 'hover:border-emerald-400', 'badge' => 'bg-emerald-100 text-emerald-700', 'icon_bg' => 'bg-emerald-100', 'icon_text' => 'text-emerald-600'],
-                ['from' => 'from-blue-500',    'to' => 'to-indigo-500',  'light' => 'bg-blue-50',    'text' => 'text-blue-600',    'border' => 'border-blue-200',   'hover' => 'hover:border-blue-400',   'badge' => 'bg-blue-100 text-blue-700',   'icon_bg' => 'bg-blue-100',   'icon_text' => 'text-blue-600'],
-                ['from' => 'from-violet-500',  'to' => 'to-purple-500',  'light' => 'bg-violet-50',  'text' => 'text-violet-600',  'border' => 'border-violet-200', 'hover' => 'hover:border-violet-400', 'badge' => 'bg-violet-100 text-violet-700', 'icon_bg' => 'bg-violet-100', 'icon_text' => 'text-violet-600'],
-                ['from' => 'from-amber-500',   'to' => 'to-orange-500',  'light' => 'bg-amber-50',   'text' => 'text-amber-600',   'border' => 'border-amber-200',  'hover' => 'hover:border-amber-400',  'badge' => 'bg-amber-100 text-amber-700',  'icon_bg' => 'bg-amber-100',  'icon_text' => 'text-amber-600'],
-                ['from' => 'from-rose-500',    'to' => 'to-pink-500',    'light' => 'bg-rose-50',    'text' => 'text-rose-600',    'border' => 'border-rose-200',   'hover' => 'hover:border-rose-400',   'badge' => 'bg-rose-100 text-rose-700',   'icon_bg' => 'bg-rose-100',   'icon_text' => 'text-rose-600'],
-                ['from' => 'from-sky-500',     'to' => 'to-cyan-500',    'light' => 'bg-sky-50',     'text' => 'text-sky-600',     'border' => 'border-sky-200',    'hover' => 'hover:border-sky-400',    'badge' => 'bg-sky-100 text-sky-700',     'icon_bg' => 'bg-sky-100',    'icon_text' => 'text-sky-600'],
-                ['from' => 'from-teal-500',    'to' => 'to-emerald-600', 'light' => 'bg-teal-50',    'text' => 'text-teal-600',    'border' => 'border-teal-200',   'hover' => 'hover:border-teal-400',   'badge' => 'bg-teal-100 text-teal-700',   'icon_bg' => 'bg-teal-100',   'icon_text' => 'text-teal-600'],
+                ['from' => 'from-emerald-500', 'to' => 'to-teal-500',   'text' => 'text-emerald-600',  'border' => 'border-emerald-200', 'hover' => 'hover:border-emerald-400', 'badge' => 'bg-emerald-100 text-emerald-700', 'icon_bg' => 'bg-emerald-100', 'icon_text' => 'text-emerald-600'],
+                ['from' => 'from-blue-500',    'to' => 'to-indigo-500',  'text' => 'text-blue-600',    'border' => 'border-blue-200',   'hover' => 'hover:border-blue-400',   'badge' => 'bg-blue-100 text-blue-700',   'icon_bg' => 'bg-blue-100',   'icon_text' => 'text-blue-600'],
+                ['from' => 'from-violet-500',  'to' => 'to-purple-500',  'text' => 'text-violet-600',  'border' => 'border-violet-200', 'hover' => 'hover:border-violet-400', 'badge' => 'bg-violet-100 text-violet-700', 'icon_bg' => 'bg-violet-100', 'icon_text' => 'text-violet-600'],
+                ['from' => 'from-amber-500',   'to' => 'to-orange-500',  'text' => 'text-amber-600',   'border' => 'border-amber-200',  'hover' => 'hover:border-amber-400',  'badge' => 'bg-amber-100 text-amber-700',  'icon_bg' => 'bg-amber-100',  'icon_text' => 'text-amber-600'],
+                ['from' => 'from-rose-500',    'to' => 'to-pink-500',    'text' => 'text-rose-600',    'border' => 'border-rose-200',   'hover' => 'hover:border-rose-400',   'badge' => 'bg-rose-100 text-rose-700',   'icon_bg' => 'bg-rose-100',   'icon_text' => 'text-rose-600'],
+                ['from' => 'from-sky-500',     'to' => 'to-cyan-500',    'text' => 'text-sky-600',     'border' => 'border-sky-200',    'hover' => 'hover:border-sky-400',    'badge' => 'bg-sky-100 text-sky-700',     'icon_bg' => 'bg-sky-100',    'icon_text' => 'text-sky-600'],
+                ['from' => 'from-teal-500',    'to' => 'to-emerald-600', 'text' => 'text-teal-600',    'border' => 'border-teal-200',   'hover' => 'hover:border-teal-400',   'badge' => 'bg-teal-100 text-teal-700',   'icon_bg' => 'bg-teal-100',   'icon_text' => 'text-teal-600'],
             ];
             @endphp
 
-            <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 @foreach ($directions as $i => $direction)
                     @php
                         $p = $palettes[$i % count($palettes)];
@@ -81,57 +81,44 @@
                         $nbServices = $direction->services->count();
                     @endphp
                     <a href="{{ route('dg.directions.show', $direction) }}"
-                       class="group relative flex flex-col overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 {{ $p['border'] }} {{ $p['hover'] }}">
+                       class="group relative flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 {{ $p['border'] }} {{ $p['hover'] }}">
 
-                        {{-- Colored top accent bar --}}
-                        <div class="h-1.5 w-full bg-gradient-to-r {{ $p['from'] }} {{ $p['to'] }}"></div>
+                        {{-- Barre de couleur --}}
+                        <div class="h-1 w-full bg-gradient-to-r {{ $p['from'] }} {{ $p['to'] }}"></div>
 
-                        <div class="flex flex-1 flex-col gap-4 p-5">
+                        <div class="flex flex-1 flex-col gap-2 p-3">
 
-                            {{-- Header row --}}
-                            <div class="flex items-start justify-between gap-3">
-                                {{-- Direction icon --}}
-                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl {{ $p['icon_bg'] }} {{ $p['icon_text'] }} transition group-hover:scale-105">
-                                    <i class="fas fa-building text-base"></i>
+                            {{-- Header --}}
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl {{ $p['icon_bg'] }} {{ $p['icon_text'] }} transition group-hover:scale-105">
+                                    <i class="fas fa-building text-xs"></i>
                                 </div>
-                                {{-- Services badge --}}
-                                <span class="rounded-full {{ $p['badge'] }} px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider">
-                                    {{ $nbServices }} service(s)
+                                <span class="rounded-full {{ $p['badge'] }} px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
+                                    {{ $nbServices }} svc
                                 </span>
                             </div>
 
-                            {{-- Direction name --}}
-                            <div class="flex-1">
-                                <h3 class="text-base font-black leading-snug text-slate-900 group-hover:{{ $p['text'] }} transition-colors">
-                                    {{ $direction->nom }}
-                                </h3>
+                            {{-- Nom direction --}}
+                            <h3 class="text-sm font-black leading-snug text-slate-900 transition-colors group-hover:{{ $p['text'] }}">
+                                {{ $direction->nom }}
+                            </h3>
 
-                                {{-- Directeur info --}}
-                                @if ($directeurNom)
-                                    <div class="mt-3 flex items-center gap-3">
-                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br {{ $p['from'] }} {{ $p['to'] }} text-[10px] font-black text-white shadow-sm">
-                                            {{ $initiales }}
-                                        </div>
-                                        <div>
-                                            <p class="text-sm font-bold text-slate-800">{{ $directeurNom }}</p>
-                                            <p class="text-[11px] text-slate-400">{{ $directeur->fonction ?? 'Directeur' }}</p>
-                                        </div>
+                            {{-- Directeur --}}
+                            @if ($directeurNom)
+                                <div class="flex items-center gap-2">
+                                    <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br {{ $p['from'] }} {{ $p['to'] }} text-[9px] font-black text-white">
+                                        {{ $initiales }}
                                     </div>
-                                @else
-                                    <div class="mt-3 flex items-center gap-2">
-                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-300">
-                                            <i class="fas fa-user text-xs"></i>
-                                        </div>
-                                        <p class="text-sm italic text-slate-400">Directeur non affecté</p>
-                                    </div>
-                                @endif
-                            </div>
+                                    <p class="truncate text-xs font-semibold text-slate-600">{{ $directeurNom }}</p>
+                                </div>
+                            @else
+                                <p class="text-xs italic text-slate-400">Non affecté</p>
+                            @endif
 
-                            {{-- Footer CTA --}}
-                            <div class="flex items-center gap-2 border-t border-slate-100 pt-3">
-                                <span class="text-xs font-semibold text-slate-400">Évaluations &amp; objectifs</span>
-                                <div class="ml-auto flex h-7 w-7 items-center justify-center rounded-full {{ $p['icon_bg'] }} transition group-hover:scale-110">
-                                    <i class="fas fa-arrow-right text-[10px] {{ $p['icon_text'] }}"></i>
+                            {{-- Footer --}}
+                            <div class="flex items-center justify-end border-t border-slate-100 pt-2 mt-auto">
+                                <div class="flex h-6 w-6 items-center justify-center rounded-full {{ $p['icon_bg'] }} transition group-hover:scale-110">
+                                    <i class="fas fa-arrow-right text-[9px] {{ $p['icon_text'] }}"></i>
                                 </div>
                             </div>
                         </div>

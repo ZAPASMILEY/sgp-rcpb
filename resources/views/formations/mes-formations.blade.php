@@ -137,7 +137,7 @@
                                             <p class="truncate font-bold text-slate-800 text-sm">
                                                 {{ trim(($formation->agent->prenom ?? '') . ' ' . ($formation->agent->nom ?? '')) }}
                                             </p>
-                                            <p class="truncate text-xs text-slate-400">{{ $formation->agent->fonction ?? '—' }}</p>
+                                            <p class="truncate text-xs text-slate-400">{{ $formation->agent->role ?? '—' }}</p>
                                         </div>
                                     </div>
                                 </td>

@@ -23,8 +23,10 @@ class DirecteurPersonnelController extends Controller
         $filterCaisse  = $request->query('caisse');
         $search        = $request->query('search');
         $statut        = $request->query('statut');
+        $sexe          = trim((string) $request->query('sexe', ''));
+        $fonction      = trim((string) $request->query('fonction', ''));
 
-        $query = $this->baseQuery($ctx, $filterService, $filterCaisse, $search);
+        $query = $this->baseQuery($ctx, $filterService, $filterCaisse, $search, $sexe, $fonction);
 
         $agents = $query->get()->map(function (Agent $agent) {
             $lastEval = $agent->evaluations->first();
@@ -48,7 +50,7 @@ class DirecteurPersonnelController extends Controller
             'note_asc'  => $agents->sortBy('note'),
             'note_desc' => $agents->sortByDesc('note'),
             'service'   => $agents->sortBy(fn ($a) => $a['service']?->nom ?? $a['caisse']?->nom ?? ''),
-            'fonction'  => $agents->sortBy(fn ($a) => $a['agent']->fonction ?? ''),
+            'fonction'  => $agents->sortBy(fn ($a) => $a['agent']->role ?? ''),
             default     => $agents->sortBy(fn ($a) => $a['agent']->nom.' '.$a['agent']->prenom),
         };
 
@@ -61,9 +63,12 @@ class DirecteurPersonnelController extends Controller
             'note_moy' => $agents->filter(fn ($a) => $a['note'] !== null)->avg('note'),
         ];
 
+        $fonctions = Agent::ROLES;
+
         return view('directeur.personnel.index', compact(
             'ctx', 'direction', 'agents', 'services', 'caisses', 'stats',
-            'sortBy', 'filterService', 'filterCaisse', 'search', 'statut'
+            'sortBy', 'filterService', 'filterCaisse', 'search', 'statut',
+            'sexe', 'fonction', 'fonctions'
         ));
     }
 
@@ -107,7 +112,7 @@ class DirecteurPersonnelController extends Controller
                 $a->nom,
                 $a->prenom,
                 $a->email,
-                $a->fonction,
+                $a->role ?? '',
                 $item['service']?->nom ?? '',
                 $item['caisse']?->nom ?? '',
                 $item['note'] !== null ? number_format($item['note'], 2, '.', '') : '',
@@ -130,7 +135,7 @@ class DirecteurPersonnelController extends Controller
         ]);
     }
 
-    private function baseQuery(DirecteurEntity $ctx, ?string $filterService, ?string $filterCaisse, ?string $search)
+    private function baseQuery(DirecteurEntity $ctx, ?string $filterService, ?string $filterCaisse, ?string $search, string $sexe = '', string $fonction = '')
     {
         // Pour Directeur_Technique : tous les agents avec delegation_technique_id = DT
         // Pour les autres : agents dans les services de l'entité
@@ -162,8 +167,14 @@ class DirecteurPersonnelController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('nom', 'like', "%{$search}%")
                   ->orWhere('prenom', 'like', "%{$search}%")
-                  ->orWhere('fonction', 'like', "%{$search}%");
+                  ->orWhere('role', 'like', "%{$search}%");
             });
+        }
+        if ($sexe !== '') {
+            $query->where('sexe', $sexe);
+        }
+        if ($fonction !== '') {
+            $query->where('role', $fonction);
         }
 
         return $query;

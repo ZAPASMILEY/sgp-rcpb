@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Gerer;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\Formation;
+use App\Traits\GererLayout;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,27 +20,7 @@ use Illuminate\View\View;
  */
 class FormationGererController extends Controller
 {
-    /**
-     * Détermine le layout Blade à utiliser selon le rôle de l'utilisateur connecté.
-     */
-    private function layout(): string
-    {
-        $role = Auth::user()?->role ?? '';
-
-        return match (true) {
-            $role === 'Admin'                                    => 'layouts.app',
-            $role === 'DG'                                       => 'layouts.dg',
-            $role === 'DGA'                                      => 'layouts.dga',
-            $role === 'PCA'                                      => 'layouts.pca',
-            $role === 'RH'                                       => 'layouts.rh',
-            str_starts_with($role, 'Directeur_')                => 'layouts.directeur',
-            str_starts_with($role, 'Chef_')                     => 'layouts.chef',
-            str_starts_with($role, 'Secretaire_')               => 'layouts.personnel',
-            in_array($role, ['Assistante_Dg', 'Conseillers_Dg', 'Secretaire_Assistante'], true)
-                                                                 => 'layouts.personnel',
-            default                                              => 'layouts.app',
-        };
-    }
+    use GererLayout;
 
     // ── Liste ──────────────────────────────────────────────────────────────────
 
@@ -70,7 +51,7 @@ class FormationGererController extends Controller
         }
 
         $formations = $query->orderByDesc('date_debut')->paginate(15)->withQueryString();
-        $agents     = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+        $agents     = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
         $annees     = range(now()->year + 1, now()->year - 4);
         $domaines   = Formation::DOMAINES;
         $layout     = $this->layout();
@@ -85,7 +66,7 @@ class FormationGererController extends Controller
 
     public function create(Request $request): View
     {
-        $agents              = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+        $agents              = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
         $domaines            = Formation::DOMAINES;
         $preselectedAgentId  = (int) $request->get('agent_id', 0);
         $titresExistants     = Formation::distinct()->orderBy('titre')->pluck('titre');
@@ -120,7 +101,7 @@ class FormationGererController extends Controller
 
     public function edit(Formation $formation): View
     {
-        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
         $domaines    = Formation::DOMAINES;
         $layout      = $this->layout();
         $routePrefix = 'gerer';

@@ -67,7 +67,7 @@
                             <p class="mt-2 text-base font-black text-slate-900">
                                 {{ trim($selectedAgent->prenom . ' ' . $selectedAgent->nom) }}
                             </p>
-                            <p class="mt-1 text-sm text-slate-500">{{ $selectedAgent->fonction ?? 'Agent' }}</p>
+                            <p class="mt-1 text-sm text-slate-500">{{ $selectedAgent->role ?? 'Agent' }}</p>
                             <input type="hidden" name="agent_id" value="{{ $selectedAgent->id }}">
                         </div>
                     @else
@@ -79,7 +79,7 @@
                                 <option value="">— Sélectionner un agent —</option>
                                 @foreach ($agents as $ag)
                                     <option value="{{ $ag->id }}" @selected(old('agent_id') == $ag->id)>
-                                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->fonction ?? 'Agent' }}
+                                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->role ?? 'Agent' }}
                                     </option>
                                 @endforeach
                             </select>

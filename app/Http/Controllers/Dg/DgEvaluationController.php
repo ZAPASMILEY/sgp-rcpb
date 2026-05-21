@@ -24,11 +24,18 @@ class DgEvaluationController extends Controller
             abort(403);
         }
         $request->validate([
-            'statut' => 'required|in:acceptee,refusee',
+            'action'      => ['required', 'in:accepter,refuser'],
+            'motif_refus' => ['required_if:action,refuser', 'nullable', 'string', 'max:1000'],
         ]);
-        $evaluation->statut = $request->statut;
+        $action = $request->input('action');
+        $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
+        if ($action === 'refuser') {
+            $evaluation->motif_refus        = $request->input('motif_refus');
+            $evaluation->statut_reclamation = 'en_attente';
+        }
         $evaluation->save();
-        return redirect()->route('dg.evaluations.show', $evaluation)->with('status', 'Statut mis à jour.');
+        $msg = $action === 'accepter' ? 'Évaluation acceptée.' : 'Évaluation refusée.';
+        return redirect()->route('dg.evaluations.show', $evaluation)->with('status', $msg);
     }
 
     public function show(Request $request, Evaluation $evaluation): View

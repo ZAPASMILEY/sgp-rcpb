@@ -148,7 +148,7 @@ class DgaSubEvaluationController extends Controller
                     'nom'           => $agentUser->name,
                     'role_label'    => 'Agent',
                     'entite_label'  => $direction->nom ?? 'Direction DGA',
-                    'service_label' => $agent->fonction ?? '',
+                    'service_label' => $agent->role ?? '',
                     'groupe'        => 'Collaborateurs directs',
                     'redirect_to'   => 'direction',
                 ]);
@@ -197,10 +197,12 @@ class DgaSubEvaluationController extends Controller
                     'date_echeance' => $fiche->date_echeance instanceof \Carbon\Carbon
                         ? $fiche->date_echeance->toDateString()
                         : (string) $fiche->date_echeance,
-                    'objectifs'     => $fiche->objectifs->map(fn ($item) => [
-                        'source_fiche_objectif_objectif_id' => $item->id,
-                        'titre'                             => $item->description,
-                    ])->values()->all(),
+                    'objectifs'     => $fiche->objectifs
+                        ->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)
+                        ->map(fn ($item) => [
+                            'source_fiche_objectif_objectif_id' => $item->id,
+                            'titre'                             => $item->description,
+                        ])->values()->all(),
                 ];
             }
         }
@@ -212,6 +214,10 @@ class DgaSubEvaluationController extends Controller
 
         $prefilledAgentId = $selectedSubordonne['agent_id'] ?? null;
 
+        $openAnnee     = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $openSemestre  = $openSemestres->first();
+
         return view('dga.subordonnes.evaluations.create', compact(
             'subordonnes',
             'selectedSubordonne',
@@ -220,6 +226,9 @@ class DgaSubEvaluationController extends Controller
             'oldFormations',
             'oldExperiences',
             'prefilledAgentId',
+            'openAnnee',
+            'openSemestres',
+            'openSemestre',
         ));
     }
 
@@ -234,12 +243,10 @@ class DgaSubEvaluationController extends Controller
 
         $validated = $request->validate([
             'subordonne_id'                    => ['required', 'integer', 'in:'.implode(',', $allowedIds)],
-            'date_debut'                       => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'date_fin'                         => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'identification.nom_prenom'        => ['nullable', 'string', 'max:255'],
-            'identification.semestre'          => ['required', 'in:1,2'],
             'identification.date_evaluation'   => ['nullable', 'string', 'max:20'],
             'identification.matricule'         => ['nullable', 'string', 'max:255'],
+            'identification.grade'             => ['required', 'string', 'max:255'],
             'identification.emploi'            => ['nullable', 'string', 'max:255'],
             'identification.direction'         => ['nullable', 'string', 'max:255'],
             'identification.direction_service' => ['nullable', 'string', 'max:255'],
@@ -263,15 +270,22 @@ class DgaSubEvaluationController extends Controller
         ]);
 
         $subordonne = User::findOrFail($validated['subordonne_id']);
-
-        $dateDebut = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_debut']);
-        $dateFin   = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_fin']);
-
-        if (strtotime($dateFin) < strtotime($dateDebut)) {
-            return back()->withInput()->withErrors(['date_fin' => 'La date de fin doit être postérieure à la date de début.']);
+        $openAnnee  = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
         }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+        $dateDebut  = $semestre->dateDebut()->toDateString();
+        $dateFin    = $semestre->dateFin()->toDateString();
+        $anneeId    = $openAnnee->id;
+        $semestreId = $semestre->id;
 
         $identification = $validated['identification'] ?? [];
+        $identification['semestre'] = (string) $semestre->numero;
+        $identification['matricule'] = $subordonne->agent?->matricule ?? null;
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -309,13 +323,11 @@ class DgaSubEvaluationController extends Controller
         }
 
         $scores  = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
-        $anneeId = null;
-        try { $anneeId = Annee::resolveIdForDate($dateDebut); } catch (\Throwable) {}
 
         $user = Auth::user();
 
         $evaluation = DB::transaction(function () use (
-            $user, $subordonne, $dateDebut, $dateFin, $anneeId,
+            $user, $subordonne, $dateDebut, $dateFin, $anneeId, $semestreId,
             $scores, $validated, $identification,
             $normalizedSubjective, $normalizedObjective
         ) {
@@ -324,6 +336,7 @@ class DgaSubEvaluationController extends Controller
                 'evaluable_id'              => $subordonne->id,
                 'evaluable_role'            => $subordonne->role,
                 'annee_id'                  => $anneeId,
+                'semestre_id'               => $semestreId,
                 'evaluateur_id'             => $user->id,
                 'date_debut'                => $dateDebut,
                 'date_fin'                  => $dateFin,

@@ -74,6 +74,29 @@
 
     <div class="px-6 lg:px-10">
 
+        {{-- ── Bannière année ouverte ──────────────────────────────────────── --}}
+        @if (! $notesVisibles)
+            <div class="mt-6 flex items-start gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-amber-800">Notes indisponibles — Année {{ $anneeOuverte->annee }} en cours d'exercice</p>
+                    <p class="mt-0.5 text-xs text-amber-600">
+                        Les notes des structures seront affichées une fois l'année <strong>{{ $anneeOuverte->annee }}</strong>
+                        clôturée par l'administrateur. Les évaluations continuent d'être enregistrées normalement.
+                    </p>
+                </div>
+            </div>
+        @elseif ($derniereAnnee)
+            <div class="mt-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3">
+                <i class="fas fa-circle-check text-emerald-500"></i>
+                <p class="text-sm font-semibold text-emerald-700">
+                    Affichage des notes pour l'année <strong>{{ $derniereAnnee->annee }}</strong> (clôturée).
+                </p>
+            </div>
+        @endif
+
         {{-- ── KPIs ─────────────────────────────────────────────────────────── --}}
         <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
 
@@ -107,7 +130,11 @@
                 <div>
                     <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Note globale</p>
                     <p class="text-xl font-black text-slate-800">
-                        {{ $perimetreStats['globale'] !== null ? number_format($perimetreStats['globale'], 2).' /10' : '—' }}
+                        @if ($notesVisibles)
+                            {{ $perimetreStats['globale'] !== null ? number_format($perimetreStats['globale'], 2).' /10' : '—' }}
+                        @else
+                            <span class="text-slate-300">—</span>
+                        @endif
                     </p>
                     <p class="text-[9px] text-slate-400 mt-0.5">Faîtière + Terrain</p>
                 </div>
@@ -121,7 +148,11 @@
                 <div>
                     <p class="text-[10px] font-semibold uppercase tracking-wider text-indigo-500">Note faîtière</p>
                     <p class="text-xl font-black text-indigo-800">
-                        {{ $perimetreStats['faitiere'] !== null ? number_format($perimetreStats['faitiere'], 2).' /10' : '—' }}
+                        @if ($notesVisibles)
+                            {{ $perimetreStats['faitiere'] !== null ? number_format($perimetreStats['faitiere'], 2).' /10' : '—' }}
+                        @else
+                            <span class="text-indigo-200">—</span>
+                        @endif
                     </p>
                     <p class="text-[9px] text-indigo-400 mt-0.5">Directions + Services</p>
                 </div>
@@ -135,7 +166,11 @@
                 <div>
                     <p class="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Note terrain</p>
                     <p class="text-xl font-black text-amber-800">
-                        {{ $perimetreStats['terrain'] !== null ? number_format($perimetreStats['terrain'], 2).' /10' : '—' }}
+                        @if ($notesVisibles)
+                            {{ $perimetreStats['terrain'] !== null ? number_format($perimetreStats['terrain'], 2).' /10' : '—' }}
+                        @else
+                            <span class="text-amber-200">—</span>
+                        @endif
                     </p>
                     <p class="text-[9px] text-amber-500 mt-0.5">DT + Caisses + Agences + Guichets</p>
                 </div>

@@ -27,6 +27,7 @@ package "Authentification & Utilisateurs" #e0f2fe {
         + manager_id : int <<FK, nullable>>
         + name : string
         + email : string
+        + password : string <<hashed>>
         + role : string
         + is_active : bool
         + must_change_password : bool
@@ -34,11 +35,21 @@ package "Authentification & Utilisateurs" #e0f2fe {
         + email_verified_at : datetime
         --
         + agent() : BelongsTo<Agent>
+        + entite() : HasOneThrough<Entite, Agent>
         + manager() : BelongsTo<User>
         + subordonnesDirects() : HasMany<User>
         + evaluations() : HasMany<Evaluation>
         + alertes() : BelongsToMany<Alerte>
+        + alertesNonLues() : BelongsToMany<Alerte>
         + activites() : HasMany<Activite>
+        .. Rôles ..
+        + isAdmin() : bool
+        + isPca() : bool
+        + isDg() : bool
+        + isDga() : bool
+        + isRh() : bool
+        + isPersonnel() : bool
+        ' (DG, DGA, Directeurs, Chefs, Agents…)
     }
 
     class LoginFailure {
@@ -69,9 +80,29 @@ package "Authentification & Utilisateurs" #e0f2fe {
         + message : text
         + statut : string
         + ip_address : string
+        ' Pivot alerte_user : lu, lu_at
         --
         + createur() : BelongsTo<User>
         + destinataires() : BelongsToMany<User>
+        + diffuserATous() : void
+        + {static} notifier(userId, titre, message, priorite) : void
+    }
+
+    class AuditLog {
+        + id : int <<PK>>
+        + user_id : int <<FK, nullable>>
+        + user_name : string
+        + auditable_type : string <<morph>>
+        + auditable_id : int <<morph>>
+        + action : string
+        + old_values : array
+        + new_values : array
+        + description : string
+        + ip_address : string
+        + created_at : datetime
+        --
+        + user() : BelongsTo<User>
+        + {static} record(...) : void
     }
 }
 
@@ -80,7 +111,7 @@ package "Authentification & Utilisateurs" #e0f2fe {
 ' ═══════════════════════════════════════════════════════════════════
 package "Structure Organisationnelle" #dcfce7 {
 
-    class Entite {
+    class Entite <<singleton>> {
         + id : int <<PK>>
         + nom : string
         + ville : string
@@ -91,6 +122,7 @@ package "Structure Organisationnelle" #dcfce7 {
         + dga_secretaire_agent_id : int <<FK, nullable>>
         + pca_agent_id : int <<FK, nullable>>
         + assistante_agent_id : int <<FK, nullable>>
+        ' Une seule ligne autorisée (faîtière unique)
         --
         + dg() : BelongsTo<Agent>
         + dga() : BelongsTo<Agent>
@@ -221,12 +253,16 @@ package "Structure Organisationnelle" #dcfce7 {
         + service_id : int <<FK, nullable>>
         + nom : string
         + prenom : string
-        + sexe : string
+        + sexe : enum[homme, femme]
         + email : string
         + numero_telephone : string
         + photo_path : string
         + fonction : string
         + date_debut_fonction : date
+        .. Constantes ..
+        + {static} FONCTIONS : array
+        + {static} NON_PERSONNEL_ROLES : array
+        ' NON_PERSONNEL_ROLES = ['PCA','Admin','RH']
         --
         + user() : HasOne<User>
         + entite() : BelongsTo<Entite>
@@ -237,15 +273,32 @@ package "Structure Organisationnelle" #dcfce7 {
         + guichet() : BelongsTo<Guichet>
         + service() : BelongsTo<Service>
         + directedDirection() : HasOne<Direction>
+        + secretariedDirection() : HasOne<Direction>
         + directedDelegation() : HasOne<DelegationTechnique>
+        + secretariedDelegation() : HasOne<DelegationTechnique>
         + directedCaisse() : HasOne<Caisse>
+        + secretariedCaisse() : HasOne<Caisse>
         + ledAgence() : HasOne<Agence>
+        + secretariedAgence() : HasOne<Agence>
         + ledGuichet() : HasOne<Guichet>
         + ledService() : HasOne<Service>
         + objectifs() : MorphMany<Objectif>
         + evaluations() : MorphMany<Evaluation>
+        .. Scopes ..
+        + {static} scopePersonnel(query) : Builder
+        ' Affecté à une structure
+        ' ET rôle ∉ NON_PERSONNEL_ROLES
     }
 }
+
+note right of Agent
+  **Règle "Personnel"** (scopePersonnel)
+  Un agent fait partie du personnel si :
+  1. Affecté à ≥ 1 structure (FK non null)
+  2. Rôle ∉ [PCA · Admin · RH]
+  Un agent non affecté n'est pas encore
+  visible dans les espaces RH / DGA.
+end note
 
 ' ═══════════════════════════════════════════════════════════════════
 '  PACKAGE : SERVICES APPLICATIFS
@@ -294,9 +347,14 @@ package "Objectifs" #fef9c3 {
     class Annee {
         + id : int <<PK>>
         + annee : int
+        + statut : enum[ouvert, clos]
         --
         + objectifs() : HasMany<Objectif>
         + evaluations() : HasMany<Evaluation>
+        + {static} currentOpen() : ?Annee
+        + {static} hasOpenYear() : bool
+        + {static} resolveIdForDate(date) : int
+        + {static} resolveOpenYearId(date) : int
     }
 
     class Objectif {
@@ -325,6 +383,7 @@ package "Objectifs" #fef9c3 {
         + statut : enum[en_attente, acceptee, refusee]
         --
         + assignable() : MorphTo
+        + annee() : BelongsTo<Annee>
         + periode() : BelongsTo<Annee>
         + objectifs() : HasMany<LigneFicheObjectif>
     }
@@ -371,6 +430,9 @@ package "Évaluations" #fce7f3 {
         + date_signature_directeur : date
         + date_signature_evaluateur : date
         + statut : enum[brouillon, soumis, valide, refuse]
+        + motif_refus : text
+        + reclamation : text
+        + statut_reclamation : string
         --
         + evaluable() : MorphTo
         + evaluateur() : BelongsTo<User>
@@ -466,9 +528,10 @@ package "Templates Critères Subjectifs" #ede9fe {
 ' ═══════════════════════════════════════════════════════════════════
 User "1" --o{ "0..*" User : "subordonnes directs\n(manager_id)"
 User "1" --> "0..1" Agent : "agent_id"
-User "0..*" }o--o{ "0..*" Alerte : "alerte_user\n(pivot)"
+User "0..*" }o--o{ "0..*" Alerte : "alerte_user\n(pivot: lu, lu_at)"
 User "1" --o{ "0..*" Activite : "user_id"
 User "1" --> "0..*" Alerte : "createur\n(created_by)"
+User "0..1" --> "0..*" AuditLog : "user_id"
 
 ' ═══════════════════════════════════════════════════════════════════
 '  RELATIONS — Structure organisationnelle
@@ -478,7 +541,7 @@ Entite "1" --o{ "0..*" DelegationTechnique : "entite_id"
 
 Direction "1" --o{ "0..*" Service : "direction_id"
 Direction "1" --o{ "0..*" Agent : "direction_id"
-Direction "1" --o{ "0..*" Caisse : "superviseur_direction_id"
+Direction "1" --o{ "0..*" Caisse : "direction_id"
 
 DelegationTechnique "1" --o{ "0..*" Caisse : "delegation_technique_id"
 DelegationTechnique "1" --o{ "0..*" Agence : "delegation_technique_id"
@@ -495,13 +558,14 @@ Agence "1" --o{ "0..*" Agent : "agence_id"
 
 Guichet "1" --o{ "0..*" Agent : "guichet_id"
 
-Agent "1" --o{ "0..*" User : "agent_id"
+Agent "1" --o| "0..1" User : "agent_id"
 
-' Postes de direction (agents nommés à la tête d'une entité)
-Agent "0..1" ..> "0..1" Direction : "directeur"
-Agent "0..1" ..> "0..1" DelegationTechnique : "directeur"
-Agent "0..1" ..> "0..1" Caisse : "directeur"
-Agent "0..1" ..> "0..1" Agence : "chef"
+' Postes de direction (agents nommés responsables d'une structure)
+Agent "0..1" ..> "0..1" Entite : "pca/dg/dga"
+Agent "0..1" ..> "0..1" Direction : "directeur / secrétaire"
+Agent "0..1" ..> "0..1" DelegationTechnique : "directeur / secrétaire"
+Agent "0..1" ..> "0..1" Caisse : "directeur / secrétaire"
+Agent "0..1" ..> "0..1" Agence : "chef / secrétaire"
 Agent "0..1" ..> "0..1" Guichet : "chef"
 Agent "0..1" ..> "0..1" Service : "chef"
 
@@ -514,17 +578,18 @@ Annee "1" --o{ "0..*" Evaluation : "annee_id"
 
 FicheObjectif "1" --o{ "0..*" LigneFicheObjectif : "fiche_objectif_id"
 
-' Polymorphisme assignable (Objectif et FicheObjectif)
-Entite "1" ..o{ "0..*" Objectif : "assignable\n(morph)"
-Direction "1" ..o{ "0..*" Objectif : "assignable\n(morph)"
-Service "1" ..o{ "0..*" Objectif : "assignable\n(morph)"
-Caisse "1" ..o{ "0..*" Objectif : "assignable\n(morph)"
-Agent "1" ..o{ "0..*" Objectif : "assignable\n(morph)"
+' Polymorphisme assignable (Objectif)
+Entite "1" ..o{ "0..*" Objectif : "assignable (morph)"
+Direction "1" ..o{ "0..*" Objectif : "assignable (morph)"
+Service "1" ..o{ "0..*" Objectif : "assignable (morph)"
+Caisse "1" ..o{ "0..*" Objectif : "assignable (morph)"
+Agent "1" ..o{ "0..*" Objectif : "assignable (morph)"
 
-User "1" ..o{ "0..*" FicheObjectif : "assignable\n(morph)"
-Direction "1" ..o{ "0..*" FicheObjectif : "assignable\n(morph)"
-Caisse "1" ..o{ "0..*" FicheObjectif : "assignable\n(morph)"
-DelegationTechnique "1" ..o{ "0..*" FicheObjectif : "assignable\n(morph)"
+' Polymorphisme assignable (FicheObjectif)
+User "1" ..o{ "0..*" FicheObjectif : "assignable (morph)"
+Direction "1" ..o{ "0..*" FicheObjectif : "assignable (morph)"
+Caisse "1" ..o{ "0..*" FicheObjectif : "assignable (morph)"
+DelegationTechnique "1" ..o{ "0..*" FicheObjectif : "assignable (morph)"
 
 ' ═══════════════════════════════════════════════════════════════════
 '  RELATIONS — Évaluations (polymorphiques)
@@ -535,13 +600,13 @@ Evaluation "1" --o| "0..1" EvaluationIdentification : "evaluation_id"
 Evaluation "1" --o{ "0..*" EvaluationCritere : "evaluation_id"
 EvaluationCritere "1" --o{ "0..*" EvaluationSousCritere : "evaluation_critere_id"
 
-' Polymorphisme évaluable
-User "1" ..o{ "0..*" Evaluation : "evaluable\n(morph)"
-Agent "1" ..o{ "0..*" Evaluation : "evaluable\n(morph)"
-Direction "1" ..o{ "0..*" Evaluation : "evaluable\n(morph)"
-Caisse "1" ..o{ "0..*" Evaluation : "evaluable\n(morph)"
+' Polymorphisme evaluable
+User "1" ..o{ "0..*" Evaluation : "evaluable (morph)"
+Agent "1" ..o{ "0..*" Evaluation : "evaluable (morph)"
+Direction "1" ..o{ "0..*" Evaluation : "evaluable (morph)"
+Caisse "1" ..o{ "0..*" Evaluation : "evaluable (morph)"
 
-' Lien critères objectifs → source fiche
+' Lien critères → source fiche / ligne
 EvaluationCritere "0..*" ..> "0..1" FicheObjectif : "source_fiche_objectif_id"
 EvaluationCritere "0..*" ..> "0..1" LigneFicheObjectif : "source_ligne_id"
 

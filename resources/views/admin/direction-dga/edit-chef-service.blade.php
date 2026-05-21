@@ -46,7 +46,7 @@
                     <option value="">— Sélectionner un agent —</option>
                     @foreach($candidats as $agent)
                         <option value="{{ $agent->id }}" @selected(old('chef_agent_id', $service->chef_agent_id) == $agent->id)>
-                            {{ $agent->nom }} {{ $agent->prenom }} — {{ $agent->fonction }}
+                            {{ $agent->nom }} {{ $agent->prenom }} — {{ $agent->role }}
                         </option>
                     @endforeach
                 </select>

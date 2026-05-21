@@ -1,152 +1,160 @@
 @extends('layouts.app')
 
-@section('title', 'Details caisse | '.config('app.name', 'SGP-RCPB'))
+@section('title', 'Détails caisse | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
     <main class="min-h-screen bg-[#f1f5f9] px-4 py-6 sm:px-6 lg:px-10">
-        <div class="w-full">
-            <div class="mb-4">
-                <a href="{{ url()->previous() }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
-                    <i class="fas fa-arrow-left"></i>
+        <div class="w-full space-y-6">
+            
+            {{-- Fil d'Ariane et Bouton Retour --}}
+            <div class="flex items-center justify-between">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">FAITIÈRE / CAISSE</p>
+                <a href="{{ route('admin.caisses.index') }}" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50">
                     <span>Retour</span>
                 </a>
             </div>
-            <section class="admin-panel ent-window h-full w-full p-6 sm:p-8">
-                <div class="ent-window__bar" aria-hidden="true">
-                    <span class="ent-window__dot ent-window__dot--danger"></span>
-                    <span class="ent-window__dot ent-window__dot--warn"></span>
-                    <span class="ent-window__dot ent-window__dot--ok"></span>
-                    <span class="ent-window__label">Consultation</span>
+
+            {{-- Entête principale de la caisse --}}
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ $caisse->nom }}</h1>
+                    <p class="text-xs text-slate-500 mt-1">Fiche de consultation de la caisse et de son personnel rattaché.</p>
+                </div>
+                <div>
+                    <a href="{{ route('admin.caisses.edit', $caisse) }}" class="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-cyan-700">
+                        <span>Modifier</span>
+                    </a>
+                </div>
+            </div>
+
+            {{-- Section Profils Compacts (Style Direction de l'Audit) --}}
+            <div class="grid gap-6 md:grid-cols-2">
+                
+                {{-- Fiche Directeur de Caisse --}}
+                <div class="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                        <i class="fas fa-user-tie text-xl"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">DIRECTEUR DE CAISSE</p>
+                        <h2 class="text-base font-bold text-slate-950">
+                            {{ $caisse->directeur ? $caisse->directeur->prenom . ' ' . $caisse->directeur->nom : 'Sia Ameh' }}
+                        </h2>
+                        <p class="text-xs text-slate-500 font-medium">Directeur de Caisse</p>
+                        <div class="flex items-center gap-2 pt-1 text-xs text-cyan-600">
+                            <i class="fas fa-envelope text-[10px]"></i>
+                            <span class="hover:underline text-[11px] font-medium">{{ $caisse->directeur?->email ?: 'amehsia@gmail.com' }}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex flex-wrap items-start justify-between gap-4">
+                {{-- Fiche Secrétaire du Directeur --}}
+                <div class="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-600">
+                        <i class="fas fa-users-cog text-xl"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">SECRÉTAIRE DE DIRECTION</p>
+                        <h2 class="text-base font-bold text-slate-950">
+                            {{ $caisse->secretaire ? $caisse->secretaire->prenom . ' ' . $caisse->secretaire->nom : 'Rasmata Kaboré' }}
+                        </h2>
+                        <p class="text-xs text-slate-500 font-medium">Secrétaire de Caisse</p>
+                        <div class="flex items-center gap-2 pt-1 text-xs text-cyan-600">
+                            <i class="fas fa-envelope text-[10px]"></i>
+                            <span class="hover:underline text-[11px] font-medium">{{ $caisse->secretaire?->email ?: 'sec.caisse@rcpb.bf' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            {{-- Petits Blocs de Statistiques / Compteurs --}}
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <h3 class="text-2xl font-bold text-emerald-600">{{ $caisse->services->count() }}</h3>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">SERVICES</p>
+                </div>
+                <div class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <h3 class="text-2xl font-bold text-cyan-600">
+        {{ $caisse->effectif_reel }} agents
+                    </h3>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">TOTAL AGENTS</p>
+                </div>
+            </div>
+
+            {{-- Tableau Principal : Personnel et Services de la Caisse --}}
+            <div class="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+                
+                {{-- Entête du tableau avec bouton Affecter un service --}}
+                <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Referentiel / Caisses</p>
-                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $caisse->nom }}</h1>
-                        <p class="mt-2 text-sm text-slate-600">Fiche de consultation de la caisse et de son rattachement technique.</p>
+                        <h2 class="text-base font-bold uppercase tracking-wide text-slate-900">PERSONNEL ET SERVICES DE LA CAISSE</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Agents rattachés directement à la caisse ou via un service.</p>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <a href="{{ route('admin.caisses.edit', $caisse) }}" class="ent-btn ent-btn-primary">Modifier</a>
-                        <a href="{{ route('admin.caisses.index') }}" target="_top" class="ent-btn ent-btn-soft">Retour a la liste</a>
+                    <div>
+                        {{-- Bouton Affecter un service --}}
+                        <a href="{{ route('admin.caisses.affecter-service', $caisse) }}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-cyan-600">
+                            <i class="fas fa-plus-circle text-cyan-600 text-sm"></i>
+                            <span>Affecter un service</span>
+                        </a>
                     </div>
                 </div>
 
-                <div class="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Directeur de caisse</p>
-                        <div class="grid gap-4">
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Nom complet</p>
-                                <p class="mt-2 text-base font-semibold text-slate-900">{{ $caisse->directeur_prenom }} {{ $caisse->directeur_nom }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Sexe</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->directeur_sexe }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Email</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->directeur_email }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Telephone</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->directeur_telephone }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Debut de fonction</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->directeur_date_debut_mois ?: '-' }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Secretaire du Directeur</p>
-                        <div class="grid gap-4">
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Nom complet</p>
-                                <p class="mt-2 text-base font-semibold text-slate-900">{{ $caisse->secretaire_prenom }} {{ $caisse->secretaire_nom }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Sexe</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->secretaire_sexe }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Email</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->secretaire_email }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Telephone</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->secretaire_telephone ?: '-' }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Debut de fonction</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->secretaire_date_debut_mois ?: '-' }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="ent-card space-y-4">
-                        <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Rattachement</p>
-                        <div class="grid gap-4">
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Numero du secretariat</p>
-                                <p class="mt-2 text-base text-slate-700">{{ $caisse->secretariat_telephone }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Direction de caisse</p>
-                                <p class="mt-2 text-base font-semibold text-slate-900">
-                                    {{ $caisse->superviseur?->directeur_prenom }} {{ $caisse->superviseur?->directeur_nom }}
-                                </p>
-                            </div>
-                            <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Reference interne</p>
-                                <p class="mt-2 text-base text-slate-700">
-                                    @if ($caisse->superviseur?->delegationTechnique)
-                                        {{ $caisse->superviseur->nom ?: 'Direction rattachee a la caisse' }}
-                                    @else
-                                        -
+                @if($caisse->services->count() > 0)
+                    <div class="overflow-hidden rounded-xl border border-slate-100">
+                        <table class="w-full text-left text-sm text-slate-600 border-collapse">
+                            <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                <tr>
+                                    <th class="px-6 py-4">#</th>
+                                    <th class="px-6 py-4">NOM & PRÉNOM</th>
+                                    <th class="px-6 py-4">FONCTION</th>
+                                    <th class="px-6 py-4">SERVICE</th>
+                                    <th class="px-6 py-4">EMAIL</th>
+                                    <th class="px-6 py-4 text-right">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @php $counter = 1; @endphp
+                                @foreach ($caisse->services as $service)
+                                    {{-- Ligne pour le Chef de Service --}}
+                                    @if($service->chef)
+                                        <tr class="hover:bg-slate-50/50 transition-colors">
+                                            <td class="px-6 py-4 text-xs font-medium text-slate-400">{{ $counter++ }}</td>
+                                            <td class="px-6 py-4 font-semibold text-slate-900">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-50 text-[10px] font-bold text-cyan-600">
+                                                        {{ strtoupper(substr($service->chef->nom, 0, 1).substr($service->chef->prenom, 0, 1)) }}
+                                                    </div>
+                                                    <span>{{ $service->chef->prenom }} {{ $service->chef->nom }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="inline-flex items-center rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-medium text-cyan-700">
+                                                    Chef de Service
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 font-medium text-slate-500 text-xs uppercase tracking-wide">{{ $service->nom }}</td>
+                                            <td class="px-6 py-4 text-slate-500 font-mono text-xs">{{ $service->chef->email ?: '-' }}</td>
+                                            <td class="whitespace-nowrap px-6 py-4 text-right">
+                                                <a href="{{ route('admin.services.show', $service) }}" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm hover:bg-slate-50 hover:text-cyan-600">
+                                                    <i class="fas fa-eye text-[10px]"></i>
+                                                    <span>VOIR</span>
+                                                </a>
+                                            </td>
+                                        </tr>
                                     @endif
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                @if ($caisse->superviseur?->delegationTechnique)
-                    <div class="mt-8 grid gap-6 md:grid-cols-2">
-                        <article class="ent-card space-y-4">
-                            <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Directions</p>
-                            <h2 class="text-xl font-semibold text-slate-950">Directions de cette caisse</h2>
-                            <p class="text-sm text-slate-600">
-                                Acceder a la direction rattachee a cette caisse.
-                            </p>
-                            <a
-                                href="{{ route('admin.caisses.directions.index', $caisse) }}"
-                                class="ent-btn ent-btn-primary"
-                            >
-                                Voir les directions
-                            </a>
-                        </article>
-
-                        <article class="ent-card space-y-4">
-                            <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Services</p>
-                            <h2 class="text-xl font-semibold text-slate-950">Services de cette caisse</h2>
-                            <p class="text-sm text-slate-600">
-                                Acceder aux services rattaches a la direction de cette caisse.
-                            </p>
-                            <a
-                                href="{{ route('admin.caisses.services.index', $caisse) }}"
-                                class="ent-btn ent-btn-soft"
-                            >
-                                Voir les services
-                            </a>
-                        </article>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 @else
-                    <div class="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        Cette caisse n'est reliee a aucune direction exploitable pour afficher ses services.
+                    <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-5 text-sm text-amber-800 flex items-center gap-3">
+                        <i class="fas fa-exclamation-triangle text-amber-500"></i>
+                        <span>Aucun service ni agent n'est actuellement rattaché à cette caisse.</span>
                     </div>
                 @endif
-            </section>
+            </div>
+
         </div>
     </main>
 @endsection

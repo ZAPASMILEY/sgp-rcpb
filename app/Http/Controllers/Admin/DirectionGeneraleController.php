@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Direction;
 use App\Models\Entite;
+use App\Models\Poste;
 use App\Models\User;
+use App\Services\AgentAccountService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
@@ -13,6 +15,8 @@ use Illuminate\Validation\Rule;
 
 class DirectionGeneraleController extends Controller
 {
+    public function __construct(private AgentAccountService $accounts) {}
+
     public function index(): View
     {
         $entite = Entite::latest()->first();
@@ -25,10 +29,9 @@ class DirectionGeneraleController extends Controller
         $conseillers = collect();
 
         if ($entite) {
-            // DG, DGA, Assistante : retrouvés via les FK inverses sur entites
+            // DG et Assistante uniquement (DGA a sa propre Direction Générale Adjointe)
             $agentIds = array_values(array_filter([
                 $entite->dg_agent_id,
-                $entite->dga_agent_id,
                 $entite->assistante_agent_id,
             ]));
             $membres = $agentIds
@@ -74,10 +77,10 @@ class DirectionGeneraleController extends Controller
         }
 
         return view('admin.direction-generale.create', [
-            'entite'      => $entite,
-            'dg_agents'   => \App\Models\Agent::query()->where('fonction', 'Directeur Général')->orderBy('nom')->get(),
-            'dga_agents'  => \App\Models\Agent::query()->where('fonction', 'DGA')->orderBy('nom')->get(),
-            'assistantes' => \App\Models\Agent::query()->where('fonction', 'Assistante DG')->orderBy('nom')->get(),
+            'entite'         => $entite,
+            'dejaConfiguree' => $dejaConfiguree,
+            'dg_agents'      => \App\Models\Agent::query()->where('role', 'Directeur Général')->orderBy('nom')->get(),
+            'assistantes'    => \App\Models\Agent::query()->where('role', 'Assistante DG')->orderBy('nom')->get(),
         ]);
     }
 
@@ -102,7 +105,6 @@ class DirectionGeneraleController extends Controller
 
         $validated = $request->validate([
             'dg_agent_id'         => ['nullable', 'integer', 'exists:agents,id'],
-            'dga_agent_id'        => ['nullable', 'integer', 'exists:agents,id'],
             'assistante_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ]);
 
@@ -113,6 +115,13 @@ class DirectionGeneraleController extends Controller
             'nom'                => 'Direction Générale',
             'directeur_agent_id' => $validated['dg_agent_id'] ?? null,
         ]);
+
+        if (!empty($validated['dg_agent_id'])) {
+            \App\Models\Agent::findOrFail($validated['dg_agent_id'])->update(['poste' => 'Directeur Général']);
+        }
+        if (!empty($validated['assistante_agent_id'])) {
+            \App\Models\Agent::findOrFail($validated['assistante_agent_id'])->update(['poste' => 'Assistante du Directeur Général']);
+        }
 
         return redirect()
             ->route('admin.direction-generale.index')
@@ -223,7 +232,7 @@ class DirectionGeneraleController extends Controller
         }
 
         $agents = \App\Models\Agent::query()
-            ->where('fonction', 'Secrétaire Assistante')
+            ->where('role', 'Secrétaire Assistante')
             ->with('user')
             ->orderBy('nom')->orderBy('prenom')
             ->get();
@@ -245,17 +254,10 @@ class DirectionGeneraleController extends Controller
             'agent_id.exists'   => 'Agent introuvable.',
         ]);
 
-        $agent = \App\Models\Agent::with('user')->findOrFail($validated['agent_id']);
-
-        if (! $agent->user) {
-            return redirect()->back()->withErrors([
-                'agent_id' => "Cet agent n'a pas encore de compte utilisateur. Créez-le d'abord dans la section Comptes.",
-            ])->withInput();
-        }
-
+        $agent = \App\Models\Agent::findOrFail($validated['agent_id']);
         $agent->entite_id = $entite->id;
         $agent->save();
-        $agent->user->update(['role' => 'Secretaire_Assistante']);
+        $this->accounts->ensureAccount($agent->fresh());
 
         return redirect()
             ->route('admin.direction-generale.index')
@@ -280,12 +282,15 @@ class DirectionGeneraleController extends Controller
         }
 
         $agents = \App\Models\Agent::query()
-            ->where('fonction', 'Conseiller DG')
+            ->where('role', 'Conseiller DG')
+            ->whereNull('entite_id')
             ->with('user')
             ->orderBy('nom')->orderBy('prenom')
             ->get();
 
-        return view('admin.direction-generale.create-conseiller', compact('entite', 'agents'));
+        $postes = Poste::where('fonction', 'Conseiller DG')->orderBy('libelle')->pluck('libelle');
+
+        return view('admin.direction-generale.create-conseiller', compact('entite', 'agents', 'postes'));
     }
 
     public function storeConseiller(Request $request): RedirectResponse
@@ -297,22 +302,27 @@ class DirectionGeneraleController extends Controller
 
         $validated = $request->validate([
             'agent_id' => ['required', 'integer', 'exists:agents,id'],
+            'poste'    => ['required', 'string', 'max:150'],
         ], [
             'agent_id.required' => 'Veuillez sélectionner un agent.',
             'agent_id.exists'   => 'Agent introuvable.',
+            'poste.required'    => 'La fonction occupée est obligatoire.',
         ]);
 
-        $agent = \App\Models\Agent::with('user')->findOrFail($validated['agent_id']);
+        $agent = \App\Models\Agent::findOrFail($validated['agent_id']);
+        $agent->entite_id = $entite->id;
+        $agent->poste     = $validated['poste'];
 
-        if (! $agent->user) {
-            return redirect()->back()->withErrors([
-                'agent_id' => "Cet agent n'a pas encore de compte utilisateur. Créez-le d'abord dans la section Comptes.",
-            ])->withInput();
+        // Rattacher à la Direction Générale pour les statistiques
+        $dirGen = \App\Models\Direction::where('entite_id', $entite->id)
+            ->whereRaw('LOWER(nom) LIKE ?', ['%direction g%n%rale%'])
+            ->first();
+        if ($dirGen) {
+            $agent->direction_id = $dirGen->id;
         }
 
-        $agent->entite_id = $entite->id;
         $agent->save();
-        $agent->user->update(['role' => 'Conseillers_Dg']);
+        $this->accounts->ensureAccount($agent->fresh());
 
         return redirect()
             ->route('admin.direction-generale.index')

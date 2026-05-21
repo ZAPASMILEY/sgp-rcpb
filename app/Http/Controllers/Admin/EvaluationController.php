@@ -97,11 +97,19 @@ class EvaluationController extends Controller
             isset($validated['note_manuelle']) ? (int) $validated['note_manuelle'] : null,
         );
 
+        try {
+            $anneeId    = Annee::resolveOpenYearId($validated['date_debut']);
+            $semestreId = Annee::resolveOpenSemestreId($validated['date_debut']);
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
         $evaluation = Evaluation::create([
             'evaluable_type' => $evaluableClass,
             'evaluable_id' => $evaluableId,
             'evaluable_role' => $evaluableRole,
-            'annee_id' => Annee::resolveIdForDate($validated['date_debut']),
+            'annee_id' => $anneeId,
+            'semestre_id' => $semestreId,
             'evaluateur_id' => $request->user()->id,
             'date_debut' => $validated['date_debut'],
             'date_fin' => $validated['date_fin'],

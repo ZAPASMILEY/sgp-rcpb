@@ -66,11 +66,40 @@
             @endforeach
         </div>
 
+        {{-- Filtres sexe + fonction --}}
+        <form method="GET" action="{{ route('chef.equipe') }}" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm border border-slate-100">
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Sexe</label>
+                <select name="sexe" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300">
+                    <option value="">Tous</option>
+                    <option value="homme" @selected($sexe === 'homme')>Homme</option>
+                    <option value="femme" @selected($sexe === 'femme')>Femme</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Fonction</label>
+                <select name="fonction" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300 max-w-xs">
+                    <option value="">Toutes</option>
+                    @foreach ($fonctions as $key => $label)
+                        <option value="{{ $key }}" @selected($fonction === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @if ($sexe || $fonction)
+                <a href="{{ route('chef.equipe') }}" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50">
+                    <i class="fas fa-times"></i> Réinitialiser
+                </a>
+            @endif
+        </form>
+
         {{-- Liste des agents --}}
         <div class="admin-panel overflow-hidden">
             <div class="border-b border-slate-100 px-6 py-4 lg:px-8">
                 <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
                     Agents de {{ $ctx->getTypeLabel() }} {{ $ctx->getNom() }}
+                    @if ($sexe || $fonction)
+                        <span class="ml-2 text-blue-500">· filtrés</span>
+                    @endif
                 </p>
             </div>
 
@@ -134,8 +163,8 @@
                                     <p class="font-black text-slate-900 text-base">
                                         {{ trim($ag->prenom . ' ' . $ag->nom) }}
                                     </p>
-                                    @if ($ag->fonction)
-                                        <span class="text-xs text-slate-400">· {{ $ag->fonction }}</span>
+                                    @if ($ag->role)
+                                        <span class="text-xs text-slate-400">· {{ $ag->role }}</span>
                                     @endif
                                 </div>
                                 <div class="mt-1 flex flex-wrap items-center gap-2">

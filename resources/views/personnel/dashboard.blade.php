@@ -6,7 +6,7 @@
 <div class="min-h-screen bg-[#f1f5f9] pb-12">
 
     {{-- ══════════════════════════ HERO ══════════════════════════════════════ --}}
-    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+    <div class="relative overflow-hidden px-6 py-8 lg:px-10" style="background:linear-gradient(135deg,#003d20 0%,#005c30 50%,#008751 100%)">
         <div class="pointer-events-none absolute inset-0 opacity-10">
             <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/30 blur-3xl"></div>
             <div class="absolute -bottom-16 left-10 h-48 w-48 rounded-full bg-teal-300/40 blur-2xl"></div>
@@ -18,7 +18,7 @@
                     {{ strtoupper(substr($user->name, 0, 1)) }}
                 </div>
                 <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">
+                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-white/70">
                         @if ($agent?->service)
                             {{ $agent->service->nom }} · Personnel
                         @elseif ($agent?->agence)
@@ -28,15 +28,15 @@
                         @endif
                     </p>
                     <h1 class="mt-0.5 text-2xl font-black tracking-tight text-white">{{ $user->name }}</h1>
-                    <p class="mt-1 text-sm text-emerald-100/80">
-                        {{ $agent?->fonction ?? $user->role }} · Synthèse du {{ now()->translatedFormat('d F Y') }}
+                    <p class="mt-1 text-sm text-white/60">
+                        {{ $agent?->role ?? $user->role }} · Synthèse du {{ now()->translatedFormat('d F Y') }}
                     </p>
                 </div>
             </div>
 
             {{-- Sélecteur d'année --}}
             <div class="flex shrink-0 items-center gap-3">
-                <span class="text-[11px] font-black uppercase tracking-widest text-emerald-200">Année</span>
+                <span class="text-[11px] font-black uppercase tracking-widest text-white/70">Année</span>
                 <form method="GET" action="{{ route('personnel.dashboard') }}" id="year-form">
                     <select name="annee" onchange="document.getElementById('year-form').submit()"
                             class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none transition hover:bg-white/20">
@@ -65,7 +65,7 @@
                     <i class="{{ $m['icon'] }}"></i>
                 </span>
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{{ $m['label'] }}</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-white/70">{{ $m['label'] }}</p>
                     <p class="text-lg font-black text-white">{{ $m['value'] }}</p>
                 </div>
             </div>
@@ -116,10 +116,10 @@
                         <p class="mt-1 font-semibold">{{ trim($agent->prenom.' '.$agent->nom) }}</p>
                     </div>
                 @endif
-                @if ($agent->fonction)
+                @if ($agent->role)
                     <div>
-                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Fonction</p>
-                        <p class="mt-1 font-semibold">{{ $agent->fonction }}</p>
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Rôle</p>
+                        <p class="mt-1 font-semibold">{{ $agent->role }}</p>
                     </div>
                 @endif
                 @if ($agent->service)
@@ -165,12 +165,16 @@
                     @foreach ($evaluationsRecentes as $eval)
                         @php
                             $statClass = match ($eval->statut) {
-                                'valide' => 'bg-emerald-100 text-emerald-700',
-                                'soumis' => 'bg-amber-100 text-amber-700',
-                                default  => 'bg-slate-100 text-slate-600',
+                                'valide'  => 'bg-emerald-100 text-emerald-700',
+                                'soumis'  => 'bg-amber-100 text-amber-700',
+                                'refuse'  => 'bg-rose-100 text-rose-700',
+                                default   => 'bg-slate-100 text-slate-600',
                             };
                             $statLabel = match ($eval->statut) {
-                                'valide' => 'Validée', 'soumis' => 'Soumise', default => 'Brouillon',
+                                'valide'  => 'Validée',
+                                'soumis'  => 'Soumise',
+                                'refuse'  => 'Refusée',
+                                default   => 'Brouillon',
                             };
                             $note = $eval->note_finale !== null ? number_format((float)$eval->note_finale, 2, ',', ' ').'/10' : null;
                         @endphp

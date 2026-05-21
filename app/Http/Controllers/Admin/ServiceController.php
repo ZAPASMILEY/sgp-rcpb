@@ -7,7 +7,9 @@ use App\Models\Agent;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
+use App\Models\Poste;
 use App\Models\Service;
+use App\Services\AgentAccountService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +17,8 @@ use Illuminate\Validation\Rule;
 
 class ServiceController extends Controller
 {
+    public function __construct(private AgentAccountService $accounts) {}
+
     /**
      * Liste des services d'une caisse
      */
@@ -116,7 +120,8 @@ class ServiceController extends Controller
     public function show(Service $service): View
     {
         return view('admin.services.show', [
-            'service' => $service->load(['direction.entite', 'chef']),
+            'service' => $service->load(['direction.entite', 'chef', 'agents']),
+            'postes'  => Poste::where('fonction', 'Agent')->orderBy('libelle')->pluck('libelle'),
         ]);
     }
 
@@ -135,14 +140,18 @@ class ServiceController extends Controller
             'delegations'        => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
             'caisses'            => Caisse::query()->with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
             'directions'         => Direction::query()->where('nom', '!=', 'Direction Générale')->with('entite')->orderBy('nom')->get(['id', 'nom', 'entite_id']),
-            'chefs'              => Agent::query()->where('fonction', 'Chef de Service')->orderBy('nom')->orderBy('prenom')->get(),
+            'chefs'              => Agent::query()->where('role', 'Chef de Service')->orderBy('nom')->orderBy('prenom')->get(),
         ];
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateService($request);
-        Service::query()->create($validated);
+        $service = Service::query()->create($validated);
+
+        if (!empty($validated['chef_agent_id'])) {
+            Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => 'Chef du Service ' . $service->nom]);
+        }
 
         return redirect()
             ->route('admin.services.index')
@@ -154,10 +163,58 @@ class ServiceController extends Controller
         $validated = $this->validateService($request, $service);
         $service->update($validated);
 
+        if (!empty($validated['chef_agent_id'])) {
+            Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => 'Chef du Service ' . $service->nom]);
+        }
+
         return redirect()
             ->route('admin.services.show', $service)
             ->with('status', 'Service mis a jour avec succes.');
     }
+    public function attachAgent(Request $request, Service $service): RedirectResponse
+    {
+        $request->validate([
+            'agent_id' => 'required|exists:agents,id',
+            'poste'    => 'required|string|max:150',
+        ], [
+            'poste.required' => 'La fonction occupée est obligatoire.',
+        ]);
+
+        $agent = Agent::findOrFail($request->agent_id);
+
+        if ($agent->service_id !== null) {
+            return redirect()->back()->with('error', "Cet agent est déjà affecté à un autre service.");
+        }
+
+        $agent->update([
+            'service_id'              => $service->id,
+            'direction_id'            => $service->direction_id,
+            'caisse_id'               => $service->caisse_id,
+            'delegation_technique_id' => $service->delegation_technique_id,
+            'poste'                   => $request->input('poste') ?: null,
+        ]);
+        $this->accounts->ensureAccount($agent->fresh());
+
+        return redirect()->back()->with('status', "L'agent {$agent->nom} a été affecté avec succès.");
+    }
+public function affecterCaisse(Request $request)
+{
+    $request->validate([
+        'service_id' => 'required|exists:services,id',
+        'caisse_id'  => 'required|exists:caisses,id',
+    ]);
+
+    // On récupère le service sélectionné
+    $service = Service::findOrFail($request->service_id);
+    
+    // On lui attribue directement l'ID de la caisse
+    $service->caisse_id = $request->caisse_id;
+    $service->save();
+
+    // On redirige vers la page des services de cette caisse avec un message de succès
+    return redirect()->route('admin.caisses.affecter-service', $request->caisse_id)
+                     ->with('success', 'Le service a bien été rattaché à la caisse.');
+}
 
     public function destroy(Service $service): RedirectResponse
     {
@@ -217,5 +274,6 @@ class ServiceController extends Controller
         }
 
         return $validated;
+                
     }
 }

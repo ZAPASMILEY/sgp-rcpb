@@ -20,7 +20,7 @@ class AgentFactory extends Factory
             'service_id' => Service::factory(),
             'nom' => $this->faker->lastName(),
             'prenom' => $this->faker->firstName(),
-            'fonction' => 'Charge de suivi',
+            'role' => 'Charge de suivi',
             'numero_telephone' => $this->faker->phoneNumber(),
             'email' => $this->faker->unique()->safeEmail(),
             'photo_path' => null,

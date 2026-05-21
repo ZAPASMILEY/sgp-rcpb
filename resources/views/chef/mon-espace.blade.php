@@ -282,7 +282,7 @@
                             <thead class="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
                                 <tr>
                                     <th class="px-4 py-3 text-left">Agent</th>
-                                    <th class="px-4 py-3 text-left">Fonction</th>
+                                    <th class="px-4 py-3 text-left">Rôle</th>
                                     <th class="px-4 py-3 text-left">Dernière évaluation</th>
                                     <th class="px-4 py-3 text-left">Statut</th>
                                     <th class="px-4 py-3 text-left">Actions</th>
@@ -316,7 +316,7 @@
                                             {{ trim($ag->prenom . ' ' . $ag->nom) }}
                                         </td>
                                         <td class="px-4 py-3 text-slate-500">
-                                            {{ $ag->fonction ?? '—' }}
+                                            {{ $ag->role ?? '—' }}
                                         </td>
                                         <td class="px-4 py-3">
                                             @if ($eval)

@@ -148,8 +148,8 @@
                                     <span class="h-2 w-2 rounded-full bg-amber-500"></span>
                                     <div>
                                         <span class="text-sm font-semibold text-slate-700">{{ trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) ?: 'Agent' }}</span>
-                                        @if ($agent->fonction)
-                                            <p class="text-xs text-slate-400">{{ $agent->fonction }}</p>
+                                        @if ($agent->role)
+                                            <p class="text-xs text-slate-400">{{ $agent->role }}</p>
                                         @endif
                                     </div>
                                 </div>

@@ -4,116 +4,104 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\Poste;
+use App\Services\AgentAccountService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\In;
 
 class AgentController extends Controller
 {
-    public function index(Request $request): View
-    {
-        $fonction    = (string) $request->query('fonction', '');
-        $search      = trim((string) $request->query('search', ''));
-        $affectation = (string) $request->query('affectation', ''); // 'affecte' | 'non_affecte' | ''
+    public function __construct(private AgentAccountService $accounts) {}
 
-        // FK directes (agent membre d'une structure)
-        $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id', 'agence_id', 'guichet_id', 'service_id'];
-        // FK inverses (agent EST le responsable d'une structure)
-        $inverseRelations = [
-            'directedDirection', 'secretariedDirection',
-            'directedDelegation', 'secretariedDelegation',
-            'directedCaisse', 'secretariedCaisse',
-            'ledAgence', 'secretariedAgence',
-            'ledGuichet', 'ledService',
-        ];
+   public function index(Request $request): View
+{
+    // 1. Récupération des filtres depuis la requête
+    $role = $request->input('role'); 
+    $search = $request->input('search');
+    $affectation = $request->input('affectation');
 
-        $scopeAffecte = function ($q) use ($directFks, $inverseRelations): void {
-            $q->where(function ($sub) use ($directFks, $inverseRelations): void {
-                foreach ($directFks as $col) {
-                    $sub->orWhereNotNull($col);
-                }
-                foreach ($inverseRelations as $rel) {
-                    $sub->orWhereHas($rel);
-                }
-            });
-        };
+    // 2. Construction de la requête pour récupérer les agents (La variable manquante !)
+    $query = Agent::query()->orderBy('nom', 'asc')->orderBy('prenom', 'asc');
 
-        $agents = Agent::query()
-            ->with([
-                'user',
-                // FK directes
-                'entite', 'direction', 'delegationTechnique', 'caisse', 'agence', 'guichet', 'service',
-                // FK inverses — postes de responsabilité
-                'directedDirection', 'secretariedDirection',
-                'directedDelegation', 'secretariedDelegation',
-                'directedCaisse', 'secretariedCaisse',
-                'ledAgence', 'ledGuichet', 'ledService',
-            ])
-            ->when($fonction !== '', fn ($q) => $q->where('fonction', $fonction))
-            ->when($search !== '', function ($q) use ($search): void {
-                $q->where(function ($sub) use ($search): void {
-                    $sub->where('nom',    'like', "%{$search}%")
-                        ->orWhere('prenom',  'like', "%{$search}%")
-                        ->orWhere('email',   'like', "%{$search}%")
-                        ->orWhere('fonction','like', "%{$search}%");
-                });
-            })
-            ->when($affectation === 'affecte', $scopeAffecte)
-            ->when($affectation === 'non_affecte', function ($q) use ($directFks, $inverseRelations): void {
-                foreach ($directFks as $col) {
-                    $q->whereNull($col);
-                }
-                foreach ($inverseRelations as $rel) {
-                    $q->whereDoesntHave($rel);
-                }
-            })
-            ->orderBy('nom')
-            ->orderBy('prenom')
-            ->get();
-
-        // Compteur par fonction pour les badges du filtre
-        $countsByFonction = Agent::query()
-            ->selectRaw('fonction, count(*) as total')
-            ->groupBy('fonction')
-            ->pluck('total', 'fonction');
-
-        // Compteurs affectation (FK directes + FK inverses)
-        $totalAffectes = Agent::query()->where(function ($q) use ($directFks, $inverseRelations): void {
-            foreach ($directFks as $col) {
-                $q->orWhereNotNull($col);
-            }
-            foreach ($inverseRelations as $rel) {
-                $q->orWhereHas($rel);
-            }
-        })->count();
-
-        return view('admin.agents.index', [
-            'agents'           => $agents,
-            'fonctionActive'   => $fonction,
-            'affectation'      => $affectation,
-            'search'           => $search,
-            'fonctions'        => Agent::FONCTIONS,
-            'countsByFonction' => $countsByFonction,
-            'totalAgents'      => Agent::count(),
-            'totalAffectes'    => $totalAffectes,
-        ]);
+    // Filtrage par rôle si sélectionné
+    if ($role) {
+        $query->where('role', $role);
     }
 
+    // Filtrage par recherche (Nom / Prénom)
+    if ($search) {
+        $query->where(function ($q) use ($search) {
+            $q->where('nom', 'like', "%{$search}%")
+              ->orWhere('prenom', 'like', "%{$search}%");
+        });
+    }
+
+    // Exécution de la requête pour alimenter la variable $agents
+    $agents = $query->get(); 
+
+    // 3. Calcul des statistiques pour les badges et filtres
+    $countsByRole = Agent::query()
+        ->selectRaw('role, count(*) as total')
+        ->groupBy('role')
+        ->pluck('total', 'role');
+
+    // Liste des colonnes de clés étrangères pour les affectations directes
+    // Dans AgentController@index :
+$directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id', 'agence_id', 'guichet_id', 'service_id'];
+    // Liste des relations inverses (si tu as défini des relations dans ton modèle Agent)
+    $inverseRelations = ['pcaEntite', 'assistanteEntite', 'directeurDirection', 'secretaireDirection', 'directeurDelegation'];
+
+    $totalAffectes = Agent::query()->where(function ($q) use ($directFks, $inverseRelations): void {
+        foreach ($directFks as $col) {
+            $q->orWhereNotNull($col);
+        }
+        foreach ($inverseRelations as $rel) {
+            if (method_exists(Agent::class, $rel)) {
+                $q->orWhereHas($rel);
+            }
+        }
+    })->count();
+
+    // 4. Envoi complet à la vue (Tout est défini !)
+    return view('admin.agents.index', [
+        'agents'        => $agents,
+        'roleActive'    => $role, 
+        'affectation'   => $affectation,
+        'search'        => $search,
+        'roles'         => Agent::ROLES,
+        'countsByRole'  => $countsByRole,
+        'totalAgents'   => Agent::count(),
+        'totalAffectes' => $totalAffectes,
+    ]);
+}
     public function create(): View
     {
         return view('admin.agents.create', $this->formData());
     }
 
     public function show(Agent $agent): View
-    {
-        return view('admin.agents.show', [
-            'agent' => $agent->load(['service.direction.entite', 'service.delegationTechnique', 'service.caisse', 'delegationTechnique', 'caisse', 'agence', 'guichet', 'user']),
-        ]);
-    }
+{
+    return view('admin.agents.show', [
+        'agent' => $agent->load([
+            'entite', 
+            'direction', 
+            'service.direction.entite', 
+            'service.delegationTechnique', 
+            'service.caisse', 
+            'delegationTechnique', 
+            'caisse', 
+            'agence', 
+            'guichet', 
+            'user'
+        ]),
+    ]);
+}
 
     public function edit(Agent $agent): View
     {
@@ -128,11 +116,14 @@ class AgentController extends Controller
         $validated = $this->validateAgent($request);
         $validated['photo_path'] = $this->storeSelectedPhoto($request);
 
-        Agent::query()->create($validated);
+        DB::transaction(function () use ($validated): void {
+            $agent = Agent::query()->create($validated);
+            $this->accounts->ensureAccount($agent);
+        });
 
         return redirect()
             ->route('admin.agents.index')
-            ->with('status', 'Agent cree avec succes.');
+            ->with('status', 'Agent créé avec succès. Compte de connexion généré (mot de passe : 11111111).');
     }
 
     public function update(Request $request, Agent $agent): RedirectResponse
@@ -148,11 +139,14 @@ class AgentController extends Controller
             $validated['photo_path'] = null;
         }
 
-        $agent->update($validated);
+        DB::transaction(function () use ($agent, $validated): void {
+            $agent->update($validated);
+            $this->accounts->ensureAccount($agent->fresh());
+        });
 
         return redirect()
             ->route('admin.agents.show', $agent)
-            ->with('status', 'Agent mis a jour avec succes.');
+            ->with('status', 'Agent mis à jour avec succès.');
     }
 
     public function destroy(Request $request, Agent $agent): RedirectResponse
@@ -172,6 +166,47 @@ class AgentController extends Controller
             ->with('status', 'Agent supprime avec succes.');
     }
 
+    /**
+     * Crée (ou réactive) le compte de connexion d'un agent existant.
+     * Mot de passe par défaut : 11111111.
+     */
+    public function activateAccount(Agent $agent): RedirectResponse
+    {
+        $this->accounts->ensureAccount($agent);
+
+        return redirect()
+            ->back()
+            ->with('status', "Compte de {$agent->prenom} {$agent->nom} activé (mot de passe : 11111111).");
+    }
+
+    /**
+     * Crée les comptes manquants pour tous les agents qui n'en ont pas.
+     * Utilise une requête DB directe pour éviter les faux positifs liés aux scopes Eloquent.
+     */
+    public function syncAllAccounts(): RedirectResponse
+    {
+        // Requête directe sans scope pour trouver les agents sans aucun user (actif ou non)
+        $agentsIds = DB::table('agents')
+            ->whereNotIn('id', DB::table('users')->whereNotNull('agent_id')->pluck('agent_id'))
+            ->pluck('id');
+
+        $agents = Agent::whereIn('id', $agentsIds)->get();
+        $count  = 0;
+
+        foreach ($agents as $agent) {
+            $this->accounts->ensureAccount($agent);
+            $count++;
+        }
+
+        $message = $count > 0
+            ? "{$count} compte(s) créé(s) avec succès. Mot de passe par défaut : 11111111."
+            : 'Tous les agents ont déjà un compte.';
+
+        return redirect()
+            ->route('admin.agents.index')
+            ->with('status', $message);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
@@ -179,7 +214,9 @@ class AgentController extends Controller
      */
     private function formData(): array
     {
-        return [];
+        return [
+            'postesByFonction' => Poste::byFonction(),
+        ];
     }
 
     /**
@@ -194,11 +231,18 @@ class AgentController extends Controller
             $emailRule[] = Rule::unique('agents', 'email')->ignore($agent->id);
         }
 
+        $matriculeRule = ['required', 'string', 'max:50'];
+        if ($agent === null) {
+            $matriculeRule[] = Rule::unique('agents', 'matricule');
+        } else {
+            $matriculeRule[] = Rule::unique('agents', 'matricule')->ignore($agent->id);
+        }
+
         return $request->validate([
             // Données personnelles
             'nom'              => ['required', 'string', 'max:100'],
             'prenom'           => ['required', 'string', 'max:100'],
-            'sexe'             => ['nullable', 'in:homme,femme'],
+            'sexe'             => ['required', 'in:homme,femme'],
             'email'            => $emailRule,
             'numero_telephone' => [
                 'required',
@@ -213,8 +257,13 @@ class AgentController extends Controller
             'remove_photo'     => ['nullable', 'boolean'],
 
             // Données professionnelles
-            'fonction'            => ['required', 'string', Rule::in(array_keys(Agent::FONCTIONS))],
-            'date_debut_fonction' => ['nullable', 'date'],
+            'matricule'           => $matriculeRule,
+            'role'                => ['required', 'string', Rule::in(array_keys(Agent::ROLES))],
+            'poste'               => [
+                Rule::requiredIf(in_array($request->input('role'), ['Agent', 'Conseiller DG'], true)),
+                'nullable', 'string', 'max:150',
+            ],
+            'date_debut_fonction' => ['required', 'date'],
         ], [
             'nom.required'              => 'Le nom est obligatoire.',
             'prenom.required'           => 'Le prénom est obligatoire.',
@@ -222,8 +271,15 @@ class AgentController extends Controller
             'email.email'               => "L'email n'est pas valide.",
             'email.unique'              => 'Cet email est déjà utilisé par un autre agent.',
             'numero_telephone.unique'   => 'Ce numéro de téléphone est déjà utilisé par un autre agent.',
-            'fonction.required'         => 'La fonction est obligatoire.',
-            'fonction.in'               => 'La fonction sélectionnée est invalide.',
+            'sexe.required'             => 'Le sexe est obligatoire.',
+            'sexe.in'                   => 'Le sexe doit être "homme" ou "femme".',
+            'matricule.required'        => 'Le matricule est obligatoire.',
+            'matricule.unique'          => 'Ce matricule est déjà utilisé par un autre agent.',
+            'role.required'              => 'Le rôle est obligatoire.',
+            'role.in'                    => 'Le rôle sélectionné est invalide.',
+            'poste.required'             => 'La fonction est obligatoire pour ce rôle.',
+            'date_debut_fonction.required' => 'La date de prise de fonction est obligatoire.',
+            'date_debut_fonction.date'     => 'La date de prise de fonction est invalide.',
             'photo_import.image'        => 'Le fichier doit être une image.',
             'photo_import.max'          => 'La photo ne doit pas dépasser 3 Mo.',
             'photo_camera.image'        => 'Le fichier doit être une image.',
@@ -263,4 +319,5 @@ class AgentController extends Controller
             Storage::disk('public')->delete($path);
         }
     }
+
 }

@@ -50,7 +50,7 @@
                                 <th>Nom</th>
                                 <th>Prenom</th>
                                 <th>Sexe</th>
-                                <th>Fonction</th>
+                                <th>Rôle</th>
                                 <th>Debut fonction</th>
                                 <th>Numero</th>
                                 <th>Email</th>
@@ -64,7 +64,7 @@
                                     <td>{{ $agent->nom }}</td>
                                     <td>{{ $agent->prenom }}</td>
                                     <td>{{ ucfirst($agent->sexe ?? '-') }}</td>
-                                    <td>{{ $agent->fonction }}</td>
+                                    <td>{{ $agent->role }}</td>
                                     <td>{{ optional($agent->date_debut_fonction)->format('d/m/Y') ?: '-' }}</td>
                                     <td>{{ $agent->numero_telephone }}</td>
                                     <td>{{ $agent->email }}</td>

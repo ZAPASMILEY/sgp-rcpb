@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGP-RCPB — Système d'Évaluation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #fff;
+    color: #1e293b;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ── PAGE ── */
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 50px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, #008751 0%, #005f38 100%);
+    color: #fff;
+    text-align: center;
+    padding: 36px 40px;
+    border-radius: 12px;
+    margin-bottom: 32px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+  .header p {
+    margin-top: 6px;
+    font-size: 13px;
+    opacity: 0.85;
+  }
+
+  /* ── ARCHITECTURE BADGE ── */
+  .arch-badge {
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 10px 18px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #166534;
+    margin-bottom: 36px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 900;
+    color: #008751;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #bbf7d0;
+  }
+  .section-num {
+    background: #008751;
+    color: #fff;
+    border-radius: 6px;
+    padding: 2px 9px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  /* ── SUB TITLE ── */
+  .sub-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 22px 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-left: 4px solid #008751;
+    padding-left: 10px;
+  }
+
+  /* ── TABLES ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+    font-size: 12.5px;
+  }
+  thead tr {
+    background: #008751;
+    color: #fff;
+  }
+  thead th {
+    padding: 9px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 11.5px;
+    letter-spacing: 0.3px;
+  }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:nth-child(odd)  { background: #fff; }
+  tbody td {
+    padding: 8px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+  tbody td:first-child { font-weight: 700; color: #1e293b; }
+
+  /* ── FORMULA BOX ── */
+  .formula-box {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 14px 0 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 2;
+  }
+  .formula-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 6px;
+  }
+  .step-badge {
+    background: #008751;
+    color: #fff;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-content {
+    flex: 1;
+  }
+  .step-label {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-weight: 700;
+    color: #334155;
+    font-size: 12px;
+  }
+  .step-formula {
+    color: #008751;
+    font-weight: 700;
+    font-size: 12.5px;
+  }
+  .arrow-down {
+    text-align: center;
+    color: #008751;
+    font-size: 18px;
+    line-height: 1;
+    margin: 4px 0;
+    padding-left: 10px;
+  }
+
+  /* ── POIDS BOX ── */
+  .poids-box {
+    display: flex;
+    gap: 14px;
+    margin: 14px 0 20px;
+  }
+  .poids-card {
+    flex: 1;
+    border-radius: 10px;
+    padding: 16px 18px;
+    text-align: center;
+  }
+  .poids-card.obj {
+    background: linear-gradient(135deg, #008751, #00a866);
+    color: #fff;
+  }
+  .poids-card.subj {
+    background: linear-gradient(135deg, #334155, #475569);
+    color: #fff;
+  }
+  .poids-card .pct {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .poids-card .lbl {
+    font-size: 11px;
+    opacity: 0.85;
+    margin-top: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .poids-card .desc {
+    font-size: 11px;
+    opacity: 0.75;
+    margin-top: 6px;
+  }
+
+  /* ── MENTION GRID ── */
+  .mention-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 14px 0 20px;
+  }
+  .mention-card {
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .mention-card .note { font-size: 18px; font-weight: 900; }
+  .mention-card .label { font-size: 11px; font-weight: 700; margin-top: 3px; text-transform: uppercase; }
+  .mention-card.excellent { background: #d1fae5; color: #065f46; }
+  .mention-card.bien      { background: #dbeafe; color: #1e40af; }
+  .mention-card.passable  { background: #fef9c3; color: #854d0e; }
+  .mention-card.insuff    { background: #fee2e2; color: #991b1b; }
+
+  /* ── CYCLE VIE ── */
+  .cycle-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 14px 0 20px;
+    font-size: 11.5px;
+  }
+  .cycle-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .cycle-arrow { color: #94a3b8; font-size: 14px; }
+  .cb-brouillon { background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; }
+  .cb-soumis    { background: #fef9c3; color: #854d0e; border: 1.5px solid #fde68a; }
+  .cb-valide    { background: #d1fae5; color: #065f46; border: 1.5px solid #6ee7b7; }
+  .cb-refuse    { background: #fee2e2; color: #991b1b; border: 1.5px solid #fca5a5; }
+  .cb-reclam    { background: #ede9fe; color: #5b21b6; border: 1.5px solid #c4b5fd; }
+  .cb-maintenu  { background: #fce7f3; color: #9d174d; border: 1.5px solid #f9a8d4; }
+  .cb-rouvert   { background: #dbeafe; color: #1e40af; border: 1.5px solid #93c5fd; }
+
+  /* ── HIERARCHY TREE ── */
+  .tree {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 14px 0 20px;
+    font-size: 12.5px;
+    line-height: 2.2;
+  }
+  .tree-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tree-indent-1 { padding-left: 0; }
+  .tree-indent-2 { padding-left: 28px; }
+  .tree-indent-3 { padding-left: 56px; }
+  .tree-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #008751;
+    flex-shrink: 0;
+  }
+  .tree-dot.gray { background: #94a3b8; }
+  .tree-label { font-weight: 700; color: #1e293b; }
+  .tree-formula { color: #008751; font-weight: 600; font-size: 11.5px; margin-left: 6px; }
+  .tree-connector { color: #cbd5e1; font-size: 18px; padding-left: 32px; line-height: 1; }
+
+  /* ── PERIMETER CARDS ── */
+  .perimeter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 14px 0 20px;
+  }
+  .perim-card {
+    border-radius: 10px;
+    padding: 16px;
+    border: 1.5px solid;
+  }
+  .perim-card.faitiere { background: #f0fdf4; border-color: #86efac; }
+  .perim-card.terrain  { background: #eff6ff; border-color: #93c5fd; }
+  .perim-card.global   { background: #faf5ff; border-color: #c4b5fd; }
+  .perim-card .perim-title { font-size: 12px; font-weight: 800; margin-bottom: 6px; }
+  .perim-card.faitiere .perim-title { color: #166534; }
+  .perim-card.terrain  .perim-title { color: #1e40af; }
+  .perim-card.global   .perim-title { color: #5b21b6; }
+  .perim-card ul { padding-left: 14px; font-size: 11.5px; color: #475569; line-height: 1.8; }
+
+  /* ── RECAP TABLE ── */
+  .recap-table thead tr { background: #1e293b; }
+
+  /* ── NOTE BOX ── */
+  .note-box {
+    background: #fffbeb;
+    border: 1.5px solid #fde68a;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 12px;
+    color: #78350f;
+    margin: 10px 0 20px;
+  }
+  .note-box strong { color: #92400e; }
+
+  /* ── SEPARATOR ── */
+  .separator {
+    border: none;
+    border-top: 2px solid #e2e8f0;
+    margin: 36px 0;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    body { font-size: 12px; }
+    .page { padding: 20px 30px; }
+    .header { border-radius: 8px; }
+    .mention-grid { grid-template-columns: repeat(4, 1fr); }
+    .perimeter-grid { grid-template-columns: repeat(3, 1fr); }
+    .poids-box { display: flex; }
+    tr { page-break-inside: avoid; }
+    .section-title { page-break-after: avoid; }
+    .sub-title { page-break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>SGP-RCPB</h1>
+    <p>Système d'Évaluation — Fonctionnement & Calcul des Notes</p>
+  </div>
+
+  <div class="arch-badge">
+    Architecture : PCA &rarr; DG &rarr; DGA &rarr; Directeur &rarr; Chef &rarr; Agent / Personnel
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PARTIE 1 — PERSONNEL                          -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section-title">
+    <span class="section-num">1</span>
+    Évaluation du Personnel
+  </div>
+
+  <!-- 1.1 Qui évalue qui -->
+  <div class="sub-title">1.1 — Qui évalue qui ?</div>
+  <table>
+    <thead>
+      <tr><th>Évaluateur</th><th>Personnel évalué</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>PCA</td><td>Directeur Général (DG)</td></tr>
+      <tr><td>DG</td><td>Directeur Général Adjoint (DGA)</td></tr>
+      <tr><td>DGA</td><td>Directeurs, Chefs de service, Agents rattachés DGA</td></tr>
+      <tr><td>Directeur</td><td>Chefs de service, Secrétaire de direction</td></tr>
+      <tr><td>Chef</td><td>Agents de son service / agence / guichet</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 1.2 Structure -->
+  <div class="sub-title">1.2 — Structure d'une évaluation</div>
+  <table>
+    <thead>
+      <tr><th>Composant</th><th>Description</th><th>Source</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Critères Objectifs</td>
+        <td>Résultats mesurables liés aux objectifs fixés</td>
+        <td>Fiches d'objectifs préalablement définies</td>
+      </tr>
+      <tr>
+        <td>Critères Subjectifs</td>
+        <td>Comportement, ponctualité, soft skills</td>
+        <td>Modèles préconfigurés (templates réutilisables)</td>
+      </tr>
+      <tr>
+        <td>Sous-critères</td>
+        <td>Items détaillés à l'intérieur de chaque critère</td>
+        <td>Notés individuellement de 1 à 5 par l'évaluateur</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 1.3 Formule -->
+  <div class="sub-title">1.3 — Formule de calcul de la note individuelle</div>
+  <div class="formula-box">
+    <div class="formula-step">
+      <div class="step-badge">1</div>
+      <div class="step-content">
+        <div class="step-label">Note de chaque sous-critère</div>
+        <div class="step-formula">Saisie directe par l'évaluateur &rarr; échelle 1 à 5</div>
+      </div>
+    </div>
+    <div class="arrow-down">↓</div>
+    <div class="formula-step">
+      <div class="step-badge">2</div>
+      <div class="step-content">
+        <div class="step-label">Note globale d'un critère</div>
+        <div class="step-formula">note_globale = MOYENNE(tous ses sous-critères)</div>
+      </div>
+    </div>
+    <div class="arrow-down">↓</div>
+    <div class="formula-step">
+      <div class="step-badge">3</div>
+      <div class="step-content">
+        <div class="step-label">Moyennes par type de critère</div>
+        <div class="step-formula">moyenne_objectifs &nbsp;= MOYENNE(critères objectifs)</div>
+        <div class="step-formula">moyenne_subjectifs = MOYENNE(critères subjectifs)</div>
+      </div>
+    </div>
+    <div class="arrow-down">↓</div>
+    <div class="formula-step">
+      <div class="step-badge">4</div>
+      <div class="step-content">
+        <div class="step-label">Application des pondérations</div>
+        <div class="step-formula">note_obj &nbsp;= moyenne_objectifs &nbsp;× 0,75</div>
+        <div class="step-formula">note_subj = moyenne_subjectifs × 0,25</div>
+      </div>
+    </div>
+    <div class="arrow-down">↓</div>
+    <div class="formula-step">
+      <div class="step-badge">5</div>
+      <div class="step-content">
+        <div class="step-label">Note finale — sur 10</div>
+        <div class="step-formula">note_finale = (note_obj + note_subj) × 2</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-box">
+    <strong>Pourquoi × 2 ?</strong> Les notes étant sur 5, la somme pondérée donne un résultat entre 0 et 5.
+    La multiplication par 2 ramène la note finale sur l'échelle <strong>0 à 10</strong>.
+  </div>
+
+  <!-- 1.4 Pondération -->
+  <div class="sub-title">1.4 — Pondération des critères</div>
+  <div class="poids-box">
+    <div class="poids-card obj">
+      <div class="pct">75 %</div>
+      <div class="lbl">Critères Objectifs</div>
+      <div class="desc">Résultats mesurables et atteinte des objectifs fixés</div>
+    </div>
+    <div class="poids-card subj">
+      <div class="pct">25 %</div>
+      <div class="lbl">Critères Subjectifs</div>
+      <div class="desc">Comportement, soft skills et attitude professionnelle</div>
+    </div>
+  </div>
+
+  <!-- 1.5 Mentions -->
+  <div class="sub-title">1.5 — Grille de mentions</div>
+  <div class="mention-grid">
+    <div class="mention-card excellent">
+      <div class="note">≥ 8,5</div>
+      <div class="label">Excellent</div>
+    </div>
+    <div class="mention-card bien">
+      <div class="note">≥ 7,0</div>
+      <div class="label">Bien</div>
+    </div>
+    <div class="mention-card passable">
+      <div class="note">≥ 5,0</div>
+      <div class="label">Passable</div>
+    </div>
+    <div class="mention-card insuff">
+      <div class="note">&lt; 5,0</div>
+      <div class="label">Insuffisant</div>
+    </div>
+  </div>
+
+  <!-- 1.6 Cycle de vie -->
+  <div class="sub-title">1.6 — Cycle de vie d'une évaluation</div>
+  <div class="cycle-flow">
+    <span class="cycle-badge cb-brouillon">Brouillon</span>
+    <span class="cycle-arrow">→</span>
+    <span class="cycle-badge cb-soumis">Soumise</span>
+    <span class="cycle-arrow">→</span>
+    <span class="cycle-badge cb-valide">Validée</span>
+  </div>
+  <div class="cycle-flow" style="margin-top:-10px;">
+    <span style="color:#94a3b8;font-size:11px;padding-left:90px;">↘ si refusée</span>
+    <span class="cycle-badge cb-refuse">Refusée</span>
+    <span class="cycle-arrow">→</span>
+    <span class="cycle-badge cb-reclam">Réclamation</span>
+    <span class="cycle-arrow">→</span>
+    <span class="cycle-badge cb-maintenu">Maintenue (RH)</span>
+  </div>
+  <div class="cycle-flow" style="margin-top:4px;">
+    <span style="color:#94a3b8;font-size:11px;padding-left:338px;">↘</span>
+    <span class="cycle-badge cb-rouvert">Rouverte → retour Brouillon</span>
+  </div>
+
+  <table style="margin-top:16px;">
+    <thead><tr><th>Statut</th><th>Signification</th></tr></thead>
+    <tbody>
+      <tr><td>Brouillon</td><td>Créée, non encore soumise au supérieur</td></tr>
+      <tr><td>Soumise</td><td>Transmise au supérieur pour validation</td></tr>
+      <tr><td>Validée</td><td>Approuvée définitivement — entre dans les statistiques</td></tr>
+      <tr><td>Refusée</td><td>Rejetée avec motif obligatoire fourni par le supérieur</td></tr>
+      <tr><td>Réclamation</td><td>L'évalué conteste le refus auprès des RH</td></tr>
+      <tr><td>Maintenue</td><td>RH confirme le refus — évaluation définitivement refusée</td></tr>
+      <tr><td>Rouverte</td><td>RH annule le refus — l'évaluation repasse en brouillon</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 1.7 Cas PCA -->
+  <div class="sub-title">1.7 — Cas particulier : PCA</div>
+  <p style="font-size:12.5px; margin-bottom:8px;">
+    En plus de la note finale sur 10, le PCA dispose d'un champ supplémentaire exprimant l'atteinte des objectifs en pourcentage :
+  </p>
+  <div class="formula-box" style="padding:14px 20px; line-height:1.8;">
+    <div class="step-formula">note_objectifs (%) = (moyenne_objectifs / 5) × 100</div>
+    <div style="color:#64748b; font-size:11.5px; margin-top:4px;">Résultat entre 0 % et 100 %</div>
+  </div>
+
+  <hr class="separator">
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PARTIE 2 — STRUCTURES                         -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section-title">
+    <span class="section-num">2</span>
+    Évaluation des Structures
+  </div>
+
+  <!-- 2.1 Principe -->
+  <div class="sub-title">2.1 — Principe fondamental</div>
+  <p style="font-size:12.5px; margin-bottom:10px;">
+    La note d'une structure <strong>n'est pas saisie directement</strong>. Elle est calculée automatiquement
+    comme la <strong>moyenne des notes finales</strong> de tous les agents qui la composent,
+    à condition que leurs évaluations soient <strong>validées</strong>.
+  </p>
+  <div class="formula-box" style="padding:14px 20px; line-height:1.8;">
+    <div class="step-formula">Note structure = MOYENNE(note_finale de tous les agents valides de la structure)</div>
+  </div>
+
+  <!-- 2.2 Hiérarchie -->
+  <div class="sub-title">2.2 — Hiérarchie d'agrégation</div>
+  <div class="tree">
+    <div class="tree-row tree-indent-1">
+      <div class="tree-dot"></div>
+      <div class="tree-label">Agent</div>
+      <div class="tree-formula">→ note_finale individuelle (0–10)</div>
+    </div>
+    <div class="tree-connector">│</div>
+    <div class="tree-row tree-indent-2">
+      <div class="tree-dot gray"></div>
+      <div class="tree-label">Service / Guichet</div>
+      <div class="tree-formula">= AVG(note_finale des agents du service)</div>
+    </div>
+    <div class="tree-connector" style="padding-left:32px;">│</div>
+    <div class="tree-row tree-indent-2">
+      <div class="tree-dot gray"></div>
+      <div class="tree-label">Agence</div>
+      <div class="tree-formula">= AVG(note_finale des agents de l'agence)</div>
+    </div>
+    <div class="tree-connector" style="padding-left:32px;">│</div>
+    <div class="tree-row tree-indent-2">
+      <div class="tree-dot gray"></div>
+      <div class="tree-label">Caisse</div>
+      <div class="tree-formula">= AVG(note_finale des agents de toutes ses agences)</div>
+    </div>
+    <div class="tree-connector" style="padding-left:32px;">│</div>
+    <div class="tree-row tree-indent-2">
+      <div class="tree-dot gray"></div>
+      <div class="tree-label">Délégation Technique</div>
+      <div class="tree-formula">= AVG(note_finale des agents rattachés à la délégation)</div>
+    </div>
+    <div class="tree-connector" style="padding-left:32px;">│</div>
+    <div class="tree-row tree-indent-2">
+      <div class="tree-dot"></div>
+      <div class="tree-label">Réseau</div>
+      <div class="tree-formula">= AVG(note_finale de TOUS les agents terrain)</div>
+    </div>
+  </div>
+
+  <!-- 2.3 Périmètres -->
+  <div class="sub-title">2.3 — Les trois périmètres du réseau</div>
+  <div class="perimeter-grid">
+    <div class="perim-card faitiere">
+      <div class="perim-title">Faîtière</div>
+      <ul>
+        <li>Agents des Directions</li>
+        <li>Agents des Services du siège</li>
+      </ul>
+    </div>
+    <div class="perim-card terrain">
+      <div class="perim-title">Terrain</div>
+      <ul>
+        <li>Agents des Délégations</li>
+        <li>Agents des Caisses</li>
+        <li>Agents des Agences</li>
+        <li>Agents des Guichets</li>
+      </ul>
+    </div>
+    <div class="perim-card global">
+      <div class="perim-title">Global</div>
+      <ul>
+        <li>Faîtière + Terrain</li>
+        <li>Toute l'organisation</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note-box">
+    <strong>Exclusion :</strong> Les rôles DG, DGA, PCA, Conseillers DG et Assistante DG sont exclus
+    des statistiques réseau terrain. Ils sont comptabilisés uniquement dans le périmètre Faîtière.
+  </div>
+
+  <!-- 2.4 Conditions -->
+  <div class="sub-title">2.4 — Conditions d'inclusion dans le calcul</div>
+  <table>
+    <thead><tr><th>Condition</th><th>Valeur requise</th></tr></thead>
+    <tbody>
+      <tr><td>Statut de l'évaluation</td><td>Validée uniquement</td></tr>
+      <tr><td>Note finale</td><td>Supérieure à 0</td></tr>
+      <tr><td>Évaluations brouillon / soumises / refusées</td><td>Exclues du calcul</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 2.5 Distribution -->
+  <div class="sub-title">2.5 — Distribution par mention (par structure)</div>
+  <p style="font-size:12.5px; margin-bottom:12px;">
+    En plus de la moyenne, chaque structure affiche la répartition de ses agents par mention :
+  </p>
+  <div class="mention-grid">
+    <div class="mention-card excellent">
+      <div class="note">≥ 8,5</div>
+      <div class="label">Excellent</div>
+    </div>
+    <div class="mention-card bien">
+      <div class="note">≥ 7,0</div>
+      <div class="label">Bien</div>
+    </div>
+    <div class="mention-card passable">
+      <div class="note">≥ 5,0</div>
+      <div class="label">Passable</div>
+    </div>
+    <div class="mention-card insuff">
+      <div class="note">&lt; 5,0</div>
+      <div class="label">Insuffisant</div>
+    </div>
+  </div>
+
+  <!-- 2.6 Calcul dynamique -->
+  <div class="sub-title">2.6 — Calcul dynamique (non stocké)</div>
+  <div class="note-box">
+    Les notes des structures <strong>ne sont jamais enregistrées en base de données</strong>.
+    Elles sont recalculées en temps réel à chaque consultation.
+    Dès qu'une évaluation individuelle est validée, les statistiques de toutes les structures concernées
+    sont <strong>automatiquement mises à jour</strong>.
+  </div>
+
+  <hr class="separator">
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- RÉCAPITULATIF                                 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section-title">
+    <span class="section-num">3</span>
+    Récapitulatif — Les deux systèmes
+  </div>
+
+  <table class="recap-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Évaluation Personnel</th>
+        <th>Évaluation Structure</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Unité de base</td>
+        <td>Sous-critère noté de 1 à 5</td>
+        <td>Note finale d'un agent (0–10)</td>
+      </tr>
+      <tr>
+        <td>Formule</td>
+        <td>Pondération 75% obj + 25% subj × 2</td>
+        <td>Moyenne des notes finales des agents</td>
+      </tr>
+      <tr>
+        <td>Stockage</td>
+        <td>Oui — enregistré en base de données</td>
+        <td>Non — calculé dynamiquement</td>
+      </tr>
+      <tr>
+        <td>Déclencheur</td>
+        <td>Saisie manuelle par l'évaluateur</td>
+        <td>Automatique à chaque validation</td>
+      </tr>
+      <tr>
+        <td>Échelle finale</td>
+        <td>0 à 10</td>
+        <td>0 à 10</td>
+      </tr>
+      <tr>
+        <td>Mentions</td>
+        <td>4 niveaux (Excellent / Bien / Passable / Insuffisant)</td>
+        <td>4 niveaux identiques + répartition par catégorie</td>
+      </tr>
+      <tr>
+        <td>Workflow</td>
+        <td>Brouillon → Soumise → Validée / Refusée</td>
+        <td>Aucun — résultat agrégé en lecture seule</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    &copy; 2026 SGP RCPB &mdash; Système de Gestion de Performance &mdash; Réseau des Caisses Populaires du Burkina
+  </div>
+
+</div>
+</body>
+</html>

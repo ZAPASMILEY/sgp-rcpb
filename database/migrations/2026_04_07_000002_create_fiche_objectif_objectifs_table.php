@@ -13,6 +13,8 @@ return new class extends Migration
             $table->foreignId('fiche_objectif_id')->constrained('fiche_objectifs')->cascadeOnDelete();
             $table->text('description');
             $table->decimal('note_obtenue', 5, 2)->default(0);
+            $table->unsignedTinyInteger('avancement_percentage')->default(0);
+            $table->string('statut')->default('normal');
             $table->timestamps();
         });
     }

@@ -165,15 +165,20 @@ class AssistanteController extends Controller
         }
 
         $direction   = (object) ['nom' => 'Direction Générale'];
-        $displayYear = now()->year;
+        $openAnnee   = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $openSemestre  = $openSemestres->first();
+        $displayYear = $openAnnee?->annee ?? now()->year;
         $backRoute   = route('assistante.secretaire', ['tab' => 'evaluations']);
         $storeRoute  = route('assistante.secretaire.evaluations.store');
         $layout      = 'layouts.subordonne';
+        $prefilledMatricule = $secretaire->agent?->matricule ?? null;
 
         return view('directeur.subordonnes.evaluations.create', compact(
             'secretaire', 'direction', 'objectiveOptions',
             'subjectiveTemplates', 'oldFormations', 'oldExperiences',
-            'displayYear', 'backRoute', 'storeRoute', 'layout'
+            'displayYear', 'backRoute', 'storeRoute', 'layout',
+            'openAnnee', 'openSemestres', 'openSemestre', 'prefilledMatricule'
         ));
     }
 
@@ -189,12 +194,10 @@ class AssistanteController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            'date_debut'                       => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'date_fin'                         => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'identification.nom_prenom'        => ['nullable', 'string', 'max:255'],
-            'identification.semestre'          => ['required', 'in:1,2'],
             'identification.date_evaluation'   => ['nullable', 'string', 'max:20'],
             'identification.matricule'         => ['nullable', 'string', 'max:255'],
+            'identification.grade'             => ['required', 'string', 'max:255'],
             'identification.emploi'            => ['nullable', 'string', 'max:255'],
             'identification.direction'         => ['nullable', 'string', 'max:255'],
             'identification.direction_service' => ['nullable', 'string', 'max:255'],
@@ -217,14 +220,23 @@ class AssistanteController extends Controller
             'date_signature_evaluateur'        => ['nullable', 'date'],
         ]);
 
-        $dateDebut = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_debut']);
-        $dateFin   = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_fin']);
-
-        if (strtotime($dateFin) < strtotime($dateDebut)) {
-            return back()->withInput()->withErrors(['date_fin' => 'La date de fin doit être postérieure à la date de début.']);
+        // Auto-detect open semestre
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
         }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+        $dateDebut  = $semestre->dateDebut()->toDateString();
+        $dateFin    = $semestre->dateFin()->toDateString();
+        $anneeId    = $openAnnee->id;
+        $semestreId = $semestre->id;
 
         $identification = $validated['identification'] ?? [];
+        $identification['semestre'] = (string) $semestre->numero;
+        $identification['matricule'] = $secretaire->agent?->matricule ?? null;
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -253,18 +265,13 @@ class AssistanteController extends Controller
 
         $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
-        try {
-            $anneeId = Annee::resolveIdForDate($dateDebut);
-        } catch (\Throwable) {
-            $anneeId = null;
-        }
-
-        DB::transaction(function () use ($user, $secretaire, $dateDebut, $dateFin, $anneeId, $scores, $validated, $identification, $normalizedSubjective, $normalizedObjective) {
+        DB::transaction(function () use ($user, $secretaire, $dateDebut, $dateFin, $anneeId, $semestreId, $scores, $validated, $identification, $normalizedSubjective, $normalizedObjective) {
             $evaluation = Evaluation::create([
                 'evaluable_type'            => User::class,
                 'evaluable_id'              => $secretaire->id,
                 'evaluable_role'            => 'secretaire',
                 'annee_id'                  => $anneeId,
+                'semestre_id'               => $semestreId,
                 'evaluateur_id'             => $user->id,
                 'date_debut'                => $dateDebut,
                 'date_fin'                  => $dateFin,
@@ -398,9 +405,16 @@ class AssistanteController extends Controller
             'objectifs.*'   => ['required', 'string', 'max:5000'],
         ]);
 
+        try {
+            $anneeIdFiche = Annee::resolveOpenYearId(now());
+            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
-            'annee_id'              => Annee::resolveIdForDate(now()),
+            'annee_id'              => $anneeIdFiche,
             'assignable_type'       => User::class,
             'assignable_id'         => $secretaire->id,
             'date'                  => now()->toDateString(),

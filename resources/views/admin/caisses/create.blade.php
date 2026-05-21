@@ -44,8 +44,8 @@
                 </div>
             </div>
             <div class="space-y-2">
-                <label for="secretariat_telephone" class="text-xs font-bold text-slate-400 ml-1">Numéro du secrétariat</label>
-                <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone') }}" class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="+226 25 00 00 00">
+                <label for="secretariat_telephone" class="text-xs font-bold text-slate-400 ml-1">Numéro d'accueil <span class="text-rose-500">*</span></label>
+                <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone') }}" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 font-bold focus:ring-2 focus:ring-cyan-500" placeholder="+226 25 00 00 00">
             </div>
             <div class="space-y-2">
                 <label for="directeur_agent_id" class="text-xs font-bold text-slate-400 ml-1">Directeur de caisse</label>

@@ -107,7 +107,7 @@
                                             <p class="font-bold text-slate-900">
                                                 {{ trim(($f->agent->prenom ?? '') . ' ' . ($f->agent->nom ?? '')) }}
                                             </p>
-                                            <p class="text-[11px] text-slate-400">{{ $f->agent->fonction ?? '' }}</p>
+                                            <p class="text-[11px] text-slate-400">{{ $f->agent->role ?? '' }}</p>
                                         </div>
                                     </div>
                                 </td>

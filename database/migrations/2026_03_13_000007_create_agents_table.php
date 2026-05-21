@@ -84,8 +84,12 @@ return new class extends Migration
             $table->string('photo_path')->nullable();
 
             // ── Données professionnelles ──────────────────────────────────────
-            $table->string('fonction', 100)
-                  ->comment('Intitulé du poste : Directeur Régional, Caissier, Chef Service RH …');
+            $table->string('matricule', 50)->unique()
+                  ->comment('Matricule unique de l\'agent');
+            $table->string('role', 100)
+                  ->comment('Catégorie de rôle : Agent, Conseiller DG, Chef de Service…');
+            $table->string('poste', 150)->nullable()
+                  ->comment('Poste spécifique dans le rôle : Caissier prestataire, Chargé de sécurité…');
             $table->date('date_debut_fonction')->nullable();
 
             $table->timestamps();

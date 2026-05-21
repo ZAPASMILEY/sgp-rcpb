@@ -13,7 +13,7 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Mon dossier · Personnel</p>
                 <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">{{ $user->name }}</h1>
                 <p class="mt-1 text-sm text-slate-500">
-                    {{ $agent?->fonction ?? $user->role }}
+                    {{ $agent?->role ?? $user->role }}
                     @if ($agent?->service)
                         · {{ $agent->service->nom }}
                     @elseif ($agent?->agence)
@@ -51,10 +51,10 @@
                         <p class="mt-1 font-semibold">{{ trim($agent->prenom.' '.$agent->nom) }}</p>
                     </div>
                 @endif
-                @if ($agent->fonction)
+                @if ($agent->role)
                     <div>
-                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Fonction</p>
-                        <p class="mt-1 font-semibold">{{ $agent->fonction }}</p>
+                        <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Rôle</p>
+                        <p class="mt-1 font-semibold">{{ $agent->role }}</p>
                     </div>
                 @endif
                 @if ($agent->service)
@@ -175,12 +175,16 @@
                                             default     => 'border-rose-200 bg-rose-50 text-rose-700',
                                         };
                                         $statusClass = match ($evaluation->statut) {
-                                            'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                                            'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-                                            default  => 'border-slate-200 bg-slate-100 text-slate-700',
+                                            'valide'  => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                                            'soumis'  => 'border-amber-200 bg-amber-50 text-amber-700',
+                                            'refuse'  => 'border-rose-200 bg-rose-50 text-rose-700',
+                                            default   => 'border-slate-200 bg-slate-100 text-slate-700',
                                         };
                                         $statusLabel = match ($evaluation->statut) {
-                                            'valide' => 'Validée', 'soumis' => 'Soumise', default => 'Brouillon',
+                                            'valide'  => 'Validée',
+                                            'soumis'  => 'Soumise',
+                                            'refuse'  => 'Refusée',
+                                            default   => 'Brouillon',
                                         };
                                         $identification = $evaluation->identification;
                                         $anneeEval = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');

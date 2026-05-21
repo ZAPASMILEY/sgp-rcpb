@@ -77,28 +77,39 @@
 
                     {{-- Note moyenne avec barre de progression --}}
                     <td class="px-4 py-3.5">
-                        @if($note !== null)
-                            <div class="flex items-center gap-2">
-                                <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                                    <div class="{{ $barCls }} h-full rounded-full transition-all"
-                                         style="width: {{ $pct }}%"></div>
+                        @if ($notesVisibles ?? true)
+                            @if($note !== null)
+                                <div class="flex items-center gap-2">
+                                    <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                        <div class="{{ $barCls }} h-full rounded-full transition-all"
+                                             style="width: {{ $pct }}%"></div>
+                                    </div>
+                                    <span class="shrink-0 text-xs font-bold text-slate-700">{{ number_format($note, 2) }}</span>
                                 </div>
-                                <span class="shrink-0 text-xs font-bold text-slate-700">{{ number_format($note, 2) }}</span>
-                            </div>
+                            @else
+                                <span class="text-xs text-slate-400">—</span>
+                            @endif
                         @else
-                            <span class="text-xs text-slate-400">—</span>
+                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-600 border border-amber-200">
+                                <i class="fas fa-clock text-[9px]"></i> En exercice
+                            </span>
                         @endif
                     </td>
 
                     {{-- Mention badge --}}
                     <td class="px-4 py-3.5 text-center">
-                        <span class="inline-block rounded-full px-2.5 py-1 text-[11px] font-bold {{ $mentCls }}">
-                            {{ $mentLbl }}
-                        </span>
+                        @if ($notesVisibles ?? true)
+                            <span class="inline-block rounded-full px-2.5 py-1 text-[11px] font-bold {{ $mentCls }}">
+                                {{ $mentLbl }}
+                            </span>
+                        @else
+                            <span class="text-[11px] text-slate-300">—</span>
+                        @endif
                     </td>
 
                     {{-- Distribution badges --}}
                     <td class="px-4 py-3.5">
+                        @if ($notesVisibles ?? true)
                         <div class="flex flex-wrap items-center gap-1">
                             <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700"
                                   title="Excellent (≥8.5)">
@@ -121,6 +132,9 @@
                                 {{ $s->nb_insuffisant }}
                             </span>
                         </div>
+                        @else
+                            <span class="text-[10px] text-slate-300">—</span>
+                        @endif
                     </td>
                 </tr>
             @empty

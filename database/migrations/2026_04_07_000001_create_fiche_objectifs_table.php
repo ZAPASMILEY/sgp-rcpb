@@ -22,8 +22,9 @@ return new class extends Migration
 
             $table->date('date');
             $table->date('date_echeance');
+            $table->date('date_validation')->nullable();
             $table->unsignedTinyInteger('avancement_percentage')->default(0);
-            $table->enum('statut', ['brouillon', 'en_attente', 'acceptee', 'refusee'])->default('brouillon');
+            $table->enum('statut', ['brouillon', 'en_attente', 'acceptee', 'refusee', 'contesté'])->default('brouillon');
 
             $table->timestamps();
         });

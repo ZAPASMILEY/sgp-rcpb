@@ -6,23 +6,6 @@
     $resolvedSubordonneId = (int) old('subordonne_id', $selectedSubordonne['id'] ?? 0);
     $resolvedSubordonne   = $subordonnes->firstWhere('id', $resolvedSubordonneId) ?? $selectedSubordonne;
     $lockSubordonne       = $subordonnes->count() === 1 || $selectedSubordonne !== null;
-
-    $extractYear = static function (?string $value, string $format): ?int {
-        if (! filled($value)) return null;
-        try {
-            return match ($format) {
-                'd/m/Y' => \Carbon\Carbon::createFromFormat('d/m/Y', $value)->year,
-                'm/Y'   => (int) substr($value, -4),
-                default => \Carbon\Carbon::parse($value)->year,
-            };
-        } catch (\Throwable) {
-            return null;
-        }
-    };
-
-    $displayYear = $extractYear(old('identification.date_evaluation'), 'd/m/Y')
-        ?? $extractYear(old('date_debut'), 'm/Y')
-        ?? now()->year;
 @endphp
 
 @section('content')
@@ -84,21 +67,6 @@
                             </div>
                         @endif
 
-                        {{-- Période --}}
-                        <div class="grid gap-5 md:grid-cols-2">
-                            <div class="space-y-2">
-                                <label for="date_debut" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date debut</label>
-                                <input id="date_debut" name="date_debut" type="text" value="{{ old('date_debut') }}"
-                                       class="ent-input" placeholder="MM/YYYY" required autocomplete="off" maxlength="7">
-                                <div id="date_debut_error" class="text-rose-600 text-xs mt-1" style="display:none"></div>
-                            </div>
-                            <div class="space-y-2">
-                                <label for="date_fin" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date fin</label>
-                                <input id="date_fin" name="date_fin" type="text" value="{{ old('date_fin') }}"
-                                       class="ent-input" placeholder="MM/YYYY" required readonly>
-                            </div>
-                        </div>
-
                         <div>
                             <h3 class="border-t border-slate-200 pt-8 text-base font-black text-slate-900">Identification de l'evalue</h3>
                             <p class="mt-1 text-sm text-slate-500">Cette section est editable manuellement.</p>
@@ -107,15 +75,13 @@
                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                             <div class="space-y-2">
                                 <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Annee</label>
-                                <input id="annee_field" type="text" value="{{ $displayYear }}" class="ent-input bg-slate-50 text-slate-600" readonly>
+                                <input type="text" value="{{ $openAnnee?->annee ?? now()->year }}" class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
-                                <label for="identification_semestre" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Semestre</label>
-                                <select id="identification_semestre" name="identification[semestre]" required class="ent-select">
-                                    <option value="">Selectionner</option>
-                                    <option value="1" @selected(old('identification.semestre') === '1')>Semestre 1</option>
-                                    <option value="2" @selected(old('identification.semestre') === '2')>Semestre 2</option>
-                                </select>
+                                <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Semestre</label>
+                                <input type="text" value="{{ $openSemestre ? 'Semestre '.$openSemestre->numero : '—' }}"
+                                       name="identification[semestre]"
+                                       class="ent-input bg-slate-50 text-slate-600" readonly>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_date_evaluation" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date de l'evaluation</label>
@@ -125,7 +91,12 @@
                             <div class="space-y-2">
                                 <label for="identification_matricule" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Matricule</label>
                                 <input id="identification_matricule" name="identification[matricule]" type="text"
-                                       value="{{ old('identification.matricule') }}" class="ent-input">
+                                       value="{{ old('identification.matricule') }}" class="ent-input bg-slate-50 text-slate-600" readonly placeholder="Renseigné automatiquement">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="identification_grade" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Grade <span class="text-red-500">*</span></label>
+                                <input id="identification_grade" name="identification[grade]" type="text"
+                                       value="{{ old('identification.grade') }}" class="ent-input" placeholder="Grade de l'évalué" required>
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_emploi" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Emploi</label>
@@ -663,49 +634,8 @@
     });
     </script>
 
-    {{-- MM/YYYY date helpers --}}
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const debut = document.getElementById('date_debut');
-        const fin   = document.getElementById('date_fin');
-        const error = document.getElementById('date_debut_error');
-        if (debut && fin) {
-            debut.addEventListener('input', function () {
-                let val = debut.value.replace(/[^0-9]/g, '');
-                if (val.length > 6) val = val.slice(0, 6);
-                if (val.length > 2) val = val.slice(0, 2) + '/' + val.slice(2);
-                debut.value = val;
-                const match = val.match(/^(0[1-9]|1[0-2])\/(\d{4})$/);
-                if (match) {
-                    let month = parseInt(match[1], 10) + 6;
-                    let year  = parseInt(match[2], 10);
-                    if (month > 12) { year += Math.floor((month - 1) / 12); month = ((month - 1) % 12) + 1; }
-                    fin.value = (month < 10 ? '0' : '') + month + '/' + year;
-                    error.style.display = 'none';
-                } else {
-                    fin.value = '';
-                    if (val.length === 7) {
-                        error.textContent = 'Format invalide. Utilisez MM/YYYY.';
-                        error.style.display = 'block';
-                    } else {
-                        error.style.display = 'none';
-                    }
-                }
-            });
-        }
-
-        const dateDebut  = document.getElementById('date_debut');
-        const anneeField = document.getElementById('annee_field');
-        if (dateDebut && anneeField) {
-            dateDebut.addEventListener('input', function () {
-                const v = dateDebut.value;
-                anneeField.value = /^(0[1-9]|1[0-2])\/(\d{4})$/.test(v) ? v.split('/')[1] : '';
-            });
-            if (/^(0[1-9]|1[0-2])\/(\d{4})$/.test(dateDebut.value)) {
-                anneeField.value = dateDebut.value.split('/')[1];
-            }
-        }
-
         // Auto-fill today for signature dates
         function todayISO() { const d = new Date(); return d.toISOString().slice(0, 10); }
         ['date_signature_evalue', 'date_signature_evaluateur'].forEach(id => {

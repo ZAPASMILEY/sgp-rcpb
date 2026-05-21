@@ -23,15 +23,29 @@
                     <h1 class="text-2xl font-black tracking-tight text-slate-900">Agents</h1>
                     <p class="mt-1 text-sm text-slate-400">
                         {{ $totalAgents }} agent(s) enregistré(s) au total.
-                        @if ($fonctionActive)
-                            <span class="font-semibold text-blue-600">— Filtre : {{ $fonctions[$fonctionActive] ?? $fonctionActive }}</span>
+                        @if ($roleActive)
+                            <span class="font-semibold text-blue-600">— Filtre : {{ $roles[$roleActive] ?? $roleActive }}</span>
                         @endif
                     </p>
                 </div>
-                <a href="{{ route('admin.agents.create') }}"
-                   class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700">
-                    <i class="fas fa-plus text-xs text-emerald-300"></i> Ajouter un agent
-                </a>
+                <div class="flex items-center gap-2">
+                    @php $sansCompte = $totalAgents - \App\Models\Agent::has('user')->count(); @endphp
+                    @if($sansCompte > 0)
+                        <form method="POST" action="{{ route('admin.agents.sync-accounts') }}"
+                              onsubmit="return confirm('Créer les comptes manquants pour {{ $sansCompte }} agent(s) ? Mot de passe par défaut : 11111111')">
+                            @csrf
+                            <button type="submit"
+                                    class="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700 transition hover:bg-amber-100">
+                                <i class="fas fa-user-plus text-xs"></i>
+                                Créer les {{ $sansCompte }} comptes manquants
+                            </button>
+                        </form>
+                    @endif
+                    <a href="{{ route('admin.agents.create') }}"
+                       class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700">
+                        <i class="fas fa-plus text-xs text-emerald-300"></i> Ajouter un agent
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -48,22 +62,22 @@
                             type="text"
                             name="search"
                             value="{{ $search }}"
-                            placeholder="Nom, prénom, email, fonction…"
+                            placeholder="Nom, prénom, email, rôle…"
                             class="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-4 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400"
                         >
                     </div>
                 </div>
 
-                {{-- Filtre par fonction --}}
+                {{-- Filtre par rôle --}}
                 <div class="min-w-[200px] space-y-1">
-                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Fonction</label>
-                    <select name="fonction" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
-                        <option value="">Toutes les fonctions</option>
-                        @foreach ($fonctions as $val => $label)
-                            <option value="{{ $val }}" @selected($fonctionActive === $val)>
+                    <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Rôle</label>
+                    <select name="role" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:ring-blue-400">
+                        <option value="">Tous les rôles</option>
+                        @foreach ($roles as $val => $label)
+                            <option value="{{ $val }}" @selected($roleActive === $val)>
                                 {{ $label }}
-                                @if (($countsByFonction[$val] ?? 0) > 0)
-                                    ({{ $countsByFonction[$val] }})
+                                @if (($countsByRole[$val] ?? 0) > 0)
+                                    ({{ $countsByRole[$val] }})
                                 @endif
                             </option>
                         @endforeach
@@ -85,7 +99,7 @@
                     <i class="fas fa-filter text-xs"></i> Filtrer
                 </button>
 
-                @if ($fonctionActive || $search || $affectation)
+                @if ($roleActive || $search || $affectation)
                     <a href="{{ route('admin.agents.index') }}"
                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
                         <i class="fas fa-times text-xs"></i> Réinitialiser
@@ -94,24 +108,24 @@
             </form>
         </div>
 
-        {{-- Badges de filtre rapide par fonction --}}
+        {{-- Badges de filtre rapide par rôle --}}
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('admin.agents.index', array_filter(['search' => $search])) }}"
                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition
-                      {{ !$fonctionActive ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50' }}">
+                      {{ !$roleActive ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50' }}">
                 Tous
-                <span class="rounded-full {{ !$fonctionActive ? 'bg-white/20' : 'bg-slate-100' }} px-1.5 py-0.5 text-[10px]">
+                <span class="rounded-full {{ !$roleActive ? 'bg-white/20' : 'bg-slate-100' }} px-1.5 py-0.5 text-[10px]">
                     {{ $totalAgents }}
                 </span>
             </a>
-            @foreach ($fonctions as $val => $label)
-                @php $cnt = $countsByFonction[$val] ?? 0; @endphp
+            @foreach ($roles as $val => $label)
+                @php $cnt = $countsByRole[$val] ?? 0; @endphp
                 @if ($cnt > 0)
-                    <a href="{{ route('admin.agents.index', array_filter(['fonction' => $val, 'search' => $search])) }}"
+                    <a href="{{ route('admin.agents.index', array_filter(['role' => $val, 'search' => $search])) }}"
                        class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition
-                              {{ $fonctionActive === $val ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50' }}">
+                              {{ $roleActive === $val ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50' }}">
                         {{ $label }}
-                        <span class="rounded-full {{ $fonctionActive === $val ? 'bg-white/20' : 'bg-slate-100' }} px-1.5 py-0.5 text-[10px]">
+                        <span class="rounded-full {{ $roleActive === $val ? 'bg-white/20' : 'bg-slate-100' }} px-1.5 py-0.5 text-[10px]">
                             {{ $cnt }}
                         </span>
                     </a>
@@ -128,7 +142,7 @@
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 w-12">#</th>
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Photo</th>
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Nom complet</th>
-                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Fonction</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Rôle</th>
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Contact</th>
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Affectation</th>
                             <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Compte</th>
@@ -161,11 +175,11 @@
                                     @endif
                                 </td>
 
-                                {{-- Fonction --}}
+                                {{-- Rôle --}}
                                 <td class="px-4 py-3">
-                                    @if ($agent->fonction)
+                                    @if ($agent->role)
                                         <span class="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                                            {{ $agent->fonction }}
+                                            {{ $roles[$agent->role] ?? $agent->role }}
                                         </span>
                                     @else
                                         <span class="text-xs text-slate-400 italic">—</span>
@@ -184,7 +198,6 @@
                                 <td class="px-4 py-3">
                                     @php
                                         $lieu = null; $libelle = null;
-                                        // 1. FK directes (agent membre d'une structure)
                                         if ($agent->service_id && $agent->service) {
                                             $lieu = 'Service'; $libelle = $agent->service->nom;
                                         } elseif ($agent->guichet_id && $agent->guichet) {
@@ -200,8 +213,11 @@
                                         } elseif ($agent->entite_id && $agent->entite) {
                                             $lieu = 'Dir. Générale'; $libelle = $agent->entite->nom;
                                         }
-                                        // 2. FK inverses (agent EST responsable d'une structure)
-                                        elseif ($agent->ledService) {
+                                        elseif ($agent->pcaedEntite) {
+                                            $lieu = 'PCA'; $libelle = $agent->pcaedEntite->nom;
+                                        } elseif ($agent->assistantedEntite) {
+                                            $lieu = 'Assistante DG'; $libelle = $agent->assistantedEntite->nom;
+                                        } elseif ($agent->ledService) {
                                             $lieu = 'Chef Service'; $libelle = $agent->ledService->nom;
                                         } elseif ($agent->ledGuichet) {
                                             $lieu = 'Chef Guichet'; $libelle = $agent->ledGuichet->nom ?? 'Guichet';
@@ -242,10 +258,14 @@
                                             <i class="fas fa-circle text-[6px]"></i> Compte actif
                                         </span>
                                     @else
-                                        <a href="{{ route('admin.users.create') }}?agent_id={{ $agent->id }}"
-                                           class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition">
-                                            <i class="fas fa-plus text-[8px]"></i> Créer compte
-                                        </a>
+                                        <form method="POST" action="{{ route('admin.agents.activate-account', $agent) }}">
+                                            @csrf
+                                            <button type="button"
+                                                    onclick="if(confirm('Créer le compte de {{ e($agent->prenom) }} {{ e($agent->nom) }} ?\nMot de passe par défaut : 11111111')) this.form.submit();"
+                                                    class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition">
+                                                <i class="fas fa-user-plus text-[8px]"></i> Créer compte
+                                            </button>
+                                        </form>
                                     @endif
                                 </td>
 
@@ -263,7 +283,7 @@
                                             <i class="fas fa-pen text-xs"></i>
                                         </a>
                                         <form method="POST" action="{{ route('admin.agents.destroy', $agent) }}"
-                                              onsubmit="return confirm('Supprimer {{ addslashes($agent->prenom.' '.$agent->nom) }} ?')">
+                                              onsubmit="return confirm('Supprimer {{ e($agent->prenom) }} {{ e($agent->nom) }} ?')">
                                             @csrf @method('DELETE')
                                             <button type="submit"
                                                     class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
@@ -279,8 +299,8 @@
                                 <td colspan="8" class="py-16 text-center">
                                     <div class="flex flex-col items-center gap-3 text-slate-400">
                                         <i class="fas fa-users text-4xl"></i>
-                                        @if ($fonctionActive)
-                                            <p class="text-sm font-semibold">Aucun agent avec la fonction <strong>{{ $fonctions[$fonctionActive] ?? $fonctionActive }}</strong>.</p>
+                                        @if ($roleActive)
+                                            <p class="text-sm font-semibold">Aucun agent avec le rôle <strong>{{ $roles[$roleActive] ?? $roleActive }}</strong>.</p>
                                             <a href="{{ route('admin.agents.index') }}" class="text-xs text-blue-500 hover:underline">Voir tous les agents</a>
                                         @elseif ($search)
                                             <p class="text-sm font-semibold">Aucun résultat pour "<strong>{{ $search }}</strong>".</p>
@@ -302,7 +322,7 @@
             @if ($agents->isNotEmpty())
                 <div class="border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-right text-xs text-slate-400">
                     {{ $agents->count() }} agent(s) affiché(s)
-                    @if ($fonctionActive || $search) sur {{ $totalAgents }} au total @endif
+                    @if ($roleActive || $search) sur {{ $totalAgents }} au total @endif
                 </div>
             @endif
         </div>

@@ -71,10 +71,17 @@ class EvaluationController extends Controller
             return back()->with('error', 'Cette action n\'est possible que sur une évaluation soumise.');
         }
 
-        $request->validate(['action' => ['required', 'in:accepter,refuser']]);
+        $request->validate([
+            'action'      => ['required', 'in:accepter,refuser'],
+            'motif_refus' => ['required_if:action,refuser', 'nullable', 'string', 'max:1000'],
+        ]);
 
         $action = $request->input('action');
         $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
+        if ($action === 'refuser') {
+            $evaluation->motif_refus        = $request->input('motif_refus');
+            $evaluation->statut_reclamation = 'en_attente';
+        }
         $evaluation->save();
 
         // Notifier le PCA (évaluateur)
@@ -92,6 +99,30 @@ class EvaluationController extends Controller
         $msg = $action === 'accepter' ? 'Évaluation acceptée.' : 'Évaluation refusée.';
 
         return redirect()->route('dg.evaluations.show', $evaluation)->with('status', $msg);
+    }
+
+    public function reclamer(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        $this->authorize('evaluations.voir-propres');
+        if ($evaluation->evaluable_type !== User::class) {
+            abort(403);
+        }
+        if ((int) $evaluation->evaluable_id !== (int) $request->user()->id) {
+            abort(403);
+        }
+        if ($evaluation->statut !== 'refuse') {
+            return back()->with('error', "La réclamation n'est possible que sur une évaluation refusée.");
+        }
+
+        $request->validate([
+            'reclamation' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $evaluation->reclamation = $request->input('reclamation');
+        $evaluation->save();
+
+        return redirect()->route('dg.evaluations.show', $evaluation)
+            ->with('status', 'Votre réclamation a été enregistrée.');
     }
 
     public function commentaire(Request $request, Evaluation $evaluation)

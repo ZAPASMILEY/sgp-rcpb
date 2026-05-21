@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,15 +11,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FicheObjectif extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $fillable = [
         'titre',
-        'annee_id', 
+        'annee_id',
         'assignable_id',
         'assignable_type',
         'date',
         'date_echeance',
+        'date_validation',
         'avancement_percentage',
         'statut',
     ];
@@ -31,6 +33,15 @@ class FicheObjectif extends Model
     public function objectifs(): HasMany
     {
         return $this->hasMany(LigneFicheObjectif::class);
+    }
+
+    /**
+     * Recalcule l'avancement de la fiche comme moyenne des lignes.
+     */
+    public function recalculateAvancement(): void
+    {
+        $avg = (int) round($this->objectifs()->avg('avancement_percentage') ?? 0);
+        $this->update(['avancement_percentage' => $avg]);
     }
 
     /**

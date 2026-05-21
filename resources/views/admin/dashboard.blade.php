@@ -17,22 +17,24 @@
         [
             'label' => 'Directions',
             'value' => $directionsCount,
-            'meta' => $faitiereDirectionsCount.' a la faitiere / '.$delegationDirectionsCount.' en delegation',
+            'meta' => $faitiereDirectionsCount.' direction(s) a la faitiere',
             'href' => route('admin.entites.directions.index'),
             'icon' => 'fas fa-sitemap',
-            'valueClass' => 'text-sky-500',
-            'iconClass' => 'bg-sky-50 text-sky-500',
-            'borderClass' => 'border-slate-100',
+            'from' => 'from-sky-500', 'to' => 'to-cyan-400',
+            'icon_bg' => 'bg-sky-100', 'icon_text' => 'text-sky-600',
+            'badge' => 'bg-sky-100 text-sky-700',
+            'border' => 'border-sky-200', 'hover' => 'hover:border-sky-400',
         ],
         [
             'label' => 'Delegations techniques',
             'value' => $delegationsCount,
-            'meta' => $delegationDirectionsCount.' directions rattachees',
+            'meta' => $caissesParDelegation.' caisse(s) rattachees',
             'href' => route('admin.delegations-techniques.index'),
             'icon' => 'fas fa-building-circle-arrow-right',
-            'valueClass' => 'text-emerald-500',
-            'iconClass' => 'bg-emerald-50 text-emerald-500',
-            'borderClass' => 'border-slate-100',
+            'from' => 'from-emerald-500', 'to' => 'to-teal-500',
+            'icon_bg' => 'bg-emerald-100', 'icon_text' => 'text-emerald-600',
+            'badge' => 'bg-emerald-100 text-emerald-700',
+            'border' => 'border-emerald-200', 'hover' => 'hover:border-emerald-400',
         ],
         [
             'label' => 'Services',
@@ -40,9 +42,10 @@
             'meta' => $servicesWithoutDirection.' sans direction',
             'href' => route('admin.services.index'),
             'icon' => 'fas fa-layer-group',
-            'valueClass' => 'text-cyan-500',
-            'iconClass' => 'bg-cyan-50 text-cyan-500',
-            'borderClass' => 'border-slate-100',
+            'from' => 'from-violet-500', 'to' => 'to-purple-500',
+            'icon_bg' => 'bg-violet-100', 'icon_text' => 'text-violet-600',
+            'badge' => 'bg-violet-100 text-violet-700',
+            'border' => 'border-violet-200', 'hover' => 'hover:border-violet-400',
         ],
         [
             'label' => 'Agents',
@@ -50,9 +53,10 @@
             'meta' => $agentsWithoutService.' sans service',
             'href' => route('admin.agents.index'),
             'icon' => 'fas fa-users',
-            'valueClass' => 'text-amber-500',
-            'iconClass' => 'bg-amber-50 text-amber-500',
-            'borderClass' => 'border-slate-100',
+            'from' => 'from-amber-500', 'to' => 'to-orange-400',
+            'icon_bg' => 'bg-amber-100', 'icon_text' => 'text-amber-600',
+            'badge' => 'bg-amber-100 text-amber-700',
+            'border' => 'border-amber-200', 'hover' => 'hover:border-amber-400',
         ],
         [
             'label' => 'Secretaires',
@@ -60,9 +64,10 @@
             'meta' => 'Total des secretaires du reseau',
             'href' => route('admin.entites.secretaires.index'),
             'icon' => 'fas fa-user-tie',
-            'valueClass' => 'text-fuchsia-500',
-            'iconClass' => 'bg-fuchsia-50 text-fuchsia-500',
-            'borderClass' => 'border-slate-100',
+            'from' => 'from-fuchsia-500', 'to' => 'to-pink-500',
+            'icon_bg' => 'bg-fuchsia-100', 'icon_text' => 'text-fuchsia-600',
+            'badge' => 'bg-fuchsia-100 text-fuchsia-700',
+            'border' => 'border-fuchsia-200', 'hover' => 'hover:border-fuchsia-400',
         ],
         [
             'label' => 'Alertes securite',
@@ -70,9 +75,10 @@
             'meta' => $failedLoginEmailsCount.' email(s) distinct(s)',
             'href' => '#security-log',
             'icon' => 'fas fa-shield-halved',
-            'valueClass' => 'text-rose-500',
-            'iconClass' => 'bg-rose-50 text-rose-500',
-            'borderClass' => 'border-rose-200',
+            'from' => 'from-rose-500', 'to' => 'to-red-500',
+            'icon_bg' => 'bg-rose-100', 'icon_text' => 'text-rose-600',
+            'badge' => 'bg-rose-100 text-rose-700',
+            'border' => 'border-rose-200', 'hover' => 'hover:border-rose-400',
         ],
     ];
 @endphp
@@ -126,25 +132,43 @@
 <div class="relative z-10 bg-[#f1f5f9] px-4 pb-6 pt-6 lg:px-8">
     <div class="mx-auto max-w-[1500px] space-y-4">
 
-        <section class="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-6">
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
             @foreach ($overviewCards as $card)
-                <article class="rounded-[20px] border {{ $card['borderClass'] }} bg-white px-4 py-3 shadow-[0_12px_30px_-24px_rgba(15,23,42,0.3)]">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">{{ $card['label'] }}</p>
-                            <p class="mt-2 text-3xl font-black tracking-tight {{ $card['valueClass'] }}">{{ $card['value'] }}</p>
-                            <p class="mt-1 line-clamp-1 text-[11px] font-bold text-slate-400">{{ $card['meta'] }}</p>
+                <a href="{{ $card['href'] }}"
+                   class="group relative flex flex-col overflow-hidden rounded-3xl border bg-white shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 {{ $card['border'] }} {{ $card['hover'] }}">
+
+                    {{-- Barre de couleur en haut --}}
+                    <div class="h-1.5 w-full bg-gradient-to-r {{ $card['from'] }} {{ $card['to'] }}"></div>
+
+                    <div class="flex flex-1 flex-col gap-4 p-5">
+
+                        {{-- Header : icône + valeur en badge --}}
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl {{ $card['icon_bg'] }} {{ $card['icon_text'] }} transition group-hover:scale-105">
+                                <i class="{{ $card['icon'] }} text-base"></i>
+                            </div>
+                            <span class="rounded-full {{ $card['badge'] }} px-3 py-0.5 text-sm font-black">
+                                {{ $card['value'] }}
+                            </span>
                         </div>
-                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl {{ $card['iconClass'] }}">
-                            <i class="{{ $card['icon'] }} text-base"></i>
+
+                        {{-- Label + méta --}}
+                        <div class="flex-1">
+                            <h3 class="text-base font-black leading-snug text-slate-900 transition-colors group-hover:{{ $card['icon_text'] }}">
+                                {{ $card['label'] }}
+                            </h3>
+                            <p class="mt-1 text-[12px] text-slate-400">{{ $card['meta'] }}</p>
+                        </div>
+
+                        {{-- Footer --}}
+                        <div class="flex items-center gap-2 border-t border-slate-100 pt-3">
+                            <span class="text-xs font-semibold text-slate-400">Ouvrir</span>
+                            <div class="ml-auto flex h-7 w-7 items-center justify-center rounded-full {{ $card['icon_bg'] }} transition group-hover:scale-110">
+                                <i class="fas fa-arrow-right text-[10px] {{ $card['icon_text'] }}"></i>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-3 flex justify-end">
-                        <a href="{{ $card['href'] }}" class="inline-flex h-8 items-center rounded-xl bg-slate-50 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-900 hover:text-white">
-                            Ouvrir
-                        </a>
-                    </div>
-                </article>
+                </a>
             @endforeach
         </section>
 

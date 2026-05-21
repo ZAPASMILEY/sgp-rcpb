@@ -24,6 +24,7 @@ return new class extends Migration
 
             // 3. Période et Exercice
             $table->foreignId('annee_id')->nullable()->constrained('annees')->nullOnDelete();
+            $table->unsignedBigInteger('semestre_id')->nullable(); // FK vers semestres (sans contrainte : semestres créé après)
             $table->date('date_debut');
             $table->date('date_fin');
 
@@ -44,7 +45,12 @@ return new class extends Migration
 
             $table->enum('statut', ['brouillon', 'soumis', 'valide', 'refuse'])->default('brouillon');
 
-            // 6. Bloc des Signatures
+            // 6. Workflow réclamation
+            $table->text('motif_refus')->nullable();
+            $table->text('reclamation')->nullable();
+            $table->string('statut_reclamation', 20)->nullable(); // en_attente | maintenu | rouvert
+
+            // 7. Bloc des Signatures
             $table->string('signature_evalue_nom')->nullable();
             $table->date('date_signature_evalue')->nullable();
             $table->string('signature_evaluateur_nom')->nullable();

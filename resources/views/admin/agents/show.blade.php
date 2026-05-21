@@ -27,7 +27,7 @@
                     <h1 class="mt-1 text-3xl font-black tracking-tight text-slate-900">
                         {{ $agent->prenom }} {{ $agent->nom }}
                     </h1>
-                    <p class="mt-1 text-sm font-semibold text-slate-500">{{ $agent->fonction }}</p>
+                    <p class="mt-1 text-sm font-semibold text-slate-500">{{ $agent->role }}</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ route('admin.agents.edit', $agent) }}"
@@ -118,7 +118,7 @@
                         <div class="grid gap-3 sm:grid-cols-2">
                             <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
                                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Fonction</p>
-                                <p class="mt-1 font-bold text-slate-800">{{ $agent->fonction }}</p>
+                                <p class="mt-1 font-bold text-slate-800">{{ $agent->role }}</p>
                             </div>
                             <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
                                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date de prise de fonction</p>
@@ -129,46 +129,62 @@
                         </div>
                     </div>
 
-                    {{-- Structure de rattachement --}}
-                    <div class="sm:col-span-2">
-                        <p class="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-                            <i class="fas fa-sitemap mr-1.5 text-violet-400"></i> Rattachement hiérarchique
-                        </p>
-                        @php
-                            $rattachements = [];
-                            if ($agent->guichet)            $rattachements[] = ['label' => 'Guichet',            'value' => $agent->guichet->nom,                       'icon' => 'fa-window-maximize',    'color' => 'text-cyan-700',   'bg' => 'bg-cyan-50',   'border' => 'border-cyan-200'];
-                            if ($agent->agence)             $rattachements[] = ['label' => 'Agence',             'value' => $agent->agence->nom,                        'icon' => 'fa-building-columns',   'color' => 'text-blue-700',   'bg' => 'bg-blue-50',   'border' => 'border-blue-200'];
-                            if ($agent->caisse)             $rattachements[] = ['label' => 'Caisse',             'value' => $agent->caisse->nom,                        'icon' => 'fa-university',         'color' => 'text-amber-700',  'bg' => 'bg-amber-50',  'border' => 'border-amber-200'];
-                            if ($agent->delegationTechnique)$rattachements[] = ['label' => 'Délégation',         'value' => $agent->delegationTechnique->region.' — '.$agent->delegationTechnique->ville, 'icon' => 'fa-sitemap', 'color' => 'text-violet-700', 'bg' => 'bg-violet-50', 'border' => 'border-violet-200'];
-                            if ($agent->service) {
-                                $svcLabel = $agent->service->nom;
-                                if ($agent->service->direction)           $svcLabel .= ' / ' . $agent->service->direction->nom;
-                                if ($agent->service->delegationTechnique) $svcLabel .= ' (DT '.$agent->service->delegationTechnique->region.')';
-                                if ($agent->service->caisse)              $svcLabel .= ' (Caisse '.$agent->service->caisse->nom.')';
-                                $rattachements[] = ['label' => 'Service', 'value' => $svcLabel, 'icon' => 'fa-layer-group', 'color' => 'text-emerald-700', 'bg' => 'bg-emerald-50', 'border' => 'border-emerald-200'];
-                            }
-                        @endphp
-                        @if (count($rattachements) > 0)
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                @foreach ($rattachements as $r)
-                                    <div class="rounded-xl border {{ $r['border'] }} {{ $r['bg'] }} p-4">
-                                        <p class="text-[10px] font-bold uppercase tracking-wider {{ $r['color'] }}">
-                                            <i class="fas {{ $r['icon'] }} mr-1"></i> {{ $r['label'] }}
-                                        </p>
-                                        <p class="mt-1 font-bold text-slate-800">{{ $r['value'] }}</p>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-400">
-                                <i class="fas fa-link-slash text-xl mb-2 block"></i>
-                                Agent non affecté à une structure.
-                                <a href="{{ route('admin.agents.edit', $agent) }}" class="block mt-1 text-blue-500 hover:underline font-semibold text-xs">
-                                    Affecter maintenant
-                                </a>
-                            </div>
-                        @endif
-                    </div>
+                   {{-- Structure de rattachement --}}
+<div class="sm:col-span-2">
+    <p class="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+        <i class="fas fa-sitemap mr-1.5 text-violet-400"></i> Rattachement hiérarchique
+    </p>
+   @php
+    $rattachements = [];
+    
+    if (!empty($agent->entite)) {
+        $rattachements[] = ['label' => 'Entité (Faîtière)', 'value' => $agent->entite->nom, 'icon' => 'fa-gavel', 'color' => 'text-slate-700', 'bg' => 'bg-slate-50', 'border' => 'border-slate-200'];
+    }
+    if (!empty($agent->direction)) {
+        $rattachements[] = ['label' => 'Direction', 'value' => $agent->direction->nom, 'icon' => 'fa-building', 'color' => 'text-indigo-700', 'bg' => 'bg-indigo-50', 'border' => 'border-indigo-200'];
+    }
+    if (!empty($agent->guichet)) {
+        $rattachements[] = ['label' => 'Guichet', 'value' => $agent->guichet->nom, 'icon' => 'fa-window-maximize', 'color' => 'text-cyan-700', 'bg' => 'bg-cyan-50', 'border' => 'border-cyan-200'];
+    }
+    if (!empty($agent->agence)) {
+        $rattachements[] = ['label' => 'Agence', 'value' => $agent->agence->nom, 'icon' => 'fa-building-columns', 'color' => 'text-blue-700', 'bg' => 'bg-blue-50', 'border' => 'border-blue-200'];
+    }
+    if (!empty($agent->caisse)) {
+        $rattachements[] = ['label' => 'Caisse', 'value' => $agent->caisse->nom, 'icon' => 'fa-university', 'color' => 'text-amber-700', 'bg' => 'bg-amber-50', 'border' => 'border-amber-200'];
+    }
+    if (!empty($agent->delegationTechnique)) {
+        $rattachements[] = ['label' => 'Délégation', 'value' => $agent->delegationTechnique->region.' — '.$agent->delegationTechnique->ville, 'icon' => 'fa-sitemap', 'color' => 'text-violet-700', 'bg' => 'bg-violet-50', 'border' => 'border-violet-200'];
+    }
+    if (!empty($agent->service)) {
+        $svcLabel = $agent->service->nom;
+        if ($agent->service->direction)           $svcLabel .= ' / ' . $agent->service->direction->nom;
+        if ($agent->service->delegationTechnique) $svcLabel .= ' (DT '.$agent->service->delegationTechnique->region.')';
+        if ($agent->service->caisse)              $svcLabel .= ' (Caisse '.$agent->service->caisse->nom.')';
+        $rattachements[] = ['label' => 'Service', 'value' => $svcLabel, 'icon' => 'fa-layer-group', 'color' => 'text-emerald-700', 'bg' => 'bg-emerald-50', 'border' => 'border-emerald-200'];
+    }
+@endphp
+
+    @if (count($rattachements) > 0)
+        <div class="grid gap-3 sm:grid-cols-2">
+            @foreach ($rattachements as $r)
+                <div class="rounded-xl border {{ $r['border'] }} {{ $r['bg'] }} p-4">
+                    <p class="text-[10px] font-bold uppercase tracking-wider {{ $r['color'] }}">
+                        <i class="fas {{ $r['icon'] }} mr-1"></i> {{ $r['label'] }}
+                    </p>
+                    <p class="mt-1 font-bold text-slate-800">{{ $r['value'] }}</p>
+                </div>
+            @endforeach
+        </div>
+    @else
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-400">
+            <i class="fas fa-link-slash text-xl mb-2 block"></i>
+            Agent non affecté à une structure.
+            <a href="{{ route('admin.agents.edit', $agent) }}" class="block mt-1 text-blue-500 hover:underline font-semibold text-xs">
+                Affecter maintenant
+            </a>
+        </div>
+    @endif
+</div>
 
                     {{-- Contact --}}
                     <div class="sm:col-span-2">

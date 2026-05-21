@@ -183,32 +183,37 @@
                                 </a>
                             </div>
                         </div>
+{{-- Secrétaires panel --}}
+<div data-entite-tab-panel="secretaires" class="hidden">
+    @forelse ($secretaires as $direction)
+        <a href="{{ route('admin.secretaires.show', $direction->id) }}" class="flex items-center justify-between border-b border-slate-50 py-3 transition hover:bg-slate-50 -mx-2 px-2 rounded-lg">
+            <div class="flex items-center gap-3">
+                <span class="h-2 w-2 rounded-full bg-pink-500"></span>
+                <span class="text-sm font-semibold text-slate-700">
+                    {{-- On passe par la relation 'secretaire' rattachée à la direction --}}
+                    @if($direction->secretaire)
+                        {{ $direction->secretaire->prenom }} {{ $direction->secretaire->nom }}
+                    @else
+                        <span class="text-slate-400 font-normal">Non renseigné</span>
+                    @endif
+                </span>
+                <span class="text-xs text-slate-400">{{ $direction->nom }}</span>
+            </div>
+            <i class="fas fa-arrow-right text-xs text-slate-300"></i>
+        </a>
+    @empty
+        <p class="py-6 text-center text-sm text-slate-400">Aucune secrétaire enregistrée.</p>
+    @endforelse
 
-                        {{-- Secrétaires panel --}}
-                        <div data-entite-tab-panel="secretaires" class="hidden">
-                            @forelse ($secretaires as $direction)
-                                <a href="{{ route('admin.secretaires.show', $direction->id) }}" class="flex items-center justify-between border-b border-slate-50 py-3 transition hover:bg-slate-50 -mx-2 px-2 rounded-lg">
-                                    <div class="flex items-center gap-3">
-                                        <span class="h-2 w-2 rounded-full bg-pink-500"></span>
-                                        <span class="text-sm font-semibold text-slate-700">
-                                            {{ trim(($direction->secretaire_prenom ?? '').' '.($direction->secretaire_nom ?? '')) ?: 'Non renseigné' }}
-                                        </span>
-                                        <span class="text-xs text-slate-400">{{ $direction->nom }}</span>
-                                    </div>
-                                    <i class="fas fa-arrow-right text-xs text-slate-300"></i>
-                                </a>
-                            @empty
-                                <p class="py-6 text-center text-sm text-slate-400">Aucune secrétaire enregistrée.</p>
-                            @endforelse
-
-                            <div class="mt-4 flex items-center gap-3">
-                                <a href="{{ route('admin.entites.secretaires.index') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-700">
-                                    <i class="fas fa-arrow-right text-xs"></i> Voir liste
-                                </a>
-                                <button type="button" onclick="document.getElementById('modal-secretaire').classList.remove('hidden')" class="inline-flex items-center gap-1.5 rounded-xl bg-pink-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-pink-600">
-                                    <i class="fas fa-plus text-[10px]"></i> Ajouter
-                                </button>
-                            </div>
+    <div class="mt-4 flex items-center gap-3">
+        <a href="{{ route('admin.entites.secretaires.index') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-700">
+            <i class="fas fa-arrow-right text-xs"></i> Voir liste
+        </a>
+        <button type="button" onclick="document.getElementById('modal-secretaire').classList.remove('hidden')" class="inline-flex items-center gap-1.5 rounded-xl bg-pink-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-pink-600">
+            <i class="fas fa-plus text-[10px]"></i> Ajouter
+        </button>
+    </div>
+</div>
                         </div>
 
                         {{-- Agents panel --}}
@@ -218,7 +223,7 @@
                                     <div class="flex items-center gap-3">
                                         <span class="h-2 w-2 rounded-full bg-amber-500"></span>
                                         <span class="text-sm font-semibold text-slate-700">{{ trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) ?: 'Agent' }}</span>
-                                        <span class="text-xs text-slate-400">{{ $agent->fonction ?? '' }}</span>
+                                        <span class="text-xs text-slate-400">{{ $agent->role ?? '' }}</span>
                                     </div>
                                     <i class="fas fa-arrow-right text-xs text-slate-300"></i>
                                 </a>
@@ -412,7 +417,7 @@
                 <select name="agent_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-orange-400 focus:ring-orange-400">
                     <option value="">— Sélectionner un agent —</option>
                     @foreach ($agents_disponibles ?? [] as $ag)
-                        <option value="{{ $ag->id }}">{{ $ag->prenom }} {{ $ag->nom }}{{ $ag->fonction ? ' — '.$ag->fonction : '' }}</option>
+                        <option value="{{ $ag->id }}">{{ $ag->prenom }} {{ $ag->nom }}{{ $ag->role ? ' — '.$ag->role : '' }}</option>
                     @endforeach
                 </select>
                 <p class="mt-1 text-xs text-slate-400">Agents sans service actuellement.</p>

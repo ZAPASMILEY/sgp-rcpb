@@ -81,23 +81,13 @@
                         </div>
                     </div>
 
-                    {{-- Directeur General Adjoint --}}
-                    <div class="ent-card space-y-4">
-                        <div class="flex items-center gap-2">
-                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-600 text-xs font-bold text-white">DGA</span>
-                            <p class="text-sm font-semibold uppercase tracking-[0.15em] text-slate-500">Directeur General Adjoint</p>
-                        </div>
-                        <div class="space-y-2">
-                            <label for="dga_agent_id" class="text-sm font-semibold text-slate-700">Choisir un agent</label>
-                            <select id="dga_agent_id" name="dga_agent_id" class="ent-select">
-                                <option value="">— Aucun DGA pour l'instant —</option>
-                                @foreach ($dga_agents as $agent)
-                                    <option value="{{ $agent->id }}" @selected(old('dga_agent_id') == $agent->id)>
-                                        {{ $agent->nom }} {{ $agent->prenom }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+                    {{-- Info DGA --}}
+                    <div class="rounded-2xl border border-violet-100 bg-violet-50 px-4 py-3 flex items-start gap-3">
+                        <i class="fas fa-info-circle mt-0.5 text-violet-400"></i>
+                        <p class="text-sm text-violet-700">
+                            Le <strong>DGA</strong> est configuré séparément depuis la page
+                            <a href="{{ route('admin.direction-dga.index') }}" class="font-bold underline">Direction Générale Adjointe</a>.
+                        </p>
                     </div>
 
                     {{-- Assistante DG --}}

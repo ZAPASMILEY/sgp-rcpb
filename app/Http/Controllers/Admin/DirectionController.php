@@ -140,8 +140,9 @@ class DirectionController extends Controller
         ];
 
         return view('admin.delegations_techniques.index', array_merge(compact('delegations', 'stats'), [
-            'directeurs_caisse' => \App\Models\Agent::where('fonction', 'Directeur de Caisse')->orderBy('nom')->get(),
-            'secretaires_caisse' => \App\Models\Agent::where('fonction', 'Secrétaire de Caisse')->orderBy('nom')->get(),
+            'directeurs'         => \App\Models\Agent::where('role', 'Directeur Technique')->orderBy('nom')->get(),
+            'directeurs_caisse'  => \App\Models\Agent::where('role', 'Directeur de Caisse')->orderBy('nom')->get(),
+            'secretaires_caisse' => \App\Models\Agent::where('role', 'Secrétaire de Caisse')->orderBy('nom')->get(),
         ]));
     }
 
@@ -216,7 +217,10 @@ class DirectionController extends Controller
             $validated['entite_id'] = $entite->id;
         }
 
-        DelegationTechnique::query()->create($validated);
+        $dt = DelegationTechnique::query()->create($validated);
+
+        Agent::findOrFail($validated['directeur_agent_id'])->update(['poste' => 'Directeur Technique de ' . $dt->ville]);
+        Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => 'Secrétaire Technique de ' . $dt->ville]);
 
         return redirect()
             ->route('admin.delegations-techniques.index')
@@ -238,7 +242,12 @@ class DirectionController extends Controller
             'directeur_agent_id.required' => 'Le directeur est obligatoire pour créer une Caisse.',
         ]);
 
-        Caisse::query()->create($validated);
+        $caisse = Caisse::query()->create($validated);
+
+        Agent::findOrFail($validated['directeur_agent_id'])->update(['poste' => 'Directeur de ' . $caisse->nom]);
+        if (!empty($validated['secretaire_agent_id'])) {
+            Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => 'Secrétaire de ' . $caisse->nom]);
+        }
 
         return redirect()
             ->route('admin.delegations-techniques.show', $validated['delegation_technique_id'])
@@ -253,7 +262,7 @@ class DirectionController extends Controller
             'prenom'                  => ['required', 'string', 'max:255'],
             'nom'                     => ['required', 'string', 'max:255'],
             'sexe'                    => ['required', 'in:Masculin,Feminin'],
-            'fonction'                => ['required', 'string', 'max:255'],
+            'role'                    => ['required', 'string', 'max:255'],
             'email'                   => ['required', 'email', 'max:255'],
             'numero_telephone'        => ['nullable', 'string', 'max:30'],
             'date_debut_fonction'     => ['nullable', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
@@ -276,7 +285,9 @@ class DirectionController extends Controller
             'chef_agent_id.required' => 'Le chef de service est obligatoire pour créer un Service.',
         ]);
 
-        Service::query()->create($validated);
+        $service = Service::query()->create($validated);
+
+        Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => 'Chef du Service ' . $service->nom]);
 
         return redirect()
             ->route('admin.delegations-techniques.index')
@@ -289,8 +300,8 @@ class DirectionController extends Controller
 
         return view('admin.delegations_techniques.edit', [
             'delegationTechnique' => $delegationTechnique,
-            'directeurs'          => Agent::query()->where('fonction', 'Directeur Technique')->orderBy('nom')->orderBy('prenom')->get(),
-            'secretaires'         => Agent::query()->where('fonction', 'Secrétaire Technique')->orderBy('nom')->orderBy('prenom')->get(),
+            'directeurs'          => Agent::query()->where('role', 'Directeur Technique')->orderBy('nom')->orderBy('prenom')->get(),
+            'secretaires'         => Agent::query()->where('role', 'Secrétaire Technique')->orderBy('nom')->orderBy('prenom')->get(),
         ]);
     }
 
@@ -359,17 +370,17 @@ class DirectionController extends Controller
 
             // Seuls les agents "Directeur de Direction" pas encore affectés à une direction
             'directeurs'  => Agent::query()
-                ->where('fonction', 'Directeur de Direction')
+                ->where('role', 'Directeur de Direction')
                 ->whereNotIn('id', $prisDirecteurIds)
                 ->orderBy('nom')->orderBy('prenom')
-                ->get(['id', 'nom', 'prenom', 'fonction']),
+                ->get(['id', 'nom', 'prenom', 'role']),
 
             // Seules les agents "Secrétaire de Direction" pas encore affectées
             'secretaires' => Agent::query()
-                ->where('fonction', 'Secrétaire de Direction')
+                ->where('role', 'Secrétaire de Direction')
                 ->whereNotIn('id', $prisSecretaireIds)
                 ->orderBy('nom')->orderBy('prenom')
-                ->get(['id', 'nom', 'prenom', 'fonction']),
+                ->get(['id', 'nom', 'prenom', 'role']),
         ]);
     }
 
@@ -396,7 +407,7 @@ class DirectionController extends Controller
             ->with('service')           // évite N+1 pour afficher le service de chaque agent
             ->orderBy('nom')
             ->orderBy('prenom')
-            ->get(['id', 'nom', 'prenom', 'fonction', 'email', 'service_id', 'direction_id']);
+            ->get(['id', 'nom', 'prenom', 'role', 'email', 'service_id', 'direction_id']);
 
         return view('admin.directions.show', [
             'direction'       => $direction,
@@ -421,26 +432,26 @@ class DirectionController extends Controller
         // Le directeur actuellement en poste est toujours inclus pour qu'il reste sélectionnable.
         $directeurs = Agent::query()
             ->where(function ($q) use ($prisDirecteurIds, $direction) {
-                $q->where('fonction', 'Directeur de Direction')
+                $q->where('role', 'Directeur de Direction')
                   ->whereNotIn('id', $prisDirecteurIds);
                 if ($direction->directeur_agent_id) {
                     $q->orWhere('id', $direction->directeur_agent_id);
                 }
             })
             ->orderBy('nom')->orderBy('prenom')
-            ->get(['id', 'nom', 'prenom', 'fonction']);
+            ->get(['id', 'nom', 'prenom', 'role']);
 
         // Secrétaires disponibles : uniquement "Secrétaire de Direction" + pas prises ailleurs.
         $secretaires = Agent::query()
             ->where(function ($q) use ($prisSecretaireIds, $direction) {
-                $q->where('fonction', 'Secrétaire de Direction')
+                $q->where('role', 'Secrétaire de Direction')
                   ->whereNotIn('id', $prisSecretaireIds);
                 if ($direction->secretaire_agent_id) {
                     $q->orWhere('id', $direction->secretaire_agent_id);
                 }
             })
             ->orderBy('nom')->orderBy('prenom')
-            ->get(['id', 'nom', 'prenom', 'fonction']);
+            ->get(['id', 'nom', 'prenom', 'role']);
 
         return view('admin.directions.edit', [
             'direction'  => $direction,
@@ -467,7 +478,12 @@ class DirectionController extends Controller
         ]);
 
         $validated['entite_id'] = $entite->id;
-        Direction::query()->create($validated);
+        $direction = Direction::query()->create($validated);
+
+        Agent::findOrFail($validated['directeur_agent_id'])->update(['poste' => 'Directeur de ' . $direction->nom]);
+        if (!empty($validated['secretaire_agent_id'])) {
+            Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => 'Secrétaire de ' . $direction->nom]);
+        }
 
         return redirect()
             ->route('admin.directions.index')
@@ -483,6 +499,13 @@ class DirectionController extends Controller
         ]);
 
         $direction->update($validated);
+
+        if (!empty($validated['directeur_agent_id'])) {
+            Agent::findOrFail($validated['directeur_agent_id'])->update(['poste' => 'Directeur de ' . $direction->nom]);
+        }
+        if (!empty($validated['secretaire_agent_id'])) {
+            Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => 'Secrétaire de ' . $direction->nom]);
+        }
 
         return redirect()
             ->route('admin.directions.show', $direction)

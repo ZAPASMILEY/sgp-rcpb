@@ -52,7 +52,7 @@ class DashboardController extends Controller
             ->get();
 
         $faitiereDirectionsCount = Direction::query()->count();
-        $delegationDirectionsCount = 0;
+        $caissesParDelegation = Caisse::query()->whereNotNull('delegation_technique_id')->count();
         $servicesWithoutDirection = Service::query()->whereNull('direction_id')->count();
         $agentsWithoutService = Agent::query()->whereNull('service_id')->count();
         $secretairesCount = User::query()->whereIn('role', [
@@ -115,10 +115,10 @@ class DashboardController extends Controller
             'delegationsCount'   => DelegationTechnique::query()->count(),
             'directionsCount'    => Direction::query()->count(),
             'servicesCount'      => Service::query()->count(),
-            'agentsCount'        => Agent::query()->count(),
+            'agentsCount'        => Agent::personnel()->count(),
             'secretairesCount'   => $secretairesCount,
-            'faitiereDirectionsCount' => $faitiereDirectionsCount,
-            'delegationDirectionsCount' => $delegationDirectionsCount,
+            'faitiereDirectionsCount'  => $faitiereDirectionsCount,
+            'caissesParDelegation'     => $caissesParDelegation,
             'servicesWithoutDirection' => $servicesWithoutDirection,
             'agentsWithoutService' => $agentsWithoutService,
             'failedLoginAttemptsCount' => $failedLoginAttemptsCount,

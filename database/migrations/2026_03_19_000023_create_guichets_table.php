@@ -17,6 +17,7 @@ return new class extends Migration
 
             // Responsable : FK vers agent
             $table->foreignId('chef_agent_id')->nullable()->constrained('agents')->nullOnDelete();
+            $table->string('telephone_accueil', 30)->nullable();
 
             $table->timestamps();
         });

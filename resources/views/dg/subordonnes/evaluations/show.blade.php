@@ -19,6 +19,11 @@
                         <i class="fas fa-file-pdf mr-2"></i>PDF
                     </a>
                     <a href="{{ $backUrl }}" class="ent-btn ent-btn-soft">Retour</a>
+                     @if($evaluation->statut === 'brouillon')
+                        <a href="{{ route('dg.sub-evaluations.edit', $evaluation) }}" class="ent-btn bg-amber-500 text-white hover:bg-amber-600">
+                            <i class="fas fa-edit mr-2"></i>Modifier
+                        </a>
+                    @endif
                 </div>
             </div>
         </header>
@@ -64,7 +69,11 @@
                 </div>
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>
-                    <p class="mt-2 text-sm font-semibold text-slate-900">{{ ucfirst($evaluation->statut) }}</p>
+                    @php
+                        $statutLbl = match($evaluation->statut) { 'valide'=>'Validée','soumis'=>'Soumise','refuse'=>'Refusée',default=>'Brouillon' };
+                        $statutClr = match($evaluation->statut) { 'valide'=>'text-emerald-700','soumis'=>'text-amber-700','refuse'=>'text-rose-700',default=>'text-slate-600' };
+                    @endphp
+                    <p class="mt-2 text-sm font-semibold {{ $statutClr }}">{{ $statutLbl }}</p>
                 </div>
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Evaluateur</p>

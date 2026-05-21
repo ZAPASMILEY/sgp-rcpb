@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Shared;
 
+use App\Models\Annee;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -11,7 +12,7 @@ trait StructureStats
      * Build an aggregated collection of all structure types with evaluation stats.
      * Chain: structure → agents (FK) → users (agent_id) → evaluations (evaluable_type=User)
      */
-    protected function buildStructureStats(?string $typeFilter = null, string $sortBy = 'note'): Collection
+    protected function buildStructureStats(?string $typeFilter = null, string $sortBy = 'note', ?int $anneeId = null): Collection
     {
         $types = [
             [
@@ -74,11 +75,14 @@ trait StructureStats
             $rows = DB::table($def['table'] . ' as s')
                 ->leftJoin('agents as a', 'a.' . $def['fk'], '=', 's.id')
                 ->leftJoin('users as u', 'u.agent_id', '=', 'a.id')
-                ->leftJoin('evaluations as e', function ($join) {
+                ->leftJoin('evaluations as e', function ($join) use ($anneeId) {
                     $join->on('e.evaluable_id', '=', 'u.id')
                          ->where('e.evaluable_type', '=', 'App\\Models\\User')
                          ->where('e.statut', '!=', 'brouillon')
                          ->where('e.note_finale', '>', 0);
+                    if ($anneeId) {
+                        $join->where('e.annee_id', '=', $anneeId);
+                    }
                 })
                 ->select([
                     's.id',
@@ -129,15 +133,18 @@ trait StructureStats
      * - terrain  : agents en DT + Caisses + Agences + Guichets (réseau)
      * - globale  : toutes évaluations confondues (faitière + terrain)
      */
-    protected function buildPerimetreStats(): array
+    protected function buildPerimetreStats(?int $anneeId = null): array
     {
         $base = DB::table('agents as a')
             ->join('users as u', 'u.agent_id', '=', 'a.id')
-            ->join('evaluations as e', function ($join) {
+            ->join('evaluations as e', function ($join) use ($anneeId) {
                 $join->on('e.evaluable_id', '=', 'u.id')
                      ->where('e.evaluable_type', '=', 'App\\Models\\User')
                      ->where('e.statut', '!=', 'brouillon')
                      ->where('e.note_finale', '>', 0);
+                if ($anneeId) {
+                    $join->where('e.annee_id', '=', $anneeId);
+                }
             });
 
         // Faîtière : Directions + Services

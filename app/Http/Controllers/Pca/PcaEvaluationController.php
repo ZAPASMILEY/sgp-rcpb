@@ -55,10 +55,11 @@ class PcaEvaluationController extends Controller
             ->withQueryString();
 
         $stats = [
-            'total' => (clone $baseQuery)->count(),
-            'brouillon' => (clone $baseQuery)->where('statut', 'brouillon')->count(),
-            'soumis' => (clone $baseQuery)->where('statut', 'soumis')->count(),
-            'valide' => (clone $baseQuery)->where('statut', 'valide')->count(),
+            'total'    => (clone $baseQuery)->count(),
+            'brouillon'=> (clone $baseQuery)->where('statut', 'brouillon')->count(),
+            'soumis'   => (clone $baseQuery)->where('statut', 'soumis')->count(),
+            'valide'   => (clone $baseQuery)->where('statut', 'valide')->count(),
+            'refuse'   => (clone $baseQuery)->where('statut', 'refuse')->count(),
         ];
 
         return view('pca.evaluations.index', [
@@ -87,6 +88,10 @@ class PcaEvaluationController extends Controller
         $oldFormations    = old('identification.formations');
         $prefilledAgentId = $dg?->agent_id;
 
+        $openAnnee     = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $openSemestre  = $openSemestres->first();
+
         return view('pca.evaluations.create', [
             'dg'               => $dg,
             'entiteFaitiere'   => $entiteFaitiere,
@@ -97,6 +102,9 @@ class PcaEvaluationController extends Controller
             'subjectiveTemplates' => $this->evaluationService->buildSubjectiveTemplates(),
             'oldFormations'    => $oldFormations,
             'prefilledAgentId' => $prefilledAgentId,
+            'openAnnee'        => $openAnnee,
+            'openSemestres'    => $openSemestres,
+            'openSemestre'     => $openSemestre,
         ]);
     }
 
@@ -142,17 +150,12 @@ class PcaEvaluationController extends Controller
 
         $validated = $request->validate([
             'evaluable_type' => ['required', 'string', 'in:user'],
-            // 'evaluable_id' => ['required'], // plus besoin de valider côté formulaire
-            'date_debut' => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'date_fin' => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'date_debut' => ['required', 'regex:/^(0[1-9]|1[0-2])\/(\d{4})$/'],
-            'date_fin' => ['required', 'regex:/^(0[1-9]|1[0-2])\/(\d{4})$/'],
             'identification.nom_prenom' => ['nullable', 'string', 'max:255'],
-            'identification.semestre' => ['required', 'in:1,2'],
             'identification.date_recrutement' => ['nullable', 'string', 'max:20'],
             'identification.date_evaluation' => ['nullable', 'string', 'max:20'],
             'identification.date_titularisation' => ['nullable', 'string', 'max:20'],
             'identification.matricule' => ['nullable', 'string', 'max:255'],
+            'identification.grade' => ['required', 'string', 'max:255'],
             'identification.poste' => ['nullable', 'string', 'max:255'],
             'identification.emploi' => ['nullable', 'string', 'max:255'],
             'identification.niveau' => ['nullable', 'string', 'max:255'],
@@ -186,20 +189,22 @@ class PcaEvaluationController extends Controller
             'date_signature_evaluateur' => ['nullable', 'date'],
         ]);
 
-        // Conversion MM/YYYY -> YYYY-MM-01 pour stockage et logique
-        $validated['date_debut'] = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', function($m) {
-            return $m[2] . '-' . $m[1] . '-01';
-        }, $validated['date_debut']);
-        $validated['date_fin'] = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', function($m) {
-            return $m[2] . '-' . $m[1] . '-01';
-        }, $validated['date_fin']);
-
-        // Vérification date_fin >= date_debut
-        if (strtotime($validated['date_fin']) < strtotime($validated['date_debut'])) {
-            return back()->withInput()->withErrors([
-                'date_fin' => "La date de fin doit être postérieure ou égale à la date de début.",
-            ]);
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
         }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+        $dateDebut  = $semestre->dateDebut()->toDateString();
+        $dateFin    = $semestre->dateFin()->toDateString();
+        $anneeId    = $openAnnee->id;
+        $semestreId = $semestre->id;
+
+        // Inject semestre + matricule from DG user
+        $validated['identification']['semestre'] = (string) $semestre->numero;
+        $validated['identification']['matricule'] = $dg?->agent?->matricule ?? ($validated['identification']['matricule'] ?? null);
 
         $validated = $this->evaluationService->normalizePayloadDates($validated, [
             'identification.date_recrutement',
@@ -239,15 +244,16 @@ class PcaEvaluationController extends Controller
 
         $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
-        $evaluation = DB::transaction(function () use ($request, $validated, $targetConfig, $targetId, $normalizedSubjective, $normalizedObjective, $scores) {
+        $evaluation = DB::transaction(function () use ($request, $validated, $targetConfig, $targetId, $normalizedSubjective, $normalizedObjective, $scores, $anneeId, $semestreId, $dateDebut, $dateFin) {
             $evaluation = Evaluation::create([
                 'evaluable_type' => $targetConfig['class'],
                 'evaluable_id' => $targetId,
                 'evaluable_role' => $targetConfig['role'],
-                'annee_id' => Annee::resolveIdForDate($validated['date_debut']),
+                'annee_id' => $anneeId,
+                'semestre_id' => $semestreId,
                 'evaluateur_id' => $request->user()->id,
-                'date_debut' => $validated['date_debut'],
-                'date_fin' => $validated['date_fin'],
+                'date_debut' => $dateDebut,
+                'date_fin' => $dateFin,
                 'moyenne_subjectifs' => $scores['moyenne_subjectifs'],
                 'note_criteres_subjectifs' => $scores['note_criteres_subjectifs'],
                 'moyenne_objectifs' => $scores['moyenne_objectifs'],

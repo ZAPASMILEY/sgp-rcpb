@@ -8,7 +8,7 @@
     {{-- ═══════════════════════════════════════════════════════════════════════
          HERO BANNER — Identité institutionnelle RCPB
     ═══════════════════════════════════════════════════════════════════════════ --}}
-    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+    <div class="relative overflow-hidden px-6 py-8 lg:px-10" style="background:linear-gradient(135deg,#003d20 0%,#005c30 50%,#008751 100%)">
         {{-- Motif décoratif --}}
         <div class="pointer-events-none absolute inset-0 opacity-10">
             <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/30 blur-3xl"></div>
@@ -22,9 +22,9 @@
                     R
                 </div>
                 <div>
-                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">Réseau des Caisses Populaires du Burkina</p>
+                    <p class="text-[11px] font-black uppercase tracking-[0.25em] text-white/70">Réseau des Caisses Populaires du Burkina</p>
                     <h1 class="mt-0.5 text-2xl font-black tracking-tight text-white">{{ $entite->nom }}</h1>
-                    <p class="mt-1 text-sm text-emerald-100/80">
+                    <p class="mt-1 text-sm text-white/60">
                         Pilotage PCA · Synthèse du {{ now()->translatedFormat('d F Y') }}
                     </p>
                 </div>
@@ -32,7 +32,7 @@
 
             {{-- Sélecteur d'année --}}
             <div class="flex shrink-0 items-center gap-3">
-                <span class="text-[11px] font-black uppercase tracking-widest text-emerald-200">Année</span>
+                <span class="text-[11px] font-black uppercase tracking-widest text-white/70">Année</span>
                 <form method="GET" action="{{ route('pca.dashboard') }}" id="year-form">
                     <select name="annee" onchange="document.getElementById('year-form').submit()"
                             class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none
@@ -69,7 +69,7 @@
                     <i class="{{ $m['icon'] }}"></i>
                 </span>
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{{ $m['label'] }}</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-white/70">{{ $m['label'] }}</p>
                     <p class="text-lg font-black text-white">{{ $m['value'] }}</p>
                 </div>
             </div>

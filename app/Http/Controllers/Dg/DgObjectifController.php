@@ -7,6 +7,7 @@ use App\Models\Alerte;
 use App\Models\Annee;
 use App\Models\Entite;
 use App\Models\FicheObjectif;
+use App\Models\LigneFicheObjectif;
 use App\Models\User;
 use App\Services\ObjectifService;
 use App\Traits\ResolvesEntite;
@@ -100,10 +101,17 @@ class DgObjectifController extends Controller
             return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
         }
 
+        try {
+            $anneeId = Annee::resolveOpenYearId(now());
+            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee'                 => now()->year,
-            'annee_id'              => Annee::resolveIdForDate(now()),
+            'annee_id'              => $anneeId,
             'assignable_type'       => User::class,
             'assignable_id'         => $validated['subordonne_id'],
             'date'                  => now()->toDateString(),
@@ -153,6 +161,9 @@ class DgObjectifController extends Controller
         ]);
 
         $fiche->statut = $request->statut;
+        if ($request->statut === 'acceptee') {
+            $fiche->date_validation = now()->toDateString();
+        }
         $fiche->save();
 
         return redirect()
@@ -215,6 +226,73 @@ class DgObjectifController extends Controller
         ]);
 
         return $pdf->download('contrat-objectifs-'.$fiche->id.'.pdf');
+    }
+
+    public function avancementLigne(Request $request, $ficheId, $ligneId): RedirectResponse
+    {
+        $this->authorize('objectifs.avancement');
+        $fiche = FicheObjectif::findOrFail($ficheId);
+
+        if ($fiche->assignable_type !== User::class || (int) $fiche->assignable_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if ($fiche->statut !== 'acceptee') {
+            return redirect()->route('dg.objectifs.show', $fiche)
+                ->with('status', "L'avancement ne peut être modifié que sur une fiche acceptée.");
+        }
+
+        $request->validate([
+            'avancement_percentage' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $val = (int) $request->avancement_percentage;
+        if ($val % 5 !== 0) {
+            return redirect()->route('dg.objectifs.show', $fiche)
+                ->with('status', "L'avancement doit être un multiple de 5.");
+        }
+
+        $ligne = LigneFicheObjectif::where('fiche_objectif_id', $ficheId)->findOrFail($ligneId);
+        $ligne->update(['avancement_percentage' => $val]);
+
+        // Recalcule l'avancement global de la fiche (moyenne des lignes)
+        $fiche->recalculateAvancement();
+
+        return redirect()->route('dg.objectifs.show', $fiche)
+            ->with('status', 'Avancement mis à jour.');
+    }
+
+    public function contesterLigne(Request $request, $ficheId, $ligneId): RedirectResponse
+    {
+        $this->authorize('objectifs.voir-equipe');
+        $fiche = FicheObjectif::findOrFail($ficheId);
+
+        if ($fiche->assignable_type !== User::class || (int) $fiche->assignable_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if ($fiche->statut === 'acceptee') {
+            return redirect()->route('dg.objectifs.show', $fiche)
+                ->with('status', 'Impossible de contester une fiche déjà acceptée.');
+        }
+
+        $ligne = LigneFicheObjectif::where('fiche_objectif_id', $ficheId)->findOrFail($ligneId);
+        $ligne->update(['statut' => 'contesté']);
+        $fiche->update(['statut' => 'contesté']);
+
+        // Notifier le PCA
+        $pcaUsers = User::where('role', 'PCA')->get();
+        foreach ($pcaUsers as $pca) {
+            Alerte::notifier(
+                $pca->id,
+                'Objectif contesté',
+                "Le DG a contesté un objectif dans la fiche « {$fiche->titre} ». Connectez-vous pour réviser et renvoyer.",
+                'haute'
+            );
+        }
+
+        return redirect()->route('dg.objectifs.show', $fiche)
+            ->with('status', 'Objectif contesté. Le PCA a été notifié.');
     }
 
     public function destroy($fiche): RedirectResponse

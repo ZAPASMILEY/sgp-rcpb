@@ -77,15 +77,26 @@
                     'ring'  => 'ring-emerald-500',
                 ],
                 [
+                    'key'   => 'brouillon',
+                    'label' => 'Brouillons',
+                    'value' => $stats['brouillon'],
+                    'icon'  => 'fas fa-pen-to-square',
+                    'meta'  => 'Non encore envoyés',
+                    'color' => 'border-amber-100 bg-amber-50',
+                    'iconBg'=> 'bg-amber-100 text-amber-600',
+                    'val'   => 'text-amber-700',
+                    'ring'  => 'ring-amber-500',
+                ],
+                [
                     'key'   => 'en_attente',
                     'label' => 'En attente',
                     'value' => $stats['en_attente'],
                     'icon'  => 'fas fa-hourglass-half',
                     'meta'  => 'Validation requise',
-                    'color' => 'border-amber-100 bg-amber-50',
-                    'iconBg'=> 'bg-amber-100 text-amber-600',
-                    'val'   => 'text-amber-700',
-                    'ring'  => 'ring-amber-500',
+                    'color' => 'border-sky-100 bg-sky-50',
+                    'iconBg'=> 'bg-sky-100 text-sky-600',
+                    'val'   => 'text-sky-700',
+                    'ring'  => 'ring-sky-500',
                 ],
                 [
                     'key'   => 'refusee',
@@ -98,9 +109,20 @@
                     'val'   => 'text-rose-700',
                     'ring'  => 'ring-rose-500',
                 ],
+                [
+                    'key'   => 'contestee',
+                    'label' => 'Contestées',
+                    'value' => $stats['contestees'],
+                    'icon'  => 'fas fa-flag',
+                    'meta'  => 'À réviser',
+                    'color' => 'border-orange-100 bg-orange-50',
+                    'iconBg'=> 'bg-orange-100 text-orange-600',
+                    'val'   => 'text-orange-700',
+                    'ring'  => 'ring-orange-500',
+                ],
             ];
         @endphp
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
             @foreach ($cards as $card)
                 @php
                     $isActive  = $activeStatut === $card['key'];
@@ -191,7 +213,7 @@
                         Contrats d'objectifs
                         @if ($activeStatut)
                             <span class="ml-2 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black text-emerald-700">
-                                {{ match($activeStatut) { 'acceptee' => 'Acceptées', 'en_attente' => 'En attente', 'refusee' => 'Refusées', default => '' } }}
+                                {{ match($activeStatut) { 'acceptee' => 'Acceptées', 'en_attente' => 'En attente', 'refusee' => 'Refusées', 'brouillon' => 'Brouillons', 'contestee' => 'Contestées', default => '' } }}
                             </span>
                         @endif
                     </p>
@@ -207,11 +229,7 @@
                     $cibleNom      = $assignable?->name ?? 'DG non renseigné';
                     $cibleInitiale = strtoupper(substr($cibleNom, 0, 1));
 
-                    $statut        = $fiche->statut ?? 'en_attente';
-                    $progressValue = (int) ($fiche->avancement_percentage ?? 0);
-                    $progressBar   = $progressValue >= 75 ? 'bg-emerald-500'
-                        : ($progressValue >= 40 ? 'bg-sky-500'
-                        : ($progressValue > 0  ? 'bg-amber-400' : 'bg-slate-200'));
+                    $statut = $fiche->statut ?? 'en_attente';
 
                     // Deadline alert: within 30 days & not accepted
                     $echeance         = \Illuminate\Support\Carbon::parse($fiche->date_echeance);
@@ -224,19 +242,25 @@
                         : ($isNearDeadline && $statut !== 'acceptee' ? 'fas fa-clock text-amber-500' : '');
 
                     $statusCls   = match ($statut) {
-                        'acceptee' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                        'refusee'  => 'bg-rose-100 text-rose-700 border-rose-200',
-                        default    => 'bg-amber-100 text-amber-700 border-amber-200',
+                        'acceptee'  => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                        'refusee'   => 'bg-rose-100 text-rose-700 border-rose-200',
+                        'brouillon' => 'bg-amber-100 text-amber-700 border-amber-200',
+                        'contesté'  => 'bg-orange-100 text-orange-700 border-orange-200',
+                        default     => 'bg-sky-100 text-sky-700 border-sky-200',
                     };
                     $statusLabel = match ($statut) {
-                        'acceptee' => 'Acceptée',
-                        'refusee'  => 'Refusée',
-                        default    => 'En attente',
+                        'acceptee'  => 'Acceptée',
+                        'refusee'   => 'Refusée',
+                        'brouillon' => 'Brouillon',
+                        'contesté'  => 'Contestée',
+                        default     => 'En attente',
                     };
                     $statusDot = match ($statut) {
-                        'acceptee' => 'bg-emerald-500',
-                        'refusee'  => 'bg-rose-500',
-                        default    => 'bg-amber-400',
+                        'acceptee'  => 'bg-emerald-500',
+                        'refusee'   => 'bg-rose-500',
+                        'brouillon' => 'bg-amber-400',
+                        'contesté'  => 'bg-orange-500',
+                        default     => 'bg-sky-400',
                     };
                 @endphp
                 <div class="group border-b border-slate-50 px-6 py-5 transition hover:bg-slate-50/60 last:border-b-0">
@@ -282,19 +306,16 @@
                             </div>
                         </div>
 
-                        {{-- Progress --}}
-                        <div class="hidden w-44 shrink-0 sm:block">
-                            <div class="mb-1.5 flex items-center justify-between">
-                                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Avancement</span>
-                                <span class="text-xs font-black text-slate-700">{{ $progressValue }}%</span>
-                            </div>
-                            <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                                <div class="h-full rounded-full transition-all {{ $progressBar }}" style="width:{{ $progressValue }}%"></div>
-                            </div>
-                            @if ($progressValue === 100)
-                                <p class="mt-1 text-[10px] font-black text-emerald-600">
-                                    <i class="fas fa-check mr-0.5"></i> Complété
+                        {{-- Date de validation --}}
+                        <div class="hidden w-40 shrink-0 sm:block">
+                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Date de validation</span>
+                            @if ($fiche->date_validation)
+                                <p class="mt-1 text-sm font-black text-emerald-700">
+                                    <i class="fas fa-circle-check mr-1 text-emerald-500"></i>
+                                    {{ \Illuminate\Support\Carbon::parse($fiche->date_validation)->format('d/m/Y') }}
                                 </p>
+                            @else
+                                <p class="mt-1 text-sm font-bold text-slate-400">—</p>
                             @endif
                         </div>
 
@@ -308,41 +329,86 @@
                                 <span class="hidden sm:inline">Voir</span>
                             </a>
 
-                            {{-- Contrat PDF --}}
-                            <a href="{{ route('pca.objectifs.contrat', $fiche->id) }}"
-                               class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-sm transition hover:border-slate-400"
-                               title="Contrat PDF">
-                                <i class="fas fa-file-pdf text-[10px]"></i>
-                                <span class="hidden sm:inline">Contrat</span>
-                            </a>
-
-                            {{-- Suppression (critique, uniquement si en_attente) --}}
-                            @if ($statut === 'en_attente' || $fiche->statut === null)
+                            @if ($statut === 'brouillon')
+                                {{-- Modifier brouillon --}}
+                                <a href="{{ route('pca.objectifs.edit', $fiche->id) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-700 shadow-sm transition hover:bg-amber-100"
+                                   title="Modifier le brouillon">
+                                    <i class="fas fa-pencil text-[10px]"></i>
+                                    <span class="hidden sm:inline">Modifier</span>
+                                </a>
+                                {{-- Supprimer brouillon --}}
                                 <form method="POST" action="{{ route('pca.objectifs.destroy', $fiche->id) }}"
-                                      onsubmit="return confirm('Supprimer définitivement cette fiche d\'objectifs ?')"
-                                      class="inline">
-                                    @csrf
-                                    @method('DELETE')
+                                      onsubmit="return confirm('Supprimer ce brouillon ?')" class="inline">
+                                    @csrf @method('DELETE')
                                     <button type="submit"
-                                            class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-600 shadow-sm transition hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700"
-                                            title="Supprimer la fiche">
+                                            class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-600 shadow-sm transition hover:bg-rose-100"
+                                            title="Supprimer">
                                         <i class="fas fa-trash text-[10px]"></i>
-                                        <span class="hidden sm:inline">Supprimer</span>
                                     </button>
                                 </form>
+                            @elseif ($statut === 'contesté')
+                                {{-- Modifier fiche contestée --}}
+                                <a href="{{ route('pca.objectifs.edit', $fiche->id) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-black text-orange-700 shadow-sm transition hover:bg-orange-100"
+                                   title="Modifier et renvoyer">
+                                    <i class="fas fa-pencil text-[10px]"></i>
+                                    <span class="hidden sm:inline">Modifier</span>
+                                </a>
+                                {{-- Supprimer --}}
+                                <form method="POST" action="{{ route('pca.objectifs.destroy', $fiche->id) }}"
+                                      onsubmit="return confirm('Supprimer définitivement cette fiche ?')" class="inline">
+                                    @csrf @method('DELETE')
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-600 shadow-sm transition hover:bg-rose-100"
+                                            title="Supprimer">
+                                        <i class="fas fa-trash text-[10px]"></i>
+                                    </button>
+                                </form>
+                            @elseif ($statut === 'refusee')
+                                {{-- Corriger fiche refusée --}}
+                                <a href="{{ route('pca.objectifs.edit', $fiche->id) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 shadow-sm transition hover:bg-rose-100"
+                                   title="Corriger et renvoyer">
+                                    <i class="fas fa-pencil text-[10px]"></i>
+                                    <span class="hidden sm:inline">Corriger</span>
+                                </a>
+                            @else
+                                {{-- Contrat PDF --}}
+                                <a href="{{ route('pca.objectifs.contrat', $fiche->id) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-sm transition hover:border-slate-400"
+                                   title="Contrat PDF">
+                                    <i class="fas fa-file-pdf text-[10px]"></i>
+                                    <span class="hidden sm:inline">Contrat</span>
+                                </a>
+                                {{-- Suppression si en_attente --}}
+                                @if ($statut === 'en_attente' || $fiche->statut === null)
+                                    <form method="POST" action="{{ route('pca.objectifs.destroy', $fiche->id) }}"
+                                          onsubmit="return confirm('Supprimer définitivement cette fiche ?')" class="inline">
+                                        @csrf @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-black text-rose-600 shadow-sm transition hover:bg-rose-100"
+                                                title="Supprimer">
+                                            <i class="fas fa-trash text-[10px]"></i>
+                                            <span class="hidden sm:inline">Supprimer</span>
+                                        </button>
+                                    </form>
+                                @endif
                             @endif
                         </div>
                     </div>
 
-                    {{-- Mobile progress bar --}}
-                    <div class="mt-3 sm:hidden">
-                        <div class="mb-1 flex items-center justify-between">
-                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Avancement</span>
-                            <span class="text-xs font-black text-slate-700">{{ $progressValue }}%</span>
-                        </div>
-                        <div class="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                            <div class="h-full rounded-full {{ $progressBar }}" style="width:{{ $progressValue }}%"></div>
-                        </div>
+                    {{-- Mobile date de validation --}}
+                    <div class="mt-2 sm:hidden">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Date de validation</span>
+                        @if ($fiche->date_validation)
+                            <p class="mt-0.5 text-xs font-black text-emerald-700">
+                                <i class="fas fa-circle-check mr-1 text-emerald-500"></i>
+                                {{ \Illuminate\Support\Carbon::parse($fiche->date_validation)->format('d/m/Y') }}
+                            </p>
+                        @else
+                            <p class="mt-0.5 text-xs font-bold text-slate-400">—</p>
+                        @endif
                     </div>
                 </div>
 

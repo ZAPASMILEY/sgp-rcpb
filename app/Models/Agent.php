@@ -20,7 +20,7 @@ class Agent extends Model
      * Clé   = valeur stockée en BD (agents.fonction)
      * Valeur = libellé affiché dans l'interface
      */
-    public const FONCTIONS = [
+    public const ROLES = [
         // Direction Générale (faîtière)
         'PCA'                     => 'PCA',
         'Directeur Général'       => 'Directeur Général',
@@ -65,9 +65,45 @@ class Agent extends Model
         'email',
         'numero_telephone',
         'photo_path',
-        'fonction',
+        'matricule',
+        'role',
+        'poste',
         'date_debut_fonction',
     ];
+
+    /**
+     * Rôles système exclus du personnel évalué.
+     * Ces rôles ne sont pas soumis au processus d'évaluation.
+     */
+    public const NON_PERSONNEL_ROLES = ['PCA', 'Admin', 'RH'];
+
+    /**
+     * Scope "personnel" : agents affectés à une structure
+     * et dont le rôle système n'est pas PCA / Admin / RH.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePersonnel($query)
+    {
+        return $query
+            ->where(fn ($q) => $q
+                ->whereNotNull('entite_id')
+                ->orWhereNotNull('direction_id')
+                ->orWhereNotNull('delegation_technique_id')
+                ->orWhereNotNull('caisse_id')
+                ->orWhereNotNull('agence_id')
+                ->orWhereNotNull('guichet_id')
+                ->orWhereNotNull('service_id')
+                // Le DG et son assistante n'ont aucune structure renseignée
+                // mais font partie du personnel évaluable (faitière FCPB)
+                ->orWhereHas('user', fn ($u) => $u->whereIn('role', ['DG', 'Assistante_Dg']))
+            )
+            ->where(fn ($q) => $q
+                ->whereDoesntHave('user')
+                ->orWhereHas('user', fn ($u) => $u->whereNotIn('role', self::NON_PERSONNEL_ROLES))
+            );
+    }
 
     // ── Compte de connexion ───────────────────────────────────────────────────
 
@@ -163,6 +199,18 @@ class Agent extends Model
     public function ledService(): HasOne
     {
         return $this->hasOne(Service::class, 'chef_agent_id');
+    }
+
+    // ── Postes faîtière / entité (FK inverses sur la table entites) ────────
+
+    public function assistantedEntite(): HasOne
+    {
+        return $this->hasOne(Entite::class, 'assistante_agent_id');
+    }
+
+    public function pcaedEntite(): HasOne
+    {
+        return $this->hasOne(Entite::class, 'pca_agent_id');
     }
 
     // ── Objectifs / Évaluations ────────────────────────────────────────────

@@ -59,6 +59,10 @@ class RolesAndPermissionsSeeder extends Seeder
         // ── Formations ────────────────────────────────────────────────────
         'formations.assigner', // Créer, modifier et supprimer des formations pour n'importe quel agent
 
+        // ── Rapports & Statistiques ────────────────────────────────────────
+        'statistiques.voir', // Consulter la page statistiques du personnel (notes)
+        'tableaux.voir',     // Consulter et exporter les tableaux Excel personnalisés
+
         // ── Administration ─────────────────────────────────────────────────
         'admin.roles',     // Gérer les rôles et leurs permissions
         'admin.users',     // Gérer les comptes utilisateurs

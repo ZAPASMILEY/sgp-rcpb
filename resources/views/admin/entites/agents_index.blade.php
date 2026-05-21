@@ -53,7 +53,7 @@
                         <tr>
                             <th>#</th>
                             <th>Agent</th>
-                            <th>Fonction</th>
+                            <th>Rôle</th>
                             <th>Service</th>
                             <th>Direction</th>
                             <th>Actions</th>
@@ -61,10 +61,10 @@
                     </thead>
                     <tbody>
                         @forelse ($agents as $agent)
-                            <tr data-search-content="{{ strtolower(trim($agent->prenom.' '.$agent->nom.' '.($agent->fonction ?? '').' '.($agent->service?->nom ?? '').' '.($agent->service?->direction?->nom ?? ''))) }}">
+                            <tr data-search-content="{{ strtolower(trim($agent->prenom.' '.$agent->nom.' '.($agent->role ?? '').' '.($agent->service?->nom ?? '').' '.($agent->service?->direction?->nom ?? ''))) }}">
                                 <td>{{ ($agents->firstItem() ?? 1) + $loop->index }}</td>
                                 <td>{{ $agent->prenom }} {{ $agent->nom }}</td>
-                                <td>{{ $agent->fonction ?? '-' }}</td>
+                                <td>{{ $agent->role ?? '-' }}</td>
                                 <td>{{ $agent->service?->nom ?? '-' }}</td>
                                 <td>{{ $agent->service?->direction?->nom ?? '-' }}</td>
                                 <td class="whitespace-nowrap">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\CustomRole;
 use App\Models\Entite;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -18,7 +19,7 @@ use Spatie\Permission\Models\Permission;
 class UserController extends Controller
 {
     /**
-     * Correspondance fonction (agents.fonction) → rôle système (users.role).
+     * Correspondance fonction (agents.role) → rôle système (users.role).
      * Permet de pré-remplir le select rôle lors de la création d'un compte.
      */
     public const FONCTION_TO_ROLE = [
@@ -42,7 +43,8 @@ class UserController extends Controller
     ];
 
     /**
-     * Rôles disponibles dans le système (valeur stockée en BD → libellé affiché).
+     * Rôles système intégrés (immuables).
+     * Valeur stockée en BD → libellé affiché.
      */
     public const ROLES = [
         'Admin'                 => 'Administrateur',
@@ -67,6 +69,16 @@ class UserController extends Controller
     ];
 
     /**
+     * Retourne tous les rôles disponibles : système + rôles personnalisés en base.
+     *
+     * @return array<string, string>  slug => label
+     */
+    public static function allRoles(): array
+    {
+        return array_merge(self::ROLES, CustomRole::allAsMap());
+    }
+
+    /**
      * Permissions que l'admin peut attribuer individuellement à n'importe quel utilisateur.
      * Format : permission_name => libellé affiché.
      */
@@ -88,7 +100,7 @@ class UserController extends Controller
                       ->orWhereHas('agent', fn ($aq) => $aq
                           ->where('nom', 'like', "%{$search}%")
                           ->orWhere('prenom', 'like', "%{$search}%")
-                          ->orWhere('fonction', 'like', "%{$search}%")
+                          ->orWhere('role', 'like', "%{$search}%")
                       );
                 });
             })
@@ -102,14 +114,14 @@ class UserController extends Controller
     {
         $preselectedAgentId = (int) $request->query('agent_id', 0);
         $preselectedAgent   = $preselectedAgentId > 0
-            ? Agent::query()->find($preselectedAgentId, ['id', 'nom', 'prenom', 'email', 'fonction'])
+            ? Agent::query()->find($preselectedAgentId, ['id', 'nom', 'prenom', 'email', 'role'])
             : null;
 
         $agents = Agent::query()
             ->doesntHave('user')
             ->orderBy('nom')
             ->orderBy('prenom')
-            ->get(['id', 'nom', 'prenom', 'email', 'fonction']);
+            ->get(['id', 'nom', 'prenom', 'email', 'role']);
 
         $managers = User::query()->orderBy('name')->get(['id', 'name', 'role']);
 
@@ -117,7 +129,7 @@ class UserController extends Controller
             'agents'           => $agents,
             'preselectedAgent' => $preselectedAgent,
             'managers'         => $managers,
-            'roles'            => self::ROLES,
+            'roles'            => self::allRoles(),
             'fonctionToRole'   => self::FONCTION_TO_ROLE,
             'entites'          => \App\Models\Entite::query()->orderBy('nom')->get(['id', 'nom']),
         ]);
@@ -127,7 +139,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'agent_id'       => ['required', 'integer', 'exists:agents,id', Rule::unique('users', 'agent_id')],
-            'role'           => ['required', 'string', Rule::in(array_keys(self::ROLES))],
+            'role'           => ['required', 'string', Rule::in(array_keys(self::allRoles()))],
             'manager_id'     => ['nullable', 'integer', 'exists:users,id'],
             'email'          => ['required', 'email', 'max:191', Rule::unique('users', 'email')],
             'password'       => ['required', 'confirmed', Password::min(8)],
@@ -179,7 +191,7 @@ class UserController extends Controller
         return view('admin.users.edit', [
             'user'                  => $user->load('agent'),
             'managers'              => $managers,
-            'roles'                 => self::ROLES,
+            'roles'                 => self::allRoles(),
             'entites'               => \App\Models\Entite::query()->orderBy('nom')->get(['id', 'nom']),
             'grantablePermissions'  => self::GRANTABLE_PERMISSIONS,
             'userDirectPermissions' => $userDirectPermissions,
@@ -189,7 +201,7 @@ class UserController extends Controller
     public function update(Request $request, User $user): RedirectResponse
     {
         $validated = $request->validate([
-            'role'          => ['required', 'string', Rule::in(array_keys(self::ROLES))],
+            'role'          => ['required', 'string', Rule::in(array_keys(self::allRoles()))],
             'manager_id'    => ['nullable', 'integer', 'exists:users,id', Rule::notIn([$user->id])],
             'email'         => ['required', 'email', 'max:191', Rule::unique('users', 'email')->ignore($user->id)],
             'password'      => ['nullable', 'confirmed', Password::min(8)],

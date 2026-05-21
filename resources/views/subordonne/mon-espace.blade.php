@@ -14,7 +14,7 @@ $roleLabel = match($user->role) {
 <div class="min-h-screen bg-[#f1f5f9] pb-12">
 
     {{-- ══════════════════════════ HERO ══════════════════════════════════════ --}}
-    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+    <div class="relative overflow-hidden px-6 py-8 lg:px-10" style="background:linear-gradient(135deg,#003d20 0%,#005c30 50%,#008751 100%)">
         <div class="pointer-events-none absolute inset-0 opacity-10">
             <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/30 blur-3xl"></div>
             <div class="absolute -bottom-16 left-10 h-48 w-48 rounded-full bg-teal-300/40 blur-2xl"></div>
@@ -24,9 +24,9 @@ $roleLabel = match($user->role) {
                 {{ strtoupper(substr($user->name, 0, 1)) }}
             </div>
             <div>
-                <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">{{ $roleLabel }} · RCPB</p>
+                <p class="text-[11px] font-black uppercase tracking-[0.25em] text-white/70">{{ $roleLabel }} · RCPB</p>
                 <h1 class="mt-0.5 text-2xl font-black tracking-tight text-white">{{ $user->name }}</h1>
-                <p class="mt-1 text-sm text-emerald-100/80">Synthèse du {{ now()->translatedFormat('d F Y') }}</p>
+                <p class="mt-1 text-sm text-white/60">Synthèse du {{ now()->translatedFormat('d F Y') }}</p>
             </div>
         </div>
 
@@ -43,7 +43,7 @@ $roleLabel = match($user->role) {
                     <i class="{{ $m['icon'] }}"></i>
                 </span>
                 <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-200">{{ $m['label'] }}</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-white/70">{{ $m['label'] }}</p>
                     <p class="text-lg font-black text-white">{{ $m['value'] }}</p>
                 </div>
             </div>
@@ -185,14 +185,16 @@ $roleLabel = match($user->role) {
                                             default     => 'border-rose-200 bg-rose-50 text-rose-700',
                                         };
                                         $statusClass = match ($evaluation->statut) {
-                                            'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                                            'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-                                            default  => 'border-slate-200 bg-slate-100 text-slate-700',
+                                            'valide'  => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                                            'soumis'  => 'border-amber-200 bg-amber-50 text-amber-700',
+                                            'refuse'  => 'border-rose-200 bg-rose-50 text-rose-700',
+                                            default   => 'border-slate-200 bg-slate-100 text-slate-700',
                                         };
                                         $statusLabel = match ($evaluation->statut) {
-                                            'valide' => 'Validee',
-                                            'soumis' => 'Soumise',
-                                            default  => 'Brouillon',
+                                            'valide'  => 'Validée',
+                                            'soumis'  => 'Soumise',
+                                            'refuse'  => 'Refusée',
+                                            default   => 'Brouillon',
                                         };
                                         $identification = $evaluation->identification;
                                         $anneeEval  = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');

@@ -66,7 +66,11 @@
                 </div>
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>
-                    <p class="mt-2 text-sm font-semibold text-slate-900">{{ ucfirst($evaluation->statut) }}</p>
+                    @php
+                        $statutLbl = match($evaluation->statut) { 'valide'=>'Validée','soumis'=>'Soumise','refuse'=>'Refusée',default=>'Brouillon' };
+                        $statutClr = match($evaluation->statut) { 'valide'=>'text-emerald-700','soumis'=>'text-amber-700','refuse'=>'text-rose-700',default=>'text-slate-600' };
+                    @endphp
+                    <p class="mt-2 text-sm font-semibold {{ $statutClr }}">{{ $statutLbl }}</p>
                 </div>
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Evaluateur</p>

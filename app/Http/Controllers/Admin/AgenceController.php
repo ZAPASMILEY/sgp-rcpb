@@ -57,15 +57,20 @@ class AgenceController extends Controller
             ],
             'chef_agent_id'       => ['required', 'integer', 'exists:agents,id'],
             'secretaire_agent_id' => ['required', 'integer', 'exists:agents,id'],
+            'telephone_accueil'   => ['required', 'string', 'max:30'],
         ], [
             'nom.unique'                   => 'Cette agence existe déjà pour la délégation technique sélectionnée.',
             'chef_agent_id.required'       => "Le chef d'agence est obligatoire.",
             'secretaire_agent_id.required' => 'Le secrétaire est obligatoire.',
             'caisse_id.required'           => 'Veuillez choisir une caisse superviseur.',
             'caisse_id.exists'             => "La caisse choisie n'appartient pas à la délégation technique sélectionnée.",
+            'telephone_accueil.required'   => "Le numéro de téléphone d'accueil est obligatoire.",
         ]);
 
-        Agence::query()->create($validated);
+        $agence = Agence::query()->create($validated);
+
+        Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => "Chef d'Agence de " . $agence->nom]);
+        Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => "Secrétaire d'Agence de " . $agence->nom]);
 
         $this->accounts->ensureAccount(Agent::findOrFail($validated['chef_agent_id']));
         $this->accounts->ensureAccount(Agent::findOrFail($validated['secretaire_agent_id']));
@@ -103,6 +108,7 @@ class AgenceController extends Controller
             'caisse_id'           => ['required', 'integer', 'exists:caisses,id'],
             'chef_agent_id'       => ['required', 'integer', 'exists:agents,id'],
             'secretaire_agent_id' => ['required', 'integer', 'exists:agents,id'],
+            'telephone_accueil'   => ['required', 'string', 'max:30'],
         ]);
 
         // Désactiver les anciens responsables si changement
@@ -114,6 +120,9 @@ class AgenceController extends Controller
         }
 
         $agence->update($validated);
+
+        Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => "Chef d'Agence de " . $agence->nom]);
+        Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => "Secrétaire d'Agence de " . $agence->nom]);
 
         $this->accounts->ensureAccount(Agent::findOrFail($validated['chef_agent_id']));
         $this->accounts->ensureAccount(Agent::findOrFail($validated['secretaire_agent_id']));
@@ -146,11 +155,19 @@ class AgenceController extends Controller
     public function createAgent(Agence $agence): View
     {
         return view('admin.agences.agents.create', [
-            'agence' => $agence->load(['delegationTechnique', 'caisse', 'chef']),
-            'agents' => Agent::query()
+            'agence'  => $agence->load(['delegationTechnique', 'caisse', 'chef']),
+            'agents'  => Agent::query()
+                ->where('role', 'Agent')
                 ->whereNull('agence_id')
+                ->whereNull('service_id')
+                ->whereNull('direction_id')
+                ->whereNull('caisse_id')
+                ->whereNull('delegation_technique_id')
+                ->whereNull('guichet_id')
+                ->whereNull('entite_id')
                 ->orderBy('nom')->orderBy('prenom')
-                ->get(['id', 'nom', 'prenom', 'fonction']),
+                ->get(['id', 'nom', 'prenom', 'matricule', 'poste']),
+            'postes'  => \App\Models\Poste::where('fonction', 'Agent')->orderBy('libelle')->pluck('libelle'),
         ]);
     }
 
@@ -158,13 +175,16 @@ class AgenceController extends Controller
     {
         $validated = $request->validate([
             'agent_id' => ['required', 'integer', 'exists:agents,id'],
+            'poste'    => ['required', 'string', 'max:150'],
         ], [
             'agent_id.required' => 'Veuillez sélectionner un agent.',
             'agent_id.exists'   => 'Agent introuvable.',
+            'poste.required'    => 'La fonction occupée est obligatoire.',
         ]);
 
         $agent = Agent::findOrFail($validated['agent_id']);
-        $agent->update(['agence_id' => $agence->id]);
+        $agent->update(['agence_id' => $agence->id, 'poste' => $validated['poste'] ?? null]);
+        $this->accounts->ensureAccount($agent->fresh());
 
         return redirect()
             ->route('admin.agences.agents.index', $agence)
@@ -174,7 +194,7 @@ class AgenceController extends Controller
     private function formData(?Agence $agence = null): array
     {
         $chefsQuery = Agent::query()
-            ->where('fonction', "Chef d'Agence")
+            ->where('role', "Chef d'Agence")
             ->where(function (EloquentBuilder $q) use ($agence): void {
                 $q->whereNull('agence_id');
                 if ($agence?->chef_agent_id) {
@@ -183,7 +203,7 @@ class AgenceController extends Controller
             });
 
         $secretairesQuery = Agent::query()
-            ->where('fonction', "Secrétaire d'Agence")
+            ->where('role', "Secrétaire d'Agence")
             ->where(function (EloquentBuilder $q) use ($agence): void {
                 $q->whereNull('agence_id');
                 if ($agence?->secretaire_agent_id) {

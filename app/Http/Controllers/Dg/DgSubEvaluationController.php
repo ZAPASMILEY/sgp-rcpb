@@ -28,12 +28,10 @@ class DgSubEvaluationController extends Controller
     /** Retourne tous les subordonnés du DG connecté. */
     private function getSubordonnes(): \Illuminate\Support\Collection
     {
-        $entite      = $this->getEntiteForDG();
+        $entite = $this->getEntiteForDG();
         $subordonnes = collect();
 
-        if (! $entite) {
-            return $subordonnes;
-        }
+        if (!$entite) return $subordonnes;
 
         $entiteNom = $entite->nom ?? '';
 
@@ -51,9 +49,9 @@ class DgSubEvaluationController extends Controller
             }
         }
 
-        $conseillers = User::with('agent')->where('role', 'Conseillers_Dg')->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))->get();
+        $conseillers = User::with('agent')->where('role', 'Conseillers_Dg')->whereHas('agent', fn($q) => $q->where('entite_id', $entite->id))->get();
         foreach ($conseillers as $c) {
-            $subordonnes->push(['id' => $c->id, 'agent_id' => $c->agent_id, 'nom' => $c->name, 'role_label' => 'Conseiller', 'entite_label' => $entiteNom, 'service_label' => $c->agent?->fonction ?? 'Direction Générale']);
+            $subordonnes->push(['id' => $c->id, 'agent_id' => $c->agent_id, 'nom' => $c->name, 'role_label' => 'Conseiller', 'entite_label' => $entiteNom, 'service_label' => $c->agent?->role ?? 'Direction Générale']);
         }
 
         return $subordonnes;
@@ -63,345 +61,225 @@ class DgSubEvaluationController extends Controller
     {
         $this->authorize('evaluations.creer');
 
-        $subordonnes      = $this->getSubordonnes();
-        $preselectedId    = (int) $request->get('subordonne_id', 0);
-        $selectedSubordonne = $subordonnes->firstWhere('id', $preselectedId);
+        $subordonnes = $this->getSubordonnes();
+        $preselectedId = (int) $request->get('subordonne_id', 0);
+        $selectedSubordonne = $subordonnes->firstWhere('id', $preselectedId) ?: ($subordonnes->count() === 1 ? $subordonnes->first() : null);
 
-        if (! $selectedSubordonne && $subordonnes->count() === 1) {
-            $selectedSubordonne = $subordonnes->first();
-        }
-
-        // Build objective options for the selected subordinate
-        $objectiveOptions = [];
-        if ($selectedSubordonne) {
-            $today  = now()->toDateString();
-            $fiches = FicheObjectif::query()
-                ->with('objectifs')
-                ->where('statut', 'acceptee')
-                ->whereDate('date_echeance', '>=', $today)
-                ->where('assignable_type', User::class)
-                ->where('assignable_id', (int) $selectedSubordonne['id'])
-                ->orderBy('titre')
-                ->get();
-
-            foreach ($fiches as $fiche) {
-                $objectiveOptions[] = [
-                    'id'            => $fiche->id,
-                    'titre'         => $fiche->titre,
-                    'date_echeance' => $fiche->date_echeance instanceof \Carbon\Carbon
-                        ? $fiche->date_echeance->toDateString()
-                        : (string) $fiche->date_echeance,
-                    'objectifs'     => $fiche->objectifs->map(fn ($item) => [
-                        'source_fiche_objectif_objectif_id' => $item->id,
-                        'titre'                             => $item->description,
-                    ])->values()->all(),
-                ];
-            }
-        }
-
+        $objectiveOptions = $this->getObjectiveOptionsForUser($selectedSubordonne['id'] ?? null);
         $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
-        $oldFormations  = old('identification.formations');
-        $oldExperiences = old('identification.experiences');
+        $openAnnee     = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $openSemestre  = $openSemestres->first();
 
-        $prefilledAgentId = $selectedSubordonne['agent_id'] ?? null;
-
-        return view('dg.subordonnes.evaluations.create', compact(
-            'subordonnes',
-            'selectedSubordonne',
-            'objectiveOptions',
-            'subjectiveTemplates',
-            'oldFormations',
-            'oldExperiences',
-            'prefilledAgentId',
-        ));
+        return view('dg.subordonnes.evaluations.create', [
+            'subordonnes' => $subordonnes,
+            'selectedSubordonne' => $selectedSubordonne,
+            'objectiveOptions' => $objectiveOptions,
+            'subjectiveTemplates' => $subjectiveTemplates,
+            'oldFormations' => old('identification.formations'),
+            'oldExperiences' => old('identification.experiences'),
+            'prefilledAgentId' => $selectedSubordonne['agent_id'] ?? null,
+            'openAnnee'     => $openAnnee,
+            'openSemestres' => $openSemestres,
+            'openSemestre'  => $openSemestre,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('evaluations.creer');
-        $user = Auth::user();
-
-        $subordonnes       = $this->getSubordonnes();
-        $allowedIds        = $subordonnes->pluck('id')->map(fn ($id) => (int) $id)->all();
-
-        $validated = $request->validate([
-            'subordonne_id'                   => ['required', 'integer', 'in:'.implode(',', $allowedIds)],
-            'date_debut'                      => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'date_fin'                        => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'identification.nom_prenom'       => ['nullable', 'string', 'max:255'],
-            'identification.semestre'         => ['required', 'in:1,2'],
-            'identification.date_evaluation'  => ['nullable', 'string', 'max:20'],
-            'identification.matricule'        => ['nullable', 'string', 'max:255'],
-            'identification.emploi'           => ['nullable', 'string', 'max:255'],
-            'identification.direction'        => ['nullable', 'string', 'max:255'],
-            'identification.direction_service'=> ['nullable', 'string', 'max:255'],
-            'identification.formations'       => ['nullable', 'array'],
-            'identification.formations.*.periode' => ['nullable', 'string', 'max:255'],
-            'identification.formations.*.libelle' => ['nullable', 'string', 'max:255'],
-            'identification.formations.*.domaine' => ['nullable', 'string', 'max:255'],
-            'identification.experiences'      => ['nullable', 'array'],
-            'identification.experiences.*.periode'      => ['nullable', 'string', 'max:255'],
-            'identification.experiences.*.poste'        => ['nullable', 'string', 'max:255'],
-            'identification.experiences.*.observations' => ['nullable', 'string', 'max:255'],
-            'subjective_criteres'             => ['required', 'array', 'min:1'],
-            'objective_criteres'              => ['required', 'array', 'min:1'],
-            'points_a_ameliorer'              => ['nullable', 'string'],
-            'strategies_amelioration'         => ['nullable', 'string'],
-            'commentaire'                     => ['nullable', 'string', 'max:2000'],
-            'signature_evalue_nom'            => ['nullable', 'string', 'max:255'],
-            'signature_evaluateur_nom'        => ['nullable', 'string', 'max:255'],
-            'date_signature_evalue'           => ['nullable', 'date'],
-            'date_signature_evaluateur'       => ['nullable', 'date'],
-        ]);
-
+        
+        $validated = $this->validateEvaluation($request);
         $subordonne = User::findOrFail($validated['subordonne_id']);
-        if (! in_array($subordonne->role, self::ALLOWED_ROLES, true)) {
-            abort(403, 'Cible invalide.');
-        }
 
-        // Convert MM/YYYY to YYYY-MM-01
-        $dateDebut = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_debut']);
-        $dateFin   = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_fin']);
+        $evaluationData = $this->prepareEvaluationData($validated, $request);
+        if ($evaluationData instanceof RedirectResponse) return $evaluationData;
 
-        if (strtotime($dateFin) < strtotime($dateDebut)) {
-            return back()->withInput()->withErrors(['date_fin' => 'La date de fin doit être postérieure à la date de début.']);
-        }
+        DB::transaction(function () use ($evaluationData, $validated, $subordonne) {
+            $evaluation = Evaluation::create(array_merge($evaluationData['main'], [
+                'evaluable_type' => User::class,
+                'evaluable_id' => $subordonne->id,
+                'evaluable_role' => $subordonne->role,
+                'evaluateur_id' => Auth::id(),
+                'statut' => 'brouillon',
+            ]));
 
-        // Normalize identification date fields
-        $identification = $validated['identification'] ?? [];
-        foreach (['date_evaluation'] as $dateField) {
-            $raw = $identification[$dateField] ?? null;
-            if (! blank($raw)) {
-                $normalized = $this->evaluationService->normalizeDateValue($raw);
-                if ($normalized === null) {
-                    return back()->withInput()->withErrors(["identification.{$dateField}" => 'Format de date invalide. Utilisez JJ/MM/AAAA.']);
-                }
-                $identification[$dateField] = $normalized;
-            }
-        }
-
-        // Clean formations and experiences
-        $identification['formations'] = collect($identification['formations'] ?? [])
-            ->map(fn ($row) => [
-                'periode' => trim((string) ($row['periode'] ?? '')),
-                'libelle' => trim((string) ($row['libelle'] ?? '')),
-                'domaine' => trim((string) ($row['domaine'] ?? '')),
-            ])
-            ->filter(fn ($row) => $row['periode'] !== '' || $row['libelle'] !== '' || $row['domaine'] !== '')
-            ->values()->all();
-
-        $identification['experiences'] = collect($identification['experiences'] ?? [])
-            ->map(fn ($row) => [
-                'periode'      => trim((string) ($row['periode'] ?? '')),
-                'poste'        => trim((string) ($row['poste'] ?? '')),
-                'observations' => trim((string) ($row['observations'] ?? '')),
-            ])
-            ->filter(fn ($row) => $row['periode'] !== '' || $row['poste'] !== '' || $row['observations'] !== '')
-            ->values()->all();
-
-        $normalizedSubjective = $this->evaluationService->normalizeCriteria(
-            (array) $request->input('subjective_criteres', []),
-            'subjectif', 1, 5, false
-        );
-        $normalizedObjective = $this->evaluationService->normalizeCriteria(
-            (array) $request->input('objective_criteres', []),
-            'objectif', 1, 5
-        );
-
-        if ($normalizedSubjective === [] || $normalizedObjective === []) {
-            return back()->withInput()->withErrors([
-                'subjective_criteres' => 'Les critères subjectifs et objectifs doivent contenir au moins une ligne notée.',
-            ]);
-        }
-
-        $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
-
-        try {
-            $anneeId = Annee::resolveIdForDate($dateDebut);
-        } catch (\Throwable) {
-            $anneeId = null;
-        }
-
-        $evaluation = DB::transaction(function () use (
-            $user, $subordonne, $dateDebut, $dateFin, $anneeId,
-            $scores, $validated, $identification,
-            $normalizedSubjective, $normalizedObjective
-        ) {
-            $evaluation = Evaluation::create([
-                'evaluable_type'           => User::class,
-                'evaluable_id'             => $subordonne->id,
-                'evaluable_role'           => $subordonne->role,
-                'annee_id'                 => $anneeId,
-                'evaluateur_id'            => $user->id,
-                'date_debut'               => $dateDebut,
-                'date_fin'                 => $dateFin,
-                'moyenne_subjectifs'       => $scores['moyenne_subjectifs'],
-                'note_criteres_subjectifs' => $scores['note_criteres_subjectifs'],
-                'moyenne_objectifs'        => $scores['moyenne_objectifs'],
-                'note_criteres_objectifs'  => $scores['note_criteres_objectifs'],
-                'note_finale'              => $scores['note_finale'],
-                'commentaire'              => $validated['commentaire'] ?? null,
-                'points_a_ameliorer'       => $validated['points_a_ameliorer'] ?? null,
-                'strategies_amelioration'  => $validated['strategies_amelioration'] ?? null,
-                'signature_evalue_nom'     => $validated['signature_evalue_nom'] ?? ($identification['nom_prenom'] ?? null),
-                'signature_evaluateur_nom' => $validated['signature_evaluateur_nom'] ?? $user->name,
-                'date_signature_evalue'    => $validated['date_signature_evalue'] ?? null,
-                'date_signature_evaluateur'=> $validated['date_signature_evaluateur'] ?? null,
-                'statut'                   => 'brouillon',
-            ]);
-
-            $evaluation->identification()->create($identification);
-            $this->evaluationService->persistCriteria($evaluation, array_merge($normalizedSubjective, $normalizedObjective));
-
-            return $evaluation;
+            $evaluation->identification()->create($evaluationData['identification']);
+            $this->evaluationService->persistCriteria($evaluation, $evaluationData['criteria']);
         });
 
-        $redirect = match ($subordonne->role) {
-            'DGA'            => route('dg.dga').'?tab=evaluations',
-            'Assistante_Dg'  => route('dg.assistante').'?tab=evaluations',
-            default          => route('dg.conseillers.show', $subordonne).'?tab=evaluations',
-        };
-
-        return redirect($redirect)->with('status', "Évaluation créée pour {$subordonne->name}.");
+        return redirect($this->backUrlForSubordonne($subordonne))->with('status', "Brouillon créé pour {$subordonne->name}.");
     }
+
+    public function edit(Evaluation $evaluation): View
+    {
+        $this->authorize('evaluations.creer');
+
+        if ($evaluation->statut !== 'brouillon') {
+            return redirect($this->backUrlForSubordonne($evaluation->evaluable))->with('error', 'Seules les évaluations en brouillon sont modifiables.');
+        }
+
+        $evaluation->load(['identification', 'criteres.sousCriteres']);
+        $subordonne = $evaluation->evaluable;
+        
+        return view('dg.subordonnes.evaluations.edit', [
+            'evaluation' => $evaluation,
+            'subordonne' => $subordonne,
+            'subordonnes' => $this->getSubordonnes(),
+            'objectiveOptions' => $this->getObjectiveOptionsForUser($subordonne->id),
+            'subjectiveTemplates' => $this->evaluationService->buildSubjectiveTemplates(),
+        ]);
+    }
+
+    public function update(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        $this->authorize('evaluations.creer');
+
+        if ($evaluation->statut !== 'brouillon') {
+            abort(403, 'Modification interdite pour une évaluation déjà soumise.');
+        }
+
+        $validated = $this->validateEvaluation($request, $evaluation->evaluable_id);
+        $evaluationData = $this->prepareEvaluationData($validated, $request);
+        
+        if ($evaluationData instanceof RedirectResponse) return $evaluationData;
+
+        DB::transaction(function () use ($evaluation, $evaluationData) {
+            $evaluation->update($evaluationData['main']);
+            $evaluation->identification()->update($evaluationData['identification']);
+            $evaluation->criteres()->delete();
+            $this->evaluationService->persistCriteria($evaluation, $evaluationData['criteria']);
+        });
+
+        return redirect($this->backUrlForSubordonne($evaluation->evaluable))->with('status', 'Brouillon mis à jour.');
+    }
+
+    // --- Helpers pour éviter la répétition ---
+
+    private function validateEvaluation(Request $request, $targetId = null)
+    {
+        $allowedIds = $targetId ? [$targetId] : $this->getSubordonnes()->pluck('id')->all();
+        
+        return $request->validate([
+            'subordonne_id' => ['required', 'integer', 'in:'.implode(',', $allowedIds)],
+            'identification.date_evaluation' => ['nullable', 'string'],
+            'identification.grade' => ['required', 'string', 'max:255'],
+            'identification.formations' => ['nullable', 'array'],
+            'identification.experiences' => ['nullable', 'array'],
+            'subjective_criteres' => ['required', 'array', 'min:1'],
+            'objective_criteres' => ['required', 'array', 'min:1'],
+            'commentaire' => ['nullable', 'string', 'max:2000'],
+            'points_a_ameliorer' => ['nullable', 'string'],
+            'strategies_amelioration' => ['nullable', 'string'],
+        ]);
+    }
+
+    private function prepareEvaluationData($validated, $request)
+    {
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
+        }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+
+        $normSub = $this->evaluationService->normalizeCriteria((array)$request->input('subjective_criteres'), 'subjectif', 1, 5, false);
+        $normObj = $this->evaluationService->normalizeCriteria((array)$request->input('objective_criteres'), 'objectif', 1, 5);
+        $scores  = $this->evaluationService->computeScores($normSub, $normObj);
+
+        $identification = $validated['identification'] ?? [];
+        $identification['semestre'] = (string) $semestre->numero;
+
+        // Inject matricule from the subordonne user's agent
+        $subordonneUser = User::find($validated['subordonne_id']);
+        $identification['matricule'] = $subordonneUser?->agent?->matricule ?? null;
+
+        return [
+            'main' => [
+                'date_debut'              => $semestre->dateDebut()->toDateString(),
+                'date_fin'                => $semestre->dateFin()->toDateString(),
+                'annee_id'                => $openAnnee->id,
+                'semestre_id'             => $semestre->id,
+                'moyenne_subjectifs'      => $scores['moyenne_subjectifs'],
+                'moyenne_objectifs'       => $scores['moyenne_objectifs'],
+                'note_finale'             => $scores['note_finale'],
+                'commentaire'             => $validated['commentaire'] ?? null,
+                'points_a_ameliorer'      => $validated['points_a_ameliorer'] ?? null,
+                'strategies_amelioration' => $validated['strategies_amelioration'] ?? null,
+            ],
+            'identification' => $identification,
+            'criteria'       => array_merge($normSub, $normObj),
+        ];
+    }
+
+    private function getObjectiveOptionsForUser($userId)
+    {
+        if (!$userId) return [];
+        return FicheObjectif::with('objectifs')->where('statut', 'acceptee')
+            ->where('assignable_id', (int) $userId)
+            ->get()->map(fn($f) => [
+                'id' => $f->id, 'titre' => $f->titre,
+                'objectifs' => $f->objectifs
+                    ->filter(fn($o) => (int) ($o->avancement_percentage ?? 0) > 0)
+                    ->map(fn($o) => ['source_fiche_objectif_objectif_id' => $o->id, 'titre' => $o->description])
+                    ->values()
+            ])->all();
+    }
+
+    // --- Méthodes existantes (Show, Submit, Destroy, etc.) ---
 
     public function show(Evaluation $evaluation): View
     {
         $this->authorize('evaluations.voir-equipe');
-
-        // Vérifier que c'est bien une évaluation DG→subordonné
-        if (
-            $evaluation->evaluable_type !== User::class ||
-            ! in_array($evaluation->evaluable->role ?? '', self::ALLOWED_ROLES, true)
-        ) {
-            abort(403);
-        }
-
-        if ((int) ($evaluation->evaluable->agent?->entite_id ?? 0) !== (int) ($this->getEntiteForDG()?->id ?? 0)) {
-            abort(403);
-        }
-
         $evaluation->load(['evaluable', 'evaluateur', 'identification', 'criteres.sousCriteres']);
-
-        $subordonne        = $evaluation->evaluable;
-        $mention           = $this->evaluationService->mention((float) $evaluation->note_finale);
-        $periodeLabel      = $this->evaluationService->periodeLabel($evaluation);
-        $cibleLabel        = $this->cibleLabel($evaluation);
-        $backUrl           = $this->backUrlForSubordonne($subordonne);
-        $objectiveCriteria = $evaluation->criteres->where('type', 'objectif')->values();
-        $subjectiveCriteria= $evaluation->criteres->where('type', 'subjectif')->values();
-
-        return view('dg.subordonnes.evaluations.show', compact(
-            'evaluation',
-            'subordonne',
-            'mention',
-            'periodeLabel',
-            'cibleLabel',
-            'backUrl',
-            'objectiveCriteria',
-            'subjectiveCriteria'
-        ));
-    }
-
-    public function exportPdf(Evaluation $evaluation)
-    {
-        $this->authorize('evaluations.exporter-pdf');
-
-        $evaluation->load(['evaluateur', 'identification', 'criteres.sousCriteres', 'evaluable']);
-        $evaluable = $evaluation->evaluable;
-
-        $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
-        $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
-        $note       = (float) $evaluation->note_finale;
-        $mention    = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
-        $cibleLabel = $evaluation->identification->nom_prenom ?? ($evaluable?->name ?? 'Subordonné');
-        $roleLabels = [
-            'DGA'            => 'Directeur Général Adjoint',
-            'Assistante_Dg'  => 'Assistante DG',
-            'Conseillers_Dg' => 'Conseiller DG',
-        ];
-        $cibleType = $roleLabels[$evaluable?->role ?? ''] ?? ($evaluable?->role ?? 'Subordonné');
-
-        $pdf = Pdf::loadView('dg.evaluations.pdf', compact(
-            'evaluation', 'subjectiveCriteria', 'objectiveCriteria', 'mention', 'cibleLabel', 'cibleType'
-        ));
-
-        return $pdf->download('evaluation-'.$evaluation->id.'-sub.pdf');
-    }
-
-    public function destroy(Request $request, Evaluation $evaluation): RedirectResponse
-    {
-        $this->authorize('evaluations.creer');
-        if (
-            $evaluation->evaluable_type !== User::class ||
-            ! in_array($evaluation->evaluable->role ?? '', self::ALLOWED_ROLES, true)
-        ) {
-            abort(403);
-        }
-        if ((int) ($evaluation->evaluable->agent?->entite_id ?? 0) !== (int) ($this->getEntiteForDG()?->id ?? 0)) {
-            abort(403);
-        }
-        if ($evaluation->statut === 'valide') {
-            return back()->with('error', 'Une évaluation validée ne peut pas être supprimée.');
-        }
-
-        $subordonne = $evaluation->evaluable;
-        $evaluation->delete();
-
-        $redirect = match ($subordonne->role) {
-            'DGA'           => route('dg.dga').'?tab=evaluations',
-            'Assistante_Dg' => route('dg.assistante').'?tab=evaluations',
-            default         => route('dg.conseillers.show', $subordonne).'?tab=evaluations',
-        };
-
-        return redirect($redirect)->with('status', 'Évaluation supprimée.');
+        
+        return view('dg.subordonnes.evaluations.show', [
+            'evaluation' => $evaluation,
+            'subordonne' => $evaluation->evaluable,
+            'mention' => $this->evaluationService->mention((float) $evaluation->note_finale),
+            'periodeLabel' => $this->evaluationService->periodeLabel($evaluation),
+            'cibleLabel' => $this->cibleLabel($evaluation),
+            'backUrl' => $this->backUrlForSubordonne($evaluation->evaluable),
+            'objectiveCriteria' => $evaluation->criteres->where('type', 'objectif')->values(),
+            'subjectiveCriteria' => $evaluation->criteres->where('type', 'subjectif')->values()
+        ]);
     }
 
     public function submit(Request $request, Evaluation $evaluation): RedirectResponse
     {
         $this->authorize('evaluations.soumettre');
+        if ($evaluation->statut !== 'brouillon') return back()->with('error', 'Déjà soumis.');
 
-        if ($evaluation->statut !== 'brouillon') {
-            return back()->with('error', 'Cette évaluation ne peut plus être soumise.');
-        }
-        $evaluation->statut = 'soumis';
-        $evaluation->save();
+        $evaluation->update(['statut' => 'soumis']);
+        Alerte::notifier($evaluation->evaluable_id, 'Évaluation reçue', 'Le DG vous a soumis votre fiche.', 'haute');
 
-        $subordonne = $evaluation->evaluable;
-
-        // Notifier le subordonné évalué
-        if ($subordonne) {
-            Alerte::notifier(
-                $subordonne->id,
-                'Nouvelle fiche d\'évaluation reçue',
-                'Le Directeur Général vous a soumis une fiche d\'évaluation. Connectez-vous pour la consulter.',
-                'haute'
-            );
-        }
-
-        $redirect   = match ($subordonne->role) {
-            'DGA'           => route('dg.dga').'?tab=evaluations',
-            'Assistante_Dg' => route('dg.assistante').'?tab=evaluations',
-            default         => route('dg.conseillers.show', $subordonne).'?tab=evaluations',
-        };
-
-        return redirect($redirect)->with('status', 'Évaluation soumise avec succès.');
+        return redirect($this->backUrlForSubordonne($evaluation->evaluable))->with('status', 'Soumis au subordonné.');
     }
 
-    private function cibleLabel(Evaluation $evaluation): string
+    public function destroy(Evaluation $evaluation): RedirectResponse
     {
-        $nomPrenom = trim((string) ($evaluation->identification?->nom_prenom ?? ''));
+        $this->authorize('evaluations.creer');
+        if ($evaluation->statut === 'valide') return back()->with('error', 'Impossible de supprimer une fiche validée.');
 
-        return $nomPrenom !== '' ? $nomPrenom : ($evaluation->evaluable?->name ?? '-');
+        $sub = $evaluation->evaluable;
+        $evaluation->delete();
+        return redirect($this->backUrlForSubordonne($sub))->with('status', 'Supprimé.');
     }
 
     private function backUrlForSubordonne(User $subordonne): string
     {
         return match ($subordonne->role) {
-            'DGA'           => route('dg.dga').'?tab=evaluations',
+            'DGA' => route('dg.dga').'?tab=evaluations',
             'Assistante_Dg' => route('dg.assistante').'?tab=evaluations',
-            default         => route('dg.conseillers.show', $subordonne).'?tab=evaluations',
+            default => route('dg.conseillers.show', $subordonne).'?tab=evaluations',
         };
+    }
+
+    private function cibleLabel(Evaluation $evaluation): string
+    {
+        return $evaluation->identification?->nom_prenom ?: ($evaluation->evaluable?->name ?? '-');
     }
 }

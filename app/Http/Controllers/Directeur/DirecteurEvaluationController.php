@@ -186,10 +186,12 @@ class DirecteurEvaluationController extends Controller
                     'date_echeance' => $fiche->date_echeance instanceof Carbon
                         ? $fiche->date_echeance->toDateString()
                         : (string) $fiche->date_echeance,
-                    'objectifs'     => $fiche->objectifs->map(fn ($item) => [
-                        'source_fiche_objectif_objectif_id' => $item->id,
-                        'titre'                             => $item->description,
-                    ])->values()->all(),
+                    'objectifs'     => $fiche->objectifs
+                        ->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)
+                        ->map(fn ($item) => [
+                            'source_fiche_objectif_objectif_id' => $item->id,
+                            'titre'                             => $item->description,
+                        ])->values()->all(),
                 ];
             }
         } elseif ($selectedAgence) {
@@ -209,10 +211,12 @@ class DirecteurEvaluationController extends Controller
                     'date_echeance' => $fiche->date_echeance instanceof Carbon
                         ? $fiche->date_echeance->toDateString()
                         : (string) $fiche->date_echeance,
-                    'objectifs'     => $fiche->objectifs->map(fn ($item) => [
-                        'source_fiche_objectif_objectif_id' => $item->id,
-                        'titre'                             => $item->description,
-                    ])->values()->all(),
+                    'objectifs'     => $fiche->objectifs
+                        ->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)
+                        ->map(fn ($item) => [
+                            'source_fiche_objectif_objectif_id' => $item->id,
+                            'titre'                             => $item->description,
+                        ])->values()->all(),
                 ];
             }
         } elseif ($selectedCaisse) {
@@ -232,10 +236,12 @@ class DirecteurEvaluationController extends Controller
                     'date_echeance' => $fiche->date_echeance instanceof Carbon
                         ? $fiche->date_echeance->toDateString()
                         : (string) $fiche->date_echeance,
-                    'objectifs'     => $fiche->objectifs->map(fn ($item) => [
-                        'source_fiche_objectif_objectif_id' => $item->id,
-                        'titre'                             => $item->description,
-                    ])->values()->all(),
+                    'objectifs'     => $fiche->objectifs
+                        ->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)
+                        ->map(fn ($item) => [
+                            'source_fiche_objectif_objectif_id' => $item->id,
+                            'titre'                             => $item->description,
+                        ])->values()->all(),
                 ];
             }
         }
@@ -244,25 +250,21 @@ class DirecteurEvaluationController extends Controller
         $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
         // Valeurs précédentes pour les tableaux formations/expériences (après erreur de validation)
-        $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
-        if (! is_array($oldFormations) || $oldFormations === []) {
-            $oldFormations = [['periode' => '', 'libelle' => '', 'domaine' => '']];
-        }
+        $oldFormations  = old('identification.formations');
+        $oldExperiences = old('identification.experiences');
 
-        $oldExperiences = old('identification.experiences', [['periode' => '', 'poste' => '', 'observations' => '']]);
-        if (! is_array($oldExperiences) || $oldExperiences === []) {
-            $oldExperiences = [['periode' => '', 'poste' => '', 'observations' => '']];
-        }
-
-        $displayYear = now()->year;
-        $entiteNom   = $direction->nom ?? '';
+        $openAnnee     = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $openSemestre  = $openSemestres->first();
+        $displayYear   = $openAnnee?->annee ?? now()->year;
+        $entiteNom     = $direction->nom ?? '';
 
         // Données JSON pour auto-remplissage dynamique des champs d'identification
         $servicesJson = $services->map(fn ($svc) => [
             'id'        => $svc->id,
             'nom'       => $svc->nom,
             'nom_prenom'=> $svc->chef ? trim($svc->chef->prenom.' '.$svc->chef->nom) : '',
-            'emploi'    => $svc->chef?->fonction ?? 'Chef de service',
+            'emploi'    => $svc->chef?->role ?? 'Chef de service',
             'entite_nom'=> $entiteNom,
         ])->values()->toArray();
 
@@ -270,7 +272,7 @@ class DirecteurEvaluationController extends Controller
             'id'        => $agc->id,
             'nom'       => $agc->nom,
             'nom_prenom'=> $agc->chef ? trim($agc->chef->prenom.' '.$agc->chef->nom) : '',
-            'emploi'    => $agc->chef?->fonction ?? "Chef d'agence",
+            'emploi'    => $agc->chef?->role ?? "Chef d'agence",
             'entite_nom'=> $entiteNom,
         ])->values()->toArray();
 
@@ -278,7 +280,7 @@ class DirecteurEvaluationController extends Controller
             'id'        => $cai->id,
             'nom'       => $cai->nom,
             'nom_prenom'=> $cai->directeurAgent ? trim($cai->directeurAgent->prenom.' '.$cai->directeurAgent->nom) : '',
-            'emploi'    => $cai->directeurAgent?->fonction ?? 'Directeur de caisse',
+            'emploi'    => $cai->directeurAgent?->role ?? 'Directeur de caisse',
             'entite_nom'=> $entiteNom,
         ])->values()->toArray();
 
@@ -287,21 +289,25 @@ class DirecteurEvaluationController extends Controller
         $prefilledEmploi           = null;
         $prefilledDirectionService = null;
 
+        $prefilledAgentId = null;
         if ($selectedCaisse) {
             $ag = $selectedCaisse->directeurAgent;
             $prefilledNomPrenom        = $ag ? trim($ag->prenom.' '.$ag->nom) : '';
-            $prefilledEmploi           = $ag?->fonction ?? 'Directeur de caisse';
+            $prefilledEmploi           = $ag?->role ?? 'Directeur de caisse';
             $prefilledDirectionService = $selectedCaisse->nom;
+            $prefilledAgentId          = $ag?->id;
         } elseif ($selectedAgence) {
             $ag = $selectedAgence->chef;
             $prefilledNomPrenom        = $ag ? trim($ag->prenom.' '.$ag->nom) : '';
-            $prefilledEmploi           = $ag?->fonction ?? "Chef d'agence";
+            $prefilledEmploi           = $ag?->role ?? "Chef d'agence";
             $prefilledDirectionService = $selectedAgence->nom;
+            $prefilledAgentId          = $ag?->id;
         } elseif ($selectedService) {
             $ag = $selectedService->chef;
             $prefilledNomPrenom        = $ag ? trim($ag->prenom.' '.$ag->nom) : '';
-            $prefilledEmploi           = $ag?->fonction ?? 'Chef de service';
+            $prefilledEmploi           = $ag?->role ?? 'Chef de service';
             $prefilledDirectionService = $selectedService->nom;
+            $prefilledAgentId          = $ag?->id;
         }
 
         return view('directeur.evaluations.create', compact(
@@ -325,6 +331,10 @@ class DirecteurEvaluationController extends Controller
             'prefilledNomPrenom',
             'prefilledEmploi',
             'prefilledDirectionService',
+            'prefilledAgentId',
+            'openAnnee',
+            'openSemestres',
+            'openSemestre',
         ));
     }
 
@@ -362,12 +372,10 @@ class DirecteurEvaluationController extends Controller
                 ? ['required', 'integer', 'in:'.implode(',', $agenceIds ?: [0])]
                 : ['nullable'],
             'caisse_id'                        => ['nullable', 'integer'],
-            'date_debut'                       => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'date_fin'                         => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'identification.nom_prenom'        => ['nullable', 'string', 'max:255'],
-            'identification.semestre'          => ['required', 'in:1,2'],
             'identification.date_evaluation'   => ['nullable', 'string', 'max:20'],
             'identification.matricule'         => ['nullable', 'string', 'max:255'],
+            'identification.grade'             => ['required', 'string', 'max:255'],
             'identification.emploi'            => ['nullable', 'string', 'max:255'],
             'identification.direction'         => ['nullable', 'string', 'max:255'],
             'identification.direction_service' => ['nullable', 'string', 'max:255'],
@@ -419,16 +427,23 @@ class DirecteurEvaluationController extends Controller
             $redirectRoute  = route('directeur.mon-espace', ['tab' => 'dashboard']);
         }
 
-        // Conversion du format MM/AAAA → AAAA-MM-01 (stocké comme date SQL)
-        $dateDebut = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_debut']);
-        $dateFin   = preg_replace_callback('/^(0[1-9]|1[0-2])\/(\d{4})$/', fn ($m) => $m[2].'-'.$m[1].'-01', $validated['date_fin']);
-
-        if (strtotime($dateFin) < strtotime($dateDebut)) {
-            return back()->withInput()->withErrors(['date_fin' => 'La date de fin doit être postérieure à la date de début.']);
+        // Dérivation automatique du semestre ouvert
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
         }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+        $dateDebut  = $semestre->dateDebut()->toDateString();
+        $dateFin    = $semestre->dateFin()->toDateString();
+        $anneeId    = $openAnnee->id;
+        $semestreId = $semestre->id;
 
         // Normalisation de la date d'évaluation dans la section identification
         $identification = $validated['identification'] ?? [];
+        $identification['semestre'] = (string) $semestre->numero;
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -471,16 +486,10 @@ class DirecteurEvaluationController extends Controller
         // Calcul des scores (pondération 75 % objectifs / 25 % subjectifs × 2 = note /10)
         $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
-        // Résolution de l'année de notation (table annees)
-        try {
-            $anneeId = Annee::resolveIdForDate($dateDebut);
-        } catch (\Throwable) {
-            $anneeId = null;
-        }
 
         // Transaction : Evaluation → Identification → Critères → SousCritères
         $evaluation = DB::transaction(function () use (
-            $user, $evaluableModel, $evaluableClass, $dateDebut, $dateFin, $anneeId,
+            $user, $evaluableModel, $evaluableClass, $dateDebut, $dateFin, $anneeId, $semestreId,
             $scores, $validated, $identification,
             $normalizedSubjective, $normalizedObjective
         ) {
@@ -489,6 +498,7 @@ class DirecteurEvaluationController extends Controller
                 'evaluable_id'              => $evaluableModel->id,
                 'evaluable_role'            => 'manager',
                 'annee_id'                  => $anneeId,
+                'semestre_id'               => $semestreId,
                 'evaluateur_id'             => $user->id,
                 'date_debut'                => $dateDebut,
                 'date_fin'                  => $dateFin,
@@ -645,10 +655,17 @@ class DirecteurEvaluationController extends Controller
             return back()->with('error', 'Cette action n\'est possible que sur une évaluation soumise.');
         }
 
-        $request->validate(['action' => ['required', 'in:accepter,refuser']]);
+        $request->validate([
+            'action'      => ['required', 'in:accepter,refuser'],
+            'motif_refus' => ['required_if:action,refuser', 'nullable', 'string', 'max:1000'],
+        ]);
 
         $action             = $request->input('action');
         $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
+        if ($action === 'refuser') {
+            $evaluation->motif_refus        = $request->input('motif_refus');
+            $evaluation->statut_reclamation = 'en_attente';
+        }
         $evaluation->save();
 
         // Notifie l'évaluateur (DG/PCA) du résultat
@@ -666,6 +683,32 @@ class DirecteurEvaluationController extends Controller
         $msg = $action === 'accepter' ? 'Évaluation acceptée.' : 'Évaluation refusée.';
 
         return redirect()->route('directeur.evaluations.show', $evaluation)->with('status', $msg);
+    }
+
+    public function reclamer(Request $request, Evaluation $evaluation): \Illuminate\Http\RedirectResponse
+    {
+        $user = $request->user();
+        // Directeur peut réclamer si c'est son évaluation reçue
+        if (
+            !($evaluation->evaluable_type === \App\Models\User::class && (int) $evaluation->evaluable_id === $user->id)
+        ) {
+            abort(403);
+        }
+
+        if ($evaluation->statut !== 'refuse') {
+            return back()->with('error', "La réclamation n'est possible que sur une évaluation refusée.");
+        }
+
+        $request->validate([
+            'reclamation' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $evaluation->reclamation = $request->input('reclamation');
+        $evaluation->save();
+
+        return redirect()
+            ->route('directeur.evaluations.show', $evaluation)
+            ->with('status', 'Votre réclamation a été enregistrée.');
     }
 
     /**

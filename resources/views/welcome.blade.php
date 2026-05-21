@@ -14,18 +14,22 @@
     @endif
     <style>
         * { font-family: 'Inter', sans-serif; }
-        body { background-color: #050e0a; min-height: 100vh; overflow-x: hidden; color: #f0fdf4; }
+        body { min-height: 100vh; overflow-x: hidden; color: #f0fdf4; }
+
+        /* Slideshow fond */
+        .welcome-bg { position: fixed; inset: 0; z-index: 0; background-size: cover; background-position: center; background-repeat: no-repeat; transition: opacity 1.6s ease; }
+        .welcome-overlay { position: fixed; inset: 0; z-index: 1; background: rgba(0,0,0,0.30); }
 
         /* Effets de fond */
         .hero-glow {
             position: absolute; top: -10%; left: 50%; transform: translateX(-50%);
             width: 800px; height: 500px;
-            background: radial-gradient(ellipse at center, rgba(16,185,129,0.18) 0%, rgba(5,150,105,0.08) 45%, transparent 70%);
+            background: radial-gradient(ellipse at center, rgba(16,185,129,0.12) 0%, transparent 70%);
             pointer-events: none;
         }
         .grid-bg {
             position: absolute; inset: 0;
-            background-image: linear-gradient(rgba(16,185,129,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.04) 1px, transparent 1px);
+            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
             background-size: 60px 60px; pointer-events: none;
         }
 
@@ -68,7 +72,13 @@
 </head>
 <body>
 
-    <div class="relative min-h-screen flex flex-col">
+    {{-- Slideshow --}}
+    <div id="welcome-bg-1" class="welcome-bg" style="background-image: url('/images/DG1.jpg');"></div>
+    <div id="welcome-bg-2" class="welcome-bg" style="background-image: url('/images/DG2.jpg'); opacity:0;"></div>
+    <div id="welcome-bg-3" class="welcome-bg" style="background-image: url('/images/DG3.jpg'); opacity:0;"></div>
+    <div class="welcome-overlay"></div>
+
+    <div class="relative min-h-screen flex flex-col" style="z-index:2;">
         <div class="hero-glow"></div>
         <div class="grid-bg"></div>
 
@@ -153,6 +163,22 @@
             </p>
         </footer>
     </div>
+
+    <script>
+    (function () {
+        const bgs = [
+            document.getElementById('welcome-bg-1'),
+            document.getElementById('welcome-bg-2'),
+            document.getElementById('welcome-bg-3'),
+        ];
+        let current = 0;
+        setInterval(function () {
+            bgs[current].style.opacity = '0';
+            current = (current + 1) % bgs.length;
+            bgs[current].style.opacity = '1';
+        }, 6000);
+    })();
+    </script>
 
 </body>
 </html>

@@ -132,8 +132,8 @@
                                     <span class="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[10px] font-black text-violet-700">
                                         <i class="fas fa-landmark text-[8px]"></i> {{ $caisse->nom }}
                                     </span>
-                                    @if ($agent?->fonction)
-                                        <span class="text-xs text-slate-400">· {{ $agent->fonction }}</span>
+                                    @if ($agent?->role)
+                                        <span class="text-xs text-slate-400">· {{ $agent->role }}</span>
                                     @endif
                                 </div>
                                 <div class="mt-1.5 flex flex-wrap items-center gap-3">

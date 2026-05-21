@@ -39,7 +39,7 @@
                 </ol>
             </div>
 
-            <form method="POST" action="{{ route('logout') }}" class="mt-8">
+            <form method="POST" action="{{ route('pca.logout') }}" class="mt-8">
                 @csrf
                 <button type="submit"
                         class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50">

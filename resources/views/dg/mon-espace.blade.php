@@ -148,7 +148,7 @@
                             <thead class="bg-slate-50/80">
                                 <tr class="border-b border-slate-200 text-slate-500">
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
-                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Période</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Année</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Note finale</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Mention</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
@@ -192,9 +192,9 @@
                                     <tr class="align-top hover:bg-slate-50/60">
                                         <td class="px-4 py-4 font-black text-slate-900">{{ $evaluation->id }}</td>
                                         <td class="px-4 py-4 whitespace-nowrap">
-                                            <p class="font-semibold text-slate-700">{{ $anneeEval }} - Semestre {{ $semestreEval }}</p>
+                                            <p class="font-semibold text-slate-700">Année {{ $anneeEval }}</p>
                                             <p class="mt-1 text-xs text-slate-400">
-                                                {{ $evaluation->date_debut->format('m/Y') }} → {{ $evaluation->date_fin->format('m/Y') }}
+                                                Semestre {{ $semestreEval }} ({{ $evaluation->date_debut->format('m/Y') }} → {{ $evaluation->date_fin->format('m/Y') }})
                                             </p>
                                         </td>
                                         <td class="px-4 py-4">
@@ -319,7 +319,7 @@
                                 <tr class="border-b border-slate-200 text-slate-500">
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Fiche</th>
-                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Période</th>
+                                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Année</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Objectifs</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Avancement</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
@@ -346,10 +346,10 @@
                                         <td class="px-4 py-4 font-black text-slate-900">{{ $fiche->id }}</td>
                                         <td class="px-4 py-4">
                                             <p class="font-semibold text-slate-700">{{ $fiche->titre }}</p>
-                                            <p class="mt-1 text-xs text-slate-400">Année {{ $fiche->annee?->annee ?? $fiche->annee_id }}</p>
                                         </td>
                                         <td class="px-4 py-4 whitespace-nowrap text-slate-600">
-                                            <p>{{ \Carbon\Carbon::parse($fiche->date)->format('d/m/Y') }}</p>
+                                         <p class="font-semibold text-slate-700">Année {{ $fiche->annee?->annee ?? $fiche->annee_id }}</p>
+
                                             <p class="mt-1 text-xs text-slate-400">Échéance : {{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}</p>
                                         </td>
                                         <td class="px-4 py-4">

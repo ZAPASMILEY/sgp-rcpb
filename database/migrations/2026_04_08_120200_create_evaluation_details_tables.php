@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('semestre', 20)->nullable();
             $table->date('date_evaluation')->nullable();
             $table->string('matricule')->nullable();
+            $table->string('grade')->nullable();
             $table->string('poste')->nullable();
             $table->string('emploi')->nullable();
             $table->string('niveau')->nullable();

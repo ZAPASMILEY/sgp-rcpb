@@ -38,8 +38,8 @@
                     @endphp
                     <p class="mt-2 text-sm text-slate-600">
                         Agent : <span class="font-semibold">{{ $agentNom }}</span>
-                        @if ($agent?->fonction)
-                            — {{ $agent->fonction }}
+                        @if ($agent?->role)
+                            — {{ $agent->role }}
                         @endif
                     </p>
                 </div>

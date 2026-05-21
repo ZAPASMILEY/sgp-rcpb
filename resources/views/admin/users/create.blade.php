@@ -51,7 +51,7 @@
                         </div>
                         <div>
                             <p class="font-black text-slate-900">{{ $preselectedAgent->prenom }} {{ $preselectedAgent->nom }}</p>
-                            <p class="text-xs text-slate-500">{{ $preselectedAgent->fonction ?? 'Fonction non renseignée' }}</p>
+                            <p class="text-xs text-slate-500">{{ $preselectedAgent->role ?? 'Rôle non renseigné' }}</p>
                             @if($preselectedAgent->email)
                                 <p class="text-xs text-slate-400">{{ $preselectedAgent->email }}</p>
                             @endif
@@ -72,11 +72,11 @@
                                 <option
                                     value="{{ $agent->id }}"
                                     data-email="{{ $agent->email }}"
-                                    data-fonction="{{ $agent->fonction }}"
+                                    data-role="{{ $agent->role }}"
                                     @selected((string) old('agent_id') === (string) $agent->id)
                                 >
                                     {{ $agent->prenom }} {{ $agent->nom }}
-                                    @if ($agent->fonction) — {{ $agent->fonction }} @endif
+                                    @if ($agent->role) — {{ $agent->role }} @endif
                                     @if ($agent->email) ({{ $agent->email }}) @endif
                                 </option>
                             @endforeach
@@ -111,7 +111,7 @@
                 {{-- ── Rôle système ── --}}
                 @php
                     $preselectedRole = old('role', isset($preselectedAgent)
-                        ? (\App\Http\Controllers\Admin\UserController::FONCTION_TO_ROLE[$preselectedAgent->fonction] ?? '')
+                        ? (\App\Http\Controllers\Admin\UserController::FONCTION_TO_ROLE[$preselectedAgent->role] ?? '')
                         : '');
                 @endphp
                 <div class="space-y-2">
@@ -268,19 +268,19 @@
                 return;
             }
 
-            const email    = opt.dataset.email    || '';
-            const fonction = opt.dataset.fonction  || '';
+            const email    = opt.dataset.email || '';
+            const role     = opt.dataset.role  || '';
             const nom      = opt.text.split('—')[0].trim();
 
             if (preview) {
                 previewNom.textContent  = nom;
-                previewFonc.textContent = fonction || 'Fonction non renseignée';
+                previewFonc.textContent = role || 'Rôle non renseigné';
                 preview.classList.remove('hidden');
             }
 
             if (!emailField.value && email) emailField.value = email;
 
-            const roleValue = fonctionToRole[fonction] || '';
+            const roleValue = fonctionToRole[role] || '';
             if (roleValue) {
                 roleSelect.value = roleValue;
                 if (roleBadge) roleBadge.classList.remove('hidden');

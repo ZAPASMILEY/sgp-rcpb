@@ -87,9 +87,9 @@
                 <option value="">— Sélectionner un agent —</option>
                 @foreach($agents as $ag)
                     <option value="{{ $ag->id }}"
-                            data-search="{{ strtolower($ag->prenom . ' ' . $ag->nom . ' ' . $ag->fonction) }}"
+                            data-search="{{ strtolower($ag->prenom . ' ' . $ag->nom . ' ' . $ag->role) }}"
                             @selected(old('agent_id', $preselectedAgentId) == $ag->id)>
-                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->fonction }}
+                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->role }}
                     </option>
                 @endforeach
             </select>

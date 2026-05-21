@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agent;
 use App\Models\Annee;
 use App\Models\Evaluation;
 use Illuminate\Http\Request;
@@ -72,6 +73,15 @@ class DgDashboardController extends Controller
             ->orderBy('note_finale')
             ->first();
 
+        // ── Agents sans évaluation validée pour l'année ouverte ──────────────
+        $openAnnee      = Annee::currentOpen();
+        $agentsSansEval = 0;
+        if ($openAnnee) {
+            $agentsSansEval = Agent::whereDoesntHave('evaluations', function ($q) use ($openAnnee) {
+                $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
+            })->count();
+        }
+
         $filters = compact('statut', 'search', 'anneeId');
 
         return view('dg.dashboard', compact(
@@ -81,6 +91,8 @@ class DgDashboardController extends Controller
             'topEval',
             'bottomEval',
             'filters',
+            'openAnnee',
+            'agentsSansEval',
         ));
     }
 }

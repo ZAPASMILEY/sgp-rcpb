@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Agent;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -57,10 +58,10 @@ class AgentAccountService
      */
     public function ensureAccount(Agent $agent): User
     {
-        $role = self::FONCTION_ROLE[$agent->fonction] ?? 'Agent';
+        $role = self::FONCTION_ROLE[$agent->role] ?? 'Agent';
 
-        /** @var User|null $user */
-        $user = User::where('agent_id', $agent->id)->first();
+        // Chercher en contournant tout scope éventuel
+        $user = User::withoutGlobalScopes()->where('agent_id', $agent->id)->first();
 
         if ($user) {
             // Réactiver si désactivé, mettre à jour le rôle si nécessaire
@@ -71,16 +72,22 @@ class AgentAccountService
             return $user;
         }
 
-        // Créer un nouveau compte avec MDP temporaire
-        return User::create([
-            'agent_id'             => $agent->id,
-            'name'                 => trim($agent->prenom . ' ' . $agent->nom),
-            'email'                => $agent->email,
-            'password'             => Hash::make('11111111'),
-            'role'                 => $role,
-            'is_active'            => true,
-            'must_change_password' => true,
-        ]);
+        try {
+            return User::create([
+                'agent_id'             => $agent->id,
+                'name'                 => trim($agent->prenom . ' ' . $agent->nom),
+                'email'                => $agent->email,
+                'password'             => Hash::make('11111111'),
+                'role'                 => $role,
+                'is_active'            => true,
+                'must_change_password' => true,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            // Compte créé simultanément (race condition) — on le récupère et on le réactive
+            $user = User::withoutGlobalScopes()->where('agent_id', $agent->id)->firstOrFail();
+            $user->update(['is_active' => true, 'role' => $role]);
+            return $user;
+        }
     }
 
     /**

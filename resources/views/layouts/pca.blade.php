@@ -17,24 +17,24 @@
             [
                 'title' => '1. Pilotage',
                 'items' => [
-                    ['route' => 'pca.dashboard', 'icon' => 'fas fa-gauge-high', 'label' => 'Tableau de bord'],
-                    ['route' => 'pca.objectifs.index', 'icon' => 'fas fa-bullseye', 'label' => 'Objectifs'],
-                    ['route' => 'pca.statistiques.index', 'icon' => 'fas fa-chart-column', 'label' => 'Statistiques'],
-                    ['route' => 'pca.evaluations.index', 'icon' => 'fas fa-clipboard-check', 'label' => 'Evaluations'],
+                    ['route' => 'pca.dashboard',          'icon' => 'fas fa-gauge-high',   'label' => 'Tableau de bord'],
+                    ['route' => 'pca.objectifs.index',    'icon' => 'fas fa-bullseye',      'label' => 'Objectifs'],
+                    ['route' => 'pca.statistiques.index', 'icon' => 'fas fa-chart-column',  'label' => 'Statistiques'],
+                    ['route' => 'pca.evaluations.index',  'icon' => 'fas fa-clipboard-check','label' => 'Evaluations'],
+                    ['route' => 'pca.comparaison.index',  'icon' => 'fas fa-code-compare',  'label' => 'Comparaison inter-période'],
                 ],
             ],
-            [
-                'title' => '2. Administration',
-                'items' => [
-                    ['route' => 'pca.settings.edit', 'icon' => 'fas fa-cog', 'label' => 'Parametres'],
-                ],
-            ],
+           
         ];
+
+        // ── Sections conditionnelles selon permissions ───────────────────────
+        $menuSections = array_merge($menuSections, \App\Helpers\PermissionMenu::extraSections());
 
         $displayYear = (int) request()->query('annee', now()->year);
         $pcaTopbarLabel = match (true) {
             request()->routeIs('pca.dashboard') => 'Tableau de bord',
             request()->routeIs('pca.statistiques.*') => 'Pilotage / Statistiques',
+            request()->routeIs('pca.comparaison.*')  => 'Pilotage / Comparaison inter-période',
             request()->routeIs('pca.objectifs.*') => 'Pilotage / Objectifs',
             request()->routeIs('pca.evaluations.*') => 'Pilotage / Evaluations',
             request()->routeIs('pca.settings.*') => 'Administration / Parametres',
@@ -52,6 +52,17 @@
     @endif
 
     <link rel="stylesheet" href="{{ asset('resources/css/all.min.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
+    <style>
+    .ts-wrapper.single .ts-control{background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.55rem 1rem;font-size:.875rem;color:#1e293b;box-shadow:none;cursor:pointer;}
+    .ts-wrapper.single.focus .ts-control{border-color:#34d399;background:#fff;box-shadow:0 0 0 3px rgba(52,211,153,.15);}
+    .ts-wrapper .ts-control input{color:#1e293b;font-size:.875rem;}
+    .ts-dropdown{border:1px solid #e2e8f0;border-radius:.75rem;box-shadow:0 10px 30px rgba(0,0,0,.1);overflow:hidden;font-size:.875rem;}
+    .ts-dropdown .option{padding:.5rem 1rem;color:#334155;}
+    .ts-dropdown .option:hover,.ts-dropdown .option.active{background:#f0fdf4;color:#065f46;}
+    .ts-dropdown .option.selected{background:#d1fae5;color:#065f46;font-weight:700;}
+    .ts-dropdown-content{max-height:220px;}
+    </style>
 
     @livewireStyles
     @stack('head')
@@ -471,6 +482,12 @@
                         <span>{{ session('feature_disabled') }}</span>
                     </div>
                 @endif
+                @if(session('periode_fermee'))
+                    <div class="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 shadow-sm">
+                        <i class="fas fa-calendar-times shrink-0"></i>
+                        <span>{{ session('periode_fermee') }}</span>
+                    </div>
+                @endif
                 @yield('content')
             </div>
         </div>
@@ -605,5 +622,21 @@
     </script>
 
     @stack('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script>
+    (function(){
+        var tsOpts={searchField:['text'],maxOptions:300,render:{
+            no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
+        }};
+        function initSelects(){
+            document.querySelectorAll('select:not([data-no-ts]):not([multiple])').forEach(function(el){
+                if(el.tomselect)return;
+                new TomSelect(el,tsOpts);
+            });
+        }
+        if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initSelects);}
+        else{initSelects();}
+    })();
+    </script>
 </body>
 </html>

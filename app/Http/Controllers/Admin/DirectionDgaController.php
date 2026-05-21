@@ -19,13 +19,61 @@ class DirectionDgaController extends Controller
     /** Résout la direction du DGA (directeur_agent_id = agent ayant fonction DGA). */
     private function getDirection(): ?Direction
     {
-        return Direction::whereHas('directeur', fn ($q) => $q->where('fonction', 'DGA'))
+        return Direction::where('nom', 'Direction Générale Adjointe')
+            ->orWhereHas('directeur', fn ($q) => $q->where('role', 'DGA'))
             ->with([
                 'directeur',
                 'secretaire',
                 'services' => fn ($q) => $q->with(['chef', 'agents']),
             ])
             ->first();
+    }
+
+    /** Formulaire de configuration du DGA (directeur de la Direction Générale Adjointe). */
+    public function configurerDga(): View|RedirectResponse
+    {
+        $direction = Direction::where('nom', 'Direction Générale Adjointe')->first();
+        if (! $direction) {
+            return redirect()->route('admin.direction-dga.index')
+                ->with('error', 'La Direction Générale Adjointe n\'existe pas encore. Créez-la d\'abord via le menu Directions.');
+        }
+
+        $candidats = Agent::where('role', 'DGA')
+            ->orderBy('nom')->orderBy('prenom')
+            ->get();
+
+        return view('admin.direction-dga.configurer-dga', compact('direction', 'candidats'));
+    }
+
+    /** Enregistre le DGA comme directeur de la Direction Générale Adjointe. */
+    public function stockerDga(Request $request): RedirectResponse
+    {
+        $direction = Direction::where('nom', 'Direction Générale Adjointe')->firstOrFail();
+
+        $validated = $request->validate([
+            'dga_agent_id' => ['required', 'integer', 'exists:agents,id'],
+        ], [
+            'dga_agent_id.required' => 'Veuillez sélectionner un agent.',
+        ]);
+
+        // Désactiver l'ancien DGA si changement
+        if ($direction->directeur_agent_id && $direction->directeur_agent_id !== (int) $validated['dga_agent_id']) {
+            $ancien = Agent::find($direction->directeur_agent_id);
+            if ($ancien) {
+                $this->accounts->deactivateAccount($ancien);
+                $ancien->update(['direction_id' => null]);
+            }
+        }
+
+        $direction->update(['directeur_agent_id' => $validated['dga_agent_id']]);
+
+        $agent = Agent::findOrFail($validated['dga_agent_id']);
+        $agent->update(['direction_id' => $direction->id, 'poste' => 'Directeur Général Adjoint']);
+        $this->accounts->ensureAccount($agent->fresh());
+
+        return redirect()
+            ->route('admin.direction-dga.index')
+            ->with('status', $agent->prenom.' '.$agent->nom.' configuré(e) comme DGA.');
     }
 
     public function index(): View
@@ -69,7 +117,7 @@ class DirectionDgaController extends Controller
             abort(403);
         }
 
-        $candidats = Agent::where('fonction', 'Chef de Service')
+        $candidats = Agent::where('role', 'Chef de Service')
             ->where(function ($q) use ($service): void {
                 $q->whereNull('service_id')->orWhere('service_id', $service->id);
             })
@@ -102,7 +150,7 @@ class DirectionDgaController extends Controller
         $service->update(['chef_agent_id' => $validated['chef_agent_id']]);
 
         $newChef = Agent::findOrFail($validated['chef_agent_id']);
-        $newChef->update(['direction_id' => $direction->id, 'service_id' => $service->id]);
+        $newChef->update(['direction_id' => $direction->id, 'service_id' => $service->id, 'poste' => 'Chef du Service ' . $service->nom]);
         $this->accounts->ensureAccount($newChef);
 
         return redirect()
@@ -116,7 +164,7 @@ class DirectionDgaController extends Controller
         $direction = $this->getDirection();
         abort_if(! $direction, 404);
 
-        $candidats = Agent::where('fonction', 'Secrétaire de Direction')
+        $candidats = Agent::where('role', 'Secrétaire de Direction')
             ->where(function ($q) use ($direction): void {
                 $q->whereNull('direction_id')->orWhere('direction_id', $direction->id);
             })
@@ -147,7 +195,7 @@ class DirectionDgaController extends Controller
         $direction->update(['secretaire_agent_id' => $validated['secretaire_agent_id']]);
 
         $agent = Agent::findOrFail($validated['secretaire_agent_id']);
-        $agent->update(['direction_id' => $direction->id]);
+        $agent->update(['direction_id' => $direction->id, 'poste' => 'Secrétaire de la Direction ' . $direction->nom]);
         $this->accounts->ensureAccount($agent);
 
         return redirect()

@@ -79,8 +79,8 @@
                 <div class="info-value"><strong>{{ trim(($formation->agent->prenom ?? '') . ' ' . ($formation->agent->nom ?? '')) }}</strong></div>
             </div>
             <div class="info-row">
-                <div class="info-label">Fonction</div>
-                <div class="info-value">{{ $formation->agent->fonction ?? '—' }}</div>
+                <div class="info-label">Rôle</div>
+                <div class="info-value">{{ $formation->agent->role ?? '—' }}</div>
             </div>
         </div>
     </div>

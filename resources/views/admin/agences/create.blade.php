@@ -49,9 +49,15 @@
                 <form method="POST" action="{{ route('admin.agences.store') }}" target="_top" class="mt-6 grid gap-6">
                     @csrf
 
-                    <div class="space-y-2">
-                        <label for="nom" class="text-sm font-semibold text-slate-700">Nom de l'agence</label>
-                        <input id="nom" name="nom" type="text" value="{{ old('nom') }}" required class="ent-input" placeholder="Ex: Agence Ouaga Centre">
+                    <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        <div class="space-y-2">
+                            <label for="nom" class="text-sm font-semibold text-slate-700">Nom de l'agence <span class="text-rose-500">*</span></label>
+                            <input id="nom" name="nom" type="text" value="{{ old('nom') }}" required class="ent-input" placeholder="Ex: Agence Ouaga Centre">
+                        </div>
+                        <div class="space-y-2">
+                            <label for="telephone_accueil" class="text-sm font-semibold text-slate-700">Téléphone d'accueil <span class="text-rose-500">*</span></label>
+                            <input id="telephone_accueil" name="telephone_accueil" type="text" value="{{ old('telephone_accueil') }}" required class="ent-input" placeholder="+226 25 00 00 00">
+                        </div>
                     </div>
 
                     <div class="space-y-2">

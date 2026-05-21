@@ -181,11 +181,13 @@ class ChefEvaluationController extends Controller
                     'date_echeance' => $fiche->date_echeance
                         ? (is_string($fiche->date_echeance) ? $fiche->date_echeance : $fiche->date_echeance->toDateString())
                         : '',
-                    // Chaque objectif de la fiche devient un critère pré-rempli
-                    'objectifs'     => $fiche->objectifs->map(fn ($item) => [
-                        'source_fiche_objectif_objectif_id' => $item->id,
-                        'titre'                             => $item->description,
-                    ])->values()->all(),
+                    // Seuls les objectifs démarrés (avancement > 0) peuvent être évalués
+                    'objectifs'     => $fiche->objectifs
+                        ->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)
+                        ->map(fn ($item) => [
+                            'source_fiche_objectif_objectif_id' => $item->id,
+                            'titre'                             => $item->description,
+                        ])->values()->all(),
                 ];
             }
         }
@@ -195,38 +197,38 @@ class ChefEvaluationController extends Controller
         $subjectiveTemplates = $this->evaluationService->buildSubjectiveTemplates();
 
         // ── Récupération des anciennes valeurs après erreur de validation ─────
-        $oldFormations = old('identification.formations', [['periode' => '', 'libelle' => '', 'domaine' => '']]);
-        if (! is_array($oldFormations) || $oldFormations === []) {
-            $oldFormations = [['periode' => '', 'libelle' => '', 'domaine' => '']];
-        }
-
-        $oldExperiences = old('identification.experiences', [['periode' => '', 'poste' => '', 'observations' => '']]);
-        if (! is_array($oldExperiences) || $oldExperiences === []) {
-            $oldExperiences = [['periode' => '', 'poste' => '', 'observations' => '']];
-        }
+        $oldFormations  = old('identification.formations');
+        $oldExperiences = old('identification.experiences');
 
         // ── Données JSON pour auto-remplissage des champs identification ──────
-        // Sérialisées en JSON pour le script JS de la vue.
         $agentsJson = $agents->map(fn ($a) => [
             'id'         => $a->id,
             'nom_prenom' => trim($a->prenom . ' ' . $a->nom),
-            'emploi'     => $a->fonction ?? 'Agent',
-            'entite_nom' => $ctx->getNom(), // Nom de la structure du chef
+            'emploi'     => $a->role ?? 'Agent',
+            'entite_nom' => $ctx->getNom(),
+            'matricule'  => $a->matricule ?? '',
         ])->values()->toArray();
 
         // Pré-remplissage initial des champs si agent pré-sélectionné
         $prefilledNomPrenom        = null;
         $prefilledEmploi           = null;
         $prefilledDirectionService = null;
+        $prefilledAgentId          = $selectedAgent?->id ?? null;
 
         if ($selectedAgent) {
             $prefilledNomPrenom        = trim($selectedAgent->prenom . ' ' . $selectedAgent->nom);
-            $prefilledEmploi           = $selectedAgent->fonction ?? 'Agent';
+            $prefilledEmploi           = $selectedAgent->role ?? 'Agent';
             $prefilledDirectionService = $ctx->getNom();
         }
 
-        $displayYear = now()->year;
-        $entiteNom   = $ctx->getNom();
+        $openAnnee      = Annee::currentOpen();
+        $openSemestres  = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $openSemestre   = $openSemestres->first();
+        $displayYear    = $openAnnee?->annee ?? now()->year;
+        $entiteNom      = $ctx->getNom();
+
+        // Pré-remplissage du matricule pour l'agent pré-sélectionné
+        $prefilledMatricule = $selectedAgent?->matricule ?? null;
 
         return view('chef.evaluations.create', compact(
             'ctx',
@@ -240,8 +242,13 @@ class ChefEvaluationController extends Controller
             'prefilledNomPrenom',
             'prefilledEmploi',
             'prefilledDirectionService',
+            'prefilledAgentId',
             'displayYear',
             'entiteNom',
+            'openAnnee',
+            'openSemestres',
+            'openSemestre',
+            'prefilledMatricule',
         ));
     }
 
@@ -268,12 +275,10 @@ class ChefEvaluationController extends Controller
         // Validation de base du formulaire
         $validated = $request->validate([
             'agent_id'                         => ['required', 'integer', 'in:' . implode(',', $agentIds ?: [0])],
-            'date_debut'                       => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
-            'date_fin'                         => ['required', 'regex:/^(0[1-9]|1[0-2])\/\d{4}$/'],
             'identification.nom_prenom'        => ['nullable', 'string', 'max:255'],
-            'identification.semestre'          => ['required', 'in:1,2'],
             'identification.date_evaluation'   => ['nullable', 'string', 'max:20'],
             'identification.matricule'         => ['nullable', 'string', 'max:255'],
+            'identification.grade'             => ['required', 'string', 'max:255'],
             'identification.emploi'            => ['nullable', 'string', 'max:255'],
             'identification.direction'         => ['nullable', 'string', 'max:255'],
             'identification.direction_service' => ['nullable', 'string', 'max:255'],
@@ -302,27 +307,24 @@ class ChefEvaluationController extends Controller
             abort(403, 'Cet agent n\'est pas sous votre responsabilité.');
         }
 
-        // ── Conversion des dates MM/AAAA → AAAA-MM-01 ────────────────────────
-        $dateDebut = preg_replace_callback(
-            '/^(0[1-9]|1[0-2])\/(\d{4})$/',
-            fn ($m) => $m[2] . '-' . $m[1] . '-01',
-            $validated['date_debut']
-        );
-        $dateFin = preg_replace_callback(
-            '/^(0[1-9]|1[0-2])\/(\d{4})$/',
-            fn ($m) => $m[2] . '-' . $m[1] . '-01',
-            $validated['date_fin']
-        );
-
-        // La date de fin doit être postérieure à la date de début
-        if (strtotime($dateFin) < strtotime($dateDebut)) {
-            return back()->withInput()->withErrors([
-                'date_fin' => 'La date de fin doit être postérieure à la date de début.',
-            ]);
+        // ── Résolution automatique du semestre ouvert ─────────────────────────
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
         }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+        $dateDebut  = $semestre->dateDebut()->toDateString();
+        $dateFin    = $semestre->dateFin()->toDateString();
+        $anneeId    = $openAnnee->id;
+        $semestreId = $semestre->id;
 
         // ── Normalisation de la date d'évaluation dans l'identification ───────
         $identification = $validated['identification'] ?? [];
+        $identification['semestre'] = (string) $semestre->numero;
+        $identification['matricule'] = $evaluableModel->matricule ?? null;
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -373,18 +375,12 @@ class ChefEvaluationController extends Controller
         // ── Calcul des scores (pondération 75 % objectifs / 25 % subjectifs) ──
         $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
-        // ── Résolution de l'année de notation ────────────────────────────────
-        try {
-            $anneeId = Annee::resolveIdForDate($dateDebut);
-        } catch (\Throwable) {
-            $anneeId = null;
-        }
 
         $user = Auth::user();
 
         // ── Transaction : Evaluation + Identification + Critères + SousCritères
         $evaluation = DB::transaction(function () use (
-            $user, $evaluableModel, $dateDebut, $dateFin, $anneeId,
+            $user, $evaluableModel, $dateDebut, $dateFin, $anneeId, $semestreId,
             $scores, $validated, $identification,
             $normalizedSubjective, $normalizedObjective
         ) {
@@ -394,6 +390,7 @@ class ChefEvaluationController extends Controller
                 'evaluable_id'              => $evaluableModel->id,
                 'evaluable_role'            => 'manager',  // Le chef évalue en tant que manager
                 'annee_id'                  => $anneeId,
+                'semestre_id'               => $semestreId,
                 'evaluateur_id'             => $user->id,
                 'date_debut'                => $dateDebut,
                 'date_fin'                  => $dateFin,
@@ -567,10 +564,17 @@ class ChefEvaluationController extends Controller
             return back()->with('error', 'Cette action n\'est possible que sur une évaluation soumise.');
         }
 
-        $request->validate(['action' => ['required', 'in:accepter,refuser']]);
+        $request->validate([
+            'action'      => ['required', 'in:accepter,refuser'],
+            'motif_refus' => ['required_if:action,refuser', 'nullable', 'string', 'max:1000'],
+        ]);
 
         $action             = $request->input('action');
         $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
+        if ($action === 'refuser') {
+            $evaluation->motif_refus        = $request->input('motif_refus');
+            $evaluation->statut_reclamation = 'en_attente';
+        }
         $evaluation->save();
 
         // Notification à l'évaluateur (directeur) du résultat
@@ -590,6 +594,267 @@ class ChefEvaluationController extends Controller
         return redirect()
             ->route('chef.evaluations.show', $evaluation)
             ->with('status', $msg);
+    }
+
+    public function reclamer(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        $this->authorizeReceivedEval($evaluation);
+
+        if ($evaluation->statut !== 'refuse') {
+            return back()->with('error', "La réclamation n'est possible que sur une évaluation refusée.");
+        }
+
+        $request->validate([
+            'reclamation' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $evaluation->reclamation = $request->input('reclamation');
+        $evaluation->save();
+
+        return redirect()
+            ->route('chef.evaluations.show', $evaluation)
+            ->with('status', 'Votre réclamation a été enregistrée.');
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MODIFIER UN BROUILLON
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Affiche le formulaire de modification d'un brouillon.
+     */
+    public function edit(Evaluation $evaluation): View|RedirectResponse
+    {
+        $ctx = $this->authorizeCreatedEval($evaluation);
+
+        if ($evaluation->statut !== 'brouillon') {
+            return redirect()->route('chef.evaluations.show', $evaluation)
+                ->with('error', 'Seules les évaluations en brouillon sont modifiables.');
+        }
+
+        $evaluation->load(['identification', 'criteres.sousCriteres', 'evaluable']);
+        $agent = $evaluation->evaluable;
+
+        // Fiches d'objectifs actives pour cet agent
+        $today = now()->toDateString();
+        $fiches = FicheObjectif::query()
+            ->with('objectifs')
+            ->where('statut', 'acceptee')
+            ->whereDate('date_echeance', '>=', $today)
+            ->where('assignable_type', Agent::class)
+            ->where('assignable_id', $agent->id)
+            ->orderBy('titre')
+            ->get();
+
+        $objectiveOptions = [];
+        foreach ($fiches as $fiche) {
+            $objectiveOptions[] = [
+                'id'            => $fiche->id,
+                'titre'         => $fiche->titre,
+                'date_echeance' => $fiche->date_echeance
+                    ? (is_string($fiche->date_echeance) ? $fiche->date_echeance : $fiche->date_echeance->toDateString())
+                    : '',
+                'objectifs' => $fiche->objectifs
+                    ->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)
+                    ->map(fn ($item) => [
+                        'source_fiche_objectif_objectif_id' => $item->id,
+                        'titre'                             => $item->description,
+                    ])->values()->all(),
+            ];
+        }
+
+        // Critères existants → format attendu par le JS du formulaire
+        $existingSubjectiveCriteria = $evaluation->criteres
+            ->where('type', 'subjectif')
+            ->map(fn ($c) => [
+                'titre'              => $c->titre,
+                'observation'        => $c->observation ?? '',
+                'source_template_id' => $c->source_template_id ?? '',
+                'subcriteria'        => $c->sousCriteres->map(fn ($s) => [
+                    'libelle'     => $s->libelle,
+                    'note'        => $s->note,
+                    'observation' => $s->observation ?? '',
+                ])->values()->all(),
+            ])->values()->all();
+
+        $existingObjectiveCriteria = $evaluation->criteres
+            ->where('type', 'objectif')
+            ->map(fn ($c) => [
+                'titre'                             => $c->titre,
+                'observation'                       => $c->observation ?? '',
+                'source_fiche_objectif_id'          => $c->source_fiche_objectif_id ?? '',
+                'source_fiche_objectif_objectif_id' => $c->source_fiche_objectif_objectif_id ?? '',
+                'subcriteria'                       => $c->sousCriteres->map(fn ($s) => [
+                    'libelle'     => $s->libelle,
+                    'note'        => $s->note,
+                    'observation' => $s->observation ?? '',
+                    'source_fiche_objectif_objectif_id' => $s->source_fiche_objectif_objectif_id ?? '',
+                ])->values()->all(),
+            ])->values()->all();
+
+        $ident         = $evaluation->identification;
+        $openAnnee     = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $openSemestre  = $openSemestres->first();
+        $displayYear   = $openAnnee?->annee ?? now()->year;
+        $entiteNom     = $ctx->getNom();
+
+        return view('chef.evaluations.edit', compact(
+            'ctx',
+            'evaluation',
+            'agent',
+            'ident',
+            'objectiveOptions',
+            'existingSubjectiveCriteria',
+            'existingObjectiveCriteria',
+            'entiteNom',
+            'displayYear',
+            'openAnnee',
+            'openSemestres',
+            'openSemestre',
+        ));
+    }
+
+    /**
+     * Met à jour un brouillon existant.
+     */
+    public function update(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        $this->authorizeCreatedEval($evaluation);
+
+        if ($evaluation->statut !== 'brouillon') {
+            abort(403, 'Modification interdite pour une évaluation déjà soumise.');
+        }
+
+        $evaluableModel = Agent::findOrFail($evaluation->evaluable_id);
+
+        $validated = $request->validate([
+            'identification.nom_prenom'               => ['nullable', 'string', 'max:255'],
+            'identification.date_evaluation'          => ['nullable', 'string', 'max:20'],
+            'identification.matricule'                => ['nullable', 'string', 'max:255'],
+            'identification.grade'                    => ['required', 'string', 'max:255'],
+            'identification.emploi'                   => ['nullable', 'string', 'max:255'],
+            'identification.direction'                => ['nullable', 'string', 'max:255'],
+            'identification.direction_service'        => ['nullable', 'string', 'max:255'],
+            'identification.formations'               => ['nullable', 'array'],
+            'identification.formations.*.periode'     => ['nullable', 'string', 'max:255'],
+            'identification.formations.*.libelle'     => ['nullable', 'string', 'max:255'],
+            'identification.formations.*.domaine'     => ['nullable', 'string', 'max:255'],
+            'identification.experiences'              => ['nullable', 'array'],
+            'identification.experiences.*.periode'    => ['nullable', 'string', 'max:255'],
+            'identification.experiences.*.poste'      => ['nullable', 'string', 'max:255'],
+            'identification.experiences.*.observations' => ['nullable', 'string', 'max:255'],
+            'subjective_criteres'                     => ['required', 'array', 'min:1'],
+            'objective_criteres'                      => ['required', 'array', 'min:1'],
+            'points_a_ameliorer'                      => ['nullable', 'string'],
+            'strategies_amelioration'                 => ['nullable', 'string'],
+            'commentaire'                             => ['nullable', 'string', 'max:2000'],
+            'signature_evalue_nom'                    => ['nullable', 'string', 'max:255'],
+            'signature_evaluateur_nom'                => ['nullable', 'string', 'max:255'],
+            'date_signature_evalue'                   => ['nullable', 'date'],
+            'date_signature_evaluateur'               => ['nullable', 'date'],
+        ]);
+
+        // Résolution automatique du semestre ouvert
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
+        }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+        $dateDebut = $semestre->dateDebut()->toDateString();
+        $dateFin   = $semestre->dateFin()->toDateString();
+
+        // Normalisation de la date d'évaluation
+        $identification = $validated['identification'] ?? [];
+        $identification['semestre'] = (string) $semestre->numero;
+        $identification['matricule'] = $evaluableModel->matricule ?? null;
+        $raw = $identification['date_evaluation'] ?? null;
+        if (! blank($raw)) {
+            $normalized = $this->evaluationService->normalizeDateValue($raw);
+            if ($normalized === null) {
+                return back()->withInput()->withErrors([
+                    'identification.date_evaluation' => 'Format de date invalide. Utilisez JJ/MM/AAAA.',
+                ]);
+            }
+            $identification['date_evaluation'] = $normalized;
+        }
+
+        // Nettoyage formations
+        $identification['formations'] = collect($identification['formations'] ?? [])
+            ->map(fn ($row) => [
+                'periode' => trim((string) ($row['periode'] ?? '')),
+                'libelle' => trim((string) ($row['libelle'] ?? '')),
+                'domaine' => trim((string) ($row['domaine'] ?? '')),
+            ])
+            ->filter(fn ($row) => $row['periode'] !== '' || $row['libelle'] !== '' || $row['domaine'] !== '')
+            ->values()->all();
+
+        // Nettoyage expériences
+        $identification['experiences'] = collect($identification['experiences'] ?? [])
+            ->map(fn ($row) => [
+                'periode'      => trim((string) ($row['periode'] ?? '')),
+                'poste'        => trim((string) ($row['poste'] ?? '')),
+                'observations' => trim((string) ($row['observations'] ?? '')),
+            ])
+            ->filter(fn ($row) => $row['periode'] !== '' || $row['poste'] !== '' || $row['observations'] !== '')
+            ->values()->all();
+
+        // Normalisation des critères
+        $normalizedSubjective = $this->evaluationService->normalizeCriteria(
+            (array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false
+        );
+        $normalizedObjective = $this->evaluationService->normalizeCriteria(
+            (array) $request->input('objective_criteres', []), 'objectif', 1, 5
+        );
+
+        if ($normalizedSubjective === [] || $normalizedObjective === []) {
+            return back()->withInput()->withErrors([
+                'subjective_criteres' => 'Les critères subjectifs et objectifs doivent contenir au moins une ligne notée.',
+            ]);
+        }
+
+        $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
+        $user   = Auth::user();
+
+        DB::transaction(function () use (
+            $evaluation, $user, $dateDebut, $dateFin,
+            $scores, $validated, $identification,
+            $normalizedSubjective, $normalizedObjective
+        ) {
+            $evaluation->update([
+                'date_debut'                => $dateDebut,
+                'date_fin'                  => $dateFin,
+                'moyenne_subjectifs'        => $scores['moyenne_subjectifs'],
+                'note_criteres_subjectifs'  => $scores['note_criteres_subjectifs'],
+                'moyenne_objectifs'         => $scores['moyenne_objectifs'],
+                'note_criteres_objectifs'   => $scores['note_criteres_objectifs'],
+                'note_finale'               => $scores['note_finale'],
+                'commentaire'               => $validated['commentaire'] ?? null,
+                'points_a_ameliorer'        => $validated['points_a_ameliorer'] ?? null,
+                'strategies_amelioration'   => $validated['strategies_amelioration'] ?? null,
+                'signature_evalue_nom'      => $validated['signature_evalue_nom']
+                    ?? ($identification['nom_prenom'] ?? null),
+                'signature_evaluateur_nom'  => $validated['signature_evaluateur_nom']
+                    ?? $user->name,
+                'date_signature_evalue'     => $validated['date_signature_evalue'] ?? null,
+                'date_signature_evaluateur' => $validated['date_signature_evaluateur'] ?? null,
+            ]);
+
+            $evaluation->identification()->update($identification);
+
+            $evaluation->criteres()->delete();
+            $this->evaluationService->persistCriteria(
+                $evaluation,
+                array_merge($normalizedSubjective, $normalizedObjective)
+            );
+        });
+
+        return redirect()
+            ->route('chef.evaluations.show', $evaluation)
+            ->with('status', 'Brouillon mis à jour avec succès.');
     }
 
     // ══════════════════════════════════════════════════════════════════════════

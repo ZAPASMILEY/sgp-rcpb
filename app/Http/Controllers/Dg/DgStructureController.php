@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Shared\StructureStats;
+use App\Models\Annee;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -15,26 +16,41 @@ class DgStructureController extends Controller
 
     public function __invoke(Request $request): View
     {
-        $typeFilter    = $request->input('type') ?: null;
-        $sortBy        = $request->input('sort', 'note');
+        $typeFilter = $request->input('type') ?: null;
+        $sortBy     = $request->input('sort', 'note');
 
-        $structures     = $this->buildStructureStats($typeFilter, $sortBy);
-        $allStructures  = $typeFilter ? $this->buildStructureStats(null, $sortBy) : $structures;
+        // Notes visibles uniquement si aucune année n'est ouverte (toutes clôturées)
+        $anneeOuverte   = Annee::currentOpen();
+        $notesVisibles  = $anneeOuverte === null;
+
+        // Si toutes clôturées, on affiche les stats de la dernière année clôturée
+        $derniereAnnee  = Annee::where('statut', 'cloture')->orderByDesc('annee')->first();
+        $anneeId        = $derniereAnnee?->id;
+
+        $structures     = $this->buildStructureStats($typeFilter, $sortBy, $notesVisibles ? $anneeId : null);
+        $allStructures  = $typeFilter ? $this->buildStructureStats(null, $sortBy, $notesVisibles ? $anneeId : null) : $structures;
         $globalStats    = $this->computeGlobalStats($allStructures);
-        $perimetreStats = $this->buildPerimetreStats();
+        $perimetreStats = $this->buildPerimetreStats($notesVisibles ? $anneeId : null);
 
-        return view('dg.structures', compact('structures', 'typeFilter', 'sortBy', 'globalStats', 'perimetreStats'));
+        return view('dg.structures', compact(
+            'structures', 'typeFilter', 'sortBy', 'globalStats', 'perimetreStats',
+            'notesVisibles', 'anneeOuverte', 'derniereAnnee'
+        ));
     }
 
     public function pdf(Request $request): Response
     {
         $typeFilter    = $request->input('type') ?: null;
         $sortBy        = $request->input('sort', 'note');
+        $anneeOuverte  = Annee::currentOpen();
+        $notesVisibles = $anneeOuverte === null;
+        $derniereAnnee = Annee::where('statut', 'cloture')->orderByDesc('annee')->first();
+        $anneeId       = $derniereAnnee?->id;
 
-        $structures     = $this->buildStructureStats($typeFilter, $sortBy);
-        $allStructures  = $typeFilter ? $this->buildStructureStats(null, $sortBy) : $structures;
+        $structures     = $this->buildStructureStats($typeFilter, $sortBy, $notesVisibles ? $anneeId : null);
+        $allStructures  = $typeFilter ? $this->buildStructureStats(null, $sortBy, $notesVisibles ? $anneeId : null) : $structures;
         $globalStats    = $this->computeGlobalStats($allStructures);
-        $perimetreStats = $this->buildPerimetreStats();
+        $perimetreStats = $this->buildPerimetreStats($notesVisibles ? $anneeId : null);
 
         $pdf = Pdf::loadView('structures.pdf', compact('structures', 'typeFilter', 'sortBy', 'globalStats', 'perimetreStats'))
                   ->setPaper('a4', 'landscape');

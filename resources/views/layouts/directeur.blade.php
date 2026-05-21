@@ -35,6 +35,9 @@
             ],
         ],
     ];
+
+    // ── Sections conditionnelles selon permissions ───────────────────────────
+    $menuSections = array_merge($menuSections, \App\Helpers\PermissionMenu::extraSections());
 @endphp
 
 <!DOCTYPE html>
@@ -232,6 +235,12 @@
                     <span>{{ session('feature_disabled') }}</span>
                 </div>
             @endif
+            @if(session('periode_fermee'))
+                <div class="mx-4 mt-4 flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 shadow-sm">
+                    <i class="fas fa-calendar-times shrink-0"></i>
+                    <span>{{ session('periode_fermee') }}</span>
+                </div>
+            @endif
             @yield('content')
             @yield('actions')
             @yield('export')
@@ -263,19 +272,17 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
     (function(){
-        var tsOpts={placeholder:'— Rechercher un agent —',searchField:['text'],maxOptions:300,render:{
-            option:function(d,e){return'<div>'+e(d.text)+'</div>';},
-            item:function(d,e){return'<div>'+e(d.text)+'</div>';},
-            no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun agent trouvé</div>';}
+        var tsOpts={searchField:['text'],maxOptions:300,render:{
+            no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
-        function initAgentSelects(){
-            document.querySelectorAll('select[name="agent_id"],select[name$="_agent_id"]').forEach(function(el){
+        function initSelects(){
+            document.querySelectorAll('select:not([data-no-ts]):not([multiple])').forEach(function(el){
                 if(el.tomselect)return;
                 new TomSelect(el,tsOpts);
             });
         }
-        if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initAgentSelects);}
-        else{initAgentSelects();}
+        if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initSelects);}
+        else{initSelects();}
     })();
     </script>
 </body>

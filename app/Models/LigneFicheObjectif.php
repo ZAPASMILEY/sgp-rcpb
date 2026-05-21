@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LigneFicheObjectif extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $table = 'lignes_fiche_objectif';
 
@@ -16,6 +17,8 @@ class LigneFicheObjectif extends Model
         'fiche_objectif_id',
         'description',
         'note_obtenue',
+        'avancement_percentage',
+        'statut',
     ];
 
     protected $casts = [

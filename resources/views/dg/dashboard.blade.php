@@ -3,39 +3,36 @@
 @section('title', 'Tableau de bord | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
+
 <div class="min-h-screen bg-[#f1f5f9] pb-10">
 
     {{-- ── Hero Banner ────────────────────────────────────────────────────── --}}
-    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
-
-        {{-- Decorative blurs --}}
-        <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
-        <div class="pointer-events-none absolute -bottom-10 left-1/3 h-48 w-48 rounded-full bg-teal-400/10 blur-2xl"></div>
+    <div class="relative overflow-hidden px-6 py-8 lg:px-10 shadow-md" style="background: linear-gradient(135deg, #003d20 0%, #005c30 50%, #008751 100%)">
 
         <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
             {{-- Identity --}}
             <div class="flex items-center gap-5">
-                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl font-black text-white shadow-lg ring-1 ring-white/20">
+                <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-black text-white shadow-lg ring-1 ring-white/20" style="background:rgba(255,255,255,0.15)">
                     {{ strtoupper(substr(auth()->user()->name ?? 'D', 0, 1)) }}
                 </div>
                 <div>
-                    <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-200">Directeur Général · Pilotage Réseau</p>
+                    <p class="text-xs font-black uppercase tracking-[0.25em] text-white/60">Directeur Général · Pilotage Réseau</p>
                     <h1 class="mt-0.5 text-2xl font-black text-white">{{ auth()->user()->name }}</h1>
-                    <p class="mt-0.5 text-sm text-emerald-100/80">Vue consolidée de toutes les évaluations du réseau RCPB</p>
+                    <p class="mt-0.5 text-sm text-white/70">Vue consolidée de toutes les évaluations du réseau RCPB</p>
                 </div>
             </div>
 
             {{-- Filters in hero --}}
             <form method="GET" action="{{ route('dg.dashboard') }}" class="flex flex-wrap items-center gap-3">
-                <div class="flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 backdrop-blur-sm ring-1 ring-white/20">
-                    <i class="fas fa-search text-emerald-200 text-xs"></i>
+                <div class="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 ring-1 ring-white/25 backdrop-blur-sm">
+                    <i class="fas fa-search text-white/50 text-xs"></i>
                     <input type="text" name="search" value="{{ $filters['search'] }}"
                         placeholder="Rechercher…"
-                        class="w-36 bg-transparent text-sm font-semibold text-white placeholder-emerald-300 outline-none">
+                        class="w-36 bg-transparent text-sm font-semibold text-white placeholder-white/40 outline-none">
                 </div>
                 <select name="statut" onchange="this.form.submit()"
-                    class="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm ring-1 ring-white/20 outline-none cursor-pointer">
+                    class="rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 backdrop-blur-sm outline-none cursor-pointer">
                     <option value="" class="text-slate-900">Tous statuts</option>
                     <option value="soumis"  class="text-slate-900" {{ $filters['statut'] === 'soumis'  ? 'selected' : '' }}>Soumises</option>
                     <option value="valide"  class="text-slate-900" {{ $filters['statut'] === 'valide'  ? 'selected' : '' }}>Validées</option>
@@ -43,7 +40,7 @@
                 </select>
                 @if ($annees->isNotEmpty())
                 <select name="annee" onchange="this.form.submit()"
-                    class="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm ring-1 ring-white/20 outline-none cursor-pointer">
+                    class="rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 backdrop-blur-sm outline-none cursor-pointer">
                     <option value="" class="text-slate-900">Toutes années</option>
                     @foreach ($annees as $annee)
                         <option value="{{ $annee->id }}" class="text-slate-900" {{ $filters['anneeId'] == $annee->id ? 'selected' : '' }}>
@@ -53,12 +50,12 @@
                 </select>
                 @endif
                 <button type="submit"
-                    class="inline-flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2.5 text-sm font-black text-white ring-1 ring-white/30 transition hover:bg-white/30">
+                    class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black text-white shadow-sm transition" style="background:#008751"
                     <i class="fas fa-filter text-xs"></i> Filtrer
                 </button>
                 @if ($filters['search'] || $filters['statut'] || $filters['anneeId'])
                     <a href="{{ route('dg.dashboard') }}"
-                       class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 text-xs font-bold text-emerald-200 ring-1 ring-white/20 transition hover:bg-white/20">
+                       class="inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2.5 text-xs font-bold text-white/70 ring-1 ring-white/25 backdrop-blur-sm transition hover:bg-white/25"
                         <i class="fas fa-times"></i>
                     </a>
                 @endif
@@ -76,13 +73,13 @@
                 ];
             @endphp
             @foreach ($heroStats as $hs)
-            <div class="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/20">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white text-sm">
+            <div class="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-3 ring-1 ring-white/25 backdrop-blur-sm">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white text-sm" style="background:rgba(255,255,255,0.15)">
                     <i class="{{ $hs['icon'] }}"></i>
                 </span>
                 <div>
                     <p class="text-xl font-black text-white">{{ $hs['value'] }}</p>
-                    <p class="text-[10px] font-semibold text-emerald-200">{{ $hs['label'] }}</p>
+                    <p class="text-[10px] font-semibold text-white/60">{{ $hs['label'] }}</p>
                 </div>
             </div>
             @endforeach
@@ -95,6 +92,26 @@
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
                 <i class="fas fa-check-circle mr-2"></i>{{ session('status') }}
+            </div>
+        @endif
+
+        {{-- ── Alerte agents sans évaluation ──────────────────────────────── --}}
+        @if ($openAnnee && $agentsSansEval > 0)
+            <div class="flex items-center gap-4 rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-orange-800">
+                        {{ $agentsSansEval }} agent{{ $agentsSansEval > 1 ? 's' : '' }} sans évaluation validée — Année {{ $openAnnee->annee }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-orange-600">
+                        Ces agents n'ont pas encore de note validée pour l'exercice en cours. Veillez à ce que toutes les évaluations soient finalisées avant la clôture.
+                    </p>
+                </div>
+                <span class="flex h-10 min-w-[2.5rem] items-center justify-center rounded-xl bg-orange-500 px-2 text-xl font-black text-white shadow-sm">
+                    {{ $agentsSansEval }}
+                </span>
             </div>
         @endif
 
@@ -316,6 +333,24 @@
         </div>
     </div>
 </div>
+
+{{-- Page background slideshow --}}
+<script>
+(function () {
+    const bgs = [
+        document.getElementById('dg-bg-1'),
+        document.getElementById('dg-bg-2'),
+        document.getElementById('dg-bg-3'),
+    ].filter(Boolean);
+    if (!bgs.length) return;
+    let current = 0;
+    setInterval(function () {
+        bgs[current].style.opacity = '0';
+        current = (current + 1) % bgs.length;
+        bgs[current].style.opacity = '1';
+    }, 6000);
+})();
+</script>
 
 {{-- Chart data --}}
 <script>

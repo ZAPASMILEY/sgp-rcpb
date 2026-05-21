@@ -11,6 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Exempter les routes de déconnexion du CSRF
+        // (la session peut déjà être expirée quand l'utilisateur clique "déconnecter")
+        $middleware->validateCsrfTokens(except: [
+            '*/logout',
+            'logout',
+        ]);
+
         $middleware->alias([
             'admin'        => \App\Http\Middleware\EnsureAdmin::class,
             'pca'          => \App\Http\Middleware\EnsurePca::class,
@@ -23,6 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
             // Middleware pour les trois types de chefs (service, agence, guichet)
             'chef'             => \App\Http\Middleware\EnsureIsChef::class,
             'feature'          => \App\Http\Middleware\FeatureGate::class,
+            'periode.ouverte'  => \App\Http\Middleware\PeriodeOuverte::class,
+            'annee.ouverte'    => \App\Http\Middleware\AnneeOuverte::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\Formation;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,7 +45,7 @@ class RhFormationController extends Controller
 
         $formations = $query->orderByDesc('date_debut')->paginate(15)->withQueryString();
 
-        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
         $annees      = range(now()->year + 1, now()->year - 4);
         $domaines    = Formation::DOMAINES;
         $routePrefix = 'rh';
@@ -56,7 +57,7 @@ class RhFormationController extends Controller
 
     public function create(Request $request): View
     {
-        $agents              = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+        $agents              = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
         $domaines            = Formation::DOMAINES;
         $preselectedAgentId  = (int) $request->get('agent_id', 0);
         $titresExistants     = Formation::distinct()->orderBy('titre')->pluck('titre');
@@ -90,7 +91,7 @@ class RhFormationController extends Controller
 
     public function edit(Formation $formation): View
     {
-        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'fonction']);
+        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
         $domaines    = Formation::DOMAINES;
         $routePrefix = 'rh';
 
@@ -125,6 +126,24 @@ class RhFormationController extends Controller
         return redirect()
             ->route('rh.formations.index')
             ->with('status', 'Formation « ' . $titre . ' » supprimée.');
+    }
+
+    // ── API JSON — formations d'un agent (utilisé par les formulaires d'évaluation) ──
+
+    public function pourAgent(Agent $agent): JsonResponse
+    {
+        $formations = Formation::where('agent_id', $agent->id)
+            ->orderBy('date_debut', 'desc')
+            ->get()
+            ->map(fn ($f) => [
+                'periode' => $f->date_debut->translatedFormat('M Y')
+                    . ' – '
+                    . ($f->date_fin ? $f->date_fin->translatedFormat('M Y') : 'en cours'),
+                'libelle' => $f->titre,
+                'domaine' => $f->domaine_label,
+            ]);
+
+        return response()->json($formations);
     }
 
     // ── PDF ───────────────────────────────────────────────────────────────────

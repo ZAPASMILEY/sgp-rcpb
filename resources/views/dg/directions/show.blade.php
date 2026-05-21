@@ -28,8 +28,8 @@
                         </div>
                         <div>
                             <p class="text-sm font-bold text-slate-300">{{ $directeurNom }}</p>
-                            @if($directeur->fonction)
-                                <p class="text-xs text-slate-500">{{ $directeur->fonction }}</p>
+                            @if($directeur->role)
+                                <p class="text-xs text-slate-500">{{ $directeur->role }}</p>
                             @endif
                         </div>
                     </div>

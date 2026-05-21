@@ -483,12 +483,208 @@
                 </form>
             </div>
         </div>
+        {{-- ── Comptes RH ───────────────────────────────────────────────── --}}
+        <div class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-5 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                        <i class="fas fa-user-tie text-sm"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-black uppercase tracking-wider text-slate-800">Comptes Responsable RH</h3>
+                        <p class="text-xs text-slate-400">Créez et visualisez les comptes avec le rôle RH.</p>
+                    </div>
+                </div>
+                <button type="button" id="open-create-rh-modal"
+                        class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2 text-xs font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-slate-700">
+                    <i class="fas fa-plus text-[10px]"></i> Créer compte RH
+                </button>
+            </div>
+
+            @if($rhUsers->isEmpty())
+                <div class="flex items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-400">
+                    <i class="fas fa-info-circle"></i>
+                    Aucun compte RH créé pour le moment.
+                </div>
+            @else
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-100">
+                                <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Nom</th>
+                                <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Email</th>
+                                <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Rôle</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            @foreach($rhUsers as $rhu)
+                            <tr class="hover:bg-slate-50/50">
+                                <td class="py-3 font-bold text-slate-700">{{ $rhu->name }}</td>
+                                <td class="py-3 text-slate-500">{{ $rhu->email }}</td>
+                                <td class="py-3">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-0.5 text-[10px] font-black text-teal-700">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-teal-400"></span>
+                                        Responsable RH
+                                    </span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+
+        {{-- Modal créer compte RH --}}
+        <div id="modal-create-rh" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="modal-create-rh"></div>
+            <div class="relative w-full max-w-md rounded-[28px] bg-white shadow-2xl">
+
+                {{-- En-tête modal --}}
+                <div class="flex items-center justify-between border-b border-slate-100 px-7 py-5">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-800 text-white">
+                            <i class="fas fa-user-tie text-sm"></i>
+                        </span>
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Nouveau compte</p>
+                            <h2 class="text-lg font-black text-slate-900">Compte Responsable RH</h2>
+                        </div>
+                    </div>
+                    <button type="button" data-close="modal-create-rh"
+                            class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
+                        <i class="fas fa-times text-sm"></i>
+                    </button>
+                </div>
+
+                {{-- Corps --}}
+                <div class="px-7 py-5">
+                    <div class="mb-4 flex items-start gap-2.5 rounded-2xl border border-teal-100 bg-teal-50 px-4 py-3 text-xs text-teal-700">
+                        <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                        <span>Ce compte aura accès au module RH uniquement. Le mot de passe devra être changé à la première connexion.</span>
+                    </div>
+
+                    @if($errors->has('name') || $errors->has('email') || $errors->has('password'))
+                        <div class="mb-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-600">
+                            @foreach($errors->only(['name','email','password']) as $err)
+                                <p><i class="fas fa-exclamation-circle mr-1"></i>{{ $err }}</p>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('admin.settings.rh.store') }}" class="space-y-4">
+                        @csrf
+
+                        <div>
+                            <label class="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">Nom complet <span class="text-rose-500">*</span></label>
+                            <input name="name" type="text" required autocomplete="off"
+                                   value="{{ old('name') }}"
+                                   placeholder="Ex : Koné Marie"
+                                   class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:font-normal placeholder:text-slate-300 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100">
+                        </div>
+
+                        <div>
+                            <label class="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">Adresse email <span class="text-rose-500">*</span></label>
+                            <input name="email" type="email" required autocomplete="off"
+                                   value="{{ old('email') }}"
+                                   placeholder="rh@rcpb.bf"
+                                   class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:font-normal placeholder:text-slate-300 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">Mot de passe <span class="text-rose-500">*</span></label>
+                                <input name="password" type="password" required minlength="8"
+                                       placeholder="Min. 8 caractères"
+                                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition placeholder:text-xs placeholder:text-slate-300 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100">
+                            </div>
+                            <div>
+                                <label class="mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500">Confirmation <span class="text-rose-500">*</span></label>
+                                <input name="password_confirmation" type="password" required minlength="8"
+                                       placeholder="Répéter"
+                                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition placeholder:text-xs placeholder:text-slate-300 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100">
+                            </div>
+                        </div>
+
+                        {{-- Boutons --}}
+                        <div class="flex gap-3 pt-2">
+                            <button type="submit"
+                                    class="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-teal-600 py-3 text-sm font-black text-white shadow-md shadow-teal-200 transition hover:bg-teal-700">
+                                <i class="fas fa-user-plus text-xs"></i> Créer le compte
+                            </button>
+                            <button type="button" data-close="modal-create-rh"
+                                    class="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
+                                Annuler
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         @endif {{-- /comptes --}}
 
         {{-- ══════════════════════════════════════════════════════════════
              TAB: RÔLES & PERMISSIONS (permissions par défaut)
         ══════════════════════════════════════════════════════════════ --}}
         @if($activeTab === 'roles')
+
+        {{-- Bouton création de rôle + liste des rôles custom --}}
+        <div class="grid gap-6 lg:grid-cols-2 mb-6">
+
+            {{-- Créer un rôle — bouton seul --}}
+            <div class="rounded-2xl bg-white p-6 shadow-sm flex flex-col items-center justify-center gap-6 min-h-[200px] border-2 border-dashed border-violet-100">
+                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 text-violet-500">
+                    <i class="fas fa-user-tag text-2xl"></i>
+                </div>
+                <div class="text-center">
+                    <h3 class="text-sm font-black text-slate-800">Nouveau rôle personnalisé</h3>
+                    <p class="mt-1 text-xs text-slate-400">Définissez un slug et un libellé pour étendre les rôles du système.</p>
+                </div>
+                <button type="button" id="open-create-role-modal"
+                        class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-black uppercase tracking-wider text-white shadow-md shadow-violet-200 transition hover:bg-violet-700 active:scale-95">
+                    <i class="fas fa-plus"></i> Créer un rôle
+                </button>
+            </div>
+
+            {{-- Rôles personnalisés existants --}}
+            <div class="rounded-2xl bg-white p-6 shadow-sm">
+                <div class="mb-4 flex items-center gap-3">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-500">
+                        <i class="fas fa-layer-group text-sm"></i>
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-black uppercase tracking-wider text-slate-800">Rôles personnalisés</h3>
+                        <p class="text-xs text-slate-400">Rôles ajoutés manuellement (supprimables).</p>
+                    </div>
+                </div>
+                @php $customRoles = \App\Models\CustomRole::orderBy('label')->get(); @endphp
+                @if($customRoles->isEmpty())
+                    <p class="py-6 text-center text-sm text-slate-400">Aucun rôle personnalisé pour l'instant.</p>
+                @else
+                    <div class="space-y-2">
+                        @foreach($customRoles as $cr)
+                            <div class="flex items-center justify-between rounded-xl bg-violet-50 px-4 py-3">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-800">{{ $cr->label }}</p>
+                                    <p class="text-[11px] font-mono text-slate-400">{{ $cr->slug }}</p>
+                                </div>
+                                <form method="POST" action="{{ route('admin.settings.roles.destroy', $cr) }}"
+                                      onsubmit="return confirm('Supprimer le rôle « {{ $cr->label }} » ?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit"
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-500 transition hover:bg-rose-200">
+                                        <i class="fas fa-trash text-xs"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+
         <div class="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
 
             {{-- Sélecteur de rôle --}}
@@ -601,6 +797,7 @@
                 @endif
             </div>
         </div>
+        </div>{{-- /grid permissions --}}
         @endif {{-- /roles --}}
 
         {{-- ══════════════════════════════════════════════════════════════
@@ -796,6 +993,84 @@
     </div>
 </div>
 
+{{-- ── MODALE : CRÉER UN RÔLE PERSONNALISÉ ────────────────────────────── --}}
+<div id="modal-create-role" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="document.getElementById('modal-create-role').classList.add('hidden')"></div>
+    <div class="relative w-full max-w-lg transform overflow-hidden rounded-[28px] bg-white shadow-2xl transition-all">
+
+        {{-- En-tête --}}
+        <div class="flex items-center justify-between border-b border-slate-100 px-7 py-5">
+            <div class="flex items-center gap-4">
+                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
+                    <i class="fas fa-user-tag text-lg"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-black uppercase tracking-widest text-violet-500">Rôles & Permissions</p>
+                    <h3 class="text-lg font-black text-slate-900">Créer un rôle personnalisé</h3>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-create-role').classList.add('hidden')"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        {{-- Corps --}}
+        <form method="POST" action="{{ route('admin.settings.roles.store') }}" class="px-7 py-6 space-y-5">
+            @csrf
+
+            <div class="space-y-1.5">
+                <label class="text-xs font-black uppercase tracking-wider text-slate-500">
+                    Slug <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="slug" value="{{ old('slug') }}"
+                       id="create-role-slug"
+                       placeholder="Ex : Auditeur_Interne"
+                       class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/30"
+                       required pattern="[A-Za-z0-9_]+">
+                <p class="text-[11px] text-slate-400">
+                    Lettres, chiffres, underscores uniquement. Valeur stockée dans
+                    <code class="rounded bg-slate-100 px-1 text-[10px]">users.role</code>.
+                </p>
+                @error('slug') <p class="text-xs font-bold text-rose-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p> @enderror
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-xs font-black uppercase tracking-wider text-slate-500">
+                    Libellé <span class="text-rose-500">*</span>
+                </label>
+                <input type="text" name="label" value="{{ old('label') }}"
+                       id="create-role-label"
+                       placeholder="Ex : Auditeur Interne"
+                       class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/30"
+                       required maxlength="150">
+                <p class="text-[11px] text-slate-400">Nom affiché dans les menus de sélection de rôle.</p>
+                @error('label') <p class="text-xs font-bold text-rose-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p> @enderror
+            </div>
+
+            {{-- Aperçu temps réel --}}
+            <div id="role-preview" class="hidden rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3">
+                <p class="text-[10px] font-black uppercase tracking-widest text-violet-400 mb-1">Aperçu</p>
+                <div class="flex items-center justify-between">
+                    <p class="text-sm font-bold text-slate-800" id="preview-label">—</p>
+                    <code class="rounded-lg bg-white px-2 py-0.5 text-[11px] font-mono text-violet-600 shadow-sm" id="preview-slug">—</code>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-1">
+                <button type="submit"
+                        class="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 py-3 text-sm font-black uppercase tracking-wider text-white shadow-md shadow-violet-200 transition hover:bg-violet-700 active:scale-95">
+                    <i class="fas fa-plus"></i> Créer le rôle
+                </button>
+                <button type="button" onclick="document.getElementById('modal-create-role').classList.add('hidden')"
+                        class="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
+                    Annuler
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- ── Modales communes (onglet Général) ──────────────────────────────── --}}
 
 {{-- MODALE : CHANGER MON MOT DE PASSE --}}
@@ -946,6 +1221,33 @@ document.addEventListener('DOMContentLoaded', function () {
     setupModal('password-modal', 'open-password-modal');
     setupModal('delete-modal', 'open-delete-modal');
     setupModal('manage-pwd-modal', 'open-manage-pwd-modal');
+    setupModal('modal-create-role', 'open-create-role-modal');
+
+    // Auto-ouvrir la modale si des erreurs de validation slug/label existent (après soumission ratée)
+    @if ($errors->has('slug') || $errors->has('label'))
+        document.getElementById('modal-create-role')?.classList.remove('hidden');
+    @endif
+
+    // Aperçu temps réel slug + label
+    const slugInput    = document.getElementById('create-role-slug');
+    const labelInput   = document.getElementById('create-role-label');
+    const preview      = document.getElementById('role-preview');
+    const previewSlug  = document.getElementById('preview-slug');
+    const previewLabel = document.getElementById('preview-label');
+
+    function updatePreview() {
+        const s = slugInput?.value.trim();
+        const l = labelInput?.value.trim();
+        if (s || l) {
+            preview?.classList.remove('hidden');
+            if (previewSlug)  previewSlug.textContent  = s || '—';
+            if (previewLabel) previewLabel.textContent = l || '—';
+        } else {
+            preview?.classList.add('hidden');
+        }
+    }
+    slugInput?.addEventListener('input', updatePreview);
+    labelInput?.addEventListener('input', updatePreview);
 
     // Recherche AJAX dans manage-pwd-modal
     const searchInput = document.getElementById('manage-pwd-search');
@@ -1054,7 +1356,25 @@ function resetManagePwdModal() {
             const m = document.getElementById('modal-reset-pwd');
             m.classList.add('hidden'); m.style.display = '';
         }
+        if (e.target.closest('[data-close="modal-create-rh"]')) {
+            const m = document.getElementById('modal-create-rh');
+            if (m) { m.classList.add('hidden'); m.style.display = ''; }
+        }
     });
+
+    // Bouton ouvrir modal création compte RH
+    document.getElementById('open-create-rh-modal')?.addEventListener('click', function () {
+        const m = document.getElementById('modal-create-rh');
+        if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+    });
+
+    // Ré-ouvrir automatiquement si erreurs de validation du formulaire RH
+    @if($errors->has('name') || $errors->has('email') || $errors->has('password'))
+    (function () {
+        const m = document.getElementById('modal-create-rh');
+        if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+    })();
+    @endif
 
 </script>
 @endpush

@@ -102,6 +102,8 @@ class DgaNotesReseauController extends Controller
         $anneeId  = (int) $request->get('annee_id', 0);
         $delegId  = (int) $request->get('delegation_id', 0);
         $caisseId = (int) $request->get('caisse_id', 0);
+        $sexe     = trim((string) $request->get('sexe', ''));
+        $fonction = trim((string) $request->get('fonction', ''));
 
         $userIds = $this->perimetre();
 
@@ -168,6 +170,16 @@ class DgaNotesReseauController extends Controller
 
             $query->whereIn('evaluable_id', User::whereIn('agent_id', $agentIdsInCaisse)->pluck('id'));
         }
+        if ($sexe !== '') {
+            $query->whereHas('evaluable', fn ($q) =>
+                $q->whereHas('agent', fn ($qa) => $qa->where('sexe', $sexe))
+            );
+        }
+        if ($fonction !== '') {
+            $query->whereHas('identification', fn ($q) =>
+                $q->where('emploi', $fonction)
+            );
+        }
 
         $evaluations = $query->paginate(20)->withQueryString();
 
@@ -177,13 +189,21 @@ class DgaNotesReseauController extends Controller
             : Caisse::orderBy('nom')->get();
         $annees = Annee::orderByDesc('annee')->get();
 
-        $filters   = compact('search', 'statut', 'anneeId', 'delegId', 'caisseId');
+        // Notes agrégées visibles uniquement pour une année clôturée
+        $anneeSelectionnee = $anneeId ? Annee::find($anneeId) : null;
+        $notesVisibles     = $anneeSelectionnee
+            ? $anneeSelectionnee->statut === 'cloture'
+            : ! Annee::hasOpenYear();
+
+        $filters   = compact('search', 'statut', 'anneeId', 'delegId', 'caisseId', 'sexe', 'fonction');
+        $fonctions = \App\Models\Agent::ROLES;
         $noteColor = fn (?float $n) => self::noteColor($n);
 
         return view('dga.notes-reseau.index', compact(
             'evaluations', 'stats', 'noteMoyenne',
             'filterDelegations', 'filterCaisses', 'annees',
-            'filters', 'noteColor'
+            'filters', 'noteColor', 'notesVisibles', 'anneeSelectionnee',
+            'fonctions'
         ));
     }
 

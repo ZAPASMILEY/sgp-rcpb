@@ -27,7 +27,7 @@
                 <p class="mt-1 font-bold text-slate-800">
                     {{ $guichet->chef ? $guichet->chef->prenom.' '.$guichet->chef->nom : '—' }}
                 </p>
-                <p class="text-xs text-slate-400">{{ $guichet->chef?->fonction ?? '' }}</p>
+                <p class="text-xs text-slate-400">{{ $guichet->chef?->role ?? '' }}</p>
             </div>
             <div class="admin-panel px-5 py-4">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Téléphone</p>
