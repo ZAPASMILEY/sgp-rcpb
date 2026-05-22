@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'logout',
         ]);
 
+        // Intercepte tous les accès authentifiés si must_change_password = true
+        $middleware->appendToGroup('web', \App\Http\Middleware\ForcePasswordChange::class);
+
         $middleware->alias([
             'admin'        => \App\Http\Middleware\EnsureAdmin::class,
             'pca'          => \App\Http\Middleware\EnsurePca::class,

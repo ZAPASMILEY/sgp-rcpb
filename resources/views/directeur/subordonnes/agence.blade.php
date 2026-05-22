@@ -64,13 +64,14 @@
                 @forelse ($evaluations as $eval)
                     @php
                         $sc = match($eval->statut) {
-                            'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                            'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-                            'refuse' => 'border-rose-200 bg-rose-50 text-rose-700',
-                            default  => 'border-slate-200 bg-slate-100 text-slate-600',
+                            'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                            'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+                            'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+                            'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+                            default       => 'border-slate-200 bg-slate-100 text-slate-600',
                         };
                         $sl = match($eval->statut) {
-                            'valide' => 'Acceptée', 'soumis' => 'Soumise', 'refuse' => 'Refusée', default => 'Brouillon',
+                            'valide' => 'Acceptée', 'soumis' => 'Soumise', 'refuse' => 'Refusée', 'reclamation' => 'Réclamation', default => 'Brouillon',
                         };
                         $note = number_format((float) $eval->note_finale, 2, ',', ' ');
                         $noteClass = match(true) {
@@ -124,10 +125,11 @@
                             'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
                             'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
                             'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
+                            'contesté'   => 'border-orange-200 bg-orange-50 text-orange-700',
                             default      => 'border-slate-200 bg-slate-100 text-slate-600',
                         };
                         $sl = match($fiche->statut) {
-                            'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', default => ucfirst($fiche->statut),
+                            'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', 'contesté' => 'Contestée', default => ucfirst($fiche->statut),
                         };
                     @endphp
                     <div class="mb-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

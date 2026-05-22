@@ -52,7 +52,7 @@ class PcaDashboardController extends Controller
         $evalsTotal     = (clone $evalsBase)->count();
         $evalsValidees  = (clone $evalsBase)->where('statut', 'valide')->count();
         $evalsSoumises  = (clone $evalsBase)->where('statut', 'soumis')->count();
-        $evalsRefusees  = (clone $evalsBase)->where('statut', 'refuse')->count();
+        $evalsRefusees  = (clone $evalsBase)->whereIn('statut', ['refuse', 'reclamation'])->count();
         $evalsBrouillon = (clone $evalsBase)->where('statut', 'brouillon')->count();
         $noteMoyenne    = round((clone $evalsBase)->where('statut', 'valide')->avg('note_finale') ?? 0, 2);
 

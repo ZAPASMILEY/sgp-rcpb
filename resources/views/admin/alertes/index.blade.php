@@ -254,6 +254,16 @@
                     </tbody>
                 </table>
             </div>
+
+            {{-- Pagination --}}
+            @if ($items->hasPages())
+                <div class="flex items-center justify-between border-t border-slate-100 px-4 py-3">
+                    <span class="text-xs text-slate-400">
+                        {{ $items->firstItem() }}–{{ $items->lastItem() }} sur {{ $items->total() }} alerte(s)
+                    </span>
+                    {{ $items->links() }}
+                </div>
+            @endif
         </div>
     </div>
 </div>

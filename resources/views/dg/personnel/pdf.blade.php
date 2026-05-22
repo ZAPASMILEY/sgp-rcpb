@@ -253,16 +253,18 @@
                     else                   { $appLabel = 'Insuffisant'; $appClass = 'badge-insuffisant'; $barClass = 'bar-insuffisant'; }
 
                     $statClass = match($eval->statut) {
-                        'valide' => 'badge-valide',
-                        'soumis' => 'badge-soumis',
-                        'refuse' => 'badge-refuse',
-                        default  => '',
+                        'valide'      => 'badge-valide',
+                        'soumis'      => 'badge-soumis',
+                        'refuse'      => 'badge-refuse',
+                        'reclamation' => 'badge-refuse',
+                        default       => '',
                     };
                     $statLabel = match($eval->statut) {
-                        'valide' => 'Validée',
-                        'soumis' => 'Soumise',
-                        'refuse' => 'Refusée',
-                        default  => ucfirst($eval->statut),
+                        'valide'      => 'Validée',
+                        'soumis'      => 'Soumise',
+                        'refuse'      => 'Refusée',
+                        'reclamation' => 'Réclamation',
+                        default       => ucfirst($eval->statut),
                     };
 
                     $semLabel   = $ident?->semestre ? 'S'.$ident->semestre.' ' : '';

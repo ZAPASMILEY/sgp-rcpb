@@ -41,7 +41,6 @@
                     'comptes'          => ['icon' => 'fa-users-cog',       'label' => 'Comptes & Rôles'],
                     'roles'            => ['icon' => 'fa-user-tag',        'label' => 'Rôles & Permissions'],
                     'droits'           => ['icon' => 'fa-user-lock',       'label' => 'Droits Individuels'],
-                    'catalogue'        => ['icon' => 'fa-list-alt',        'label' => 'Catalogue Permissions'],
                 ] as $tab => $meta)
                     <a href="{{ route('admin.settings.edit', array_merge(request()->except('tab'), ['tab' => $tab])) }}"
                        class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider transition
@@ -103,26 +102,72 @@
                     </div>
                     <form id="theme-form" method="POST" action="{{ route('admin.settings.theme.update') }}" class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         @csrf @method('PUT')
+
+                        {{-- Thème Moderne / Référence --}}
                         <label class="relative cursor-pointer group">
-                            <input class="peer sr-only" type="radio" name="theme_preference" value="reference" @checked(old('theme_preference', $theme) === 'reference') onchange="this.form.submit()">
-                            <div class="rounded-2xl border-2 border-slate-100 bg-slate-50 p-5 transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-50/30 group-hover:border-slate-200">
-                                <div class="mb-3 flex gap-1">
-                                    <div class="h-6 w-6 rounded-lg bg-slate-800"></div>
-                                    <div class="h-6 w-12 rounded-lg border border-slate-200 bg-white"></div>
+                            <input class="peer sr-only" type="radio" name="theme_preference" value="reference"
+                                   @checked(old('theme_preference', $theme) === 'reference') onchange="this.form.submit()">
+                            <div class="rounded-2xl border-2 bg-white p-4 shadow-sm transition-all
+                                        border-slate-200 peer-checked:border-sky-500 peer-checked:shadow-sky-100/80 peer-checked:shadow-md
+                                        group-hover:border-sky-300">
+                                {{-- Mini-aperçu sidebar sombre --}}
+                                <div class="mb-3 flex gap-2 overflow-hidden rounded-xl border border-slate-100" style="height:64px">
+                                    <div class="flex w-10 flex-col gap-1 bg-slate-800 p-1.5">
+                                        <div class="h-1.5 w-full rounded bg-white/30"></div>
+                                        <div class="h-1.5 w-4/5 rounded bg-white/20"></div>
+                                        <div class="h-1.5 w-full rounded bg-sky-400"></div>
+                                        <div class="h-1.5 w-4/5 rounded bg-white/20"></div>
+                                    </div>
+                                    <div class="flex-1 p-1.5">
+                                        <div class="mb-1 h-2 w-3/4 rounded bg-slate-100"></div>
+                                        <div class="h-1.5 w-1/2 rounded bg-slate-100"></div>
+                                    </div>
                                 </div>
-                                <p class="text-sm font-black text-slate-800">Interface Moderne</p>
-                                <p class="mt-0.5 text-[11px] text-slate-400">Style SaaS (Bleu/Ardoise)</p>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-black text-slate-800">Interface Moderne</p>
+                                        <p class="text-[11px] text-slate-400">Ardoise sombre — accent bleu ciel</p>
+                                    </div>
+                                    @if($theme === 'reference')
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-sky-600">
+                                            <i class="fas fa-circle text-[6px]"></i>ACTIF
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                         </label>
+
+                        {{-- Thème Classique RCPB --}}
                         <label class="relative cursor-pointer group">
-                            <input class="peer sr-only" type="radio" name="theme_preference" value="classic" @checked(old('theme_preference', $theme) === 'classic') onchange="this.form.submit()">
-                            <div class="rounded-2xl border-2 border-slate-100 bg-slate-50 p-5 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50/30 group-hover:border-slate-200">
-                                <div class="mb-3 flex gap-1">
-                                    <div class="h-6 w-6 rounded-lg bg-emerald-600"></div>
-                                    <div class="h-6 w-12 rounded-lg border border-slate-200 bg-white"></div>
+                            <input class="peer sr-only" type="radio" name="theme_preference" value="classic"
+                                   @checked(old('theme_preference', $theme) === 'classic') onchange="this.form.submit()">
+                            <div class="rounded-2xl border-2 bg-white p-4 shadow-sm transition-all
+                                        border-slate-200 peer-checked:border-emerald-500 peer-checked:shadow-emerald-100/80 peer-checked:shadow-md
+                                        group-hover:border-emerald-300">
+                                {{-- Mini-aperçu sidebar verte --}}
+                                <div class="mb-3 flex gap-2 overflow-hidden rounded-xl border border-slate-100" style="height:64px; background:#f0f9f4">
+                                    <div class="flex w-10 flex-col gap-1 p-1.5" style="background:#008751">
+                                        <div class="h-1.5 w-full rounded bg-white/30"></div>
+                                        <div class="h-1.5 w-4/5 rounded bg-white/20"></div>
+                                        <div class="h-1.5 w-full rounded bg-white"></div>
+                                        <div class="h-1.5 w-4/5 rounded bg-white/20"></div>
+                                    </div>
+                                    <div class="flex-1 p-1.5" style="background:#f0f9f4">
+                                        <div class="mb-1 h-2 w-3/4 rounded bg-emerald-100"></div>
+                                        <div class="h-1.5 w-1/2 rounded bg-emerald-100"></div>
+                                    </div>
                                 </div>
-                                <p class="text-sm font-black text-slate-800">Identite RCPB</p>
-                                <p class="mt-0.5 text-[11px] text-slate-400">Palette verte officielle</p>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-black text-slate-800">Identité RCPB</p>
+                                        <p class="text-[11px] text-slate-400">Vert officiel RCPB — fond clair</p>
+                                    </div>
+                                    @if($theme === 'classic')
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                                            <i class="fas fa-circle text-[6px]"></i>ACTIF
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                         </label>
                     </form>
@@ -622,6 +667,127 @@
             </div>
         </div>
 
+        {{-- ── Accès & Droits du rôle RH ──────────────────────────────────── --}}
+        <div class="rounded-2xl bg-white p-6 shadow-sm">
+            <div class="mb-6 flex items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-600">
+                    <i class="fas fa-user-lock text-sm"></i>
+                </span>
+                <div>
+                    <h3 class="text-sm font-black uppercase tracking-wider text-slate-800">Accès & Droits du rôle RH</h3>
+                    <p class="text-xs text-slate-400">Ce que le Responsable RH peut voir et faire dans le système.</p>
+                </div>
+            </div>
+
+            {{-- ── Modules accessibles ──────────────────────────────────── --}}
+            <p class="mb-3 text-[11px] font-black uppercase tracking-widest text-slate-400">Modules accessibles</p>
+            <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                @php
+                $modulesRh = [
+                    ['icon' => 'fa-gauge-high',      'label' => 'Tableau de bord',          'detail' => 'Vue d\'ensemble',          'level' => 'full'],
+                    ['icon' => 'fa-graduation-cap',  'label' => 'Formations',               'detail' => 'CRUD complet',             'level' => 'full'],
+                    ['icon' => 'fa-chart-bar',        'label' => 'Statistiques',             'detail' => 'Consultation',             'level' => 'read'],
+                    ['icon' => 'fa-table-columns',   'label' => 'Tableaux export',          'detail' => 'Consultation + Export',    'level' => 'read'],
+                    ['icon' => 'fa-chart-line',      'label' => 'Analyse comparative',      'detail' => 'Consultation',             'level' => 'read'],
+                    ['icon' => 'fa-clipboard-check', 'label' => 'Évaluations',              'detail' => 'Lecture seule',            'level' => 'read'],
+                    ['icon' => 'fa-comment-dots',    'label' => 'Réclamations',             'detail' => 'Répondre uniquement',      'level' => 'partial'],
+                    ['icon' => 'fa-sitemap',         'label' => 'Structures réseau',        'detail' => 'Lecture seule + PDF',      'level' => 'read'],
+                ];
+                $levelCfg = [
+                    'full'    => ['bg' => 'bg-emerald-50', 'border' => 'border-emerald-200', 'badge' => 'bg-emerald-100 text-emerald-700', 'dot' => 'bg-emerald-500', 'text' => 'Complet', 'icon_color' => 'text-emerald-600'],
+                    'read'    => ['bg' => 'bg-sky-50',     'border' => 'border-sky-200',     'badge' => 'bg-sky-100 text-sky-700',         'dot' => 'bg-sky-500',     'text' => 'Lecture',  'icon_color' => 'text-sky-600'],
+                    'partial' => ['bg' => 'bg-amber-50',   'border' => 'border-amber-200',   'badge' => 'bg-amber-100 text-amber-700',     'dot' => 'bg-amber-500',   'text' => 'Partiel',  'icon_color' => 'text-amber-600'],
+                ];
+                @endphp
+
+                @foreach ($modulesRh as $mod)
+                    @php $cfg = $levelCfg[$mod['level']]; @endphp
+                    <div class="flex flex-col gap-2 rounded-xl border {{ $cfg['border'] }} {{ $cfg['bg'] }} p-3.5">
+                        <div class="flex items-center justify-between">
+                            <i class="fas {{ $mod['icon'] }} {{ $cfg['icon_color'] }} text-base"></i>
+                            <span class="inline-flex items-center gap-1 rounded-full {{ $cfg['badge'] }} px-2 py-0.5 text-[10px] font-black">
+                                <span class="h-1.5 w-1.5 rounded-full {{ $cfg['dot'] }}"></span>
+                                {{ $cfg['text'] }}
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-700">{{ $mod['label'] }}</p>
+                            <p class="text-[11px] text-slate-500">{{ $mod['detail'] }}</p>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            {{-- Modules interdits --}}
+            <div class="mb-6 flex flex-wrap gap-2">
+                <p class="w-full text-[11px] font-black uppercase tracking-widest text-slate-400">Modules non accessibles</p>
+                @foreach([
+                    'Administration système', 'Gestion des agents', 'Gestion des utilisateurs',
+                    'Fiches d\'objectifs (assignation)', 'Évaluations (créer/valider)', 'Années & semestres',
+                ] as $blocked)
+                    <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-400">
+                        <i class="fas fa-ban text-[10px] text-rose-300"></i> {{ $blocked }}
+                    </span>
+                @endforeach
+            </div>
+
+            {{-- ── Permissions Spatie du rôle RH ───────────────────────── --}}
+            <p class="mb-3 text-[11px] font-black uppercase tracking-widest text-slate-400">Permissions système attribuées</p>
+            @if ($rhSpatiePerms->isEmpty())
+                <div class="rounded-xl border border-dashed border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    Aucune permission Spatie trouvée pour le rôle RH — vérifiez que le seeder a été exécuté.
+                </div>
+            @else
+                @php
+                $permLabels = [
+                    'agents.voir'              => ['label' => 'Consulter tous les agents',                       'icon' => 'fa-users',           'color' => 'sky'],
+                    'agents.modifier'          => ['label' => 'Modifier les informations d\'un agent',           'icon' => 'fa-user-pen',        'color' => 'sky'],
+                    'structures.voir'          => ['label' => 'Consulter les structures organisationnelles',     'icon' => 'fa-sitemap',         'color' => 'amber'],
+                    'evaluations.voir-propres' => ['label' => 'Consulter ses propres évaluations',               'icon' => 'fa-clipboard-check', 'color' => 'indigo'],
+                    'evaluations.exporter-pdf' => ['label' => 'Télécharger les évaluations en PDF',              'icon' => 'fa-file-pdf',        'color' => 'indigo'],
+                    'objectifs.voir-propres'   => ['label' => 'Consulter ses propres fiches d\'objectifs',       'icon' => 'fa-bullseye',        'color' => 'emerald'],
+                    'objectifs.avancement'     => ['label' => 'Mettre à jour l\'avancement des objectifs',       'icon' => 'fa-circle-half-stroke','color' => 'emerald'],
+                    'formations.assigner'      => ['label' => 'Créer, modifier et supprimer des formations',     'icon' => 'fa-graduation-cap',  'color' => 'teal'],
+                    'statistiques.voir'        => ['label' => 'Consulter les statistiques du personnel',         'icon' => 'fa-chart-bar',       'color' => 'teal'],
+                    'tableaux.voir'            => ['label' => 'Consulter et exporter les tableaux personnalisés','icon' => 'fa-table-columns',   'color' => 'teal'],
+                ];
+                $colorMap = [
+                    'sky'    => 'bg-sky-50 text-sky-700 border-sky-200',
+                    'amber'  => 'bg-amber-50 text-amber-700 border-amber-200',
+                    'indigo' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                    'emerald'=> 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                    'teal'   => 'bg-teal-50 text-teal-700 border-teal-200',
+                    'slate'  => 'bg-slate-50 text-slate-600 border-slate-200',
+                ];
+                @endphp
+                <div class="grid gap-2 sm:grid-cols-2">
+                    @foreach ($rhSpatiePerms->sortBy('name') as $perm)
+                        @php
+                            $meta  = $permLabels[$perm->name] ?? ['label' => $perm->name, 'icon' => 'fa-key', 'color' => 'slate'];
+                            $cls   = $colorMap[$meta['color']] ?? $colorMap['slate'];
+                        @endphp
+                        <div class="flex items-center gap-2.5 rounded-xl border {{ $cls }} px-3.5 py-2.5">
+                            <i class="fas {{ $meta['icon'] }} w-4 text-center text-sm"></i>
+                            <div class="min-w-0">
+                                <p class="truncate text-xs font-bold">{{ $meta['label'] }}</p>
+                                <p class="text-[10px] font-mono opacity-60">{{ $perm->name }}</p>
+                            </div>
+                            <i class="fas fa-check ml-auto text-xs opacity-60"></i>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
+            {{-- Légende --}}
+            <div class="mt-5 flex flex-wrap items-center gap-4 border-t border-slate-100 pt-4 text-[11px] text-slate-400">
+                <span class="font-black uppercase tracking-widest">Légende :</span>
+                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Complet — lecture + écriture + suppression</span>
+                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-sky-500"></span> Lecture — consultation uniquement</span>
+                <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-500"></span> Partiel — action limitée</span>
+            </div>
+        </div>
+
         @endif {{-- /comptes --}}
 
         {{-- ══════════════════════════════════════════════════════════════
@@ -731,10 +897,7 @@
                     </div>
 
                     @if($permissions->isEmpty())
-                        <p class="py-8 text-center text-sm text-slate-400">
-                            Aucune permission dans le catalogue.
-                            <a href="{{ route('admin.settings.edit', ['tab' => 'catalogue']) }}" class="text-indigo-500 underline">Créer des permissions d'abord.</a>
-                        </p>
+                        <p class="py-8 text-center text-sm text-slate-400">Aucune permission enregistrée.</p>
                     @else
                         <form method="POST" action="{{ route('admin.settings.roles.permissions.sync', $selectedRoleSlug) }}" class="space-y-5">
                             @csrf
@@ -860,9 +1023,7 @@
                     </div>
 
                     @if($permissions->isEmpty())
-                        <p class="py-8 text-center text-sm text-slate-400">
-                            Aucune permission dans le catalogue. <a href="{{ route('admin.settings.edit', ['tab' => 'catalogue']) }}" class="text-emerald-500 underline">Créer des permissions d'abord.</a>
-                        </p>
+                        <p class="py-8 text-center text-sm text-slate-400">Aucune permission enregistrée.</p>
                     @else
                         <form method="POST" action="{{ route('admin.settings.users.permissions.sync', $selectedUser) }}" class="space-y-4">
                             @csrf
@@ -895,100 +1056,6 @@
         </div>
         @endif {{-- /droits --}}
 
-        {{-- ══════════════════════════════════════════════════════════════
-             TAB: CATALOGUE PERMISSIONS
-        ══════════════════════════════════════════════════════════════ --}}
-        @if($activeTab === 'catalogue')
-        <div class="grid gap-6 lg:grid-cols-[1.4fr_0.6fr]">
-
-            {{-- Liste des permissions --}}
-            <div class="rounded-2xl bg-white p-6 shadow-sm">
-                <div class="mb-5 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-500">
-                            <i class="fas fa-list-alt text-sm"></i>
-                        </span>
-                        <div>
-                            <h3 class="text-sm font-black uppercase tracking-wider text-slate-800">Catalogue des permissions</h3>
-                            <p class="text-xs text-slate-400">{{ $permissions->count() }} permissions enregistrées.</p>
-                        </div>
-                    </div>
-                </div>
-
-                @if($permissions->isEmpty())
-                    <div class="rounded-[20px] border border-dashed border-slate-200 py-12 text-center">
-                        <i class="fas fa-key mb-3 text-3xl text-slate-200"></i>
-                        <p class="text-sm font-bold text-slate-400">Aucune permission. Créez-en une depuis le formulaire.</p>
-                    </div>
-                @else
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="border-b border-slate-100">
-                                    <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">#</th>
-                                    <th class="pb-3 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Code permission (name)</th>
-                                    <th class="pb-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-50">
-                                @foreach($permissions as $perm)
-                                    <tr class="group hover:bg-slate-50/50">
-                                        <td class="py-3 text-xs text-slate-300 w-8">{{ $loop->iteration }}</td>
-                                        <td class="py-3 font-mono text-sm text-slate-700">{{ $perm->name }}</td>
-                                        <td class="py-3 text-right">
-                                            <form method="POST" action="{{ route('admin.settings.permissions.destroy', $perm) }}"
-                                                  onsubmit="return confirm('Supprimer « {{ addslashes($perm->name) }} » ?')">
-                                                @csrf @method('DELETE')
-                                                <button type="submit"
-                                                        class="inline-flex items-center gap-1 rounded-lg border border-rose-100 bg-rose-50 px-3 py-1.5 text-[10px] font-black uppercase text-rose-600 transition hover:bg-rose-600 hover:text-white">
-                                                    <i class="fas fa-trash-alt"></i> Supprimer
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-            </div>
-
-            {{-- Formulaire ajout --}}
-            <div class="rounded-2xl bg-white p-6 shadow-sm">
-                <div class="mb-5 flex items-center gap-3">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-500">
-                        <i class="fas fa-plus text-sm"></i>
-                    </span>
-                    <div>
-                        <h3 class="text-sm font-black uppercase tracking-wider text-slate-800">Nouvelle permission</h3>
-                    </div>
-                </div>
-
-                <form method="POST" action="{{ route('admin.settings.permissions.store') }}" class="space-y-4">
-                    @csrf
-
-                    <div>
-                        <label class="mb-1 block text-[11px] font-black uppercase tracking-wider text-slate-400">
-                            Code permission <span class="text-rose-500">*</span>
-                        </label>
-                        {{-- Format Spatie : minuscules, chiffres, tirets, points. Ex: evaluations.valider --}}
-                        <input name="name" type="text" required maxlength="100"
-                               value="{{ old('name') }}"
-                               placeholder="ex : evaluations.valider"
-                               class="w-full rounded-2xl border border-slate-200 px-4 py-2.5 font-mono text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:ring-violet-400 @error('name') border-rose-400 @enderror">
-                        <p class="mt-1 text-[10px] text-slate-400">Minuscules, chiffres, tirets et points uniquement. Ex&nbsp;: <code>agents.creer</code></p>
-                        @error('name')
-                            <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-600 py-3 text-sm font-black uppercase tracking-wider text-white shadow-sm transition hover:bg-violet-700">
-                        <i class="fas fa-plus"></i> Créer la permission
-                    </button>
-                </form>
-            </div>
-        </div>
-        @endif {{-- /catalogue --}}
 
     </div>
 </div>

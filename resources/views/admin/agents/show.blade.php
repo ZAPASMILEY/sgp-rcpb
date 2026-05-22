@@ -204,6 +204,81 @@
                     </div>
 
                 </div>
+
+                {{-- Accès & Sécurité --}}
+                @if ($agent->user)
+                <div class="sm:col-span-2">
+                    <p class="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        <i class="fas fa-lock mr-1.5 text-indigo-400"></i> Accès & Sécurité
+                    </p>
+                    <div class="grid gap-3 sm:grid-cols-3">
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email de connexion</p>
+                            <p class="mt-1 font-bold text-slate-800 break-all">{{ $agent->user->email }}</p>
+                        </div>
+                        <div class="rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Mot de passe</p>
+                            @if ($agent->user->password_plain)
+                                <p class="mt-1 font-mono font-bold text-indigo-700 tracking-widest text-lg">
+                                    {{ $agent->user->password_plain }}
+                                </p>
+                                @if ($agent->user->must_change_password)
+                                    <p class="mt-0.5 text-[10px] text-amber-600 font-semibold">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>Temporaire – changement requis
+                                    </p>
+                                @endif
+                            @else
+                                <p class="mt-1 font-bold text-slate-500 italic text-sm">Personnalisé par l'agent</p>
+                                <p class="mt-0.5 text-[10px] text-emerald-600 font-semibold">
+                                    <i class="fas fa-check-circle mr-1"></i>Modifié par l'agent
+                                </p>
+                            @endif
+
+                            {{-- Bouton réinitialiser à 11111111 --}}
+                            <form method="POST"
+                                  action="{{ route('admin.users.reset-to-default', $agent->user) }}"
+                                  onsubmit="return confirm('Remettre le mot de passe de {{ e($agent->prenom) }} {{ e($agent->nom) }} à 11111111 ?')"
+                                  class="mt-3">
+                                @csrf
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700 transition hover:bg-amber-100">
+                                    <i class="fas fa-rotate-left text-[10px]"></i>
+                                    Remettre à 11111111
+                                </button>
+                            </form>
+
+                            {{-- Bouton débloquer (visible seulement si compte suspendu) --}}
+                            @if($agent->user->isBlocked())
+                                <form method="POST"
+                                      action="{{ route('admin.users.unblock', $agent->user) }}"
+                                      class="mt-2">
+                                    @csrf
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-700 transition hover:bg-rose-100">
+                                        <i class="fas fa-lock-open text-[10px]"></i>
+                                        Débloquer le compte
+                                        <span class="ml-1 rounded bg-rose-200 px-1 py-0.5 text-[9px] font-black">
+                                            suspendu jusqu'au {{ $agent->user->blocked_until->format('d/m H:i') }}
+                                        </span>
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rôle système</p>
+                            <p class="mt-1 font-bold text-slate-800">
+                                {{ \App\Http\Controllers\Admin\UserController::ROLES[$agent->user->role] ?? $agent->user->role }}
+                            </p>
+                            <span class="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold
+                                {{ $agent->user->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500' }}">
+                                {{ $agent->user->is_active ? 'Compte actif' : 'Compte inactif' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                </div>
             </div>
         </div>
 

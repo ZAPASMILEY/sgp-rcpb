@@ -192,6 +192,10 @@ class DgDirectionController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        if (FicheObjectif::existsPourAnnee($anneeIdFiche, User::class, $directeurUser->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour ce directeur pour l\'année en cours.');
+        }
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee_id'              => $anneeIdFiche,
@@ -488,7 +492,7 @@ class DgDirectionController extends Controller
         $this->authorize('evaluations.soumettre');
         $direction = $this->authorizeEvaluation($evaluation);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return back()->with('error', 'Cette évaluation ne peut plus être soumise.');
         }
 

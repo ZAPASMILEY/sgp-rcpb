@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chart: { type: 'donut', height: 300, fontFamily: font },
         series: @json(array_values($agentsBySexe)),
         labels: @json(array_keys($agentsBySexe)),
-        colors: ['#3b82f6', '#f472b6'],
+        colors: ['#3b82f6', '#f472b6', '#94a3b8'],
         legend: { position: 'bottom', fontSize: '12px', fontWeight: 700, labels: { colors: '#64748b' } },
         plotOptions: {
             pie: {

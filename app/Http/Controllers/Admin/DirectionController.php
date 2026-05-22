@@ -125,7 +125,7 @@ class DirectionController extends Controller
         ]);
     }
 
-    public function delegationsIndex(): View
+   public function delegationsIndex(): View
     {
         $delegations = DelegationTechnique::query()
             ->withCount(['caisses', 'agents'])
@@ -141,6 +141,7 @@ class DirectionController extends Controller
 
         return view('admin.delegations_techniques.index', array_merge(compact('delegations', 'stats'), [
             'directeurs'         => \App\Models\Agent::where('role', 'Directeur Technique')->orderBy('nom')->get(),
+            'secretaires'        => \App\Models\Agent::where('role', 'Secrétaire Technique')->orderBy('nom')->get(), // <-- AJOUTE CETTE LIGNE !
             'directeurs_caisse'  => \App\Models\Agent::where('role', 'Directeur de Caisse')->orderBy('nom')->get(),
             'secretaires_caisse' => \App\Models\Agent::where('role', 'Secrétaire de Caisse')->orderBy('nom')->get(),
         ]));

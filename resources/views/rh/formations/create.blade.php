@@ -87,9 +87,9 @@
                 <option value="">— Sélectionner un agent —</option>
                 @foreach($agents as $ag)
                     <option value="{{ $ag->id }}"
-                            data-search="{{ strtolower($ag->prenom . ' ' . $ag->nom . ' ' . $ag->role) }}"
+                            data-search="{{ strtolower($ag->prenom . ' ' . $ag->nom . ' ' . $ag->poste) }}"
                             @selected(old('agent_id', $preselectedAgentId) == $ag->id)>
-                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->role }}
+                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->poste ?: $ag->role }}
                     </option>
                 @endforeach
             </select>
@@ -101,16 +101,16 @@
         {{-- Titre (avec autocomplete) --}}
         <div>
             <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">
-                Titre de la formation *
+                Theme *
             </label>
             <div class="autocomplete-wrap">
-                <input type="text" id="input-titre" name="titre" value="{{ old('titre') }}"
+                <input type="text" id="input-theme" name="theme" value="{{ old('theme') }}"
                        required maxlength="255" autocomplete="off"
                        placeholder="Ex: Formation leadership et management d'équipe"
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('titre') border-rose-400 @enderror">
+                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('theme') border-rose-400 @enderror">
                 <ul id="autocomplete-list" class="autocomplete-list"></ul>
             </div>
-            @error('titre')
+            @error('theme')
                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
             @enderror
         </div>
@@ -190,9 +190,9 @@
         }
     });
 
-    // ── Autocomplete Titre de formation ─────────────────────────────────────
-    const titres = @json($titresExistants);
-    const input  = document.getElementById('input-titre');
+    // ── Autocomplete Theme de formation ─────────────────────────────────────
+    const theme = @json($themesExistants);
+    const input  = document.getElementById('input-theme');
     const list   = document.getElementById('autocomplete-list');
 
     function highlight(text, query) {
@@ -206,7 +206,7 @@
         list.innerHTML = '';
         if (q.length < 2) { list.style.display = 'none'; return; }
 
-        const matches = titres.filter(t => t.toLowerCase().includes(q)).slice(0, 8);
+        const matches = theme.filter(t => t.toLowerCase().includes(q)).slice(0, 8);
         if (!matches.length) { list.style.display = 'none'; return; }
 
         matches.forEach(t => {

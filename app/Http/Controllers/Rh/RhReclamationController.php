@@ -13,7 +13,7 @@ class RhReclamationController extends Controller
     public function index(): View
     {
         $evaluations = Evaluation::query()
-            ->where('statut', 'refuse')
+            ->whereIn('statut', ['refuse', 'reclamation'])
             ->with(['evaluable', 'evaluateur', 'identification'])
             ->latest()
             ->get();
@@ -30,8 +30,8 @@ class RhReclamationController extends Controller
         $evaluation->statut_reclamation = $request->input('reponse');
 
         if ($request->input('reponse') === 'rouvert') {
-            $evaluation->statut      = 'brouillon';
-            $evaluation->motif_refus = null;
+            $evaluation->statut = 'a_reviser';
+            // motif_refus conservé pour que l'évaluateur voie la raison du refus
         }
 
         $evaluation->save();

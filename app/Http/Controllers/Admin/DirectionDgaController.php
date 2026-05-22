@@ -106,7 +106,84 @@ class DirectionDgaController extends Controller
                 ->get()
             : collect();
 
-        return view('admin.direction-dga.index', compact('direction', 'services', 'agentsDirects'));
+        // Agents disponibles pour ajout dans un service (rattachés à la direction, sans service)
+        $agentsDisponibles = $direction
+            ? Agent::where('direction_id', $direction->id)
+                ->whereNull('service_id')
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'role'])
+            : collect();
+
+        return view('admin.direction-dga.index', compact('direction', 'services', 'agentsDirects', 'agentsDisponibles'));
+    }
+
+    /** Crée un nouveau service dans la Direction Générale Adjointe. */
+    public function storeService(Request $request): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction, 404, 'Direction DGA introuvable.');
+
+        $validated = $request->validate([
+            'nom' => ['required', 'string', 'max:150'],
+        ], ['nom.required' => 'Le nom du service est obligatoire.']);
+
+        Service::create([
+            'nom'          => $validated['nom'],
+            'direction_id' => $direction->id,
+        ]);
+
+        return back()->with('status', 'Service « ' . $validated['nom'] . ' » créé avec succès.');
+    }
+
+    /** Supprime un service de la Direction DGA (et détache ses agents). */
+    public function destroyService(Service $service): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction || $service->direction_id !== $direction->id, 403);
+
+        // Détacher les agents du service (les laisser dans la direction sans service)
+        Agent::where('service_id', $service->id)
+            ->update(['service_id' => null]);
+
+        $nom = $service->nom;
+        $service->delete();
+
+        return back()->with('status', 'Service « ' . $nom . ' » supprimé.');
+    }
+
+    /** Ajoute un agent existant dans un service de la Direction DGA. */
+    public function storeAgent(Request $request, Service $service): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction || $service->direction_id !== $direction->id, 403);
+
+        $validated = $request->validate([
+            'agent_id' => ['required', 'integer', 'exists:agents,id'],
+        ], ['agent_id.required' => 'Sélectionnez un agent.']);
+
+        $agent = Agent::findOrFail($validated['agent_id']);
+
+        // L'agent doit appartenir à la direction
+        if ((int) $agent->direction_id !== $direction->id) {
+            return back()->with('error', 'Cet agent ne fait pas partie de la Direction DGA.');
+        }
+
+        $agent->update(['service_id' => $service->id]);
+        $this->accounts->ensureAccount($agent->fresh());
+
+        return back()->with('status', $agent->prenom . ' ' . $agent->nom . ' affecté(e) au service « ' . $service->nom . ' ».');
+    }
+
+    /** Retire un agent d'un service (le remet en collaborateur direct). */
+    public function removeAgent(Service $service, Agent $agent): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction || $service->direction_id !== $direction->id, 403);
+        abort_if((int) $agent->service_id !== $service->id, 403);
+
+        $agent->update(['service_id' => null]);
+
+        return back()->with('status', $agent->prenom . ' ' . $agent->nom . ' retiré(e) du service « ' . $service->nom . ' ».');
     }
 
     /** Formulaire d'affectation d'un chef de service. */

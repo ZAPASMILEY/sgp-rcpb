@@ -3,12 +3,12 @@
     $menuSections = [
         [
             'title' => 'Tableau de bord',
-            'items' => [
+            'items' => array_filter([
                 ['route' => 'rh.dashboard',          'icon' => 'fas fa-chart-pie',   'label' => 'Vue d\'ensemble'],
                 ['route' => 'rh.comparaison.index',  'icon' => 'fas fa-code-compare','label' => 'Comparaison inter-période'],
-                ['route' => 'rh.statistiques',       'icon' => 'fas fa-chart-bar',   'label' => 'Statistiques'],
-                ['route' => 'rh.tableaux.index',     'icon' => 'fas fa-file-excel',  'label' => 'Tableaux Excel'],
-            ],
+                $user?->can('statistiques.voir') ? ['route' => 'rh.statistiques',   'icon' => 'fas fa-chart-bar',  'label' => 'Statistiques']   : null,
+                $user?->can('tableaux.voir')     ? ['route' => 'rh.tableaux.index', 'icon' => 'fas fa-file-excel', 'label' => 'Tableaux Excel'] : null,
+            ]),
         ],
         [
             'title' => 'Réseau',
@@ -131,6 +131,8 @@
     </style>
 </head>
 <body class="h-full antialiased">
+
+    @include('layouts._alerte_banniere')
 
     <nav class="sidebar shadow" id="sidebar">
         <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Réduire le menu">

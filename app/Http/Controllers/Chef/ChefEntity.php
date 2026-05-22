@@ -89,10 +89,11 @@ class ChefEntity
 
         // Délégation selon le rôle stocké dans users.role
         return match ($user->role) {
-            'Chef_Service'  => static::fromService($user),
-            'Chef_Agence'   => static::fromAgence($user),
-            'Chef_Guichet'  => static::fromGuichet($user),
-            default         => null, // Rôle non reconnu → pas de contexte chef
+            'Chef_Service'         => static::fromService($user),
+            'Chef_Agence'          => static::fromAgence($user),
+            'Chef_Guichet'         => static::fromGuichet($user),
+            'Secretaire_Agence'    => static::fromSecretaireAgence($user),
+            default                => null, // Rôle non reconnu → pas de contexte chef
         };
     }
 
@@ -169,6 +170,27 @@ class ChefEntity
 
         return $guichet
             ? new static($guichet, 'guichet', Guichet::class, 'guichet_id', $agent)
+            : null;
+    }
+
+    /**
+     * Résout le contexte pour une Secretaire_Agence.
+     *
+     * La secrétaire est rattachée à l'agence via agents.agence_id.
+     * Elle obtient le même périmètre de vue que le chef de cette agence
+     * (tous les agents dont agents.agence_id = agence.id).
+     */
+    private static function fromSecretaireAgence(User $user): ?static
+    {
+        $agent = $user->agent_id ? Agent::find($user->agent_id) : null;
+        if (! $agent || ! $agent->agence_id) {
+            return null;
+        }
+
+        $agence = Agence::find($agent->agence_id);
+
+        return $agence
+            ? new static($agence, 'agence', Agence::class, 'agence_id', $agent)
             : null;
     }
 

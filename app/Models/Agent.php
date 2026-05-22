@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -223,6 +225,23 @@ class Agent extends Model
     public function evaluations(): MorphMany
     {
         return $this->morphMany(Evaluation::class, 'evaluable');
+    }
+
+    /**
+     * Évaluations de cet agent passées via son compte utilisateur
+     * (evaluable_type = User, evaluable_id = user.id).
+     * C'est le chemin utilisé par DG, DGA, Directeur, Chef, etc.
+     */
+    public function evaluationsPersonnel(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            Evaluation::class,
+            User::class,
+            'agent_id',     // FK sur users
+            'evaluable_id', // FK sur evaluations
+            'id',           // clé locale sur agents
+            'id',           // clé locale sur users
+        )->where('evaluations.evaluable_type', User::class);
     }
 
     protected function casts(): array

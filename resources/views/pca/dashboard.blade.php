@@ -292,10 +292,11 @@
                                     'acceptee'   => 'bg-emerald-100 text-emerald-700',
                                     'en_attente' => 'bg-amber-100 text-amber-700',
                                     'refusee'    => 'bg-rose-100 text-rose-700',
+                                    'contesté'   => 'bg-orange-100 text-orange-700',
                                     default      => 'bg-slate-100 text-slate-500',
                                 };
                                 $sl = match($fiche->statut) {
-                                    'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', default => ucfirst($fiche->statut),
+                                    'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', 'contesté' => 'Contestée', default => ucfirst($fiche->statut),
                                 };
                                 $av = (int) ($fiche->avancement_percentage ?? 0);
                                 $avBar = $av >= 80 ? 'bg-emerald-500' : ($av >= 50 ? 'bg-sky-500' : ($av >= 25 ? 'bg-amber-400' : 'bg-slate-200'));

@@ -62,13 +62,14 @@
                 @forelse ($evaluations as $eval)
                     @php
                         $sc = match($eval->statut) {
-                            'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                            'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-                            'refuse' => 'border-rose-200 bg-rose-50 text-rose-700',
-                            default  => 'border-slate-200 bg-slate-100 text-slate-600',
+                            'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                            'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+                            'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+                            'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+                            default       => 'border-slate-200 bg-slate-100 text-slate-600',
                         };
                         $sl = match($eval->statut) {
-                            'valide' => 'Acceptée', 'soumis' => 'Soumise', 'refuse' => 'Refusée', default => 'Brouillon',
+                            'valide' => 'Acceptée', 'soumis' => 'Soumise', 'refuse' => 'Refusée', 'reclamation' => 'Réclamation', default => 'Brouillon',
                         };
                         $note = number_format((float) $eval->note_finale, 2, ',', ' ');
                         $noteClass = match(true) {
@@ -122,15 +123,20 @@
                             'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
                             'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
                             'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
+                            'contesté'   => 'border-orange-200 bg-orange-50 text-orange-700',
                             default      => 'border-slate-200 bg-slate-100 text-slate-600',
                         };
                         $sl = match($fiche->statut) {
-                            'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', default => ucfirst($fiche->statut),
+                            'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', 'contesté' => 'Contestée', default => ucfirst($fiche->statut),
                         };
+                    @endphp
+                    @php
+                        $av = (int) ($fiche->avancement_percentage ?? 0);
+                        $avColor = $av >= 75 ? 'bg-emerald-500' : ($av >= 40 ? 'bg-sky-500' : ($av > 0 ? 'bg-amber-400' : 'bg-slate-200'));
                     @endphp
                     <div class="mb-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <div>
+                            <div class="flex-1 min-w-0">
                                 <p class="text-base font-black text-slate-900">{{ $fiche->titre }}</p>
                                 <p class="mt-0.5 text-sm text-slate-500">
                                     Année : {{ $fiche->annee?->annee ?? $fiche->annee_id }}
@@ -139,8 +145,15 @@
                                     @endif
                                     · {{ $fiche->objectifs_count }} objectif(s)
                                 </p>
+                                {{-- Barre d'avancement --}}
+                                <div class="mt-2 flex items-center gap-2">
+                                    <div class="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                                        <div class="h-full rounded-full {{ $avColor }} transition-all" style="width: {{ $av }}%"></div>
+                                    </div>
+                                    <span class="text-xs font-black text-slate-500 tabular-nums">{{ $av }}%</span>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 shrink-0">
                                 <span class="inline-flex rounded-full border px-3 py-1 text-[11px] font-black {{ $sc }}">{{ $sl }}</span>
                                 <a href="{{ route('directeur.subordonnes.caisse.objectifs.show', $fiche) }}" class="ent-btn ent-btn-soft text-xs">Voir</a>
                             </div>

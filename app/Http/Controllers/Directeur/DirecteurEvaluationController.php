@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Directeur;
 
+use App\Helpers\AgentStructure;
 use App\Http\Controllers\Controller;
 use App\Models\Agence;
 use App\Models\Alerte;
 use App\Models\Annee;
+use App\Models\Entite;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\Service;
+use App\Models\User;
 use App\Services\EvaluationService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -170,14 +174,20 @@ class DirecteurEvaluationController extends Controller
         $today = now()->toDateString();
 
         if ($selectedService) {
-            $fiches = FicheObjectif::query()
+            // Les fiches sont assignées au chef (User), pas à la structure
+            $selectedService->load('chef');
+            $chefUser = $selectedService->chef
+                ? User::where('agent_id', $selectedService->chef->id)->first()
+                : null;
+
+            $fiches = $chefUser ? FicheObjectif::query()
                 ->with('objectifs')
                 ->where('statut', 'acceptee')
                 ->whereDate('date_echeance', '>=', $today)
-                ->where('assignable_type', Service::class)
-                ->where('assignable_id', $selectedService->id)
+                ->where('assignable_type', User::class)
+                ->where('assignable_id', $chefUser->id)
                 ->orderBy('titre')
-                ->get();
+                ->get() : collect();
 
             foreach ($fiches as $fiche) {
                 $objectiveOptions[] = [
@@ -195,14 +205,19 @@ class DirecteurEvaluationController extends Controller
                 ];
             }
         } elseif ($selectedAgence) {
-            $fiches = FicheObjectif::query()
+            // Les fiches sont assignées au chef d'agence (User), pas à la structure
+            $chefAgenceUser = $selectedAgence->chef_agent_id
+                ? User::where('agent_id', $selectedAgence->chef_agent_id)->first()
+                : null;
+
+            $fiches = $chefAgenceUser ? FicheObjectif::query()
                 ->with('objectifs')
                 ->where('statut', 'acceptee')
                 ->whereDate('date_echeance', '>=', $today)
-                ->where('assignable_type', Agence::class)
-                ->where('assignable_id', $selectedAgence->id)
+                ->where('assignable_type', User::class)
+                ->where('assignable_id', $chefAgenceUser->id)
                 ->orderBy('titre')
-                ->get();
+                ->get() : collect();
 
             foreach ($fiches as $fiche) {
                 $objectiveOptions[] = [
@@ -220,14 +235,19 @@ class DirecteurEvaluationController extends Controller
                 ];
             }
         } elseif ($selectedCaisse) {
-            $fiches = FicheObjectif::query()
+            // Les fiches sont assignées au directeur de caisse (User), pas à la structure
+            $directeurCaisseUser = $selectedCaisse->directeur_agent_id
+                ? User::where('agent_id', $selectedCaisse->directeur_agent_id)->first()
+                : null;
+
+            $fiches = $directeurCaisseUser ? FicheObjectif::query()
                 ->with('objectifs')
                 ->where('statut', 'acceptee')
                 ->whereDate('date_echeance', '>=', $today)
-                ->where('assignable_type', \App\Models\Caisse::class)
-                ->where('assignable_id', $selectedCaisse->id)
+                ->where('assignable_type', User::class)
+                ->where('assignable_id', $directeurCaisseUser->id)
                 ->orderBy('titre')
-                ->get();
+                ->get() : collect();
 
             foreach ($fiches as $fiche) {
                 $objectiveOptions[] = [
@@ -257,31 +277,38 @@ class DirecteurEvaluationController extends Controller
         $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
         $openSemestre  = $openSemestres->first();
         $displayYear   = $openAnnee?->annee ?? now()->year;
-        $entiteNom     = $direction->nom ?? '';
+        $faitiereNom   = Entite::first()?->nom ?? $direction->nom ?? '';
+        $entiteNom     = $faitiereNom;
 
         // Données JSON pour auto-remplissage dynamique des champs d'identification
         $servicesJson = $services->map(fn ($svc) => [
-            'id'        => $svc->id,
-            'nom'       => $svc->nom,
-            'nom_prenom'=> $svc->chef ? trim($svc->chef->prenom.' '.$svc->chef->nom) : '',
-            'emploi'    => $svc->chef?->role ?? 'Chef de service',
-            'entite_nom'=> $entiteNom,
+            'id'               => $svc->id,
+            'nom'              => $svc->nom,
+            'nom_prenom'       => $svc->chef ? trim($svc->chef->prenom.' '.$svc->chef->nom) : '',
+            'emploi'           => $svc->chef?->role ?? 'Chef de service',
+            'entite_nom'       => $faitiereNom,
+            'direction_service'=> $svc->nom . ($direction ? ' — ' . $direction->nom : ''),
+            'matricule'        => $svc->chef?->matricule ?? '',
         ])->values()->toArray();
 
         $agencesJson = $agences->map(fn ($agc) => [
-            'id'        => $agc->id,
-            'nom'       => $agc->nom,
-            'nom_prenom'=> $agc->chef ? trim($agc->chef->prenom.' '.$agc->chef->nom) : '',
-            'emploi'    => $agc->chef?->role ?? "Chef d'agence",
-            'entite_nom'=> $entiteNom,
+            'id'               => $agc->id,
+            'nom'              => $agc->nom,
+            'nom_prenom'       => $agc->chef ? trim($agc->chef->prenom.' '.$agc->chef->nom) : '',
+            'emploi'           => $agc->chef?->role ?? "Chef d'agence",
+            'entite_nom'       => $faitiereNom,
+            'direction_service'=> $agc->nom,
+            'matricule'        => $agc->chef?->matricule ?? '',
         ])->values()->toArray();
 
         $caissesJson = $caisses->map(fn ($cai) => [
-            'id'        => $cai->id,
-            'nom'       => $cai->nom,
-            'nom_prenom'=> $cai->directeurAgent ? trim($cai->directeurAgent->prenom.' '.$cai->directeurAgent->nom) : '',
-            'emploi'    => $cai->directeurAgent?->role ?? 'Directeur de caisse',
-            'entite_nom'=> $entiteNom,
+            'id'               => $cai->id,
+            'nom'              => $cai->nom,
+            'nom_prenom'       => $cai->directeurAgent ? trim($cai->directeurAgent->prenom.' '.$cai->directeurAgent->nom) : '',
+            'emploi'           => $cai->directeurAgent?->role ?? 'Directeur de caisse',
+            'entite_nom'       => $faitiereNom,
+            'direction_service'=> $cai->nom,
+            'matricule'        => $cai->directeurAgent?->matricule ?? '',
         ])->values()->toArray();
 
         // Pré-remplissage initial selon la cible sélectionnée (premier affichage)
@@ -306,7 +333,7 @@ class DirecteurEvaluationController extends Controller
             $ag = $selectedService->chef;
             $prefilledNomPrenom        = $ag ? trim($ag->prenom.' '.$ag->nom) : '';
             $prefilledEmploi           = $ag?->role ?? 'Chef de service';
-            $prefilledDirectionService = $selectedService->nom;
+            $prefilledDirectionService = $selectedService->nom . ($direction ? ' — ' . $direction->nom : '');
             $prefilledAgentId          = $ag?->id;
         }
 
@@ -444,6 +471,22 @@ class DirecteurEvaluationController extends Controller
         // Normalisation de la date d'évaluation dans la section identification
         $identification = $validated['identification'] ?? [];
         $identification['semestre'] = (string) $semestre->numero;
+
+        // Entité & Direction/Service dérivés du modèle (ne pas faire confiance au formulaire seul)
+        $faitiere = \App\Models\Entite::first();
+        $identification['direction'] = $faitiere?->sigle ?: ($faitiere?->nom ?? 'RCPB');
+        if ($isCaisse) {
+            $identification['direction_service'] = $evaluableModel->nom;
+        } elseif ($isAgence) {
+            $evaluableModel->loadMissing(['caisse']);
+            $identification['direction_service'] = $evaluableModel->nom
+                . ($evaluableModel->caisse ? ' — ' . $evaluableModel->caisse->nom : '');
+        } else {
+            // Service
+            $evaluableModel->loadMissing(['direction']);
+            $identification['direction_service'] = $evaluableModel->nom
+                . ($evaluableModel->direction ? ' — ' . $evaluableModel->direction->nom : '');
+        }
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -608,17 +651,19 @@ class DirecteurEvaluationController extends Controller
 
         // Badge de statut
         $statusClass = match ($evaluation->statut) {
-            'valide'    => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-            'soumis'    => 'border-amber-200 bg-amber-50 text-amber-700',
-            'refuse'    => 'border-rose-200 bg-rose-50 text-rose-700',
-            default     => 'border-slate-200 bg-slate-100 text-slate-700',
+            'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+            'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+            'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+            'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+            default       => 'border-slate-200 bg-slate-100 text-slate-700',
         };
         $statusLabel = match ($evaluation->statut) {
-            'valide'    => 'Acceptée',
-            'soumis'    => 'Soumise',
-            'refuse'    => 'Refusée',
-            'brouillon' => 'Brouillon',
-            default     => ucfirst((string) $evaluation->statut),
+            'valide'      => 'Acceptée',
+            'soumis'      => 'Soumise',
+            'refuse'      => 'Refusée',
+            'reclamation' => 'Réclamation',
+            'brouillon'   => 'Brouillon',
+            default       => ucfirst((string) $evaluation->statut),
         };
 
         $ident = $evaluation->identification;
@@ -722,7 +767,7 @@ class DirecteurEvaluationController extends Controller
         $this->authorize('evaluations.soumettre');
         $this->authorizeCreatedEval($evaluation);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return back()->with('error', 'Cette évaluation ne peut plus être soumise.');
         }
 

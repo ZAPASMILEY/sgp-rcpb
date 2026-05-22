@@ -49,7 +49,7 @@ class MonEspaceController extends Controller
             'total'  => $baseE()->count(),
             'soumis' => $baseE()->where('statut', 'soumis')->count(),
             'valide' => $baseE()->where('statut', 'valide')->count(),
-            'refuse' => $baseE()->where('statut', 'refuse')->count(),
+            'refuse' => $baseE()->whereIn('statut', ['refuse', 'reclamation'])->count(),
         ];
 
         $evaluations = $evalsQ->paginate(10)->withQueryString();
@@ -66,7 +66,7 @@ class MonEspaceController extends Controller
 
         if ($search && $tab === 'objectifs') {
             $fichesQ->where(fn ($q) => $q->where('titre', 'like', "%{$search}%")
-                ->orWhere('annee', 'like', "%{$search}%"));
+                ->orWhereHas('annee', fn ($a) => $a->where('annee', 'like', "%{$search}%")));
         }
 
         if ($statut && $tab === 'objectifs') {

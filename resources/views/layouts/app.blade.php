@@ -75,15 +75,26 @@
         :root {
             --app-bg: #f8fafc;
             --sidebar-width: 260px;
-            --accent-color: #15803d;
-            --sidebar-green: #008751;
-            --sidebar-green-dark: #006837;
+            /* Thème RÉFÉRENCE (moderne / SaaS) — défaut */
+            --sidebar-from:  #1e293b;
+            --sidebar-to:    #0f172a;
+            --sidebar-active-text: #38bdf8;
+            --sidebar-btn-color: #38bdf8;
+        }
+
+        /* ── Thème CLASSIQUE RCPB (vert officiel) ───────────────────────── */
+        body.theme-rcpb {
+            --sidebar-from:       #008751;
+            --sidebar-to:         #006837;
+            --sidebar-active-text:#008751;
+            --sidebar-btn-color:  #008751;
+            background-color: #f0f9f4;
         }
 
         body { font-family: 'Inter', sans-serif; background-color: var(--app-bg); color: #1e293b; overflow-x: hidden; }
 
         /* --- SIDEBAR --- */
-        .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; left: 0; top: 0; background: linear-gradient(180deg, var(--sidebar-green) 0%, var(--sidebar-green-dark) 100%); color: #fff; transition: transform 0.3s ease, width 0.3s ease; z-index: 1050; border-right: 1px solid rgba(255,255,255,0.08); overflow: hidden; display: flex; flex-direction: column; }
+        .sidebar { width: var(--sidebar-width); height: 100vh; position: fixed; left: 0; top: 0; background: linear-gradient(180deg, var(--sidebar-from) 0%, var(--sidebar-to) 100%); color: #fff; transition: transform 0.3s ease, width 0.3s ease; z-index: 1050; border-right: 1px solid rgba(255,255,255,0.08); overflow: hidden; display: flex; flex-direction: column; }
         .sidebar-header { padding: 1.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
         .sidebar-nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
         .sidebar-nav::-webkit-scrollbar { width: 4px; }
@@ -92,11 +103,11 @@
         .sidebar .nav-link { color: rgba(255,255,255,0.85) !important; padding: 0.6rem 1.2rem; display: flex; align-items: center; border-radius: 10px; margin: 0.15rem 0.8rem; transition: all 0.2s; font-size: 0.875rem; font-weight: 500; text-decoration: none; white-space: nowrap; overflow: hidden; }
         .sidebar .nav-link i { font-size: 1rem; width: 1.5rem; text-align: center; margin-right: 0.75rem; flex-shrink: 0; }
         .sidebar .nav-link:hover { background: rgba(255,255,255,0.12); color: #fff !important; }
-        .sidebar .nav-link.active { background: #fff !important; color: var(--sidebar-green) !important; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .sidebar .nav-link.active { background: #fff !important; color: var(--sidebar-active-text) !important; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
 
         /* Collapse button */
-        .sidebar-collapse-btn { position: absolute; right: -12px; top: 80px; width: 24px; height: 24px; background: #fff; border: 1px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--sidebar-green); font-size: 10px; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.12); transition: transform 0.3s ease; }
-        .sidebar-collapse-btn:hover { background: var(--sidebar-green); color: #fff; }
+        .sidebar-collapse-btn { position: absolute; right: -12px; top: 80px; width: 24px; height: 24px; background: #fff; border: 1px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--sidebar-btn-color); font-size: 10px; z-index: 10; box-shadow: 0 2px 6px rgba(0,0,0,0.12); transition: transform 0.3s ease; }
+        .sidebar-collapse-btn:hover { background: var(--sidebar-from); color: #fff; border-color: var(--sidebar-from); }
 
         .main-content { margin-left: var(--sidebar-width); min-height: 100vh; transition: margin 0.3s ease; display: flex; flex-direction: column; }
 
@@ -127,7 +138,9 @@
 @endphp
 
 <body class="h-full antialiased {{ $isModalMode ? 'bg-slate-50' : '' }} {{ $themePreference === 'classic' ? 'theme-rcpb' : '' }}">
-    
+
+    @if(!$isModalMode) @include('layouts._alerte_banniere') @endif
+
     @if($showSidebar)
         <nav class="sidebar shadow" id="sidebar">
             <button class="sidebar-collapse-btn" id="sidebarCollapseBtn">

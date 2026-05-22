@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Agent;
+use App\Models\AuditLog;
 use App\Models\Evaluation;
 use App\Models\Formation;
 use App\Models\Setting;
@@ -11,6 +12,9 @@ use App\Observers\AgentObserver;
 use App\Observers\EvaluationObserver;
 use App\Observers\FormationObserver;
 use App\Observers\UserObserver;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -77,6 +81,31 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registerAdminBypass();
         $this->registerRolePermissionBridge();
+
+        // Journalisation des connexions / déconnexions
+        Event::listen(Login::class, function (Login $event) {
+            AuditLog::record(
+                User::class,
+                $event->user->id,
+                'login',
+                null,
+                ['role' => $event->user->role],
+                'Connexion — '.$event->user->name.' ('.$event->user->role.')',
+            );
+        });
+
+        Event::listen(Logout::class, function (Logout $event) {
+            if ($event->user) {
+                AuditLog::record(
+                    User::class,
+                    $event->user->id,
+                    'logout',
+                    null,
+                    null,
+                    'Déconnexion — '.$event->user->name,
+                );
+            }
+        });
 
         // Observers pour l'historique d'audit
         Evaluation::observe(EvaluationObserver::class);

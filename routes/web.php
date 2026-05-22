@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\StatistiqueController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Personnel\PersonnelDashboardController;
 use App\Http\Controllers\Pca\PcaDashboardController;
 use App\Http\Controllers\Pca\PcaEvaluationController;
@@ -30,6 +31,12 @@ Route::get('/login', function () {
     return view('auth.login');
 })->name('login');
 Route::post('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store'])->name('login.store');
+
+// ── Changement de mot de passe obligatoire (first login) ─────────────────────
+Route::middleware('auth')->group(function (): void {
+    Route::get('/changer-mot-de-passe',  [ChangePasswordController::class, 'create'])->name('password.change');
+    Route::post('/changer-mot-de-passe', [ChangePasswordController::class, 'store'])->name('password.change.update');
+});
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/admin/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -57,6 +64,11 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
         // Modification des membres principaux (DG, DGA, Assistante)
         Route::get('/admin/direction-generale/membres/{user}/modifier', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'editMembre'])->name('admin.direction-generale.membres.edit');
         Route::put('/admin/direction-generale/membres/{user}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'updateMembre'])->name('admin.direction-generale.membres.update');
+        // Services de la Direction Générale
+        Route::post('/admin/direction-generale/services', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'storeService'])->name('admin.direction-generale.services.store');
+        Route::delete('/admin/direction-generale/services/{service}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'destroyService'])->name('admin.direction-generale.services.destroy');
+        Route::post('/admin/direction-generale/services/{service}/agents', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'storeAgent'])->name('admin.direction-generale.services.agents.store');
+        Route::delete('/admin/direction-generale/services/{service}/agents/{agent}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'removeAgent'])->name('admin.direction-generale.services.agents.destroy');
 
         // ── Direction Générale Adjointe (DGA) ─────────────────────────────────
         Route::get('/admin/direction-dga', [\App\Http\Controllers\Admin\DirectionDgaController::class, 'index'])->name('admin.direction-dga.index');
@@ -66,6 +78,10 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
         Route::put('/admin/direction-dga/services/{service}/chef', [\App\Http\Controllers\Admin\DirectionDgaController::class, 'updateChefService'])->name('admin.direction-dga.services.chef.update');
         Route::get('/admin/direction-dga/secretaire', [\App\Http\Controllers\Admin\DirectionDgaController::class, 'editSecretaire'])->name('admin.direction-dga.secretaire.edit');
         Route::put('/admin/direction-dga/secretaire', [\App\Http\Controllers\Admin\DirectionDgaController::class, 'updateSecretaire'])->name('admin.direction-dga.secretaire.update');
+        Route::post('/admin/direction-dga/services', [\App\Http\Controllers\Admin\DirectionDgaController::class, 'storeService'])->name('admin.direction-dga.services.store');
+        Route::delete('/admin/direction-dga/services/{service}', [\App\Http\Controllers\Admin\DirectionDgaController::class, 'destroyService'])->name('admin.direction-dga.services.destroy');
+        Route::post('/admin/direction-dga/services/{service}/agents', [\App\Http\Controllers\Admin\DirectionDgaController::class, 'storeAgent'])->name('admin.direction-dga.services.agents.store');
+        Route::delete('/admin/direction-dga/services/{service}/agents/{agent}', [\App\Http\Controllers\Admin\DirectionDgaController::class, 'removeAgent'])->name('admin.direction-dga.services.agents.destroy');
     // Route pour enregistrer un secrétaire depuis la modale de la Faitière
     Route::post('/admin/secretaires', [EntiteController::class, 'storeSecretaire'])->name('admin.secretaires.store');
     Route::get('/admin/secretaires/{direction}', [EntiteController::class, 'showSecretaire'])->name('admin.secretaires.show');
@@ -136,6 +152,8 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/users/{user}/modifier', [UserController::class, 'edit'])->name('admin.users.edit');
     Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
     Route::post('/admin/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('admin.users.reset-password');
+    Route::post('/admin/users/{user}/reset-to-default', [UserController::class, 'resetToDefault'])->name('admin.users.reset-to-default');
+    Route::post('/admin/users/{user}/unblock', [UserController::class, 'unblock'])->name('admin.users.unblock');
     Route::patch('/admin/users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('admin.users.toggle-active');
     Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
 
@@ -212,8 +230,6 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::put('/admin/parametres/utilisateurs/mot-de-passe', [SettingsController::class, 'updateUserPassword'])->name('admin.settings.users.password.update');
     Route::put('/admin/parametres/utilisateurs/role', [SettingsController::class, 'updateUserRole'])->name('admin.settings.users.role.update');
     Route::post('/admin/parametres/utilisateurs/{user}/permissions', [SettingsController::class, 'syncUserPermissions'])->name('admin.settings.users.permissions.sync');
-    Route::post('/admin/parametres/permissions', [SettingsController::class, 'storePermission'])->name('admin.settings.permissions.store');
-    Route::delete('/admin/parametres/permissions/{permission}', [SettingsController::class, 'destroyPermission'])->name('admin.settings.permissions.destroy');
     Route::post('/admin/parametres/roles/{roleSlug}/permissions', [SettingsController::class, 'syncRolePermissions'])->name('admin.settings.roles.permissions.sync');
     Route::post('/admin/parametres/roles', [SettingsController::class, 'storeRole'])->name('admin.settings.roles.store');
     Route::delete('/admin/parametres/roles/{customRole}', [SettingsController::class, 'destroyRole'])->name('admin.settings.roles.destroy');
@@ -261,6 +277,10 @@ Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function 
     Route::put('/parametres/theme', [PcaSettingsController::class, 'updateTheme'])->name('settings.theme.update');
     Route::put('/parametres/mot-de-passe', [PcaSettingsController::class, 'updatePassword'])->name('settings.password.update');
     Route::delete('/parametres/compte', [PcaSettingsController::class, 'destroyAccount'])->name('settings.account.destroy');
+
+    // Mes formations
+    Route::get('/formations',                    \App\Http\Controllers\Pca\PcaFormationController::class)->name('formations.index');
+    Route::get('/formations/{formation}/pdf',    [\App\Http\Controllers\Pca\PcaFormationController::class, 'pdf'])->name('formations.pdf');
 });
 
 Route::middleware(['auth', 'personnel'])->group(function (): void {
@@ -364,12 +384,16 @@ Route::middleware(['auth', 'rh'])->prefix('rh')->name('rh.')->group(function ():
     Route::get('/structures',     \App\Http\Controllers\Rh\RhStructureController::class)->name('structures');
     Route::get('/structures/pdf', [\App\Http\Controllers\Rh\RhStructureController::class, 'pdf'])->name('structures.pdf');
 
-    // Statistiques
-    Route::get('/statistiques', \App\Http\Controllers\Rh\RhStatistiqueController::class)->name('statistiques');
+    // Statistiques — permission requise
+    Route::middleware('can:statistiques.voir')->group(function () {
+        Route::get('/statistiques', \App\Http\Controllers\Rh\RhStatistiqueController::class)->name('statistiques');
+    });
 
-    // Tableaux personnalisés
-    Route::get('/tableaux',        [\App\Http\Controllers\Rh\RhTableauController::class, 'index'])->name('tableaux.index');
-    Route::get('/tableaux/export', [\App\Http\Controllers\Rh\RhTableauController::class, 'export'])->name('tableaux.export');
+    // Tableaux personnalisés — permission requise
+    Route::middleware('can:tableaux.voir')->group(function () {
+        Route::get('/tableaux',        [\App\Http\Controllers\Rh\RhTableauController::class, 'index'])->name('tableaux.index');
+        Route::get('/tableaux/export', [\App\Http\Controllers\Rh\RhTableauController::class, 'export'])->name('tableaux.export');
+    });
 });
 
 // Shared routes — all authenticated users
@@ -394,6 +418,9 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
     Route::get('/objectifs/creer',               [\App\Http\Controllers\Dg\DgObjectifController::class, 'create'])->name('objectifs.create')->middleware(['feature:objectifs', 'annee.ouverte']);
     Route::post('/objectifs',                    [\App\Http\Controllers\Dg\DgObjectifController::class, 'store'])->name('objectifs.store')->middleware(['feature:objectifs', 'annee.ouverte']);
     Route::get('/objectifs/{fiche}/pdf',         [\App\Http\Controllers\Dg\DgObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
+    Route::get('/objectifs/{fiche}/modifier',    [\App\Http\Controllers\Dg\DgObjectifController::class, 'edit'])->name('objectifs.edit')->middleware(['feature:objectifs']);
+    Route::put('/objectifs/{fiche}',             [\App\Http\Controllers\Dg\DgObjectifController::class, 'update'])->name('objectifs.update')->middleware(['feature:objectifs']);
+    Route::patch('/objectifs/{fiche}/soumettre', [\App\Http\Controllers\Dg\DgObjectifController::class, 'soumettre'])->name('objectifs.soumettre')->middleware(['feature:objectifs']);
     Route::get('/objectifs/{fiche}',             [\App\Http\Controllers\Dg\DgObjectifController::class, 'show'])->name('objectifs.show');
     Route::patch('/objectifs/{fiche}/statut',              [\App\Http\Controllers\Dg\DgObjectifController::class, 'statut'])->name('objectifs.statut');
     Route::patch('/objectifs/{fiche}/avancement',          [\App\Http\Controllers\Dg\DgObjectifController::class, 'avancement'])->name('objectifs.avancement');
@@ -462,6 +489,10 @@ Route::middleware(['auth', 'dg'])->prefix('dg')->name('dg.')->group(function ():
 
     // Statistiques
     Route::get('/statistiques', \App\Http\Controllers\Dg\DgStatistiqueController::class)->name('statistiques');
+
+    // Mes formations
+    Route::get('/formations',                    \App\Http\Controllers\Dg\DgFormationController::class)->name('formations.index');
+    Route::get('/formations/{formation}/pdf',    [\App\Http\Controllers\Dg\DgFormationController::class, 'pdf'])->name('formations.pdf');
 });
 
 // DG - Enregistrer le commentaire de l'évalué
@@ -513,8 +544,10 @@ Route::middleware(['auth', 'dga_espace'])->prefix('espace-dga')->name('dga.')->g
     // Fiches d'objectifs assignées par le DGA à ses subordonnés — spécifiques AVANT le wildcard
     Route::get('/sub-objectifs/creer',               [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'create'])->name('sub-objectifs.create')->middleware(['feature:objectifs', 'annee.ouverte']);
     Route::post('/sub-objectifs',                    [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'store'])->name('sub-objectifs.store')->middleware(['feature:objectifs', 'annee.ouverte']);
+    Route::get('/sub-objectifs/{fiche}/modifier',    [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'edit'])->name('sub-objectifs.edit')->middleware(['feature:objectifs']);
+    Route::put('/sub-objectifs/{fiche}',             [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'update'])->name('sub-objectifs.update')->middleware(['feature:objectifs']);
+    Route::patch('/sub-objectifs/{fiche}/soumettre', [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'soumettre'])->name('sub-objectifs.soumettre')->middleware(['feature:objectifs']);
     Route::get('/sub-objectifs/{fiche}',             [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'show'])->name('sub-objectifs.show');
-
     Route::delete('/sub-objectifs/{fiche}',          [\App\Http\Controllers\Dga\DgaSubObjectifController::class, 'destroy'])->name('sub-objectifs.destroy');
 
     // Évaluations des subordonnés (DGA → DTs / secrétaire)
@@ -565,6 +598,10 @@ Route::middleware(['auth', 'subordonne'])->prefix('mon-espace')->name('subordonn
     Route::get('/objectifs/{fiche}/pdf',                                     [\App\Http\Controllers\Dga\ObjectifController::class, 'exportPdf'])->name('objectifs.pdf');
     Route::patch('/objectifs/{fiche}/lignes/{ligne}/avancement',            [\App\Http\Controllers\Dga\ObjectifController::class, 'avancementLigne'])->name('objectifs.lignes.avancement');
     Route::patch('/objectifs/{fiche}/lignes/{ligne}/contester',             [\App\Http\Controllers\Dga\ObjectifController::class, 'contesterLigne'])->name('objectifs.lignes.contester');
+
+    // Mes formations
+    Route::get('/formations',                    \App\Http\Controllers\Subordonne\FormationController::class)->name('formations.index');
+    Route::get('/formations/{formation}/pdf',    [\App\Http\Controllers\Subordonne\FormationController::class, 'pdf'])->name('formations.pdf');
 });
 
 // ── Espace Assistante DG ──────────────────────────────────────────────────────
@@ -635,12 +672,16 @@ Route::middleware(['auth', 'directeur_espace'])->prefix('espace-directeur')->nam
     // Objectifs services
     Route::get('/subordonnes/services/{service}/objectifs/creer',                   [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'createServiceObjectif'])->name('subordonnes.service.objectifs.create')->middleware(['feature:objectifs', 'annee.ouverte']);
     Route::post('/subordonnes/services/objectifs',                                  [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'storeServiceObjectif'])->name('subordonnes.service.objectifs.store')->middleware(['feature:objectifs', 'annee.ouverte']);
+    Route::get('/subordonnes/services/objectifs/{fiche}/modifier',                  [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'editServiceObjectif'])->name('subordonnes.service.objectifs.edit')->middleware(['feature:objectifs']);
+    Route::put('/subordonnes/services/objectifs/{fiche}',                           [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'updateServiceObjectif'])->name('subordonnes.service.objectifs.update')->middleware(['feature:objectifs']);
     Route::get('/subordonnes/services/objectifs/{fiche}',                           [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'showServiceObjectif'])->name('subordonnes.service.objectifs.show');
     Route::delete('/subordonnes/services/objectifs/{fiche}',                        [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'destroyServiceObjectif'])->name('subordonnes.service.objectifs.destroy');
 
     // Objectifs secrétaire
     Route::get('/subordonnes/secretaire/objectifs/creer',                           [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'createSecretaireObjectif'])->name('subordonnes.secretaire.objectifs.create')->middleware(['feature:objectifs', 'annee.ouverte']);
     Route::post('/subordonnes/secretaire/objectifs',                                [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'storeSecretaireObjectif'])->name('subordonnes.secretaire.objectifs.store')->middleware(['feature:objectifs', 'annee.ouverte']);
+    Route::get('/subordonnes/secretaire/objectifs/{fiche}/modifier',               [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'editSecretaireObjectif'])->name('subordonnes.secretaire.objectifs.edit')->middleware(['feature:objectifs']);
+    Route::put('/subordonnes/secretaire/objectifs/{fiche}',                         [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'updateSecretaireObjectif'])->name('subordonnes.secretaire.objectifs.update')->middleware(['feature:objectifs']);
     Route::get('/subordonnes/secretaire/objectifs/{fiche}',                         [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'showSecretaireObjectif'])->name('subordonnes.secretaire.objectifs.show');
     Route::delete('/subordonnes/secretaire/objectifs/{fiche}',                      [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'destroySecretaireObjectif'])->name('subordonnes.secretaire.objectifs.destroy');
 
@@ -648,6 +689,8 @@ Route::middleware(['auth', 'directeur_espace'])->prefix('espace-directeur')->nam
     Route::get('/subordonnes/agences/{agence}',                                     [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'showAgence'])->name('subordonnes.agence');
     Route::get('/subordonnes/agences/{agence}/objectifs/creer',                     [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'createAgenceObjectif'])->name('subordonnes.agence.objectifs.create')->middleware(['feature:objectifs', 'annee.ouverte']);
     Route::post('/subordonnes/agences/objectifs',                                   [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'storeAgenceObjectif'])->name('subordonnes.agence.objectifs.store')->middleware(['feature:objectifs', 'annee.ouverte']);
+    Route::get('/subordonnes/agences/objectifs/{fiche}/modifier',                  [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'editAgenceObjectif'])->name('subordonnes.agence.objectifs.edit')->middleware(['feature:objectifs']);
+    Route::put('/subordonnes/agences/objectifs/{fiche}',                            [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'updateAgenceObjectif'])->name('subordonnes.agence.objectifs.update')->middleware(['feature:objectifs']);
     Route::get('/subordonnes/agences/objectifs/{fiche}',                            [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'showAgenceObjectif'])->name('subordonnes.agence.objectifs.show');
     Route::delete('/subordonnes/agences/objectifs/{fiche}',                         [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'destroyAgenceObjectif'])->name('subordonnes.agence.objectifs.destroy');
 
@@ -655,8 +698,11 @@ Route::middleware(['auth', 'directeur_espace'])->prefix('espace-directeur')->nam
     Route::get('/subordonnes/caisses/{caisse}',                                     [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'showCaisse'])->name('subordonnes.caisse');
     Route::get('/subordonnes/caisses/{caisse}/objectifs/creer',                     [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'createCaisseObjectif'])->name('subordonnes.caisse.objectifs.create')->middleware(['feature:objectifs', 'annee.ouverte']);
     Route::post('/subordonnes/caisses/objectifs',                                   [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'storeCaisseObjectif'])->name('subordonnes.caisse.objectifs.store')->middleware(['feature:objectifs', 'annee.ouverte']);
+    Route::get('/subordonnes/caisses/objectifs/{fiche}/modifier',                   [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'editCaisseObjectif'])->name('subordonnes.caisse.objectifs.edit')->middleware(['feature:objectifs']);
+    Route::put('/subordonnes/caisses/objectifs/{fiche}',                            [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'updateCaisseObjectif'])->name('subordonnes.caisse.objectifs.update')->middleware(['feature:objectifs']);
     Route::get('/subordonnes/caisses/objectifs/{fiche}',                            [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'showCaisseObjectif'])->name('subordonnes.caisse.objectifs.show');
     Route::delete('/subordonnes/caisses/objectifs/{fiche}',                         [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'destroyCaisseObjectif'])->name('subordonnes.caisse.objectifs.destroy');
+    Route::patch('/subordonnes/objectifs/{fiche}/soumettre',                        [\App\Http\Controllers\Directeur\DirecteurSubordonneController::class, 'soumettreObjectif'])->name('subordonnes.objectifs.soumettre')->middleware(['feature:objectifs']);
 
     // ── Personnel ─────────────────────────────────────────────────────────────
     Route::get('/personnel/export',              [\App\Http\Controllers\Directeur\DirecteurPersonnelController::class, 'export'])->name('personnel.export');
@@ -706,6 +752,9 @@ Route::middleware(['auth', 'chef'])->prefix('chef')->name('chef.')->group(functi
     // ── Objectifs assignés par le chef à ses agents ───────────────────────────
     Route::get('/objectifs/assigner',                       [\App\Http\Controllers\Chef\ChefObjectifController::class, 'create'])->name('objectifs.create')->middleware(['feature:objectifs', 'annee.ouverte']);
     Route::post('/objectifs',                               [\App\Http\Controllers\Chef\ChefObjectifController::class, 'store'])->name('objectifs.store')->middleware(['feature:objectifs', 'annee.ouverte']);
+    Route::get('/objectifs/{fiche}/modifier',               [\App\Http\Controllers\Chef\ChefObjectifController::class, 'edit'])->name('objectifs.edit')->middleware(['feature:objectifs']);
+    Route::put('/objectifs/{fiche}',                        [\App\Http\Controllers\Chef\ChefObjectifController::class, 'update'])->name('objectifs.update')->middleware(['feature:objectifs']);
+    Route::patch('/objectifs/{fiche}/soumettre',            [\App\Http\Controllers\Chef\ChefObjectifController::class, 'soumettre'])->name('objectifs.soumettre')->middleware(['feature:objectifs']);
     Route::get('/objectifs/{fiche}',                        [\App\Http\Controllers\Chef\ChefObjectifController::class, 'show'])->name('objectifs.show');
     Route::delete('/objectifs/{fiche}',                     [\App\Http\Controllers\Chef\ChefObjectifController::class, 'destroy'])->name('objectifs.destroy');
 

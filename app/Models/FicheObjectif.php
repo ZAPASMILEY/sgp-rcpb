@@ -68,6 +68,19 @@ class FicheObjectif extends Model
         return $this->belongsTo(Annee::class, 'annee_id');
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Vérifie qu'une fiche existe déjà pour ce couple (assignable, année).
+     */
+    public static function existsPourAnnee(int $anneeId, string $assignableType, int $assignableId): bool
+    {
+        return static::where('annee_id', $anneeId)
+            ->where('assignable_type', $assignableType)
+            ->where('assignable_id', $assignableId)
+            ->exists();
+    }
+
     // ── Accesseurs ────────────────────────────────────────────────────────────
 
     /**

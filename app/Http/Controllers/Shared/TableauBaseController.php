@@ -107,7 +107,7 @@ abstract class TableauBaseController extends Controller
             ->with([
                 'delegationTechnique',
                 'caisse.delegationTechnique',
-                'evaluations' => fn ($q) => $q->where('annee_id', $annee->id)->with('semestre'),
+                'evaluationsPersonnel' => fn ($q) => $q->where('annee_id', $annee->id)->where('statut', 'valide')->with('semestre'),
             ])
             ->when($scope === 'faitiere', fn ($q) => $q
                 ->where(fn ($s) => $s
@@ -190,7 +190,7 @@ abstract class TableauBaseController extends Controller
         if ($total === 0) return collect();
 
         $notesParAgent = $agents->map(function ($agent) use ($s1, $s2, $sem) {
-            $evals = $agent->evaluations->keyBy(fn ($e) => $e->semestre?->numero);
+            $evals = $agent->evaluationsPersonnel->keyBy(fn ($e) => $e->semestre?->numero);
             $n1    = ($s1 && $evals->get(1)?->note_finale !== null) ? (float)$evals->get(1)->note_finale : null;
             $n2    = ($s2 && $evals->get(2)?->note_finale !== null) ? (float)$evals->get(2)->note_finale : null;
             $raw   = match ($sem) {
@@ -260,7 +260,7 @@ abstract class TableauBaseController extends Controller
 
     private function agentNote($agent, $s1, $s2, string $sem): ?int
     {
-        $evals = $agent->evaluations->keyBy(fn ($e) => $e->semestre?->numero);
+        $evals = $agent->evaluationsPersonnel->keyBy(fn ($e) => $e->semestre?->numero);
         $n1    = ($s1 && $evals->get(1)?->note_finale !== null) ? (float)$evals->get(1)->note_finale : null;
         $n2    = ($s2 && $evals->get(2)?->note_finale !== null) ? (float)$evals->get(2)->note_finale : null;
         $raw   = match ($sem) {

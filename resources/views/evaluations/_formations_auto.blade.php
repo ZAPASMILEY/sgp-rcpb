@@ -37,7 +37,7 @@
         <td class="px-3 py-2 whitespace-nowrap text-xs text-slate-500">
             {{ $f->date_debut->translatedFormat('d M Y') }} → {{ $f->date_fin->translatedFormat('d M Y') }}
         </td>
-        <td class="px-3 py-2">{{ $f->titre }}</td>
+        <td class="px-3 py-2">{{ $f->theme }}</td>
         <td class="px-3 py-2">
             <span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
                 {{ $f->domaine_label }}

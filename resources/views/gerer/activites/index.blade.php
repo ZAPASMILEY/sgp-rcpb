@@ -65,6 +65,7 @@
                         <tr class="border-b border-slate-100 bg-slate-50/70">
                             <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Date</th>
                             <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Utilisateur</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Ressource</th>
                             <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Action</th>
                             <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Description</th>
                         </tr>
@@ -72,12 +73,28 @@
                     <tbody class="divide-y divide-slate-50">
                         @foreach($activites as $activite)
                         <tr class="hover:bg-slate-50/60 transition-colors">
-                            <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{{ $activite->created_at->format('d/m/Y H:i') }}</td>
-                            <td class="px-4 py-3 text-xs font-semibold text-slate-700">{{ $activite->user?->name ?? '—' }}</td>
-                            <td class="px-4 py-3">
-                                <span class="inline-block rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] font-bold text-sky-700">{{ $activite->action }}</span>
+                            <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
+                                {{ $activite->created_at->format('d/m/Y H:i') }}
                             </td>
-                            <td class="px-4 py-3 text-xs text-slate-600 max-w-[320px] truncate" title="{{ $activite->description }}">{{ $activite->description ?? '—' }}</td>
+                            <td class="px-4 py-3">
+                                <p class="text-xs font-semibold text-slate-700">{{ $activite->user_name ?? $activite->user?->name ?? '—' }}</p>
+                                @if($activite->ip_address)
+                                    <p class="text-[10px] text-slate-400">{{ $activite->ip_address }}</p>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+                                    {{ $activite->auditableLabel() }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold {{ $activite->actionBadgeClass() }}">
+                                    {{ $activite->actionLabel() }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-xs text-slate-600 max-w-[320px] truncate" title="{{ $activite->description }}">
+                                {{ $activite->description ?? '—' }}
+                            </td>
                         </tr>
                         @endforeach
                     </tbody>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Directeur;
 
+use App\Helpers\XlsxHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\Caisse;
@@ -100,14 +101,14 @@ class DirecteurPersonnelController extends Controller
             $agents = $agents->filter(fn ($a) => $a['statut'] === $statut);
         }
 
-        $filename = 'personnel_'.$ctx->getNom().'_'.now()->format('Ymd').'.csv';
+        $filename = 'personnel_'.$ctx->getNom().'_'.now()->format('Ymd').'.xlsx';
         $filename = preg_replace('/[^a-zA-Z0-9_\-.]/', '_', $filename);
 
-        $rows   = [];
-        $rows[] = ['Nom', 'Prénom', 'Email', 'Fonction', 'Service', 'Caisse', 'Dernière note', 'Mention', 'Statut éval.'];
+        $headers = ['Nom', 'Prénom', 'Email', 'Fonction', 'Service', 'Caisse', 'Dernière note', 'Mention', 'Statut éval.'];
+        $rows    = [];
 
         foreach ($agents as $item) {
-            $a = $item['agent'];
+            $a      = $item['agent'];
             $rows[] = [
                 $a->nom,
                 $a->prenom,
@@ -115,22 +116,22 @@ class DirecteurPersonnelController extends Controller
                 $a->role ?? '',
                 $item['service']?->nom ?? '',
                 $item['caisse']?->nom ?? '',
-                $item['note'] !== null ? number_format($item['note'], 2, '.', '') : '',
+                $item['note'] !== null ? (float) number_format($item['note'], 2, '.', '') : '',
                 $item['mention'] ?? '',
                 match($item['statut']) {
-                    'valide'   => 'Validée',
-                    'soumis'   => 'Soumise',
-                    'refuse'   => 'Refusée',
-                    'brouillon'=> 'Brouillon',
-                    default    => '',
+                    'valide'    => 'Validée',
+                    'soumis'    => 'Soumise',
+                    'refuse'    => 'Refusée',
+                    'brouillon' => 'Brouillon',
+                    default     => '',
                 },
             ];
         }
 
-        $csv = implode("\n", array_map(fn ($r) => implode(';', array_map(fn ($c) => '"'.str_replace('"', '""', (string)$c).'"', $r)), $rows));
+        $content = XlsxHelper::build($headers, $rows, 'Personnel');
 
-        return response($csv, 200, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
+        return response($content, 200, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }

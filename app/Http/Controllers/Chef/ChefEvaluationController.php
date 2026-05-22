@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Chef;
 
+use App\Helpers\AgentStructure;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\Alerte;
@@ -141,6 +142,8 @@ class ChefEvaluationController extends Controller
      */
     public function create(Request $request): View
     {
+        $this->authorize('evaluations.creer');
+
         $ctx = $this->getContext();
 
         // Charge les agents subordonnés de la structure avec leurs informations
@@ -201,31 +204,40 @@ class ChefEvaluationController extends Controller
         $oldExperiences = old('identification.experiences');
 
         // ── Données JSON pour auto-remplissage des champs identification ──────
-        $agentsJson = $agents->map(fn ($a) => [
-            'id'         => $a->id,
-            'nom_prenom' => trim($a->prenom . ' ' . $a->nom),
-            'emploi'     => $a->role ?? 'Agent',
-            'entite_nom' => $ctx->getNom(),
-            'matricule'  => $a->matricule ?? '',
-        ])->values()->toArray();
+        AgentStructure::loadRelations($agents);
+
+        $agentsJson = $agents->map(function ($a) {
+            $struct = AgentStructure::labels($a);
+            return [
+                'id'               => $a->id,
+                'nom_prenom'       => trim($a->prenom . ' ' . $a->nom),
+                'emploi'           => $a->role ?? 'Agent',
+                'entite_nom'       => $struct['entite_nom'],
+                'direction_service'=> $struct['direction_service'],
+                'matricule'        => $a->matricule ?? '',
+            ];
+        })->values()->toArray();
 
         // Pré-remplissage initial des champs si agent pré-sélectionné
         $prefilledNomPrenom        = null;
         $prefilledEmploi           = null;
         $prefilledDirectionService = null;
+        $prefilledEntiteNom        = null;
         $prefilledAgentId          = $selectedAgent?->id ?? null;
 
         if ($selectedAgent) {
+            $struct = AgentStructure::labels($selectedAgent);
             $prefilledNomPrenom        = trim($selectedAgent->prenom . ' ' . $selectedAgent->nom);
             $prefilledEmploi           = $selectedAgent->role ?? 'Agent';
-            $prefilledDirectionService = $ctx->getNom();
+            $prefilledEntiteNom        = $struct['entite_nom'];
+            $prefilledDirectionService = $struct['direction_service'];
         }
 
         $openAnnee      = Annee::currentOpen();
         $openSemestres  = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
         $openSemestre   = $openSemestres->first();
         $displayYear    = $openAnnee?->annee ?? now()->year;
-        $entiteNom      = $ctx->getNom();
+        $entiteNom      = $prefilledEntiteNom ?? \App\Models\Entite::first()?->nom ?? $ctx->getNom();
 
         // Pré-remplissage du matricule pour l'agent pré-sélectionné
         $prefilledMatricule = $selectedAgent?->matricule ?? null;
@@ -267,6 +279,8 @@ class ChefEvaluationController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('evaluations.creer');
+
         $ctx = $this->getContext();
 
         // Liste des IDs d'agents autorisés (appartenant à la structure du chef)
@@ -322,9 +336,15 @@ class ChefEvaluationController extends Controller
         $semestreId = $semestre->id;
 
         // ── Normalisation de la date d'évaluation dans l'identification ───────
+        $evaluableModel->loadMissing(['entite', 'direction', 'delegationTechnique', 'caisse', 'agence', 'service']);
         $identification = $validated['identification'] ?? [];
-        $identification['semestre'] = (string) $semestre->numero;
-        $identification['matricule'] = $evaluableModel->matricule ?? null;
+        $identification['semestre']          = (string) $semestre->numero;
+        $identification['matricule']         = $evaluableModel->matricule ?? null;
+        $identification['nom_prenom']        = trim($evaluableModel->prenom . ' ' . $evaluableModel->nom);
+        $identification['emploi']            = $evaluableModel->poste ?: $evaluableModel->role;
+        $structLabels = \App\Helpers\AgentStructure::labels($evaluableModel);
+        $identification['direction']         = $structLabels['entite_nom'];
+        $identification['direction_service'] = $structLabels['direction_service'];
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -375,6 +395,11 @@ class ChefEvaluationController extends Controller
         // ── Calcul des scores (pondération 75 % objectifs / 25 % subjectifs) ──
         $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
 
+        // ── Unicité : 1 évaluation par semestre ─────────────────────────────
+        // Chef évalue ses agents via Agent morph
+        if ($this->evaluationService->dejaEvalueeSemestre($evaluableModel->id, Agent::class, $semestreId)) {
+            return back()->withInput()->with('error', "Une évaluation existe déjà pour cet agent sur ce semestre.");
+        }
 
         $user = Auth::user();
 
@@ -514,17 +539,21 @@ class ChefEvaluationController extends Controller
 
         // ── Badge de statut ────────────────────────────────────────────────────
         $statusClass = match ($evaluation->statut) {
-            'valide'    => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-            'soumis'    => 'border-amber-200 bg-amber-50 text-amber-700',
-            'refuse'    => 'border-rose-200 bg-rose-50 text-rose-700',
-            default     => 'border-slate-200 bg-slate-100 text-slate-700',
+            'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+            'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+            'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+            'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+            'a_reviser'   => 'border-purple-200 bg-purple-50 text-purple-700',
+            default       => 'border-slate-200 bg-slate-100 text-slate-700',
         };
         $statusLabel = match ($evaluation->statut) {
-            'valide'    => 'Acceptée',
-            'soumis'    => 'Soumise',
-            'refuse'    => 'Refusée',
-            'brouillon' => 'Brouillon',
-            default     => ucfirst((string) $evaluation->statut),
+            'valide'      => 'Acceptée',
+            'soumis'      => 'Soumise',
+            'refuse'      => 'Refusée',
+            'reclamation' => 'Réclamation',
+            'a_reviser'   => 'À réviser',
+            'brouillon'   => 'Brouillon',
+            default       => ucfirst((string) $evaluation->statut),
         };
 
         $ident = $evaluation->identification;
@@ -627,7 +656,7 @@ class ChefEvaluationController extends Controller
     {
         $ctx = $this->authorizeCreatedEval($evaluation);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return redirect()->route('chef.evaluations.show', $evaluation)
                 ->with('error', 'Seules les évaluations en brouillon sont modifiables.');
         }
@@ -722,7 +751,7 @@ class ChefEvaluationController extends Controller
     {
         $this->authorizeCreatedEval($evaluation);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             abort(403, 'Modification interdite pour une évaluation déjà soumise.');
         }
 
@@ -768,9 +797,15 @@ class ChefEvaluationController extends Controller
         $dateFin   = $semestre->dateFin()->toDateString();
 
         // Normalisation de la date d'évaluation
+        $evaluableModel->loadMissing(['entite', 'direction', 'delegationTechnique', 'caisse', 'agence', 'service']);
         $identification = $validated['identification'] ?? [];
-        $identification['semestre'] = (string) $semestre->numero;
-        $identification['matricule'] = $evaluableModel->matricule ?? null;
+        $identification['semestre']          = (string) $semestre->numero;
+        $identification['matricule']         = $evaluableModel->matricule ?? null;
+        $identification['nom_prenom']        = trim($evaluableModel->prenom . ' ' . $evaluableModel->nom);
+        $identification['emploi']            = $evaluableModel->poste ?: $evaluableModel->role;
+        $structLabels = \App\Helpers\AgentStructure::labels($evaluableModel);
+        $identification['direction']         = $structLabels['entite_nom'];
+        $identification['direction_service'] = $structLabels['direction_service'];
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -872,7 +907,7 @@ class ChefEvaluationController extends Controller
     {
         $this->authorizeCreatedEval($evaluation);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return back()->with('error', 'Cette évaluation ne peut plus être soumise (statut actuel : ' . $evaluation->statut . ').');
         }
 

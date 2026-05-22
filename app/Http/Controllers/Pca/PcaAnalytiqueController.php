@@ -82,7 +82,7 @@ class PcaAnalytiqueController extends Controller
             'evals_validees'   => $evalsValides()->count(),
             'evals_soumises'   => $evals()->where('statut', 'soumis')->count(),
             'evals_brouillon'  => $evals()->where('statut', 'brouillon')->count(),
-            'evals_refusees'   => $evals()->where('statut', 'refuse')->count(),
+            'evals_refusees'   => $evals()->whereIn('statut', ['refuse', 'reclamation'])->count(),
             'moyenne'          => round($evalsValides()->avg('note_finale') ?? 0, 2),
             'meilleure'        => round($evalsValides()->max('note_finale') ?? 0, 2),
         ];

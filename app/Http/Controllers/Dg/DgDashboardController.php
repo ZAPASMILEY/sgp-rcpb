@@ -30,10 +30,10 @@ class DgDashboardController extends Controller
             'total'       => $base()->count(),
             'soumis'      => $base()->where('statut', 'soumis')->count(),
             'valide'      => $base()->where('statut', 'valide')->count(),
-            'excellent'   => $base()->where('note_finale', '>=', 8.5)->count(),
-            'bien'        => $base()->whereBetween('note_finale', [7, 8.499])->count(),
-            'passable'    => $base()->whereBetween('note_finale', [5, 6.999])->count(),
-            'insuffisant' => $base()->where('note_finale', '<', 5)->count(),
+            'excellent'   => Evaluation::query()->where('statut', 'valide')->where('note_finale', '>=', 8.5)->count(),
+            'bien'        => Evaluation::query()->where('statut', 'valide')->whereBetween('note_finale', [7, 8.499])->count(),
+            'passable'    => Evaluation::query()->where('statut', 'valide')->whereBetween('note_finale', [5, 6.999])->count(),
+            'insuffisant' => Evaluation::query()->where('statut', 'valide')->where('note_finale', '<', 5)->count(),
         ];
 
         // ── Requête principale avec filtres ───────────────────────────────────

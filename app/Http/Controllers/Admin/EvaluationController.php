@@ -61,7 +61,7 @@ class EvaluationController extends Controller
 
     public function edit(Evaluation $evaluation): View|RedirectResponse
     {
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return redirect()->route('admin.evaluations.show', $evaluation)
                 ->with('status', 'Seule une evaluation en brouillon peut etre modifiee.');
         }
@@ -126,7 +126,7 @@ class EvaluationController extends Controller
 
     public function update(Request $request, Evaluation $evaluation): RedirectResponse
     {
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return redirect()->route('admin.evaluations.show', $evaluation)
                 ->with('status', 'Seule une evaluation en brouillon peut etre modifiee.');
         }
@@ -210,7 +210,7 @@ class EvaluationController extends Controller
 
     public function submit(Evaluation $evaluation): RedirectResponse
     {
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return redirect()->route('admin.evaluations.show', $evaluation)
                 ->with('status', 'Cette evaluation a deja ete soumise ou validee.');
         }

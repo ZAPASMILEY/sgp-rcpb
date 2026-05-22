@@ -18,7 +18,7 @@ return new class extends Migration
                   ->comment('Agent ayant suivi la formation');
 
             // Contenu de la formation
-            $table->string('titre', 255)->comment('Intitulé de la formation');
+            $table->string('theme', 255)->comment('Thème de la formation');
 
             $table->string('domaine', 60)->comment('Domaine : management, informatique, finance…');
 

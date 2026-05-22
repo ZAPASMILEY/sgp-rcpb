@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureIsSubordonne
 {
-    private const ALLOWED_ROLES = ['Assistante_Dg', 'Conseillers_Dg'];
+    private const ALLOWED_ROLES = ['Assistante_Dg', 'Conseillers_Dg', 'Secretaire_Assistante'];
 
     public function handle(Request $request, Closure $next): Response
     {

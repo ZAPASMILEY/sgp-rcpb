@@ -38,10 +38,16 @@ class StatistiqueController extends Controller
         $guichetsCount = Guichet::query()->whereYear('created_at', $selectedYear)->count();
         $agentsCount = Agent::query()->count();
 
+        $maleValues   = ['homme', 'Homme', 'Masculin', 'masculin', 'M'];
+        $femaleValues = ['femme', 'Femme', 'Féminin', 'féminin', 'Feminine', 'feminine', 'F'];
         $agentsBySexe = [
-            'Hommes'         => Agent::query()->where('sexe', 'homme')->count(),
-            'Femmes'         => Agent::query()->where('sexe', 'femme')->count(),
-            'Non renseigné'  => Agent::query()->whereNull('sexe')->orWhere('sexe', '')->count(),
+            'Hommes'        => Agent::query()->whereIn('sexe', $maleValues)->count(),
+            'Femmes'        => Agent::query()->whereIn('sexe', $femaleValues)->count(),
+            'Non renseigné' => Agent::query()
+                ->where(fn ($q) => $q
+                    ->whereNotIn('sexe', array_merge($maleValues, $femaleValues))
+                    ->orWhereNull('sexe')
+                )->count(),
         ];
 
         return view('admin.statistiques.index', compact(

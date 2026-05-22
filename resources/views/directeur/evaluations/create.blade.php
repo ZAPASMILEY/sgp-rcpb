@@ -724,10 +724,12 @@
 
         function fillIdent(data) {
             if (!data) return;
-            if (fieldNomPrenom)    { fieldNomPrenom.value    = data.nom_prenom  ?? ''; }
-            if (fieldEmploi)       { fieldEmploi.value       = data.emploi      ?? ''; }
-            if (fieldDirection)    { fieldDirection.value    = data.entite_nom  ?? ''; }
-            if (fieldDirectionSvc) { fieldDirectionSvc.value = data.nom         ?? ''; }
+            if (fieldNomPrenom)    { fieldNomPrenom.value    = data.nom_prenom        ?? ''; }
+            if (fieldEmploi)       { fieldEmploi.value       = data.emploi            ?? ''; }
+            if (fieldDirection)    { fieldDirection.value    = data.entite_nom        ?? ''; }
+            if (fieldDirectionSvc) { fieldDirectionSvc.value = data.direction_service ?? data.nom ?? ''; }
+            const fieldMatricule = document.getElementById('identification_matricule');
+            if (fieldMatricule && data.matricule !== undefined) { fieldMatricule.value = data.matricule ?? ''; }
             // Sync vers la signature évalué
             if (fieldSignatureEvalue && (!fieldSignatureEvalue.value || fieldSignatureEvalue.dataset.autoFilled)) {
                 fieldSignatureEvalue.value = data.nom_prenom ?? '';

@@ -81,6 +81,8 @@
                                 $hasData  = $annee->evaluations_count > 0 || $annee->objectifs_count > 0;
                                 $s1 = $annee->semestres->firstWhere('numero', 1);
                                 $s2 = $annee->semestres->firstWhere('numero', 2);
+                                // Bloqué si l'année est ouverte mais contient encore des semestres ouverts
+                                $boutonBloque = $isOuvert && $annee->semestres->where('statut', 'ouvert')->isNotEmpty();
                             @endphp
                             <tr class="hover:bg-slate-50/60 transition-colors">
                                 <td class="px-6 py-4">
@@ -100,33 +102,50 @@
                                     @endif
                                 </td>
 
-                                {{-- Semestres S1 / S2 --}}
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-2">
-                                        @foreach ([1 => $s1, 2 => $s2] as $num => $sem)
-                                            @php $semOuvert = $sem?->statut === 'ouvert'; @endphp
-                                            <form method="POST" action="{{ route('admin.annees.semestres.toggle', [$annee, $num]) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit"
-                                                        title="{{ $semOuvert ? 'Clôturer S'.$num : 'Ouvrir S'.$num }}"
-                                                        @if (!$isOuvert) disabled @endif
-                                                        class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition
-                                                            {{ $semOuvert
-                                                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                                                                : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100' }}
-                                                            {{ !$isOuvert ? 'opacity-40 cursor-not-allowed' : '' }}">
-                                                    @if ($semOuvert)
-                                                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                                    @else
-                                                        <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
-                                                    @endif
-                                                    S{{ $num }}
-                                                </button>
-                                            </form>
-                                        @endforeach
-                                    </div>
-                                </td>
+   {{-- Semestres S1 / S2 --}}
+<td class="px-6 py-4">
+    <div class="flex items-center gap-2">
+        @foreach ([1 => $s1, 2 => $s2] as $num => $sem)
+            @php 
+                $semOuvert = $sem?->statut === 'ouvert'; 
+                $boutonSemestreBloque = !$isOuvert; // Bloqué d'office si l'année entière est clôturée
+                
+                if ($isOuvert && !$semOuvert) {
+                    if ($num === 1) {
+                        // S1 est bloqué si S2 est ouvert en ce moment 
+                        // OU si l'année entière contient déjà des données (preuve que S2 a été entamé)
+                        $s2DejaEntame = ($s2?->statut === 'ouvert') || ($annee->evaluations_count > 0) || ($annee->objectifs_count > 0);
+                        
+                        if ($s2DejaEntame) {
+                            $boutonSemestreBloque = true;
+                        }
+                    } elseif ($num === 2) {
+                        // S2 reste bloqué tant que S1 est toujours ouvert
+                        if ($s1?->statut === 'ouvert') {
+                            $boutonSemestreBloque = true;
+                        }
+                    }
+                }
+            @endphp
+            
+            <form method="POST" action="{{ route('admin.annees.semestres.toggle', [$annee, $num]) }}">
+                @csrf
+                @method('PATCH')
+                <button type="submit"
+                        @if($boutonSemestreBloque) disabled @endif
+                        title="@if($boutonSemestreBloque) Période verrouillée @else {{ $semOuvert ? 'Clôturer S'.$num : 'Ouvrir S'.$num }} @endif"
+                        class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition
+                            {{ $semOuvert
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100' }}
+                            {{ $boutonSemestreBloque ? 'opacity-30 cursor-not-allowed' : '' }}">
+                    <span class="h-1.5 w-1.5 rounded-full {{ $semOuvert ? 'bg-emerald-500' : 'bg-slate-400' }}"></span>
+                    S{{ $num }}
+                </button>
+            </form>
+        @endforeach
+    </div>
+</td>
 
                                 <td class="px-6 py-4 text-center">
                                     <span class="font-semibold text-slate-700">{{ $annee->evaluations_count }}</span>
@@ -136,22 +155,54 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center justify-end gap-2">
-                                        {{-- Toggle statut année --}}
-                                        <form method="POST" action="{{ route('admin.annees.toggle-statut', $annee) }}">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit"
-                                                    class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition
-                                                        {{ $isOuvert
-                                                            ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                                                            : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }}">
-                                                @if ($isOuvert)
-                                                    <i class="fas fa-lock text-[10px]"></i> Clôturer
-                                                @else
-                                                    <i class="fas fa-lock-open text-[10px]"></i> Rouvrir
-                                                @endif
-                                            </button>
-                                        </form>
+                                      {{-- Toggle statut année sécurisé --}}
+@php 
+        $semOuvert = $sem?->statut === 'ouvert'; 
+        $boutonSemestreBloque = !$isOuvert; // Bloqué d'office si l'année entière est clôturée
+        
+        if ($isOuvert && !$semOuvert) {
+            if ($num === 1) {
+                // S1 est bloqué si S2 est ouvert en ce moment OR si l'année contient déjà 
+                // des évaluations ou objectifs (ce qui prouve que S2 a été entamé après la fermeture de S1)
+                $s2DejaEntame = ($s2?->statut === 'ouvert') || ($annee->evaluations_count > 0) || ($annee->objectifs_count > 0);
+                
+                if ($s2DejaEntame) {
+                    $boutonSemestreBloque = true;
+                }
+            } elseif ($num === 2) {
+                // S2 reste bloqué tant que S1 est toujours ouvert
+                if ($s1?->statut === 'ouvert') {
+                    $boutonSemestreBloque = true;
+                }
+            }
+        }
+    @endphp
+
+<form method="POST" action="{{ route('admin.annees.toggle-statut', $annee) }}">
+    @csrf
+    @method('PATCH')
+    <button type="submit"
+            @if($boutonBloque) 
+                disabled 
+                title="Fermez d'abord le S1 et le S2 pour pouvoir clôturer l'année"
+            @else
+                title="{{ $isOuvert ? 'Clôturer l\'année' : 'Rouvrir l\'année' }}"
+            @endif
+            class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition
+                @if($boutonBloque)
+                    border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60
+                @elseif($isOuvert)
+                    border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100
+                @else
+                    border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100
+                @endif">
+        @if ($isOuvert)
+            <i class="fas fa-lock text-[10px]"></i> Clôturer
+        @else
+            <i class="fas fa-lock-open text-[10px]"></i> Rouvrir
+        @endif
+    </button>
+</form>
 
                                         {{-- Delete --}}
                                         @if (!$hasData)

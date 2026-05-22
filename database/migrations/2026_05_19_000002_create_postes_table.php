@@ -9,10 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // ── Table des postes prédéfinis par fonction ──────────────────────────
-        Schema::create('fonction', function (Blueprint $table): void {
+        Schema::create('postes', function (Blueprint $table): void {
             $table->id();
-            $table->string('fonction', 100)->index()->comment('Clé de Agent::FONCTIONS (ex: Agent, Conseiller DG)');
-            $table->string('libelle', 150)->comment('Intitulé affiché (ex: Caissier prestataire)');
+            $table->string('fonction', 100)->index()->comment('Rôle de l\'agent (ex: Agent, Conseiller DG)');
+            $table->string('libelle', 150)->comment('Intitulé du poste affiché (ex: Caissier, Chargé de crédit)');
             $table->timestamps();
 
             $table->unique(['fonction', 'libelle']);
@@ -29,7 +29,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('fonction');
+        Schema::dropIfExists('postes');
 
         if (Schema::hasColumn('agents', 'fonction')) {
             Schema::table('agents', function (Blueprint $table): void {

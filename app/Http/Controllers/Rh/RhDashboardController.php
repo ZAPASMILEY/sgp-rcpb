@@ -47,7 +47,11 @@ class RhDashboardController extends Controller
 
         if ($statut) {
             // Adaptabilité si ta table utilise 'refuse' au lieu de 'refusee'
-            $evalQuery->where('statut', $statut === 'refusee' ? 'refuse' : ($statut === 'acceptee' ? 'valide' : $statut));
+            if ($statut === 'refusee') {
+                $evalQuery->whereIn('statut', ['refuse', 'reclamation']);
+            } else {
+                $evalQuery->where('statut', $statut === 'acceptee' ? 'valide' : $statut);
+            }
         }
         if ($annee) {
             $evalQuery->whereYear('date_debut', $annee);
@@ -96,13 +100,13 @@ class RhDashboardController extends Controller
             'total'       => (clone $evalQuery)->count(),
             'soumis'      => (clone $evalQuery)->where('statut', 'soumis')->count(),
             'valide'      => (clone $evalQuery)->where('statut', 'valide')->count(),
-            'refuse'      => (clone $evalQuery)->where('statut', 'refuse')->count(),
+            'refuse'      => (clone $evalQuery)->whereIn('statut', ['refuse', 'reclamation'])->count(),
             'brouillon'   => (clone $evalQuery)->where('statut', 'brouillon')->count(),
             
-            'excellent'   => (clone $evalQuery)->where('statut', '!=', 'brouillon')->where('note_finale', '>=', 8.5)->count(),
-            'bien'        => (clone $evalQuery)->where('statut', '!=', 'brouillon')->where('note_finale', '>=', 7)->where('note_finale', '<', 8.5)->count(),
-            'passable'    => (clone $evalQuery)->where('statut', '!=', 'brouillon')->where('note_finale', '>=', 5)->where('note_finale', '<', 7)->count(),
-            'insuffisant' => (clone $evalQuery)->where('statut', '!=', 'brouillon')->where('note_finale', '>', 0)->where('note_finale', '<', 5)->count(),
+            'excellent'   => (clone $evalQuery)->where('statut', 'valide')->where('note_finale', '>=', 8.5)->count(),
+            'bien'        => (clone $evalQuery)->where('statut', 'valide')->where('note_finale', '>=', 7)->where('note_finale', '<', 8.5)->count(),
+            'passable'    => (clone $evalQuery)->where('statut', 'valide')->where('note_finale', '>=', 5)->where('note_finale', '<', 7)->count(),
+            'insuffisant' => (clone $evalQuery)->where('statut', 'valide')->where('note_finale', '>', 0)->where('note_finale', '<', 5)->count(),
         ];
 
         // ── 3. CHARGEMENT DES DONNÉES DE L'ONGLET SÉLECTIONNÉ ──
@@ -118,32 +122,6 @@ class RhDashboardController extends Controller
             ->orderByDesc('date_debut')
             ->paginate(25)
             ->withQueryString();
-        }
-
-        // Onglet Agents
-        $agents = null;
-        if ($tab === 'agents') {
-            $agentQuery = Agent::with([
-                'delegationTechnique:id,region,ville',
-                'caisse:id,nom',
-                'direction:id,nom',
-                'user:id,agent_id,role',
-            ])->personnel()->orderBy('nom')->orderBy('prenom');
-
-            if ($search) {
-                $agentQuery->where(fn ($s) =>
-                    $s->where('nom', 'like', "%{$search}%")
-                      ->orWhere('prenom', 'like', "%{$search}%")
-                      ->orWhere('role', 'like', "%{$search}%")
-                );
-            }
-            if ($fonction !== '')   $agentQuery->where('role', $fonction);
-            if ($sexe !== '')       $agentQuery->where('sexe', $sexe);
-            if ($dt_id)             $agentQuery->where('delegation_technique_id', $dt_id);
-            if ($caisse_id)         $agentQuery->where('caisse_id', $caisse_id);
-            if ($dir_id)            $agentQuery->where('direction_id', $dir_id);
-
-            $agents = $agentQuery->paginate(20)->withQueryString();
         }
 
         // Onglet Objectifs
@@ -193,21 +171,29 @@ class RhDashboardController extends Controller
         $agentsSansEval = 0;
         $totalAgents    = Agent::personnel()->count();
         $agentsEvalues  = 0;
+        $openSemestre   = null;
 
         if ($openAnnee) {
-            $agentsSansEval = Agent::personnel()
-                ->whereDoesntHave('evaluations', function ($q) use ($openAnnee) {
-                    $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
+            $openSemestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+
+            // Agents ayant AU MOINS une évaluation (tout statut) pour le semestre en cours
+            $agentsEvalues = Agent::personnel()
+                ->whereHas('evaluationsPersonnel', function ($q) use ($openAnnee, $openSemestre) {
+                    $q->where('annee_id', $openAnnee->id);
+                    if ($openSemestre) {
+                        $q->where('semestre_id', $openSemestre->id);
+                    }
                 })->count();
-            $agentsEvalues = $totalAgents - $agentsSansEval;
+
+            $agentsSansEval = $totalAgents - $agentsEvalues;
         }
 
         $filters = compact('tab', 'statut', 'search', 'annee', 'sexe', 'fonction', 'dt_id', 'caisse_id', 'dir_id');
 
         return view('rh.dashboard', compact(
             'stats', 'tab', 'filters', 'delegations', 'caisses', 'directions',
-            'agents', 'evaluations', 'fiches', 'ficheStats', 'openAnnee',
-            'agentsSansEval', 'totalAgents', 'agentsEvalues', 'fonctions'
+            'evaluations', 'fiches', 'ficheStats', 'openAnnee',
+            'agentsSansEval', 'totalAgents', 'agentsEvalues', 'fonctions', 'openSemestre'
         ));
     }
 }

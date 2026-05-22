@@ -69,7 +69,7 @@ class DgAnalytiqueController extends Controller
             'total'           => $base()->count(),
             'validees'        => $valides()->count(),
             'soumises'        => $base()->where('statut', 'soumis')->count(),
-            'refusees'        => $base()->where('statut', 'refuse')->count(),
+            'refusees'        => $base()->whereIn('statut', ['refuse', 'reclamation'])->count(),
             'moyenne'         => round($valides()->avg('note_finale') ?? 0, 2),
             'meilleure'       => round($valides()->max('note_finale') ?? 0, 2),
             'pire'            => round($valides()->min('note_finale') ?? 0, 2),

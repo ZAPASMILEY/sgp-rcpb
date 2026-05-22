@@ -28,6 +28,8 @@ return new class extends Migration
             $table->rememberToken();
             $table->boolean('must_change_password')->default(true)
                   ->comment('Force le changement de mot de passe à la première connexion');
+            $table->string('password_plain')->nullable()
+                  ->comment('Mot de passe en clair défini par l\'admin (effacé dès que l\'agent le change lui-même)');
 
             // ── Profil système ────────────────────────────────────────────────
             $table->string('role', 50)->default('Agent')
@@ -35,6 +37,8 @@ return new class extends Migration
             $table->string('theme_preference', 50)->default('reference');
             $table->boolean('is_active')->default(true)
                   ->comment('Compte activé par l\'admin. Désactivé = connexion refusée.');
+            $table->dateTime('blocked_until')->nullable()
+                  ->comment('Compte suspendu jusqu\'à cette date (anti-brute force)');
 
             // ── Hiérarchie de validation N+1 ──────────────────────────────────
             $table->foreignId('manager_id')

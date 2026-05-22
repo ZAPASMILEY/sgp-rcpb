@@ -23,8 +23,10 @@ class User extends Authenticatable
         'role',
         'manager_id',
         'must_change_password',
+        'password_plain',
         'is_active',
         'theme_preference',
+        'blocked_until',
     ];
 
     protected $hidden = [
@@ -34,8 +36,15 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'blocked_until'     => 'datetime',
+        'password'          => 'hashed',
     ];
+
+    /** Retourne true si ce compte est actuellement suspendu (anti-brute force). */
+    public function isBlocked(): bool
+    {
+        return $this->blocked_until !== null && $this->blocked_until->isFuture();
+    }
 
     // ── Relations ─────────────────────────────────────────────────────────────
 

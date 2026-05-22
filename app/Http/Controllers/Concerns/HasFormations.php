@@ -53,7 +53,7 @@ trait HasFormations
         }
 
         if ($search = trim((string) $request->get('search'))) {
-            $query->where('titre', 'like', "%{$search}%");
+            $query->where('theme', 'like', "%{$search}%");
         }
 
         $formations = $query->orderByDesc('date_debut')->paginate(15)->withQueryString();
@@ -91,7 +91,7 @@ trait HasFormations
         $pdf = Pdf::loadView('formations.pdf', compact('formation'))
             ->setPaper('a4', 'portrait');
 
-        $filename = 'formation_' . $formation->id . '_' . str_replace(' ', '_', $formation->titre) . '.pdf';
+        $filename = 'formation_' . $formation->id . '_' . str_replace(' ', '_', $formation->theme) . '.pdf';
 
         return $pdf->download($filename);
     }

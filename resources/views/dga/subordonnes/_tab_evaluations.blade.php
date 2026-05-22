@@ -103,17 +103,19 @@ $evalCards = [
                         };
 
                         $statusClass = match ($evaluation->statut) {
-                            'valide'  => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                            'soumis'  => 'border-amber-200 bg-amber-50 text-amber-700',
-                            'refuse'  => 'border-rose-200 bg-rose-50 text-rose-700',
-                            default   => 'border-slate-200 bg-slate-100 text-slate-700',
+                            'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                            'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+                            'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+                            'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+                            default       => 'border-slate-200 bg-slate-100 text-slate-700',
                         };
 
                         $statusLabel = match ($evaluation->statut) {
-                            'valide'  => 'Validée',
-                            'soumis'  => 'Soumise',
-                            'refuse'  => 'Refusée',
-                            default   => 'Brouillon',
+                            'valide'      => 'Validée',
+                            'soumis'      => 'Soumise',
+                            'refuse'      => 'Refusée',
+                            'reclamation' => 'Réclamation',
+                            default       => 'Brouillon',
                         };
 
                         $identification = $evaluation->identification;

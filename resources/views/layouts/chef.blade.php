@@ -216,6 +216,8 @@
 </head>
 <body class="h-full antialiased">
 
+    @include('layouts._alerte_banniere')
+
     {{-- ── Sidebar ──────────────────────────────────────────────────────────── --}}
     <nav class="sidebar shadow" id="sidebar">
 

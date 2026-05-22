@@ -255,19 +255,28 @@
     <section class="admin-panel px-6 py-5 lg:px-8">
         @php
             $statutColors = [
-                'brouillon' => 'border-slate-200 bg-slate-100 text-slate-600',
-                'soumis'    => 'border-amber-200 bg-amber-50 text-amber-700',
-                'valide'    => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                'refuse'    => 'border-rose-200 bg-rose-50 text-rose-700',
+                'brouillon'   => 'border-slate-200 bg-slate-100 text-slate-600',
+                'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+                'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+                'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
             ];
-            $statutLabels = ['brouillon' => 'Brouillon', 'soumis' => 'Soumise', 'valide' => 'Validée', 'refuse' => 'Refusée'];
+            $statutLabels = ['brouillon' => 'Brouillon', 'soumis' => 'Soumise', 'valide' => 'Validée', 'refuse' => 'Refusée', 'reclamation' => 'Réclamation'];
         @endphp
         <div class="flex items-center justify-between gap-4">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>
-                <span class="mt-1 inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statutColors[$evaluation->statut] ?? 'bg-slate-100 text-slate-500' }}">
-                    {{ $statutLabels[$evaluation->statut] ?? ucfirst($evaluation->statut) }}
-                </span>
+            <div class="flex flex-col gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>
+                    <span class="mt-1 inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statutColors[$evaluation->statut] ?? 'bg-slate-100 text-slate-500' }}">
+                        {{ $statutLabels[$evaluation->statut] ?? ucfirst($evaluation->statut) }}
+                    </span>
+                </div>
+                @if($evaluation->statut === 'reclamation' && $evaluation->motif_refus)
+                <div class="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+                    <p class="text-xs font-black uppercase tracking-[0.15em] text-orange-600"><i class="fas fa-triangle-exclamation mr-1"></i> Motif du refus</p>
+                    <p class="mt-1.5 text-sm text-orange-800">{{ $evaluation->motif_refus }}</p>
+                </div>
+                @endif
             </div>
             <a href="{{ route('rh.dashboard') }}?tab=evaluations"
                class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-300">

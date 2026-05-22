@@ -91,7 +91,15 @@ class UserController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $users = User::query()
-            ->with(['agent', 'manager'])
+            ->with([
+                'agent.entite',
+                'agent.direction',
+                'agent.delegationTechnique',
+                'agent.caisse',
+                'agent.agence',
+                'agent.guichet',
+                'agent.service',
+            ])
             ->when($search !== '', function ($q) use ($search): void {
                 $q->where(function ($q) use ($search): void {
                     $q->where('name', 'like', "%{$search}%")
@@ -105,7 +113,7 @@ class UserController extends Controller
                 });
             })
             ->orderBy('name')
-            ->get();
+            ->paginate(20)->withQueryString();
 
         return view('admin.users.index', ['users' => $users, 'search' => $search]);
     }
@@ -158,6 +166,7 @@ class UserController extends Controller
             'name'                  => $agent->prenom . ' ' . $agent->nom,
             'email'                 => $validated['email'],
             'password'              => Hash::make($validated['password']),
+            'password_plain'        => $validated['password'],
             'role'                  => $validated['role'],
             'manager_id'            => $validated['manager_id'] ?? null,
             'must_change_password'  => true,
@@ -221,6 +230,7 @@ class UserController extends Controller
 
         if (! empty($validated['password'])) {
             $data['password']             = Hash::make($validated['password']);
+            $data['password_plain']       = $validated['password'];
             $data['must_change_password'] = true;
         }
 
@@ -310,7 +320,8 @@ class UserController extends Controller
     {
         $plain = Str::random(12);
         $user->update([
-            'password'            => Hash::make($plain),
+            'password'             => Hash::make($plain),
+            'password_plain'       => $plain,
             'must_change_password' => true,
         ]);
 
@@ -318,5 +329,30 @@ class UserController extends Controller
             ->route('admin.users.index')
             ->with('status', "Mot de passe réinitialisé : {$plain} — Communiquez-le à l'utilisateur.")
             ->with('generated_password', $plain);
+    }
+
+    /**
+     * Remet le mot de passe à la valeur par défaut (11111111).
+     * Utilisé quand un agent a oublié son mot de passe.
+     */
+    public function resetToDefault(User $user): RedirectResponse
+    {
+        $user->update([
+            'password'             => Hash::make('11111111'),
+            'password_plain'       => '11111111',
+            'must_change_password' => true,
+        ]);
+
+        return back()->with('status', "Mot de passe de {$user->name} remis à 11111111. L'agent devra le changer à la prochaine connexion.");
+    }
+
+    /**
+     * Lève la suspension anti-brute force d'un compte.
+     */
+    public function unblock(User $user): RedirectResponse
+    {
+        $user->update(['blocked_until' => null]);
+
+        return back()->with('status', "Le compte de {$user->name} a été débloqué.");
     }
 }

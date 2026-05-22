@@ -67,7 +67,7 @@ class DirecteurMonEspaceController extends \App\Http\Controllers\Controller
             'total'     => $evaluationsRecues->count(),
             'soumis'    => $evaluationsRecues->where('statut', 'soumis')->count(),
             'valide'    => $evaluationsRecues->where('statut', 'valide')->count(),
-            'refuse'    => $evaluationsRecues->where('statut', 'refuse')->count(),
+            'refuse'    => $evaluationsRecues->whereIn('statut', ['refuse', 'reclamation'])->count(),
             'brouillon' => $evaluationsRecues->where('statut', 'brouillon')->count(),
         ];
 

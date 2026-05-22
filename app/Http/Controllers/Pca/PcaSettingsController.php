@@ -48,7 +48,8 @@ class PcaSettingsController extends Controller
         }
 
         $request->user()->forceFill([
-            'password' => Hash::make($validated['password']),
+            'password'       => Hash::make($validated['password']),
+            'password_plain' => null,
         ])->save();
 
         return redirect()

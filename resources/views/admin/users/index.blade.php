@@ -31,7 +31,7 @@
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Administration</p>
                 <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Comptes utilisateurs</h1>
-                <p class="mt-2 text-sm text-slate-600">{{ $users->count() }} compte(s){{ $search ? ' trouvé(s)' : ' enregistré(s)' }}.</p>
+                <p class="mt-2 text-sm text-slate-600">{{ $users->total() }} compte(s){{ $search ? ' trouvé(s)' : ' enregistré(s)' }}.</p>
             </div>
             <a href="{{ route('admin.users.create') }}" class="ent-btn ent-btn-primary">
                 <i class="fas fa-plus mr-2"></i> Nouveau compte
@@ -67,7 +67,7 @@
                             <th class="px-4 py-3 font-semibold text-slate-600">Agent lié</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Email</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Rôle système</th>
-                            <th class="px-4 py-3 font-semibold text-slate-600">Manager (N+1)</th>
+                            <th class="px-4 py-3 font-semibold text-slate-600">Entité d'affectation</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">MDP forcé</th>
                             <th class="px-4 py-3"></th>
                         </tr>
@@ -89,8 +89,33 @@
                                         {{ \App\Http\Controllers\Admin\UserController::ROLES[$user->role] ?? $user->role }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-slate-600">
-                                    {{ $user->manager?->name ?? '—' }}
+                                <td class="px-4 py-3">
+                                    @php
+                                        $a = $user->agent;
+                                        $entiteNom  = null;
+                                        $entiteType = null;
+                                        $entiteColor = 'bg-slate-100 text-slate-500';
+                                        if ($a) {
+                                            $dt = $a->delegation_technique_id ? $a->delegationTechnique : null;
+                                            $dtNom = $dt ? trim(($dt->ville ?? '') . ($dt->region ? ' ('.$dt->region.')' : '')) : null;
+
+                                            if ($a->service_id)                { $entiteNom = $a->service?->nom;     $entiteType = 'Service';    $entiteColor = 'bg-violet-100 text-violet-700'; }
+                                            elseif ($a->guichet_id)            { $entiteNom = $a->guichet?->nom;     $entiteType = 'Guichet';    $entiteColor = 'bg-pink-100 text-pink-700'; }
+                                            elseif ($a->agence_id)             { $entiteNom = $a->agence?->nom;      $entiteType = 'Agence';     $entiteColor = 'bg-cyan-100 text-cyan-700'; }
+                                            elseif ($a->caisse_id)             { $entiteNom = $a->caisse?->nom;      $entiteType = 'Caisse';     $entiteColor = 'bg-emerald-100 text-emerald-700'; }
+                                            elseif ($a->delegation_technique_id){ $entiteNom = $dtNom;               $entiteType = 'DT';         $entiteColor = 'bg-orange-100 text-orange-700'; }
+                                            elseif ($a->direction_id)          { $entiteNom = $a->direction?->nom;   $entiteType = 'Direction';  $entiteColor = 'bg-blue-100 text-blue-700'; }
+                                            elseif ($a->entite_id)             { $entiteNom = $a->entite?->nom;      $entiteType = 'Faîtière';   $entiteColor = 'bg-green-100 text-green-700'; }
+                                        }
+                                    @endphp
+                                    @if ($entiteNom)
+                                        <span class="inline-flex items-center gap-1.5 rounded-full {{ $entiteColor }} px-2.5 py-0.5 text-xs font-semibold">
+                                            {{ $entiteType }}
+                                        </span>
+                                        <span class="block mt-0.5 text-xs text-slate-600 font-medium">{{ $entiteNom }}</span>
+                                    @else
+                                        <span class="text-slate-300 italic text-xs">—</span>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3">
                                     @if ($user->must_change_password)
@@ -151,6 +176,16 @@
                 </table>
             </div>
         </section>
+
+        {{-- Pagination --}}
+        @if ($users->hasPages())
+            <div class="flex items-center justify-between rounded-2xl bg-white px-5 py-3 shadow-sm">
+                <span class="text-xs text-slate-400">
+                    {{ $users->firstItem() }}–{{ $users->lastItem() }} sur {{ $users->total() }} compte(s)
+                </span>
+                {{ $users->links() }}
+            </div>
+        @endif
 
     </div>
 </main>

@@ -105,7 +105,10 @@
                 <h2 class="text-base font-black text-slate-900">Services</h2>
                 <p class="text-xs text-slate-400 mt-0.5">{{ count($services) }} service{{ count($services) > 1 ? 's' : '' }} rattaché{{ count($services) > 1 ? 's' : '' }} à la Direction DGA</p>
             </div>
-            <span class="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700">{{ count($services) }}</span>
+            <button type="button" onclick="document.getElementById('modal-create-service').classList.remove('hidden')"
+                    class="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-purple-700 transition">
+                <i class="fas fa-plus text-[10px]"></i> Créer un service
+            </button>
         </div>
 
         @if(count($services) === 0)
@@ -117,11 +120,12 @@
                     $service   = $s['service'];
                     $chef      = $s['chef'];
                     $chefUser  = $s['chefUser'];
-                    // Agents du service hors chef
                     $membres   = $service->agents->where('id', '!=', $chef?->id)->values();
+                    // Agents dispo pour CE service = agents sans service dans la direction
+                    $dispoPourService = $agentsDisponibles->filter(fn($a) => (int)$a->id !== $chef?->id);
                 @endphp
                 <div class="px-5 py-4">
-                    {{-- Ligne chef + action --}}
+                    {{-- Ligne chef + actions --}}
                     <div class="flex flex-wrap items-center gap-4">
                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-600 text-white font-black text-lg shadow">
                             {{ strtoupper(substr($service->nom, 0, 1)) }}
@@ -156,16 +160,40 @@
                             </div>
                         </div>
 
-                        <a href="{{ route('admin.direction-dga.services.chef.edit', $service) }}"
-                           class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition">
-                            <i class="fas fa-pen text-[10px]"></i>
-                            {{ $chef ? 'Changer le chef' : 'Affecter un chef' }}
-                        </a>
+                        <div class="flex shrink-0 items-center gap-2">
+                            {{-- Affecter / changer chef --}}
+                            <a href="{{ route('admin.direction-dga.services.chef.edit', $service) }}"
+                               class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition">
+                                <i class="fas fa-user-tie text-[10px]"></i>
+                                {{ $chef ? 'Changer le chef' : 'Affecter un chef' }}
+                            </a>
+
+                            {{-- Ajouter un agent --}}
+                            @if($dispoPourService->isNotEmpty())
+                            <button type="button"
+                                    onclick="document.getElementById('modal-add-agent-{{ $service->id }}').classList.remove('hidden')"
+                                    class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition">
+                                <i class="fas fa-user-plus text-[10px]"></i> Ajouter un agent
+                            </button>
+                            @endif
+
+                            {{-- Supprimer le service --}}
+                            @if($s['nbAgents'] === 0)
+                            <form method="POST" action="{{ route('admin.direction-dga.services.destroy', $service) }}"
+                                  onsubmit="return confirm('Supprimer le service « {{ e($service->nom) }} » ?')">
+                                @csrf @method('DELETE')
+                                <button type="submit"
+                                        class="inline-flex items-center justify-center h-8 w-8 rounded-xl border border-rose-200 bg-rose-50 text-rose-500 hover:bg-rose-100 transition">
+                                    <i class="fas fa-trash text-[10px]"></i>
+                                </button>
+                            </form>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Agents du service --}}
                     @if($membres->isNotEmpty())
-                        <div class="mt-3 ml-15 pl-1 border-l-2 border-purple-100 space-y-1" style="margin-left:3.75rem">
+                        <div class="mt-3 border-l-2 border-purple-100 space-y-1 pl-1" style="margin-left:3.75rem">
                             @foreach($membres as $agent)
                             @php $agentUser = \App\Models\User::where('agent_id', $agent->id)->first(); @endphp
                             <div class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-2.5">
@@ -187,16 +215,99 @@
                                         Sans compte
                                     </span>
                                 @endif
+                                {{-- Retirer du service --}}
+                                <form method="POST"
+                                      action="{{ route('admin.direction-dga.services.agents.destroy', [$service, $agent]) }}"
+                                      onsubmit="return confirm('Retirer {{ e($agent->prenom) }} {{ e($agent->nom) }} du service ?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit"
+                                            class="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                                            title="Retirer du service">
+                                        <i class="fas fa-times text-[10px]"></i>
+                                    </button>
+                                </form>
                             </div>
                             @endforeach
                         </div>
-                    @elseif($s['nbAgents'] <= 1)
+                    @else
                         <p class="mt-2 text-xs italic text-slate-300" style="margin-left:3.75rem">Aucun autre agent dans ce service.</p>
+                    @endif
+
+                    {{-- Modale : ajouter un agent au service --}}
+                    @if($dispoPourService->isNotEmpty())
+                    <div id="modal-add-agent-{{ $service->id }}" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl mx-4">
+                            <div class="mb-4 flex items-center justify-between">
+                                <h3 class="text-sm font-black text-slate-900">Ajouter un agent — {{ $service->nom }}</h3>
+                                <button type="button" onclick="document.getElementById('modal-add-agent-{{ $service->id }}').classList.add('hidden')"
+                                        class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
+                                    <i class="fas fa-times text-xs"></i>
+                                </button>
+                            </div>
+                            <form method="POST" action="{{ route('admin.direction-dga.services.agents.store', $service) }}" class="space-y-4">
+                                @csrf
+                                <div>
+                                    <label class="mb-1 block text-xs font-semibold text-slate-600">Agent à affecter</label>
+                                    <select name="agent_id" required
+                                            class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100" data-no-ts>
+                                        <option value="">— Choisir un agent —</option>
+                                        @foreach($dispoPourService as $ag)
+                                            <option value="{{ $ag->id }}">{{ $ag->prenom }} {{ $ag->nom }} — {{ $ag->role }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="flex justify-end gap-2">
+                                    <button type="button"
+                                            onclick="document.getElementById('modal-add-agent-{{ $service->id }}').classList.add('hidden')"
+                                            class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">
+                                        Annuler
+                                    </button>
+                                    <button type="submit"
+                                            class="rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white hover:bg-purple-700">
+                                        <i class="fas fa-check mr-1"></i>Affecter
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                     @endif
                 </div>
                 @endforeach
             </div>
         @endif
+    </div>
+
+    {{-- ── Modale : créer un service ─────────────────────────────────────── --}}
+    <div id="modal-create-service" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl mx-4">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-sm font-black text-slate-900">Nouveau service</h3>
+                <button type="button" onclick="document.getElementById('modal-create-service').classList.add('hidden')"
+                        class="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('admin.direction-dga.services.store') }}" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-600">Nom du service <span class="text-rose-500">*</span></label>
+                    <input type="text" name="nom" required autofocus
+                           class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                           placeholder="Ex : Service Informatique">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button"
+                            onclick="document.getElementById('modal-create-service').classList.add('hidden')"
+                            class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">
+                        Annuler
+                    </button>
+                    <button type="submit"
+                            class="rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white hover:bg-purple-700">
+                        <i class="fas fa-plus mr-1"></i>Créer
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     {{-- ── Collaborateurs directs ─────────────────────────────────────────── --}}

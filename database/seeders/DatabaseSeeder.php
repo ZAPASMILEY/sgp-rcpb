@@ -30,6 +30,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolesAndPermissionsSeeder::class,
             SubjectiveCriteriaTemplateSeeder::class,
+            PosteSeeder::class,
+            GrandSeeder::class,
         ]);
     }
 }

@@ -30,7 +30,7 @@ class FormationGererController extends Controller
 
         if ($search = trim((string) $request->get('search'))) {
             $query->where(function ($q) use ($search) {
-                $q->where('titre', 'like', "%{$search}%")
+                $q->where('theme', 'like', "%{$search}%")
                   ->orWhereHas('agent', fn ($a) =>
                       $a->where('nom', 'like', "%{$search}%")
                         ->orWhere('prenom', 'like', "%{$search}%")
@@ -69,18 +69,18 @@ class FormationGererController extends Controller
         $agents              = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
         $domaines            = Formation::DOMAINES;
         $preselectedAgentId  = (int) $request->get('agent_id', 0);
-        $titresExistants     = Formation::distinct()->orderBy('titre')->pluck('titre');
+        $themesExistants     = Formation::distinct()->orderBy('theme')->pluck('theme');
         $layout              = $this->layout();
         $routePrefix         = 'gerer';
 
-        return view('rh.formations.create', compact('agents', 'domaines', 'preselectedAgentId', 'titresExistants', 'layout', 'routePrefix'));
+        return view('rh.formations.create', compact('agents', 'domaines', 'preselectedAgentId', 'themesExistants', 'layout', 'routePrefix'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'agent_id'     => ['required', 'integer', 'exists:agents,id'],
-            'titre'        => ['required', 'string', 'max:255'],
+            'theme'        => ['required', 'string', 'max:255'],
             'domaine'      => ['required', 'string', 'in:' . implode(',', array_keys(Formation::DOMAINES))],
             'date_debut'   => ['required', 'date'],
             'date_fin'     => ['required', 'date', 'after_or_equal:date_debut'],
@@ -94,7 +94,7 @@ class FormationGererController extends Controller
 
         return redirect()
             ->route('gerer.formations.index')
-            ->with('status', 'Formation « ' . $formation->titre . ' » enregistrée.');
+            ->with('status', 'Formation « ' . $formation->theme . ' » enregistrée.');
     }
 
     // ── Modifier ───────────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ class FormationGererController extends Controller
     {
         $validated = $request->validate([
             'agent_id'     => ['required', 'integer', 'exists:agents,id'],
-            'titre'        => ['required', 'string', 'max:255'],
+            'theme'        => ['required', 'string', 'max:255'],
             'domaine'      => ['required', 'string', 'in:' . implode(',', array_keys(Formation::DOMAINES))],
             'date_debut'   => ['required', 'date'],
             'date_fin'     => ['required', 'date', 'after_or_equal:date_debut'],
@@ -131,12 +131,12 @@ class FormationGererController extends Controller
 
     public function destroy(Formation $formation): RedirectResponse
     {
-        $titre = $formation->titre;
+        $theme = $formation->theme;
         $formation->delete();
 
         return redirect()
             ->route('gerer.formations.index')
-            ->with('status', 'Formation « ' . $titre . ' » supprimée.');
+            ->with('status', 'Formation « ' . $theme . ' » supprimée.');
     }
 
     // ── PDF ────────────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ class FormationGererController extends Controller
         $pdf = Pdf::loadView('formations.pdf', compact('formation'))
             ->setPaper('a4', 'portrait');
 
-        $filename = 'formation_' . $formation->id . '_' . str_replace(' ', '_', $formation->titre) . '.pdf';
+        $filename = 'formation_' . $formation->id . '_' . str_replace(' ', '_', $formation->theme) . '.pdf';
 
         return $pdf->download($filename);
     }

@@ -28,7 +28,7 @@
 @forelse ($autoFormations as $f)
     <tr>
         <td>{{ $f->date_debut->translatedFormat('d M Y') }} – {{ $f->date_fin->translatedFormat('d M Y') }}</td>
-        <td>{{ $f->titre }}</td>
+        <td>{{ $f->theme }}</td>
         <td>{{ $f->domaine_label }}</td>
     </tr>
 @empty

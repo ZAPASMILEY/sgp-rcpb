@@ -361,7 +361,7 @@
 </div>
 
 {{-- Bandeau refus/réclamation pour directeur évalué --}}
-@if($isReceived && $evaluation->statut === 'refuse')
+@if($isReceived && in_array($evaluation->statut, ['refuse', 'reclamation']))
 <div class="fixed bottom-0 inset-x-0 z-30 mx-auto max-w-2xl px-4 pb-6">
     <div class="flex flex-col gap-3 rounded-[24px] border-2 border-rose-200 bg-white shadow-2xl px-6 py-5">
         <div class="flex items-start gap-4">

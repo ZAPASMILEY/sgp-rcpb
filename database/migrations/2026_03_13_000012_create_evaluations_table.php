@@ -43,7 +43,7 @@ return new class extends Migration
             $table->text('strategies_amelioration')->nullable();
             $table->text('commentaires_evalue')->nullable();
 
-            $table->enum('statut', ['brouillon', 'soumis', 'valide', 'refuse'])->default('brouillon');
+            $table->enum('statut', ['brouillon', 'soumis', 'valide', 'refuse', 'reclamation'])->default('brouillon');
 
             // 6. Workflow réclamation
             $table->text('motif_refus')->nullable();

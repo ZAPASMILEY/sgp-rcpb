@@ -41,16 +41,18 @@
                         <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>
                         @php
                             $statutLabel = match($evaluation->statut) {
-                                'valide'    => 'Validée',
-                                'soumis'    => 'Soumise',
-                                'refuse'    => 'Refusée',
-                                default     => 'Brouillon',
+                                'valide'      => 'Validée',
+                                'soumis'      => 'Soumise',
+                                'refuse'      => 'Refusée',
+                                'reclamation' => 'Réclamation',
+                                default       => 'Brouillon',
                             };
                             $statutClass = match($evaluation->statut) {
-                                'valide'    => 'text-emerald-700',
-                                'soumis'    => 'text-amber-700',
-                                'refuse'    => 'text-rose-700',
-                                default     => 'text-slate-600',
+                                'valide'      => 'text-emerald-700',
+                                'soumis'      => 'text-amber-700',
+                                'refuse'      => 'text-rose-700',
+                                'reclamation' => 'text-orange-600',
+                                default       => 'text-slate-600',
                             };
                         @endphp
                         <p class="mt-2 text-sm font-semibold {{ $statutClass }}">{{ $statutLabel }}</p>

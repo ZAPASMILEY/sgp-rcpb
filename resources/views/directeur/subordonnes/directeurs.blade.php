@@ -104,14 +104,15 @@
                             } : 'bg-slate-200';
 
                             $statutClass = $eval ? match($eval->statut) {
-                                'valide' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                                'soumis' => 'bg-amber-100 text-amber-700 border-amber-200',
-                                'refuse' => 'bg-rose-100 text-rose-700 border-rose-200',
-                                default  => 'bg-slate-100 text-slate-600 border-slate-200',
+                                'valide'      => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                                'soumis'      => 'bg-amber-100 text-amber-700 border-amber-200',
+                                'refuse'      => 'bg-rose-100 text-rose-700 border-rose-200',
+                                'reclamation' => 'bg-orange-100 text-orange-700 border-orange-200',
+                                default       => 'bg-slate-100 text-slate-600 border-slate-200',
                             } : null;
                             $statutLabel = $eval ? match($eval->statut) {
                                 'valide' => 'Validée', 'soumis' => 'Soumise',
-                                'refuse' => 'Refusée', default => 'Brouillon',
+                                'refuse' => 'Refusée', 'reclamation' => 'Réclamation', default => 'Brouillon',
                             } : null;
                         @endphp
                         <div class="flex flex-wrap items-center gap-5 px-6 py-5 transition hover:bg-slate-50/70 lg:px-8">

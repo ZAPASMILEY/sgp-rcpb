@@ -142,17 +142,19 @@
                         @foreach ($evaluationsRecues as $eval)
                             @php
                                 $statClass = match ($eval->statut) {
-                                    'valide'    => 'bg-emerald-100 text-emerald-700',
-                                    'soumis'    => 'bg-amber-100 text-amber-700',
-                                    'refuse'    => 'bg-rose-100 text-rose-700',
-                                    default     => 'bg-slate-100 text-slate-600',
+                                    'valide'      => 'bg-emerald-100 text-emerald-700',
+                                    'soumis'      => 'bg-amber-100 text-amber-700',
+                                    'refuse'      => 'bg-rose-100 text-rose-700',
+                                    'reclamation' => 'bg-orange-100 text-orange-700',
+                                    default       => 'bg-slate-100 text-slate-600',
                                 };
                                 $statLabel = match ($eval->statut) {
-                                    'valide'    => 'Acceptée',
-                                    'soumis'    => 'Soumise',
-                                    'refuse'    => 'Refusée',
-                                    'brouillon' => 'Brouillon',
-                                    default     => ucfirst($eval->statut),
+                                    'valide'      => 'Acceptée',
+                                    'soumis'      => 'Soumise',
+                                    'refuse'      => 'Refusée',
+                                    'reclamation' => 'Réclamation',
+                                    'brouillon'   => 'Brouillon',
+                                    default       => ucfirst($eval->statut),
                                 };
                             @endphp
                             <a href="{{ route('chef.evaluations.show', $eval) }}"
@@ -198,12 +200,14 @@
                                     'acceptee'   => 'bg-emerald-100 text-emerald-700',
                                     'en_attente' => 'bg-amber-100 text-amber-700',
                                     'refusee'    => 'bg-rose-100 text-rose-700',
+                                    'contesté'   => 'bg-orange-100 text-orange-700',
                                     default      => 'bg-slate-100 text-slate-600',
                                 };
                                 $statLabel = match ($fiche->statut) {
                                     'acceptee'   => 'Acceptée',
                                     'en_attente' => 'En attente',
                                     'refusee'    => 'Refusée',
+                                    'contesté'   => 'Contestée',
                                     default      => ucfirst($fiche->statut),
                                 };
                             @endphp
@@ -297,18 +301,20 @@
                                         $statut   = $row['eval_statut'];
 
                                         $evalClass = match ($statut) {
-                                            'valide'    => 'bg-emerald-100 text-emerald-700',
-                                            'soumis'    => 'bg-amber-100 text-amber-700',
-                                            'refuse'    => 'bg-rose-100 text-rose-700',
-                                            'brouillon' => 'bg-slate-100 text-slate-600',
-                                            default     => null,
+                                            'valide'      => 'bg-emerald-100 text-emerald-700',
+                                            'soumis'      => 'bg-amber-100 text-amber-700',
+                                            'refuse'      => 'bg-rose-100 text-rose-700',
+                                            'reclamation' => 'bg-orange-100 text-orange-700',
+                                            'brouillon'   => 'bg-slate-100 text-slate-600',
+                                            default       => null,
                                         };
                                         $evalLabel = match ($statut) {
-                                            'valide'    => 'Acceptée',
-                                            'soumis'    => 'Soumise',
-                                            'refuse'    => 'Refusée',
-                                            'brouillon' => 'Brouillon',
-                                            default     => null,
+                                            'valide'      => 'Acceptée',
+                                            'soumis'      => 'Soumise',
+                                            'refuse'      => 'Refusée',
+                                            'reclamation' => 'Réclamation',
+                                            'brouillon'   => 'Brouillon',
+                                            default       => null,
                                         };
                                     @endphp
                                     <tr class="hover:bg-slate-50/70">

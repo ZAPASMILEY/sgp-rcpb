@@ -24,7 +24,7 @@
             @if($anneeSelectionnee)
             <a href="{{ request()->fullUrlWithQuery(['export' => 1]) }}"
                class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/25">
-                <i class="fas fa-file-csv"></i> Exporter CSV
+                <i class="fas fa-file-excel"></i> Exporter Excel
             </a>
             @endif
         </div>

@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <title>Evaluation #{{ $evaluation->id }}</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #111827; line-height: 1.4; }
-        h1 { margin: 0 0 6px; font-size: 18px; }
-        h2 { margin: 18px 0 8px; font-size: 13px; }
-        .muted { color: #6b7280; }
-        .grid { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .grid td, .grid th { border: 1px solid #d1d5db; padding: 6px; vertical-align: top; }
-        .criterion { margin-top: 12px; margin-bottom: 12px; }
-        .criterion-title { font-weight: 700; margin-bottom: 4px; }
+        * { box-sizing: border-box; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #111827; line-height: 1.4; margin: 0; padding: 10px 14px; }
+        h1 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
+        h2 { margin: 14px 0 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
+        .muted { color: #6b7280; font-size: 10px; margin-bottom: 4px; }
+        .grid { width: 100%; border-collapse: collapse; margin-top: 5px; table-layout: fixed; }
+        .grid th { background: #f1f5f9; font-weight: 700; font-size: 9.5px; text-align: left; padding: 5px 6px; border: 1px solid #cbd5e1; }
+        .grid td { border: 1px solid #cbd5e1; padding: 5px 6px; vertical-align: top; font-size: 9.5px; word-wrap: break-word; }
+        .group-row td { background: #e2e8f0; font-weight: 700; font-size: 9.5px; padding: 4px 6px; }
+        .note-col { width: 10%; text-align: center; }
     </style>
 </head>
 <body>
@@ -88,46 +90,68 @@
     </table>
 
     <h2>Criteres objectifs</h2>
-    @foreach ($objectiveCriteria as $criterion)
-        <div class="criterion">
-            <div class="criterion-title">{{ $criterion->titre }} (note globale : {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }})</div>
-            <table class="grid">
+    <table class="grid">
+        <colgroup>
+            <col style="width:35%">
+            <col style="width:35%">
+            <col style="width:10%">
+            <col style="width:20%">
+        </colgroup>
+        <tr>
+            <th>Critere</th>
+            <th>Sous-critere</th>
+            <th class="note-col">Note /5</th>
+            <th>Observation</th>
+        </tr>
+        @foreach ($objectiveCriteria as $criterion)
+            <tr class="group-row">
+                <td colspan="4">
+                    {{ $criterion->titre }}
+                    — Note globale : {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}
+                </td>
+            </tr>
+            @foreach ($criterion->sousCriteres as $subcriterion)
                 <tr>
-                    <th>Sous-critere</th>
-                    <th>Note /5</th>
-                    <th>Observation</th>
+                    <td></td>
+                    <td>{{ $subcriterion->libelle }}</td>
+                    <td class="note-col" style="text-align:center">{{ number_format((float) $subcriterion->note, 2, ',', ' ') }}</td>
+                    <td>{{ $subcriterion->observation ?: '-' }}</td>
                 </tr>
-                @foreach ($criterion->sousCriteres as $subcriterion)
-                    <tr>
-                        <td>{{ $subcriterion->libelle }}</td>
-                        <td>{{ number_format((float) $subcriterion->note, 2, ',', ' ') }}</td>
-                        <td>{{ $subcriterion->observation ?: '-' }}</td>
-                    </tr>
-                @endforeach
-            </table>
-        </div>
-    @endforeach
+            @endforeach
+        @endforeach
+    </table>
 
     <h2>Criteres subjectifs</h2>
-    @foreach ($subjectiveCriteria as $criterion)
-        <div class="criterion">
-            <div class="criterion-title">{{ $criterion->titre }} (note globale : {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }})</div>
-            <table class="grid">
+    <table class="grid">
+        <colgroup>
+            <col style="width:35%">
+            <col style="width:35%">
+            <col style="width:10%">
+            <col style="width:20%">
+        </colgroup>
+        <tr>
+            <th>Critere</th>
+            <th>Sous-critere</th>
+            <th class="note-col">Note /5</th>
+            <th>Observation</th>
+        </tr>
+        @foreach ($subjectiveCriteria as $criterion)
+            <tr class="group-row">
+                <td colspan="4">
+                    {{ $criterion->titre }}
+                    — Note globale : {{ number_format((float) $criterion->note_globale, 2, ',', ' ') }}
+                </td>
+            </tr>
+            @foreach ($criterion->sousCriteres as $subcriterion)
                 <tr>
-                    <th>Sous-critere</th>
-                    <th>Note /5</th>
-                    <th>Observation</th>
+                    <td></td>
+                    <td>{{ $subcriterion->libelle }}</td>
+                    <td class="note-col" style="text-align:center">{{ number_format((float) $subcriterion->note, 2, ',', ' ') }}</td>
+                    <td>{{ $subcriterion->observation ?: '-' }}</td>
                 </tr>
-                @foreach ($criterion->sousCriteres as $subcriterion)
-                    <tr>
-                        <td>{{ $subcriterion->libelle }}</td>
-                        <td>{{ number_format((float) $subcriterion->note, 2, ',', ' ') }}</td>
-                        <td>{{ $subcriterion->observation ?: '-' }}</td>
-                    </tr>
-                @endforeach
-            </table>
-        </div>
-    @endforeach
+            @endforeach
+        @endforeach
+    </table>
 
     <h2>Note totale d'évaluation</h2>
     <table class="grid">

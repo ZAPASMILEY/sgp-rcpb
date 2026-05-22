@@ -115,10 +115,11 @@
                             'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
                             'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
                             'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
+                            'contesté'   => 'border-orange-200 bg-orange-50 text-orange-700',
                             default      => 'border-slate-200 bg-slate-100 text-slate-600',
                         };
                         $sl = match($fiche->statut) {
-                            'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', default => ucfirst($fiche->statut),
+                            'acceptee' => 'Acceptée', 'en_attente' => 'En attente', 'refusee' => 'Refusée', 'contesté' => 'Contestée', default => ucfirst($fiche->statut),
                         };
                     @endphp
                     <div class="mb-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

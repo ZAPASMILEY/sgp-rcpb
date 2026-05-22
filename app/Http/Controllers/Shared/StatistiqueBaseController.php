@@ -9,6 +9,7 @@ use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use App\Helpers\XlsxHelper;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -23,12 +24,12 @@ abstract class StatistiqueBaseController extends Controller
     /** Vue à rendre (ex: 'rh.statistiques.index' ou 'dg.statistiques.index') */
     abstract protected function viewName(): string;
 
-    /** Préfixe du fichier CSV exporté */
+    /** Préfixe du fichier XLSX exporté */
     abstract protected function csvFilenamePrefix(): string;
 
     // ────────────────────────────────────────────────────────────────────────
 
-    public function __invoke(Request $request): View|StreamedResponse
+    public function __invoke(Request $request): View|\Illuminate\Http\Response|StreamedResponse
     {
         $annees = Annee::orderByDesc('annee')->get();
 
@@ -52,8 +53,9 @@ abstract class StatistiqueBaseController extends Controller
                     'delegationTechnique',
                     'caisse.delegationTechnique',
                     'direction',
-                    'evaluations' => fn ($q) => $q
+                    'evaluationsPersonnel' => fn ($q) => $q
                         ->where('annee_id', $anneeSelectionnee->id)
+                        ->where('statut', 'valide')
                         ->with(['semestre', 'identification']),
                 ])
                 // ── Filtres de périmètre ─────────────────────────────────────
@@ -118,61 +120,66 @@ abstract class StatistiqueBaseController extends Controller
 
     // ────────────────────────────────────────────────────────────────────────
 
-    private function exportCsv($agents, $annee, $s1, $s2, string $type): StreamedResponse
+    private function exportCsv($agents, $annee, $s1, $s2, string $type): \Illuminate\Http\Response
     {
-        $filename   = $this->csvFilenamePrefix() . ($annee?->annee ?? 'export') . '.csv';
+        $filename   = $this->csvFilenamePrefix() . ($annee?->annee ?? 'export') . '.xlsx';
         $isFaitiere = in_array($type, ['faitiere', 'siege']);
 
-        return response()->streamDownload(function () use ($agents, $s1, $s2, $isFaitiere, $type) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
+        $headers = ['Matricule', 'Nom et Prénom', 'Sexe', 'Fonction', 'Grade'];
+        if ($type === 'siege')    $headers[] = 'Direction';
+        elseif ($isFaitiere)      $headers[] = 'Structure';
+        else                      $headers[] = 'Délégation';
+        if (! $isFaitiere)        $headers[] = 'Caisse';
+        $headers = array_merge($headers, ['Date de prise de fonction', 'Note S1', 'Note S2', 'Note Annuelle']);
 
-            $headers = ['Matricule', 'Nom et Prénom', 'Sexe', 'Fonction', 'Grade'];
-            if ($type === 'siege')        $headers[] = 'Direction';
-            elseif ($isFaitiere)          $headers[] = 'Structure';
-            else                          $headers[] = 'Délégation';
-            if (! $isFaitiere)            $headers[] = 'Caisse';
-            $headers = array_merge($headers, ['Date de prise de fonction', 'Note S1', 'Note S2', 'Note Annuelle']);
+        $rows = [];
+        foreach ($agents as $agent) {
+            $evals  = $agent->evaluationsPersonnel->keyBy(fn ($e) => $e->semestre?->numero);
+            $evalS1 = $s1 ? $evals->get(1) : null;
+            $evalS2 = $s2 ? $evals->get(2) : null;
+            $grade  = ($evalS1?->identification?->grade ?? $evalS2?->identification?->grade) ?? '—';
+            $noteS1 = $evalS1?->note_finale !== null ? (float) number_format((float)$evalS1->note_finale, 2, '.', '') : '';
+            $noteS2 = $evalS2?->note_finale !== null ? (float) number_format((float)$evalS2->note_finale, 2, '.', '') : '';
+            $noteAn = ($noteS1 !== '' && $noteS2 !== '')
+                ? (float) number_format(((float)$noteS1 + (float)$noteS2) / 2, 2, '.', '')
+                : ($noteS1 !== '' ? $noteS1 : ($noteS2 !== '' ? $noteS2 : ''));
 
-            fputcsv($handle, $headers, ';');
-
-            foreach ($agents as $agent) {
-                $evals  = $agent->evaluations->keyBy(fn ($e) => $e->semestre?->numero);
-                $evalS1 = $s1 ? $evals->get(1) : null;
-                $evalS2 = $s2 ? $evals->get(2) : null;
-                $grade  = ($evalS1?->identification?->grade ?? $evalS2?->identification?->grade) ?? '—';
-                $noteS1 = $evalS1?->note_finale !== null ? number_format((float)$evalS1->note_finale, 2, '.', '') : '';
-                $noteS2 = $evalS2?->note_finale !== null ? number_format((float)$evalS2->note_finale, 2, '.', '') : '';
-                $noteAn = ($noteS1 !== '' && $noteS2 !== '')
-                    ? number_format(((float)$noteS1 + (float)$noteS2) / 2, 2, '.', '')
-                    : ($noteS1 !== '' ? $noteS1 : ($noteS2 !== '' ? $noteS2 : ''));
-
-                if ($type === 'siege') {
-                    $col = $agent->direction?->nom ?? 'FCPB';
-                } elseif ($isFaitiere) {
-                    $col = $agent->delegationTechnique
-                        ? $agent->delegationTechnique->region . ' - ' . $agent->delegationTechnique->ville
-                        : 'FCPB';
-                } else {
-                    $col = $agent->delegationTechnique
-                        ? $agent->delegationTechnique->region . ' - ' . $agent->delegationTechnique->ville
-                        : ($agent->caisse?->delegationTechnique
-                            ? $agent->caisse->delegationTechnique->region . ' - ' . $agent->caisse->delegationTechnique->ville
-                            : '—');
-                }
-
-                $row = [$agent->matricule ?? '—', trim(($agent->prenom ?? '') . ' ' . ($agent->nom ?? '')),
-                    $agent->sexe ?? '—', $agent->poste ?? $agent->role ?? '—', $grade, $col];
-                if (! $isFaitiere) $row[] = $agent->caisse?->nom ?? '—';
-                $row = array_merge($row, [
-                    $agent->date_debut_fonction?->format('d/m/Y') ?? '—',
-                    $noteS1, $noteS2, $noteAn,
-                ]);
-
-                fputcsv($handle, $row, ';');
+            if ($type === 'siege') {
+                $col = $agent->direction?->nom ?? 'FCPB';
+            } elseif ($isFaitiere) {
+                $col = $agent->delegationTechnique
+                    ? $agent->delegationTechnique->region . ' - ' . $agent->delegationTechnique->ville
+                    : 'FCPB';
+            } else {
+                $col = $agent->delegationTechnique
+                    ? $agent->delegationTechnique->region . ' - ' . $agent->delegationTechnique->ville
+                    : ($agent->caisse?->delegationTechnique
+                        ? $agent->caisse->delegationTechnique->region . ' - ' . $agent->caisse->delegationTechnique->ville
+                        : '—');
             }
 
-            fclose($handle);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+            $row = [
+                $agent->matricule ?? '—',
+                trim(($agent->prenom ?? '') . ' ' . ($agent->nom ?? '')),
+                $agent->sexe ?? '—',
+                $agent->poste ?? $agent->role ?? '—',
+                $grade,
+                $col,
+            ];
+            if (! $isFaitiere) $row[] = $agent->caisse?->nom ?? '—';
+            $row[] = $agent->date_debut_fonction?->format('d/m/Y') ?? '—';
+            $row[] = $noteS1;
+            $row[] = $noteS2;
+            $row[] = $noteAn;
+
+            $rows[] = $row;
+        }
+
+        $content = XlsxHelper::build($headers, $rows, 'Statistiques');
+
+        return response($content, 200, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }

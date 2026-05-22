@@ -59,7 +59,7 @@ class PcaEvaluationController extends Controller
             'brouillon'=> (clone $baseQuery)->where('statut', 'brouillon')->count(),
             'soumis'   => (clone $baseQuery)->where('statut', 'soumis')->count(),
             'valide'   => (clone $baseQuery)->where('statut', 'valide')->count(),
-            'refuse'   => (clone $baseQuery)->where('statut', 'refuse')->count(),
+            'refuse'   => (clone $baseQuery)->whereIn('statut', ['refuse', 'reclamation'])->count(),
         ];
 
         return view('pca.evaluations.index', [
@@ -155,7 +155,7 @@ class PcaEvaluationController extends Controller
             'identification.date_evaluation' => ['nullable', 'string', 'max:20'],
             'identification.date_titularisation' => ['nullable', 'string', 'max:20'],
             'identification.matricule' => ['nullable', 'string', 'max:255'],
-            'identification.grade' => ['required', 'string', 'max:255'],
+            'identification.grade' => ['nullable', 'string', 'max:255'],
             'identification.poste' => ['nullable', 'string', 'max:255'],
             'identification.emploi' => ['nullable', 'string', 'max:255'],
             'identification.niveau' => ['nullable', 'string', 'max:255'],
@@ -371,7 +371,7 @@ class PcaEvaluationController extends Controller
         $this->authorize('evaluations.soumettre');
         $this->authorizeEvaluation($evaluation, $request->user()->agent?->entite_id);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return redirect()->route('pca.evaluations.show', $evaluation)
                 ->with('status', 'Cette evaluation a deja ete soumise ou validee.');
         }

@@ -81,9 +81,11 @@ class PermissionMenu
         }
 
         // ── Section Rapports ──────────────────────────────────────────────────
+        // Pour le RH les liens stats/tableaux sont déjà dans le layout RH,
+        // donc on ne les ajoute ici QUE pour les rôles non-RH.
         $rapportItems = [];
 
-        if ($user?->can('statistiques.voir')) {
+        if ($user?->can('statistiques.voir') && $user?->role !== 'RH') {
             $rapportItems[] = [
                 'route' => 'personnel.statistiques',
                 'icon'  => 'fas fa-chart-bar',
@@ -91,7 +93,7 @@ class PermissionMenu
             ];
         }
 
-        if ($user?->can('tableaux.voir')) {
+        if ($user?->can('tableaux.voir') && $user?->role !== 'RH') {
             $rapportItems[] = [
                 'route' => 'personnel.tableaux.index',
                 'icon'  => 'fas fa-file-excel',

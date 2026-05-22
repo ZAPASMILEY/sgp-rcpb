@@ -92,7 +92,6 @@
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Secrétaire</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Délégation</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Superviseur (Dir. caisse)</th>
-                            <th class="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">Note</th>
                             <th class="px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
                         </tr>
                     </thead>
@@ -128,9 +127,6 @@
                                     @else
                                         -
                                     @endif
-                                </td>
-                                <td class="whitespace-nowrap px-3 py-3 text-center">
-                                    <span class="text-xs font-bold text-slate-300">—</span>
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-3 text-right">
                                     <div class="flex items-center justify-end gap-1">

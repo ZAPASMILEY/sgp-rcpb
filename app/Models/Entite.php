@@ -33,6 +33,7 @@ class Entite extends Model
 
     protected $fillable = [
         'nom',
+        'sigle',
         'ville',
         'region',
         'secretariat_telephone',

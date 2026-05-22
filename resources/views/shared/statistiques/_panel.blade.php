@@ -109,10 +109,10 @@
     {{-- ── Cartes stats rapides ─────────────────────────────────────────────── --}}
     @php
         $totalAgents = $agents->count();
-        $avecS1      = $agents->filter(fn ($a) => $a->evaluations->contains(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->count();
-        $avecS2      = $agents->filter(fn ($a) => $a->evaluations->contains(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->count();
-        $moyS1       = $agents->map(fn ($a) => optional($a->evaluations->first(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->note_finale)->filter()->avg();
-        $moyS2       = $agents->map(fn ($a) => optional($a->evaluations->first(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->note_finale)->filter()->avg();
+        $avecS1      = $agents->filter(fn ($a) => $a->evaluationsPersonnel->contains(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->count();
+        $avecS2      = $agents->filter(fn ($a) => $a->evaluationsPersonnel->contains(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->count();
+        $moyS1       = $agents->map(fn ($a) => optional($a->evaluationsPersonnel->first(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->note_finale)->filter()->avg();
+        $moyS2       = $agents->map(fn ($a) => optional($a->evaluationsPersonnel->first(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->note_finale)->filter()->avg();
     @endphp
     <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div class="rounded-2xl bg-white px-5 py-4 shadow-sm ring-1 ring-slate-100">
@@ -174,7 +174,7 @@
                 <tbody class="divide-y divide-slate-50">
                     @foreach($agents as $agent)
                     @php
-                        $evals  = $agent->evaluations->keyBy(fn ($e) => $e->semestre?->numero);
+                        $evals  = $agent->evaluationsPersonnel->keyBy(fn ($e) => $e->semestre?->numero);
                         $evalS1 = $s1 ? $evals->get(1) : null;
                         $evalS2 = $s2 ? $evals->get(2) : null;
                         $grade  = $evalS1?->identification?->grade ?? $evalS2?->identification?->grade ?? null;

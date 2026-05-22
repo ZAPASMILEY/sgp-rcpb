@@ -23,7 +23,7 @@ class RhFormationController extends Controller
         // Filtres
         if ($search = trim((string) $request->get('search'))) {
             $query->where(function ($q) use ($search) {
-                $q->where('titre', 'like', "%{$search}%")
+                $q->where('theme', 'like', "%{$search}%")
                   ->orWhereHas('agent', fn ($a) =>
                       $a->where('nom', 'like', "%{$search}%")
                         ->orWhere('prenom', 'like', "%{$search}%")
@@ -60,17 +60,17 @@ class RhFormationController extends Controller
         $agents              = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
         $domaines            = Formation::DOMAINES;
         $preselectedAgentId  = (int) $request->get('agent_id', 0);
-        $titresExistants     = Formation::distinct()->orderBy('titre')->pluck('titre');
+        $themesExistants     = Formation::distinct()->orderBy('theme')->pluck('theme');
         $routePrefix         = 'rh';
 
-        return view('rh.formations.create', compact('agents', 'domaines', 'preselectedAgentId', 'titresExistants', 'routePrefix'));
+        return view('rh.formations.create', compact('agents', 'domaines', 'preselectedAgentId', 'themesExistants', 'routePrefix'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'agent_id'     => ['required', 'integer', 'exists:agents,id'],
-            'titre'        => ['required', 'string', 'max:255'],
+            'theme'        => ['required', 'string', 'max:255'],
             'domaine'      => ['required', 'string', 'in:' . implode(',', array_keys(Formation::DOMAINES))],
             'date_debut'   => ['required', 'date'],
             'date_fin'     => ['required', 'date', 'after_or_equal:date_debut'],
@@ -84,7 +84,7 @@ class RhFormationController extends Controller
 
         return redirect()
             ->route('rh.formations.index')
-            ->with('status', 'Formation « ' . $formation->titre . ' » enregistrée.');
+            ->with('status', 'Formation « ' . $formation->theme . ' » enregistrée.');
     }
 
     // ── Modifier ──────────────────────────────────────────────────────────────
@@ -102,7 +102,7 @@ class RhFormationController extends Controller
     {
         $validated = $request->validate([
             'agent_id'     => ['required', 'integer', 'exists:agents,id'],
-            'titre'        => ['required', 'string', 'max:255'],
+            'theme'        => ['required', 'string', 'max:255'],
             'domaine'      => ['required', 'string', 'in:' . implode(',', array_keys(Formation::DOMAINES))],
             'date_debut'   => ['required', 'date'],
             'date_fin'     => ['required', 'date', 'after_or_equal:date_debut'],
@@ -113,19 +113,19 @@ class RhFormationController extends Controller
 
         return redirect()
             ->route('rh.formations.index')
-            ->with('status', 'Formation mise à jour.');
+            ->with('status', 'Formation « ' . $formation->theme . ' » mise à jour.');
     }
 
     // ── Supprimer ─────────────────────────────────────────────────────────────
 
     public function destroy(Formation $formation): RedirectResponse
     {
-        $titre = $formation->titre;
+        $theme = $formation->theme;
         $formation->delete();
 
         return redirect()
             ->route('rh.formations.index')
-            ->with('status', 'Formation « ' . $titre . ' » supprimée.');
+            ->with('status', 'Formation « ' . $theme . ' » supprimée.');
     }
 
     // ── API JSON — formations d'un agent (utilisé par les formulaires d'évaluation) ──
@@ -139,7 +139,7 @@ class RhFormationController extends Controller
                 'periode' => $f->date_debut->translatedFormat('M Y')
                     . ' – '
                     . ($f->date_fin ? $f->date_fin->translatedFormat('M Y') : 'en cours'),
-                'libelle' => $f->titre,
+                'libelle' => $f->theme,
                 'domaine' => $f->domaine_label,
             ]);
 
@@ -155,7 +155,7 @@ class RhFormationController extends Controller
         $pdf = Pdf::loadView('formations.pdf', compact('formation'))
             ->setPaper('a4', 'portrait');
 
-        $filename = 'formation_' . $formation->id . '_' . str_replace(' ', '_', $formation->titre) . '.pdf';
+        $filename = 'formation_' . $formation->id . '_' . str_replace(' ', '_', $formation->theme) . '.pdf';
 
         return $pdf->download($filename);
     }

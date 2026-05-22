@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -72,12 +73,23 @@ class AlerteController extends Controller
         $combined = $combined->sortByDesc('date')->values();
 
         // --- Filtrage par onglet ---
-        $items = match ($tab) {
+        $filtered = match ($tab) {
             'securite'       => $combined->where('type', 'securite')->values(),
             'personnalisees' => $combined->where('type', 'personnalisee')->values(),
             'critiques'      => $combined->filter(fn ($a) => $a['priorite'] === 'critique' || $a['priorite'] === 'haute')->values(),
             default          => $combined,
         };
+
+        // --- Pagination manuelle sur la collection ---
+        $perPage     = 20;
+        $currentPage = (int) $request->query('page', 1);
+        $items = new LengthAwarePaginator(
+            $filtered->forPage($currentPage, $perPage)->values(),
+            $filtered->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         $counts = [
             'toutes'         => $combined->count(),

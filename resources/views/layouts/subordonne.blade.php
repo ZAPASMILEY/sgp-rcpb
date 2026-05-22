@@ -10,13 +10,13 @@
         [
             'title' => 'Mon espace',
             'items' => [
-                ['route' => 'subordonne.mon-espace', 'icon' => 'fas fa-house',    'label' => 'Tableau de bord'],
+                ['route' => 'subordonne.mon-espace', 'icon' => 'fas fa-house', 'label' => 'Tableau de bord'],
             ],
         ],
         [
-            'title' => 'Mon dossier',
+            'title' => 'Formations',
             'items' => [
-                ['route' => 'subordonne.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon espace'],
+                ['route' => 'subordonne.formations.index', 'icon' => 'fas fa-graduation-cap', 'label' => 'Mes formations'],
             ],
         ],
     ];
@@ -111,6 +111,8 @@
     </style>
 </head>
 <body class="h-full antialiased">
+
+    @include('layouts._alerte_banniere')
 
     <nav class="sidebar shadow" id="sidebar">
         <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Réduire le menu">

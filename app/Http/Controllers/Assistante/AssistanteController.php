@@ -234,9 +234,19 @@ class AssistanteController extends Controller
         $anneeId    = $openAnnee->id;
         $semestreId = $semestre->id;
 
+        $secretaire->loadMissing(['agent.entite', 'agent.direction', 'agent.delegationTechnique', 'agent.caisse', 'agent.agence']);
+        $agentSec = $secretaire->agent;
         $identification = $validated['identification'] ?? [];
-        $identification['semestre'] = (string) $semestre->numero;
-        $identification['matricule'] = $secretaire->agent?->matricule ?? null;
+        $identification['semestre']          = (string) $semestre->numero;
+        $identification['matricule']         = $agentSec?->matricule ?? null;
+        $identification['nom_prenom']        = $agentSec ? trim($agentSec->prenom . ' ' . $agentSec->nom) : $secretaire->name;
+        $identification['emploi']            = $agentSec?->poste ?: $agentSec?->role;
+        $identification['direction']         = $agentSec?->entite?->sigle ?: ($agentSec?->entite?->nom ?? null);
+        $identification['direction_service'] = $agentSec?->direction?->nom
+            ?? $agentSec?->delegationTechnique?->nom
+            ?? $agentSec?->caisse?->nom
+            ?? $agentSec?->agence?->nom
+            ?? null;
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -264,6 +274,11 @@ class AssistanteController extends Controller
         }
 
         $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
+
+        // ── Unicité : 1 évaluation par semestre ─────────────────────────────
+        if ($this->evaluationService->dejaEvalueeSemestre($secretaire->id, User::class, $semestreId)) {
+            return back()->withInput()->with('error', "Une évaluation existe déjà pour {$secretaire->name} sur ce semestre.");
+        }
 
         DB::transaction(function () use ($user, $secretaire, $dateDebut, $dateFin, $anneeId, $semestreId, $scores, $validated, $identification, $normalizedSubjective, $normalizedObjective) {
             $evaluation = Evaluation::create([
@@ -327,7 +342,7 @@ class AssistanteController extends Controller
     {
         $this->authorizeEval($evaluation);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return back()->with('error', 'Seules les évaluations en brouillon peuvent être soumises.');
         }
 
@@ -349,7 +364,7 @@ class AssistanteController extends Controller
     {
         $this->authorizeEval($evaluation);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return back()->with('error', 'Seules les évaluations en brouillon peuvent être supprimées.');
         }
 
@@ -410,6 +425,10 @@ class AssistanteController extends Controller
             Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        if (FicheObjectif::existsPourAnnee($anneeIdFiche, User::class, $secretaire->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour ce secrétaire pour l\'année en cours.');
         }
 
         $fiche = FicheObjectif::create([

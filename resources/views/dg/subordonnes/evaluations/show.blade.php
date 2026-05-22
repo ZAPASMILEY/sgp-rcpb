@@ -70,8 +70,8 @@
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut</p>
                     @php
-                        $statutLbl = match($evaluation->statut) { 'valide'=>'Validée','soumis'=>'Soumise','refuse'=>'Refusée',default=>'Brouillon' };
-                        $statutClr = match($evaluation->statut) { 'valide'=>'text-emerald-700','soumis'=>'text-amber-700','refuse'=>'text-rose-700',default=>'text-slate-600' };
+                        $statutLbl = match($evaluation->statut) { 'valide'=>'Validée','soumis'=>'Soumise','refuse'=>'Refusée','reclamation'=>'Réclamation',default=>'Brouillon' };
+                        $statutClr = match($evaluation->statut) { 'valide'=>'text-emerald-700','soumis'=>'text-amber-700','refuse'=>'text-rose-700','reclamation'=>'text-orange-600',default=>'text-slate-600' };
                     @endphp
                     <p class="mt-2 text-sm font-semibold {{ $statutClr }}">{{ $statutLbl }}</p>
                 </div>
@@ -80,6 +80,14 @@
                     <p class="mt-2 text-sm text-slate-700">{{ $evaluation->evaluateur?->name ?? '-' }}</p>
                 </div>
             </div>
+
+            {{-- Motif de refus --}}
+            @if(in_array($evaluation->statut, ['reclamation','a_reviser']) && $evaluation->motif_refus)
+            <div class="mt-5 rounded-xl border border-orange-200 bg-orange-50 px-5 py-4">
+                <p class="text-xs font-black uppercase tracking-[0.15em] text-orange-600"><i class="fas fa-triangle-exclamation mr-1"></i> Motif du refus par l'évalué</p>
+                <p class="mt-2 text-sm text-orange-800">{{ $evaluation->motif_refus }}</p>
+            </div>
+            @endif
         </section>
 
         {{-- Identification --}}

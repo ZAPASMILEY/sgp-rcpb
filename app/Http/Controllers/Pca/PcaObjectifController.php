@@ -79,7 +79,7 @@ class PcaObjectifController extends Controller
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('titre', 'like', "%{$search}%")
-                        ->orWhere('annee', 'like', "%{$search}%");
+                        ->orWhereHas('annee', fn ($a) => $a->where('annee', 'like', "%{$search}%"));
                 });
             });
 
@@ -170,6 +170,10 @@ class PcaObjectifController extends Controller
         }
 
         $statut = $action === 'brouillon' ? 'brouillon' : 'en_attente';
+
+        if (FicheObjectif::existsPourAnnee($anneeId, User::class, $dgUser->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour le DG pour l\'année en cours.');
+        }
 
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],

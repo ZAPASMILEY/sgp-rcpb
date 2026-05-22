@@ -191,6 +191,15 @@
                         </a>
                     @endif
 
+                    {{-- Modifier (si brouillon / contestée / refusée) --}}
+                    @if (in_array($fiche->statut, ['brouillon', 'contesté', 'refusee']))
+                        <a href="{{ route('chef.objectifs.edit', $fiche) }}"
+                           class="ent-btn bg-orange-500 text-white hover:bg-orange-600">
+                            <i class="fas fa-pen mr-2"></i>
+                            {{ $fiche->statut === 'contesté' ? 'Réviser les objectifs' : 'Modifier la fiche' }}
+                        </a>
+                    @endif
+
                     {{-- Suppression (sauf si acceptée) --}}
                     @if ($fiche->statut !== 'acceptee')
                         <form method="POST"

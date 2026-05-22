@@ -89,6 +89,9 @@
                         </div>
                     @endif
 
+                    @php $anneeOuverte = \App\Models\Annee::currentOpen(); @endphp
+                    <input type="hidden" name="date_echeance" value="{{ $anneeOuverte ? $anneeOuverte->annee.'-12-31' : now()->format('Y').'-12-31' }}">
+
                     <div class="grid gap-5 md:grid-cols-2">
                         {{-- Titre de la fiche --}}
                         <div class="space-y-2">
@@ -97,23 +100,19 @@
                             </label>
                             <input id="titre" name="titre" type="text"
                                    value="{{ old('titre') }}"
-                                   class="ent-input" placeholder="Ex : Objectifs Semestre 1 — 2026" required>
+                                   class="ent-input" placeholder="Ex : Objectifs Semestre 1 — {{ $anneeOuverte?->annee ?? now()->year }}" required>
                             @error('titre')
                                 <p class="text-xs text-rose-600">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        {{-- Date d'échéance --}}
+                        {{-- Année (auto, lecture seule) --}}
                         <div class="space-y-2">
-                            <label for="date_echeance" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                                Date d'échéance
+                            <label class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+                                Année
                             </label>
-                            <input id="date_echeance" name="date_echeance" type="date"
-                                   value="{{ old('date_echeance') }}"
-                                   class="ent-input" required>
-                            @error('date_echeance')
-                                <p class="text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                            <input type="text" value="{{ $anneeOuverte?->annee ?? now()->year }}" readonly tabindex="-1"
+                                   class="ent-input cursor-not-allowed bg-slate-50 text-slate-500 select-none">
                         </div>
                     </div>
                 </section>

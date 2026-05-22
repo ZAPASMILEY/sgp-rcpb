@@ -5,9 +5,11 @@
 @php
     $statut  = $fiche->statut ?? 'en_attente';
     $sc = match($statut) {
-        'acceptee'  => ['label'=>'Acceptée',   'bg'=>'bg-indigo-100','text'=>'text-indigo-700','dot'=>'bg-indigo-500','border'=>'border-indigo-200'],
-        'refusee'   => ['label'=>'Refusée',    'bg'=>'bg-rose-100',  'text'=>'text-rose-700',  'dot'=>'bg-rose-500',  'border'=>'border-rose-200'],
-        default     => ['label'=>'En attente', 'bg'=>'bg-amber-100', 'text'=>'text-amber-700', 'dot'=>'bg-amber-400', 'border'=>'border-amber-200'],
+        'acceptee'  => ['label'=>'Acceptée',   'bg'=>'bg-indigo-100', 'text'=>'text-indigo-700', 'dot'=>'bg-indigo-500', 'border'=>'border-indigo-200'],
+        'refusee'   => ['label'=>'Refusée',    'bg'=>'bg-rose-100',   'text'=>'text-rose-700',   'dot'=>'bg-rose-500',   'border'=>'border-rose-200'],
+        'contesté'  => ['label'=>'Contestée',  'bg'=>'bg-orange-100', 'text'=>'text-orange-700', 'dot'=>'bg-orange-500', 'border'=>'border-orange-200'],
+        'brouillon' => ['label'=>'Brouillon',  'bg'=>'bg-slate-100',  'text'=>'text-slate-600',  'dot'=>'bg-slate-400',  'border'=>'border-slate-300'],
+        default     => ['label'=>'En attente', 'bg'=>'bg-amber-100',  'text'=>'text-amber-700',  'dot'=>'bg-amber-400',  'border'=>'border-amber-200'],
     };
     $avancement    = (int) ($fiche->avancement_percentage ?? 0);
     $progressColor = $avancement >= 75 ? 'bg-emerald-500' : ($avancement >= 40 ? 'bg-sky-500' : ($avancement > 0 ? 'bg-amber-400' : 'bg-slate-200'));
@@ -118,16 +120,34 @@
                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600 shadow-sm transition hover:border-slate-300">
                 <i class="fas fa-arrow-left text-xs"></i> Retour au dossier
             </a>
-            @if ($statut !== 'acceptee')
-                <form method="POST" action="{{ route('dga.sub-objectifs.destroy', $fiche) }}"
-                      onsubmit="return confirm('Supprimer définitivement cette fiche d\'objectifs ?')">
-                    @csrf @method('DELETE')
-                    <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-black text-rose-600 shadow-sm transition hover:bg-rose-100">
-                        <i class="fas fa-trash text-xs"></i> Supprimer
-                    </button>
-                </form>
-            @endif
+            <div class="flex flex-wrap items-center gap-3">
+                @if ($statut === 'brouillon')
+                    <form method="POST" action="{{ route('dga.sub-objectifs.soumettre', $fiche) }}">
+                        @csrf @method('PATCH')
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-indigo-700">
+                            <i class="fas fa-paper-plane text-xs"></i> Soumettre la fiche
+                        </button>
+                    </form>
+                @endif
+                @if (in_array($statut, ['brouillon', 'contesté', 'refusee']))
+                    <a href="{{ route('dga.sub-objectifs.edit', $fiche) }}"
+                       class="inline-flex items-center gap-2 rounded-xl border-2 border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-black text-orange-700 shadow-sm transition hover:bg-orange-100">
+                        <i class="fas fa-pen text-xs"></i>
+                        {{ $statut === 'contesté' ? 'Réviser les objectifs' : 'Modifier la fiche' }}
+                    </a>
+                @endif
+                @if ($statut !== 'acceptee')
+                    <form method="POST" action="{{ route('dga.sub-objectifs.destroy', $fiche) }}"
+                          onsubmit="return confirm('Supprimer définitivement cette fiche d\'objectifs ?')">
+                        @csrf @method('DELETE')
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-black text-rose-600 shadow-sm transition hover:bg-rose-100">
+                            <i class="fas fa-trash text-xs"></i> Supprimer
+                        </button>
+                    </form>
+                @endif
+            </div>
         </div>
 
         </div>

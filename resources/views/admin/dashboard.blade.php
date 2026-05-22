@@ -312,16 +312,14 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-black text-slate-900">{{ trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) ?: 'Agent non renseigne' }}</p>
-                                        @php
-                                            $structure = $agent->guichet?->nom
-                                                ?? $agent->agence?->nom
-                                                ?? $agent->caisse?->nom
-                                                ?? $agent->delegationTechnique
-                                                    ? ($agent->delegationTechnique->region . ' – ' . $agent->delegationTechnique->ville)
-                                                    : ($agent->service?->nom
-                                                        ?? $agent->direction?->nom
-                                                        ?? null);
-                                        @endphp
+                                       @php
+    $structure = $agent->guichet?->nom
+        ?? $agent->agence?->nom
+        ?? $agent->caisse?->nom
+        ?? ($agent->delegationTechnique ? ($agent->delegationTechnique->region . ' – ' . $agent->delegationTechnique->ville) : null)
+        ?? $agent->service?->nom
+        ?? $agent->direction?->nom;
+@endphp
                                         <p class="truncate text-[11px] font-semibold text-slate-400">{{ $structure ?? 'Non affecté' }}</p>
                                     </div>
                                 </div>

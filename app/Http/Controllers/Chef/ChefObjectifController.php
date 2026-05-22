@@ -86,6 +86,8 @@ class ChefObjectifController extends Controller
      */
     public function create(Request $request): View
     {
+        $this->authorize('objectifs.assigner');
+
         $ctx = $this->getContext();
 
         // Charge tous les agents subordonnés
@@ -119,6 +121,8 @@ class ChefObjectifController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('objectifs.assigner');
+
         $ctx      = $this->getContext();
         $agentIds = $ctx->getAgentIds();
 
@@ -161,6 +165,10 @@ class ChefObjectifController extends Controller
         }
 
         $user = Auth::user();
+
+        if (FicheObjectif::existsPourAnnee($anneeId, Agent::class, $agent->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour cet agent pour l\'année en cours.');
+        }
 
         // Transaction : FicheObjectif + LigneFicheObjectif
         $fiche = DB::transaction(function () use (
@@ -216,6 +224,7 @@ class ChefObjectifController extends Controller
      */
     public function show(FicheObjectif $fiche): View
     {
+        $this->authorize('objectifs.voir-equipe');
         $ctx = $this->authorizeFiche($fiche);
 
         // Chargement des objectifs (lignes de la fiche)
@@ -241,6 +250,115 @@ class ChefObjectifController extends Controller
             'statusClass',
             'statusLabel',
         ));
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MODIFIER UNE FICHE D'OBJECTIFS (brouillon / contestée / refusée)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public function edit(FicheObjectif $fiche): View|RedirectResponse
+    {
+        $ctx = $this->authorizeFiche($fiche);
+        $fiche->load('objectifs');
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('chef.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        return view('chef.subordonnes.objectifs.edit', [
+            'ctx'   => $ctx,
+            'fiche' => $fiche,
+        ]);
+    }
+
+    public function update(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        $ctx = $this->authorizeFiche($fiche);
+        $fiche->load('objectifs');
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('chef.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $wasContested = $fiche->statut === 'contesté';
+        $wasRefusee   = $fiche->statut === 'refusee';
+        $action = $request->input('action', 'brouillon');
+
+        $validated = $request->validate([
+            'titre'                   => ['required', 'string', 'max:255'],
+            'objectifs'               => ['required', 'array', 'min:1'],
+            'objectifs.*.description' => ['required', 'string', 'max:500'],
+        ]);
+
+        $objectifsData = collect($validated['objectifs'])
+            ->map(fn ($row) => ['description' => trim($row['description'] ?? '')])
+            ->filter(fn ($row) => $row['description'] !== '')
+            ->values()
+            ->all();
+
+        if (empty($objectifsData)) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        $fiche->update(['titre' => $validated['titre']]);
+        $fiche->objectifs()->delete();
+        foreach ($objectifsData as $row) {
+            LigneFicheObjectif::create([
+                'fiche_objectif_id' => $fiche->id,
+                'description'       => $row['description'],
+            ]);
+        }
+
+        if (($wasContested || $wasRefusee) && $action === 'renvoyer') {
+            $fiche->update(['statut' => 'en_attente']);
+
+            $agentUser = \App\Models\User::where('agent_id', $fiche->assignable_id)->first();
+            if ($agentUser) {
+                Alerte::notifier(
+                    $agentUser->id,
+                    'Fiche d\'objectifs révisée',
+                    "Votre chef a révisé la fiche d'objectifs « {$fiche->titre} » suite à vos contestations. Consultez votre espace.",
+                    'moyenne'
+                );
+            }
+
+            $msg = $wasRefusee
+                ? 'Fiche corrigée et renvoyée à l\'agent.'
+                : 'Fiche révisée et renvoyée à l\'agent.';
+
+            return redirect()->route('chef.objectifs.show', $fiche)->with('status', $msg);
+        }
+
+        return redirect()->route('chef.objectifs.show', $fiche)
+            ->with('status', 'Brouillon mis à jour.');
+    }
+
+    public function soumettre(FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorizeFiche($fiche);
+
+        if ($fiche->statut !== 'brouillon') {
+            return redirect()->route('chef.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche n\'est pas en brouillon.');
+        }
+
+        $fiche->update(['statut' => 'en_attente']);
+
+        $user = Auth::user();
+        $agentUser = \App\Models\User::where('agent_id', $fiche->assignable_id)->first();
+        if ($agentUser) {
+            Alerte::notifier(
+                $agentUser->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Votre chef {$user->name} vous a assigné une fiche d'objectifs : « {$fiche->titre} ».",
+                'moyenne'
+            );
+        }
+
+        return redirect()->route('chef.objectifs.show', $fiche)
+            ->with('status', 'Fiche soumise à l\'agent.');
     }
 
     // ══════════════════════════════════════════════════════════════════════════

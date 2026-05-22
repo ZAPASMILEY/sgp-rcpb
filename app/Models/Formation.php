@@ -22,7 +22,7 @@ class Formation extends Model
 
     protected $fillable = [
         'agent_id',
-        'titre',
+        'theme',
         'domaine',
         'date_debut',
         'date_fin',

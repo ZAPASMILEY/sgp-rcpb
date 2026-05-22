@@ -322,16 +322,18 @@
             <div>
                 @php
                     $statutColors = [
-                        'brouillon' => 'border-slate-200 bg-slate-100 text-slate-600',
-                        'soumis'    => 'border-amber-200 bg-amber-50 text-amber-700',
-                        'valide'    => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                        'refuse'    => 'border-rose-200 bg-rose-50 text-rose-700',
+                        'brouillon'   => 'border-slate-200 bg-slate-100 text-slate-600',
+                        'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+                        'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                        'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+                        'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
                     ];
                     $statutLabels = [
-                        'brouillon' => 'Brouillon',
-                        'soumis'    => 'Soumise',
-                        'valide'    => 'Acceptée',
-                        'refuse'    => 'Refusée',
+                        'brouillon'   => 'Brouillon',
+                        'soumis'      => 'Soumise',
+                        'valide'      => 'Acceptée',
+                        'refuse'      => 'Refusée',
+                        'reclamation' => 'Réclamation',
                     ];
                 @endphp
                 <p class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Statut de l'évaluation</p>
@@ -363,7 +365,7 @@
     </section>
 
     {{-- Bloc refus / réclamation --}}
-    @if($evaluation->statut === 'refuse')
+    @if(in_array($evaluation->statut, ['refuse', 'reclamation']))
     <section class="flex flex-col gap-4 rounded-[24px] border-2 border-rose-200 bg-rose-50 px-6 py-5">
         <div class="flex items-start gap-4">
             <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">

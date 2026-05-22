@@ -320,9 +320,14 @@
             </div>
 
             @if ($agents->isNotEmpty())
-                <div class="border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-right text-xs text-slate-400">
-                    {{ $agents->count() }} agent(s) affiché(s)
-                    @if ($roleActive || $search) sur {{ $totalAgents }} au total @endif
+                <div class="border-t border-slate-100 bg-slate-50 px-4 py-2.5 flex items-center justify-between">
+                    <span class="text-xs text-slate-400">
+                        {{ $agents->firstItem() }}–{{ $agents->lastItem() }} sur {{ $agents->total() }} agent(s)
+                        @if ($roleActive || $search) · filtre actif @endif
+                    </span>
+                    <div class="text-xs">
+                        {{ $agents->links() }}
+                    </div>
                 </div>
             @endif
         </div>

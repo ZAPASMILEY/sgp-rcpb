@@ -144,7 +144,7 @@
 
                                 {{-- Titre --}}
                                 <td class="px-5 py-3.5">
-                                    <p class="font-semibold text-slate-800 line-clamp-1">{{ $formation->titre }}</p>
+                                    <p class="font-semibold text-slate-800 line-clamp-1">{{ $formation->theme }}</p>
                                 </td>
 
                                 {{-- Domaine --}}

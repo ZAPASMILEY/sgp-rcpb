@@ -56,18 +56,19 @@
                 @csrf
                 <input type="hidden" name="direction_id" value="{{ $direction->id }}">
 
+                @php $anneeOuverte = \App\Models\Annee::currentOpen(); @endphp
+                <input type="hidden" name="date_echeance" value="{{ $anneeOuverte ? $anneeOuverte->annee.'-12-31' : now()->format('Y').'-12-31' }}">
+
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="space-y-1.5">
                         <label class="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Date</label>
-                        <input type="text" value="{{ now()->format('d/m/Y') }}" readonly
+                        <input type="text" value="{{ now()->format('d/m/Y') }}" readonly tabindex="-1"
                                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 cursor-not-allowed outline-none">
                     </div>
                     <div class="space-y-1.5">
-                        <label for="date_echeance" class="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Date d'échéance</label>
-                        <input id="date_echeance" name="date_echeance" type="date"
-                               value="{{ old('date_echeance', \Carbon\Carbon::now()->addYear()->toDateString()) }}"
-                               required
-                               class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100">
+                        <label class="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Année</label>
+                        <input type="text" value="{{ $anneeOuverte?->annee ?? now()->year }}" readonly tabindex="-1"
+                               class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 cursor-not-allowed outline-none select-none">
                     </div>
                 </div>
 

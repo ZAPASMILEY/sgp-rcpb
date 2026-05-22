@@ -60,6 +60,7 @@ class DgaSubEvaluationController extends Controller
         $entite      = $this->getEntiteForDGA();
         $direction   = $this->directionDga();
         $subordonnes = collect();
+        $faitiereNom = $entite?->nom ?? 'RCPB';
 
         // ── Directeurs Techniques ─────────────────────────────────────────
         $delegations = DelegationTechnique::whereNotNull('directeur_agent_id')->get();
@@ -70,14 +71,14 @@ class DgaSubEvaluationController extends Controller
             if (! $dt) {
                 continue;
             }
-            $delegationLabel = trim($delegation->region . ($delegation->ville ? ' — ' . $delegation->ville : ''));
+            $delegationLabel = 'DT ' . trim($delegation->region . ($delegation->ville ? ' / ' . $delegation->ville : ''));
             $subordonnes->push([
                 'id'            => $dt->id,
                 'agent_id'      => $dt->agent_id,
                 'nom'           => $dt->name,
                 'role_label'    => 'Directeur Technique',
-                'entite_label'  => $delegationLabel ?: 'Délégation Technique',
-                'service_label' => '',
+                'entite_label'  => $faitiereNom,
+                'service_label' => $delegationLabel ?: 'Délégation Technique',
                 'groupe'        => 'Directeurs Techniques',
                 'redirect_to'   => 'subordonnes',
             ]);
@@ -92,8 +93,8 @@ class DgaSubEvaluationController extends Controller
                     'agent_id'      => $sec->agent_id,
                     'nom'           => $sec->name,
                     'role_label'    => 'Secrétaire DGA',
-                    'entite_label'  => $entite->nom ?? '',
-                    'service_label' => 'Secrétariat DGA',
+                    'entite_label'  => $faitiereNom,
+                    'service_label' => $direction?->nom ?? 'Direction Générale Adjointe',
                     'groupe'        => 'Secrétariat',
                     'redirect_to'   => 'subordonnes',
                 ]);
@@ -120,8 +121,8 @@ class DgaSubEvaluationController extends Controller
                     'agent_id'      => $chefUser->agent_id,
                     'nom'           => $chefUser->name,
                     'role_label'    => 'Chef de Service',
-                    'entite_label'  => $direction->nom ?? 'Direction DGA',
-                    'service_label' => $service->nom,
+                    'entite_label'  => $faitiereNom,
+                    'service_label' => $service->nom . ' — ' . $direction->nom,
                     'groupe'        => 'Chefs de Services',
                     'redirect_to'   => 'direction',
                 ]);
@@ -147,8 +148,8 @@ class DgaSubEvaluationController extends Controller
                     'agent_id'      => $agentUser->agent_id,
                     'nom'           => $agentUser->name,
                     'role_label'    => 'Agent',
-                    'entite_label'  => $direction->nom ?? 'Direction DGA',
-                    'service_label' => $agent->role ?? '',
+                    'entite_label'  => $faitiereNom,
+                    'service_label' => $direction->nom,
                     'groupe'        => 'Collaborateurs directs',
                     'redirect_to'   => 'direction',
                 ]);
@@ -283,9 +284,21 @@ class DgaSubEvaluationController extends Controller
         $anneeId    = $openAnnee->id;
         $semestreId = $semestre->id;
 
+        $subordonne->loadMissing(['agent.entite', 'agent.direction', 'agent.delegationTechnique', 'agent.caisse', 'agent.agence', 'agent.service']);
+        $agentDga = $subordonne->agent;
         $identification = $validated['identification'] ?? [];
-        $identification['semestre'] = (string) $semestre->numero;
-        $identification['matricule'] = $subordonne->agent?->matricule ?? null;
+        $identification['semestre']          = (string) $semestre->numero;
+        $identification['matricule']         = $agentDga?->matricule ?? null;
+        $identification['nom_prenom']        = $agentDga ? trim($agentDga->prenom . ' ' . $agentDga->nom) : $subordonne->name;
+        $identification['emploi']            = $agentDga?->poste ?: $agentDga?->role;
+        if ($agentDga) {
+            $structLabels = \App\Helpers\AgentStructure::labels($agentDga);
+            $identification['direction']         = $structLabels['entite_nom'];
+            $identification['direction_service'] = $structLabels['direction_service'];
+        } else {
+            $identification['direction']         = null;
+            $identification['direction_service'] = null;
+        }
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -323,6 +336,11 @@ class DgaSubEvaluationController extends Controller
         }
 
         $scores  = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
+
+        // ── Unicité : 1 évaluation par semestre ─────────────────────────────
+        if ($this->evaluationService->dejaEvalueeSemestre($subordonne->id, \App\Models\User::class, $semestreId)) {
+            return back()->withInput()->with('error', "Une évaluation existe déjà pour {$subordonne->name} sur ce semestre.");
+        }
 
         $user = Auth::user();
 
@@ -409,7 +427,7 @@ class DgaSubEvaluationController extends Controller
         if (! in_array($evaluation->evaluable_id, $this->getAllowedUserIds(), true)) {
             abort(403);
         }
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return back()->with('error', 'Cette évaluation ne peut plus être soumise.');
         }
 

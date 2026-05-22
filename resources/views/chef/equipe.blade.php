@@ -123,18 +123,20 @@
                             $note   = $row['eval_note'];
 
                             $evalClass = match ($statut) {
-                                'valide'    => 'bg-emerald-100 text-emerald-700',
-                                'soumis'    => 'bg-amber-100 text-amber-700',
-                                'refuse'    => 'bg-rose-100 text-rose-700',
-                                'brouillon' => 'bg-slate-100 text-slate-600',
-                                default     => null,
+                                'valide'      => 'bg-emerald-100 text-emerald-700',
+                                'soumis'      => 'bg-amber-100 text-amber-700',
+                                'refuse'      => 'bg-rose-100 text-rose-700',
+                                'reclamation' => 'bg-orange-100 text-orange-700',
+                                'brouillon'   => 'bg-slate-100 text-slate-600',
+                                default       => null,
                             };
                             $evalLabel = match ($statut) {
-                                'valide'    => 'Acceptée',
-                                'soumis'    => 'Soumise',
-                                'refuse'    => 'Refusée',
-                                'brouillon' => 'Brouillon',
-                                default     => null,
+                                'valide'      => 'Acceptée',
+                                'soumis'      => 'Soumise',
+                                'refuse'      => 'Refusée',
+                                'reclamation' => 'Réclamation',
+                                'brouillon'   => 'Brouillon',
+                                default       => null,
                             };
                             $noteClass = $note !== null ? match(true) {
                                 (float)$note >= 8.5 => 'bg-emerald-100 text-emerald-700',

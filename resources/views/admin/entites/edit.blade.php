@@ -127,9 +127,20 @@
                             </div>
                         </div>
 
-                        <div class="space-y-2">
-                            <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Numero du secretariat</label>
-                            <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone', $entite->secretariat_telephone) }}" required class="ent-input">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="space-y-2">
+                                <label for="secretariat_telephone" class="text-sm font-semibold text-slate-700">Numero du secretariat</label>
+                                <input id="secretariat_telephone" name="secretariat_telephone" type="text" value="{{ old('secretariat_telephone', $entite->secretariat_telephone) }}" required class="ent-input">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="sigle" class="text-sm font-semibold text-slate-700">Sigle / Acronyme
+                                    <span class="ml-1 text-[10px] font-normal text-slate-400">(affiché dans les évaluations)</span>
+                                </label>
+                                <input id="sigle" name="sigle" type="text" maxlength="30"
+                                       value="{{ old('sigle', $entite->sigle) }}"
+                                       placeholder="Ex : FCPB"
+                                       class="ent-input">
+                            </div>
                         </div>
 
                         <div class="ent-card space-y-4">

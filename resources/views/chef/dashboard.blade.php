@@ -252,15 +252,17 @@
                     @forelse ($agentsOverview as $ao)
                         @php
                             $sc = match($ao['eval_statut']) {
-                                'valide'    => 'bg-emerald-100 text-emerald-700',
-                                'soumis'    => 'bg-amber-100 text-amber-700',
-                                'brouillon' => 'bg-slate-100 text-slate-500',
-                                'refuse'    => 'bg-rose-100 text-rose-700',
-                                default     => 'bg-slate-100 text-slate-400',
+                                'valide'      => 'bg-emerald-100 text-emerald-700',
+                                'soumis'      => 'bg-amber-100 text-amber-700',
+                                'brouillon'   => 'bg-slate-100 text-slate-500',
+                                'refuse'      => 'bg-rose-100 text-rose-700',
+                                'reclamation' => 'bg-orange-100 text-orange-700',
+                                default       => 'bg-slate-100 text-slate-400',
                             };
                             $sl = match($ao['eval_statut']) {
                                 'valide' => 'Validée', 'soumis' => 'Soumise',
                                 'brouillon' => 'Brouillon', 'refuse' => 'Refusée',
+                                'reclamation' => 'Réclamation',
                                 default => 'Non évalué',
                             };
                         @endphp
@@ -315,6 +317,7 @@
                                     'acceptee'   => 'bg-emerald-100 text-emerald-700',
                                     'en_attente' => 'bg-amber-100 text-amber-700',
                                     'refusee'    => 'bg-rose-100 text-rose-700',
+                                    'contesté'   => 'bg-orange-100 text-orange-700',
                                     default      => 'bg-slate-100 text-slate-500',
                                 };
                                 $av    = (int) ($fiche->avancement_percentage ?? 0);

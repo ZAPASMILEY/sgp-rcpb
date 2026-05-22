@@ -146,6 +146,8 @@
 </head>
 <body class="h-full antialiased">
 
+    @include('layouts._alerte_banniere')
+
     <nav class="sidebar shadow" id="sidebar">
         <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Réduire le menu">
             <i class="fas fa-chevron-left"></i>

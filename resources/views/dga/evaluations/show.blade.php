@@ -382,7 +382,7 @@
         @endif
 
         {{-- Bandeau refus + réclamation --}}
-        @if($evaluation->statut === 'refuse')
+        @if(in_array($evaluation->statut, ['refuse', 'reclamation']))
         <div class="flex flex-col gap-4 rounded-[24px] border-2 border-rose-200 bg-rose-50 px-6 py-5">
             <div class="flex items-start gap-4">
                 <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">

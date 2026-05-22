@@ -15,7 +15,7 @@
                 </div>
                 <a href="{{ route('directeur.personnel.export', request()->query()) }}"
                    class="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
-                    <i class="fas fa-file-csv"></i> Exporter CSV
+                    <i class="fas fa-file-excel"></i> Exporter Excel
                 </a>
             </div>
         </header>
@@ -181,18 +181,20 @@
                                         default       => '',
                                     };
                                     $statutClass = match($item['statut']) {
-                                        'valide'    => 'bg-emerald-100 text-emerald-700',
-                                        'soumis'    => 'bg-amber-100 text-amber-700',
-                                        'refuse'    => 'bg-rose-100 text-rose-700',
-                                        'brouillon' => 'bg-slate-100 text-slate-600',
-                                        default     => '',
+                                        'valide'      => 'bg-emerald-100 text-emerald-700',
+                                        'soumis'      => 'bg-amber-100 text-amber-700',
+                                        'refuse'      => 'bg-rose-100 text-rose-700',
+                                        'reclamation' => 'bg-orange-100 text-orange-700',
+                                        'brouillon'   => 'bg-slate-100 text-slate-600',
+                                        default       => '',
                                     };
                                     $statutLabel = match($item['statut']) {
-                                        'valide'    => 'Validée',
-                                        'soumis'    => 'Soumise',
-                                        'refuse'    => 'Refusée',
-                                        'brouillon' => 'Brouillon',
-                                        default     => '—',
+                                        'valide'      => 'Validée',
+                                        'soumis'      => 'Soumise',
+                                        'refuse'      => 'Refusée',
+                                        'reclamation' => 'Réclamation',
+                                        'brouillon'   => 'Brouillon',
+                                        default       => '—',
                                     };
                                     // Libellé de structure : service > caisse > —
                                     $structure     = $item['service']?->nom ?? $item['caisse']?->nom ?? '—';

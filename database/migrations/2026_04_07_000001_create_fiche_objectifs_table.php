@@ -19,6 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger('assignable_id');
             $table->string('assignable_type');
             $table->index(['assignable_type', 'assignable_id'], 'fiche_objectifs_assignable_index');
+            $table->unique(['annee_id', 'assignable_type', 'assignable_id'], 'fiche_objectifs_unique_per_year');
 
             $table->date('date');
             $table->date('date_echeance');

@@ -172,7 +172,7 @@
                     <input type="radio" name="reponse" value="rouvert" class="mt-0.5 accent-blue-500">
                     <div>
                         <p class="font-semibold text-slate-800">Rouvrir l'évaluation</p>
-                        <p class="text-xs text-slate-500">L'évaluation repasse en brouillon pour correction.</p>
+                        <p class="text-xs text-slate-500">L'évaluation passe en statut <strong>« À réviser »</strong> — l'évaluateur pourra la corriger et la resoumettre.</p>
                     </div>
                 </label>
             </div>

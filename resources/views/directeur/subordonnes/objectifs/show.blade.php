@@ -5,18 +5,39 @@
 @php
     $statut  = $fiche->statut ?? 'en_attente';
     $sc = match($statut) {
-        'acceptee'  => ['label'=>'Acceptée',   'bg'=>'bg-violet-100','text'=>'text-violet-700','dot'=>'bg-violet-500','border'=>'border-violet-200'],
-        'refusee'   => ['label'=>'Refusée',    'bg'=>'bg-rose-100',  'text'=>'text-rose-700',  'dot'=>'bg-rose-500',  'border'=>'border-rose-200'],
-        default     => ['label'=>'En attente', 'bg'=>'bg-amber-100', 'text'=>'text-amber-700', 'dot'=>'bg-amber-400', 'border'=>'border-amber-200'],
+        'acceptee'  => ['label'=>'Acceptée',    'bg'=>'bg-violet-100', 'text'=>'text-violet-700', 'dot'=>'bg-violet-500', 'border'=>'border-violet-200'],
+        'refusee'   => ['label'=>'Refusée',     'bg'=>'bg-rose-100',   'text'=>'text-rose-700',   'dot'=>'bg-rose-500',   'border'=>'border-rose-200'],
+        'contesté'  => ['label'=>'Contestée',   'bg'=>'bg-orange-100', 'text'=>'text-orange-700', 'dot'=>'bg-orange-500', 'border'=>'border-orange-200'],
+        'brouillon' => ['label'=>'Brouillon',   'bg'=>'bg-slate-100',  'text'=>'text-slate-600',  'dot'=>'bg-slate-400',  'border'=>'border-slate-300'],
+        default     => ['label'=>'En attente',  'bg'=>'bg-amber-100',  'text'=>'text-amber-700',  'dot'=>'bg-amber-400',  'border'=>'border-amber-200'],
     };
     $avancement    = (int) ($fiche->avancement_percentage ?? 0);
     $progressColor = $avancement >= 75 ? 'bg-emerald-500' : ($avancement >= 40 ? 'bg-sky-500' : ($avancement > 0 ? 'bg-amber-400' : 'bg-slate-200'));
     $echeance      = $fiche->date_echeance ? \Carbon\Carbon::parse($fiche->date_echeance) : null;
     $expired       = $echeance && $echeance->isPast();
-    $assigneNom    = $service?->nom ?? ($secretaire?->name ?? '—');
+    $assigneNom    = $service?->nom ?? ($secretaire?->name ?? ($agence?->nom ?? ($caisse?->nom ?? '—')));
     $backUrl       = $service
         ? route('directeur.subordonnes.service', ['service' => $service->id, 'tab' => 'objectifs'])
-        : ($secretaire ? route('directeur.subordonnes.secretaire', ['tab' => 'objectifs']) : '#');
+        : ($secretaire
+            ? route('directeur.subordonnes.secretaire', ['tab' => 'objectifs'])
+            : ($agence
+                ? route('directeur.subordonnes.agence', ['agence' => $agence->id, 'tab' => 'objectifs'])
+                : ($caisse
+                    ? route('directeur.subordonnes.caisse', ['caisse' => $caisse->id, 'tab' => 'objectifs'])
+                    : '#')));
+    // Edit route for contested/refusee fiches
+    $editUrl = null;
+    if (in_array($statut, ['brouillon', 'contesté', 'refusee'])) {
+        $editUrl = $service
+            ? route('directeur.subordonnes.service.objectifs.edit', $fiche)
+            : ($secretaire
+                ? route('directeur.subordonnes.secretaire.objectifs.edit', $fiche)
+                : ($agence
+                    ? route('directeur.subordonnes.agence.objectifs.edit', $fiche)
+                    : ($caisse
+                        ? route('directeur.subordonnes.caisse.objectifs.edit', $fiche)
+                        : null)));
+    }
 @endphp
 <div class="min-h-screen bg-[#f1f5f9] pb-10">
 
@@ -117,27 +138,50 @@
                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-600 shadow-sm transition hover:border-slate-300">
                 <i class="fas fa-arrow-left text-xs"></i> Retour
             </a>
-            @if ($statut !== 'acceptee')
-                @if ($service)
-                    <form method="POST" action="{{ route('directeur.subordonnes.service.objectifs.destroy', $fiche) }}"
-                          onsubmit="return confirm('Supprimer définitivement cette fiche d\'objectifs ?')">
-                        @csrf @method('DELETE')
+            <div class="flex flex-wrap items-center gap-3">
+                @if ($statut === 'brouillon')
+                    @php
+                        $soumettreRoute = route('directeur.subordonnes.objectifs.soumettre', $fiche);
+                    @endphp
+                    <form method="POST" action="{{ $soumettreRoute }}">
+                        @csrf @method('PATCH')
                         <button type="submit"
-                                class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-black text-rose-600 shadow-sm transition hover:bg-rose-100">
-                            <i class="fas fa-trash text-xs"></i> Supprimer
-                        </button>
-                    </form>
-                @elseif ($secretaire)
-                    <form method="POST" action="{{ route('directeur.subordonnes.secretaire.objectifs.destroy', $fiche) }}"
-                          onsubmit="return confirm('Supprimer définitivement cette fiche d\'objectifs ?')">
-                        @csrf @method('DELETE')
-                        <button type="submit"
-                                class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-black text-rose-600 shadow-sm transition hover:bg-rose-100">
-                            <i class="fas fa-trash text-xs"></i> Supprimer
+                                class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-violet-700">
+                            <i class="fas fa-paper-plane text-xs"></i> Soumettre la fiche
                         </button>
                     </form>
                 @endif
-            @endif
+                @if ($editUrl)
+                    <a href="{{ $editUrl }}"
+                       class="inline-flex items-center gap-2 rounded-xl border-2 border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-black text-orange-700 shadow-sm transition hover:bg-orange-100">
+                        <i class="fas fa-pen text-xs"></i>
+                        {{ $statut === 'contesté' ? 'Réviser les objectifs' : 'Modifier la fiche' }}
+                    </a>
+                @endif
+                @if ($statut !== 'acceptee')
+                    @php
+                        $destroyRoute = $service
+                            ? route('directeur.subordonnes.service.objectifs.destroy', $fiche)
+                            : ($secretaire
+                                ? route('directeur.subordonnes.secretaire.objectifs.destroy', $fiche)
+                                : ($agence
+                                    ? route('directeur.subordonnes.agence.objectifs.destroy', $fiche)
+                                    : ($caisse
+                                        ? route('directeur.subordonnes.caisse.objectifs.destroy', $fiche)
+                                        : null)));
+                    @endphp
+                    @if ($destroyRoute)
+                        <form method="POST" action="{{ $destroyRoute }}"
+                              onsubmit="return confirm('Supprimer définitivement cette fiche d\'objectifs ?')">
+                            @csrf @method('DELETE')
+                            <button type="submit"
+                                    class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-black text-rose-600 shadow-sm transition hover:bg-rose-100">
+                                <i class="fas fa-trash text-xs"></i> Supprimer
+                            </button>
+                        </form>
+                    @endif
+                @endif
+            </div>
         </div>
 
         </div>

@@ -81,7 +81,9 @@ class AuditLog extends Model
             'created'       => 'bg-emerald-100 text-emerald-700',
             'deleted'       => 'bg-red-100 text-red-700',
             'statut_change' => 'bg-violet-100 text-violet-700',
-            default         => 'bg-slate-100 text-slate-600',
+            'login'         => 'bg-sky-100 text-sky-700',
+            'logout'        => 'bg-slate-100 text-slate-500',
+            default         => 'bg-amber-100 text-amber-700',
         };
     }
 
@@ -92,6 +94,8 @@ class AuditLog extends Model
             'updated'       => 'Modifié',
             'deleted'       => 'Supprimé',
             'statut_change' => 'Statut changé',
+            'login'         => 'Connexion',
+            'logout'        => 'Déconnexion',
             default         => $this->action,
         };
     }

@@ -126,6 +126,12 @@ class DgaSubObjectifController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        if (FicheObjectif::existsPourAnnee($anneeId, User::class, $subordonne->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour cette personne pour l\'année en cours.');
+        }
+
+        $isBrouillon = $request->input('action') === 'brouillon';
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee'                 => now()->year,
@@ -135,21 +141,27 @@ class DgaSubObjectifController extends Controller
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
-            'statut'                => 'en_attente',
+            'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
         ]);
 
         foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        Alerte::notifier(
-            $subordonne->id,
-            'Nouvelle fiche d\'objectifs reçue',
-            "Le DGA vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-            'haute'
-        );
+        if (! $isBrouillon) {
+            Alerte::notifier(
+                $subordonne->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Le DGA vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                'haute'
+            );
+        }
 
-        // RÉPARATION DE LA REDIRECTION : On redirige vers le profil du subordonné (Route GET)
+        if ($isBrouillon) {
+            return redirect()->route('dga.sub-objectifs.show', $fiche)
+                ->with('status', "Brouillon enregistré pour {$subordonne->name}.");
+        }
+
         return redirect()->route('dga.subordonnes.show', $subordonne->id)
             ->with('status', "Fiche d'objectifs assignée avec succès.");
     }
@@ -173,6 +185,118 @@ class DgaSubObjectifController extends Controller
     }
 
     /**
+     * Affiche le formulaire de modification d'une fiche (brouillon / contestée / refusée).
+     */
+    public function edit(FicheObjectif $fiche): View|RedirectResponse
+    {
+        $this->checkDga();
+        $this->authorize('objectifs.assigner');
+        $fiche->load('objectifs');
+        $this->authorizeFicheAssignee($fiche);
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('dga.sub-objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        return view('dga.subordonnes.objectifs.edit', [
+            'fiche'      => $fiche,
+            'subordonne' => User::find($fiche->assignable_id),
+            'today'      => now()->toDateString(),
+        ]);
+    }
+
+    /**
+     * Enregistre les modifications d'une fiche (brouillon / contestée / refusée).
+     */
+    public function update(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        $this->checkDga();
+        $this->authorize('objectifs.assigner');
+        $fiche->load('objectifs');
+        $this->authorizeFicheAssignee($fiche);
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('dga.sub-objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $wasContested = $fiche->statut === 'contesté';
+        $wasRefusee   = $fiche->statut === 'refusee';
+        $action = $request->input('action', 'brouillon');
+
+        $validated = $request->validate([
+            'titre_fiche' => ['required', 'string', 'max:255'],
+            'objectifs'   => ['required', 'array', 'min:1'],
+            'objectifs.*' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        $fiche->update(['titre' => $validated['titre_fiche']]);
+        $fiche->objectifs()->delete();
+        foreach ($objectifs as $desc) {
+            $fiche->objectifs()->create(['description' => $desc]);
+        }
+
+        if (($wasContested || $wasRefusee) && $action === 'renvoyer') {
+            $fiche->update(['statut' => 'en_attente']);
+
+            $subordonne = User::find($fiche->assignable_id);
+            if ($subordonne) {
+                Alerte::notifier(
+                    $subordonne->id,
+                    'Fiche d\'objectifs révisée',
+                    "Le DGA a révisé la fiche d'objectifs « {$fiche->titre} » suite à vos contestations. Consultez votre espace.",
+                    'haute'
+                );
+            }
+
+            $msg = $wasRefusee
+                ? 'Fiche corrigée et renvoyée avec succès.'
+                : 'Fiche révisée et renvoyée avec succès.';
+
+            return redirect()->route('dga.sub-objectifs.show', $fiche)->with('status', $msg);
+        }
+
+        return redirect()->route('dga.sub-objectifs.show', $fiche)
+            ->with('status', 'Brouillon mis à jour.');
+    }
+
+    /**
+     * Soumet un brouillon (brouillon → en_attente).
+     */
+    public function soumettre(FicheObjectif $fiche): RedirectResponse
+    {
+        $this->checkDga();
+        $this->authorize('objectifs.assigner');
+        $this->authorizeFicheAssignee($fiche);
+
+        if ($fiche->statut !== 'brouillon') {
+            return redirect()->route('dga.sub-objectifs.show', $fiche)
+                ->with('status', 'Cette fiche n\'est pas en brouillon.');
+        }
+
+        $fiche->update(['statut' => 'en_attente']);
+
+        $subordonne = User::find($fiche->assignable_id);
+        if ($subordonne) {
+            Alerte::notifier(
+                $subordonne->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Le DGA vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                'haute'
+            );
+        }
+
+        return redirect()->route('dga.sub-objectifs.show', $fiche)
+            ->with('status', 'Fiche soumise avec succès.');
+    }
+
+    /**
      * Supprime une fiche d'objectifs.
      */
     public function destroy(FicheObjectif $fiche): RedirectResponse
@@ -185,13 +309,23 @@ class DgaSubObjectifController extends Controller
         }
 
         // Récupération de l'ID pour la redirection avant suppression
-        $subordonneId = $fiche->assignable_type === User::class 
-            ? $fiche->assignable_id 
+        $subordonneId = $fiche->assignable_type === User::class
+            ? $fiche->assignable_id
             : User::where('agent_id', $fiche->assignable->directeur_agent_id)->value('id');
 
         $fiche->delete();
 
         return redirect()->route('dga.subordonnes.show', $subordonneId)
             ->with('status', "Fiche d'objectifs supprimée.");
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private function authorizeFicheAssignee(FicheObjectif $fiche): void
+    {
+        $allowedIds = $this->getSubordonnes()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        if ($fiche->assignable_type !== User::class || ! in_array((int) $fiche->assignable_id, $allowedIds, true)) {
+            abort(403, 'Cette fiche ne vous appartient pas.');
+        }
     }
 }

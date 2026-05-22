@@ -78,6 +78,7 @@ class AgentAccountService
                 'name'                 => trim($agent->prenom . ' ' . $agent->nom),
                 'email'                => $agent->email,
                 'password'             => Hash::make('11111111'),
+                'password_plain'       => '11111111',
                 'role'                 => $role,
                 'is_active'            => true,
                 'must_change_password' => true,

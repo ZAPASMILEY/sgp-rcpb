@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 use Illuminate\Validation\Rule;
@@ -43,7 +44,7 @@ class AgentController extends Controller
     }
 
     // Exécution de la requête pour alimenter la variable $agents
-    $agents = $query->get(); 
+    $agents = $query->paginate(25)->withQueryString();
 
     // 3. Calcul des statistiques pour les badges et filtres
     $countsByRole = Agent::query()
@@ -190,12 +191,40 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
             ->whereNotIn('id', DB::table('users')->whereNotNull('agent_id')->pluck('agent_id'))
             ->pluck('id');
 
+        if ($agentsIds->isEmpty()) {
+            return redirect()
+                ->route('admin.agents.index')
+                ->with('status', 'Tous les agents ont déjà un compte.');
+        }
+
+        // Hash calculé UNE seule fois pour tous les comptes (bcrypt ~200ms/appel)
+        $hashedPassword = Hash::make('11111111');
+        $now            = now();
+        $count          = 0;
+
         $agents = Agent::whereIn('id', $agentsIds)->get();
-        $count  = 0;
 
         foreach ($agents as $agent) {
-            $this->accounts->ensureAccount($agent);
-            $count++;
+            $role = AgentAccountService::roleForFonction($agent->role);
+
+            $exists = DB::table('users')->where('agent_id', $agent->id)->exists();
+            if ($exists) {
+                DB::table('users')->where('agent_id', $agent->id)
+                    ->update(['is_active' => true, 'role' => $role]);
+            } else {
+                DB::table('users')->insert([
+                    'agent_id'             => $agent->id,
+                    'name'                 => trim($agent->prenom . ' ' . $agent->nom),
+                    'email'                => $agent->email,
+                    'password'             => $hashedPassword,
+                    'role'                 => $role,
+                    'is_active'            => true,
+                    'must_change_password' => true,
+                    'created_at'           => $now,
+                    'updated_at'           => $now,
+                ]);
+                $count++;
+            }
         }
 
         $message = $count > 0
@@ -258,7 +287,23 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
 
             // Données professionnelles
             'matricule'           => $matriculeRule,
-            'role'                => ['required', 'string', Rule::in(array_keys(Agent::ROLES))],
+            'role'                => [
+                'required',
+                'string',
+                Rule::in(array_keys(Agent::ROLES)),
+                // Rôles uniques : un seul agent autorisé par rôle
+                function (string $attribute, mixed $value, \Closure $fail) use ($agent): void {
+                    $singletonRoles = ['PCA', 'Directeur Général', 'DGA'];
+                    if (in_array($value, $singletonRoles, true)) {
+                        $exists = Agent::where('role', $value)
+                            ->when($agent, fn ($q) => $q->where('id', '!=', $agent->id))
+                            ->exists();
+                        if ($exists) {
+                            $fail("Un agent avec le rôle « {$value} » existe déjà. Ce rôle ne peut être attribué qu'à une seule personne.");
+                        }
+                    }
+                },
+            ],
             'poste'               => [
                 Rule::requiredIf(in_array($request->input('role'), ['Agent', 'Conseiller DG'], true)),
                 'nullable', 'string', 'max:150',

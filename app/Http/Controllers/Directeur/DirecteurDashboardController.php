@@ -35,7 +35,7 @@ class DirecteurDashboardController extends Controller
             'total'     => $evalsRecBase()->count(),
             'soumis'    => $evalsRecBase()->where('statut', 'soumis')->count(),
             'valide'    => $evalsRecBase()->where('statut', 'valide')->count(),
-            'refuse'    => $evalsRecBase()->where('statut', 'refuse')->count(),
+            'refuse'    => $evalsRecBase()->whereIn('statut', ['refuse', 'reclamation'])->count(),
             'brouillon' => $evalsRecBase()->where('statut', 'brouillon')->count(),
         ];
 

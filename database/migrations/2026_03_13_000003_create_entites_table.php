@@ -15,6 +15,7 @@ return new class extends Migration
             $table->tinyInteger('singleton')->unsigned()->default(1)
                   ->comment('Valeur toujours 1. Contrainte UNIQUE garantit une seule ligne.');
             $table->string('nom')->unique();
+            $table->string('sigle', 30)->nullable()->comment('Sigle/acronyme affiché dans les évaluations, ex: FCPB');
             $table->string('ville');
             $table->string('region')->nullable();
             $table->string('secretariat_telephone', 30)->nullable();

@@ -175,7 +175,7 @@
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_direction" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                                    Entité ({{ $ctx->getTypeLabel() }})
+                                    Entité
                                 </label>
                                 <input id="identification_direction" name="identification[direction]" type="text"
                                        value="{{ old('identification.direction', $entiteNom ?? '') }}"
@@ -183,7 +183,7 @@
                             </div>
                             <div class="space-y-2">
                                 <label for="identification_direction_service" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                                    Structure
+                                    Direction / Service
                                 </label>
                                 <input id="identification_direction_service" name="identification[direction_service]" type="text"
                                        value="{{ old('identification.direction_service', $prefilledDirectionService ?? '') }}"
@@ -743,10 +743,10 @@
 
         function fillIdent(data) {
             if (!data) return;
-            if (fieldNomPrenom)    { fieldNomPrenom.value    = data.nom_prenom ?? ''; }
-            if (fieldEmploi)       { fieldEmploi.value       = data.emploi     ?? ''; }
-            if (fieldDirection)    { fieldDirection.value    = data.entite_nom ?? ''; }
-            if (fieldDirectionSvc) { fieldDirectionSvc.value = data.entite_nom ?? ''; }
+            if (fieldNomPrenom)    { fieldNomPrenom.value    = data.nom_prenom        ?? ''; }
+            if (fieldEmploi)       { fieldEmploi.value       = data.emploi            ?? ''; }
+            if (fieldDirection)    { fieldDirection.value    = data.entite_nom        ?? ''; }
+            if (fieldDirectionSvc) { fieldDirectionSvc.value = data.direction_service ?? ''; }
             const fieldMatricule = document.getElementById('identification_matricule');
             if (fieldMatricule) fieldMatricule.value = data.matricule ?? '';
             // Sync vers le champ de signature de l'évalué

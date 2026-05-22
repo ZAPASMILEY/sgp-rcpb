@@ -35,23 +35,37 @@ class DgSubEvaluationController extends Controller
 
         $entiteNom = $entite->nom ?? '';
 
+        // Résoudre le nom de la Direction Générale Adjointe
+        $dirDga = \App\Models\Direction::where('nom', 'Direction Générale Adjointe')
+            ->where('entite_id', $entite->id)->first();
+        $dirGen = \App\Models\Direction::where('nom', 'Direction Générale')
+            ->where('entite_id', $entite->id)->first();
+
         if ($entite->dga_agent_id) {
-            $dga = User::where('role', 'DGA')->where('agent_id', $entite->dga_agent_id)->first();
+            $dga = User::with(['agent.direction', 'agent.entite'])
+                ->where('role', 'DGA')->where('agent_id', $entite->dga_agent_id)->first();
             if ($dga) {
-                $subordonnes->push(['id' => $dga->id, 'agent_id' => $dga->agent_id, 'nom' => $dga->name, 'role_label' => 'DGA', 'entite_label' => $entiteNom, 'service_label' => 'Direction Générale']);
+                $dgaServiceLabel = $dirDga?->nom ?? $dga->agent?->direction?->nom ?? 'Direction Générale Adjointe';
+                $subordonnes->push(['id' => $dga->id, 'agent_id' => $dga->agent_id, 'nom' => $dga->name, 'role_label' => 'DGA', 'entite_label' => $entiteNom, 'service_label' => $dgaServiceLabel]);
             }
         }
 
         if ($entite->assistante_agent_id) {
-            $assistante = User::where('role', 'Assistante_Dg')->where('agent_id', $entite->assistante_agent_id)->first();
+            $assistante = User::with(['agent.direction', 'agent.entite'])
+                ->where('role', 'Assistante_Dg')->where('agent_id', $entite->assistante_agent_id)->first();
             if ($assistante) {
-                $subordonnes->push(['id' => $assistante->id, 'agent_id' => $assistante->agent_id, 'nom' => $assistante->name, 'role_label' => 'Assistante', 'entite_label' => $entiteNom, 'service_label' => 'Secrétariat DG']);
+                $assServiceLabel = $dirGen?->nom ?? $assistante->agent?->direction?->nom ?? 'Direction Générale';
+                $subordonnes->push(['id' => $assistante->id, 'agent_id' => $assistante->agent_id, 'nom' => $assistante->name, 'role_label' => 'Assistante', 'entite_label' => $entiteNom, 'service_label' => $assServiceLabel]);
             }
         }
 
-        $conseillers = User::with('agent')->where('role', 'Conseillers_Dg')->whereHas('agent', fn($q) => $q->where('entite_id', $entite->id))->get();
+        $conseillers = User::with(['agent.direction', 'agent.entite'])
+            ->where('role', 'Conseillers_Dg')
+            ->whereHas('agent', fn($q) => $q->where('entite_id', $entite->id))
+            ->get();
         foreach ($conseillers as $c) {
-            $subordonnes->push(['id' => $c->id, 'agent_id' => $c->agent_id, 'nom' => $c->name, 'role_label' => 'Conseiller', 'entite_label' => $entiteNom, 'service_label' => $c->agent?->role ?? 'Direction Générale']);
+            $cServiceLabel = $c->agent?->direction?->nom ?? $dirGen?->nom ?? 'Direction Générale';
+            $subordonnes->push(['id' => $c->id, 'agent_id' => $c->agent_id, 'nom' => $c->name, 'role_label' => 'Conseiller', 'entite_label' => $entiteNom, 'service_label' => $cServiceLabel]);
         }
 
         return $subordonnes;
@@ -96,6 +110,11 @@ class DgSubEvaluationController extends Controller
         $evaluationData = $this->prepareEvaluationData($validated, $request);
         if ($evaluationData instanceof RedirectResponse) return $evaluationData;
 
+        // ── Unicité : 1 évaluation par semestre ─────────────────────────────
+        if ($this->evaluationService->dejaEvalueeSemestre($subordonne->id, User::class, $evaluationData['main']['semestre_id'])) {
+            return back()->withInput()->with('error', "Une évaluation existe déjà pour {$subordonne->name} sur ce semestre.");
+        }
+
         DB::transaction(function () use ($evaluationData, $validated, $subordonne) {
             $evaluation = Evaluation::create(array_merge($evaluationData['main'], [
                 'evaluable_type' => User::class,
@@ -116,19 +135,61 @@ class DgSubEvaluationController extends Controller
     {
         $this->authorize('evaluations.creer');
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return redirect($this->backUrlForSubordonne($evaluation->evaluable))->with('error', 'Seules les évaluations en brouillon sont modifiables.');
         }
 
         $evaluation->load(['identification', 'criteres.sousCriteres']);
         $subordonne = $evaluation->evaluable;
-        
+        $ident      = $evaluation->identification;
+
+        $existingSubjectiveCriteria = $evaluation->criteres
+            ->where('type', 'subjectif')
+            ->map(fn ($c) => [
+                'titre'              => $c->titre,
+                'observation'        => $c->observation ?? '',
+                'source_template_id' => $c->source_template_id ?? '',
+                'subcriteria'        => $c->sousCriteres->map(fn ($s) => [
+                    'libelle'     => $s->libelle,
+                    'note'        => $s->note,
+                    'observation' => $s->observation ?? '',
+                ])->values()->all(),
+            ])->values()->all();
+
+        $existingObjectiveCriteria = $evaluation->criteres
+            ->where('type', 'objectif')
+            ->map(fn ($c) => [
+                'titre'                             => $c->titre,
+                'observation'                       => $c->observation ?? '',
+                'source_fiche_objectif_id'          => $c->source_fiche_objectif_id ?? '',
+                'source_fiche_objectif_objectif_id' => $c->source_fiche_objectif_objectif_id ?? '',
+                'subcriteria'                       => $c->sousCriteres->map(fn ($s) => [
+                    'libelle'     => $s->libelle,
+                    'note'        => $s->note,
+                    'observation' => $s->observation ?? '',
+                    'source_fiche_objectif_objectif_id' => $s->source_fiche_objectif_objectif_id ?? '',
+                ])->values()->all(),
+            ])->values()->all();
+
+        $openAnnee     = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+
+        $formations  = $ident?->formations ?? [];
+        $experiences = $ident?->experiences ?? [];
+
         return view('dg.subordonnes.evaluations.edit', [
-            'evaluation' => $evaluation,
-            'subordonne' => $subordonne,
-            'subordonnes' => $this->getSubordonnes(),
-            'objectiveOptions' => $this->getObjectiveOptionsForUser($subordonne->id),
-            'subjectiveTemplates' => $this->evaluationService->buildSubjectiveTemplates(),
+            'evaluation'                => $evaluation,
+            'subordonne'                => $subordonne,
+            'ident'                     => $ident,
+            'subordonnes'               => $this->getSubordonnes(),
+            'objectiveOptions'          => $this->getObjectiveOptionsForUser($subordonne->id),
+            'subjectiveTemplates'       => $this->evaluationService->buildSubjectiveTemplates(),
+            'existingSubjectiveCriteria'=> $existingSubjectiveCriteria,
+            'existingObjectiveCriteria' => $existingObjectiveCriteria,
+            'openAnnee'                 => $openAnnee,
+            'openSemestres'             => $openSemestres,
+            'formationsData'            => $formations,
+            'experiencesData'           => $experiences,
         ]);
     }
 
@@ -136,7 +197,7 @@ class DgSubEvaluationController extends Controller
     {
         $this->authorize('evaluations.creer');
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             abort(403, 'Modification interdite pour une évaluation déjà soumise.');
         }
 
@@ -164,7 +225,7 @@ class DgSubEvaluationController extends Controller
         return $request->validate([
             'subordonne_id' => ['required', 'integer', 'in:'.implode(',', $allowedIds)],
             'identification.date_evaluation' => ['nullable', 'string'],
-            'identification.grade' => ['required', 'string', 'max:255'],
+            'identification.grade' => ['nullable', 'string', 'max:255'],
             'identification.formations' => ['nullable', 'array'],
             'identification.experiences' => ['nullable', 'array'],
             'subjective_criteres' => ['required', 'array', 'min:1'],
@@ -193,22 +254,45 @@ class DgSubEvaluationController extends Controller
         $identification = $validated['identification'] ?? [];
         $identification['semestre'] = (string) $semestre->numero;
 
-        // Inject matricule from the subordonne user's agent
-        $subordonneUser = User::find($validated['subordonne_id']);
-        $identification['matricule'] = $subordonneUser?->agent?->matricule ?? null;
+        // Inject identification fields from the subordonne user's agent
+        $subordonneUser = User::with(['agent.entite', 'agent.direction', 'agent.delegationTechnique', 'agent.caisse', 'agent.agence', 'agent.service'])->find($validated['subordonne_id']);
+        $agent = $subordonneUser?->agent;
+        $identification['matricule']        = $agent?->matricule ?? null;
+        $identification['nom_prenom']       = $agent ? trim($agent->prenom . ' ' . $agent->nom) : $subordonneUser?->name;
+        $identification['emploi']           = $agent?->poste ?: $agent?->role;
+        if ($agent) {
+            $structLabels = \App\Helpers\AgentStructure::labels($agent);
+            $identification['direction']         = $structLabels['entite_nom'];
+            $identification['direction_service'] = $structLabels['direction_service'];
+        } else {
+            $identification['direction']         = null;
+            $identification['direction_service'] = null;
+        }
+
+        // Normalize date_evaluation from d/m/Y → Y-m-d
+        $raw = $identification['date_evaluation'] ?? null;
+        if (! blank($raw)) {
+            $normalized = $this->evaluationService->normalizeDateValue($raw);
+            if ($normalized === null) {
+                return back()->withInput()->withErrors(['identification.date_evaluation' => 'Format de date invalide. Utilisez JJ/MM/AAAA.']);
+            }
+            $identification['date_evaluation'] = $normalized;
+        }
 
         return [
             'main' => [
-                'date_debut'              => $semestre->dateDebut()->toDateString(),
-                'date_fin'                => $semestre->dateFin()->toDateString(),
-                'annee_id'                => $openAnnee->id,
-                'semestre_id'             => $semestre->id,
-                'moyenne_subjectifs'      => $scores['moyenne_subjectifs'],
-                'moyenne_objectifs'       => $scores['moyenne_objectifs'],
-                'note_finale'             => $scores['note_finale'],
-                'commentaire'             => $validated['commentaire'] ?? null,
-                'points_a_ameliorer'      => $validated['points_a_ameliorer'] ?? null,
-                'strategies_amelioration' => $validated['strategies_amelioration'] ?? null,
+                'date_debut'               => $semestre->dateDebut()->toDateString(),
+                'date_fin'                 => $semestre->dateFin()->toDateString(),
+                'annee_id'                 => $openAnnee->id,
+                'semestre_id'              => $semestre->id,
+                'moyenne_subjectifs'       => $scores['moyenne_subjectifs'],
+                'moyenne_objectifs'        => $scores['moyenne_objectifs'],
+                'note_criteres_subjectifs' => $scores['note_criteres_subjectifs'],
+                'note_criteres_objectifs'  => $scores['note_criteres_objectifs'],
+                'note_finale'              => $scores['note_finale'],
+                'commentaire'              => $validated['commentaire'] ?? null,
+                'points_a_ameliorer'       => $validated['points_a_ameliorer'] ?? null,
+                'strategies_amelioration'  => $validated['strategies_amelioration'] ?? null,
             ],
             'identification' => $identification,
             'criteria'       => array_merge($normSub, $normObj),
@@ -251,7 +335,7 @@ class DgSubEvaluationController extends Controller
     public function submit(Request $request, Evaluation $evaluation): RedirectResponse
     {
         $this->authorize('evaluations.soumettre');
-        if ($evaluation->statut !== 'brouillon') return back()->with('error', 'Déjà soumis.');
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) return back()->with('error', 'Déjà soumis.');
 
         $evaluation->update(['statut' => 'soumis']);
         Alerte::notifier($evaluation->evaluable_id, 'Évaluation reçue', 'Le DG vous a soumis votre fiche.', 'haute');

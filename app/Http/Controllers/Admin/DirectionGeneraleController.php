@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agent;
 use App\Models\Direction;
 use App\Models\Entite;
 use App\Models\Poste;
+use App\Models\Service;
 use App\Models\User;
 use App\Services\AgentAccountService;
 use Illuminate\Http\RedirectResponse;
@@ -17,19 +19,38 @@ class DirectionGeneraleController extends Controller
 {
     public function __construct(private AgentAccountService $accounts) {}
 
-    public function index(): View
+    private function getDirection(): ?Direction
     {
         $entite = Entite::latest()->first();
+        if (! $entite) {
+            return null;
+        }
+        return Direction::where('entite_id', $entite->id)
+            ->where('nom', 'Direction Générale')
+            ->with([
+                'services' => fn ($q) => $q->with(['chef', 'agents']),
+            ])
+            ->first();
+    }
+
+    public function index(): View
+    {
+        $entite    = Entite::latest()->first();
         $direction = $entite
-            ? Direction::where('entite_id', $entite->id)->where('nom', 'Direction Générale')->first()
+            ? Direction::where('entite_id', $entite->id)
+                ->where('nom', 'Direction Générale')
+                ->with(['services' => fn ($q) => $q->with(['chef', 'agents'])])
+                ->first()
             : null;
 
         $membres     = collect();
         $secretaires = collect();
         $conseillers = collect();
+        $services    = collect();
+        $agentsDisponibles = collect();
 
         if ($entite) {
-            // DG et Assistante uniquement (DGA a sa propre Direction Générale Adjointe)
+            // DG et Assistante uniquement
             $agentIds = array_values(array_filter([
                 $entite->dg_agent_id,
                 $entite->assistante_agent_id,
@@ -38,7 +59,6 @@ class DirectionGeneraleController extends Controller
                 ? User::whereIn('agent_id', $agentIds)->get()
                 : collect();
 
-            // Secrétaires et Conseillers : retrouvés via agents.entite_id
             $secretaires = User::where('role', 'Secretaire_Assistante')
                 ->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))
                 ->get();
@@ -48,13 +68,95 @@ class DirectionGeneraleController extends Controller
                 ->get();
         }
 
+        if ($direction) {
+            $services = $direction->services->map(function (Service $s): array {
+                $chef     = $s->chef;
+                $chefUser = $chef ? User::where('agent_id', $chef->id)->first() : null;
+                return [
+                    'service'  => $s,
+                    'chef'     => $chef,
+                    'chefUser' => $chefUser,
+                    'nbAgents' => $s->agents->count(),
+                ];
+            });
+
+            $agentsDisponibles = Agent::where('direction_id', $direction->id)
+                ->whereNull('service_id')
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'role']);
+        }
+
         return view('admin.direction-generale.index', [
-            'entite'      => $entite,
-            'direction'   => $direction,
-            'membres'     => $membres,
-            'secretaires' => $secretaires,
-            'conseillers' => $conseillers,
+            'entite'            => $entite,
+            'direction'         => $direction,
+            'membres'           => $membres,
+            'secretaires'       => $secretaires,
+            'conseillers'       => $conseillers,
+            'services'          => $services,
+            'agentsDisponibles' => $agentsDisponibles,
         ]);
+    }
+
+    public function storeService(Request $request): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction, 404, 'Direction Générale introuvable.');
+
+        $validated = $request->validate([
+            'nom' => ['required', 'string', 'max:150'],
+        ], ['nom.required' => 'Le nom du service est obligatoire.']);
+
+        Service::create([
+            'nom'          => $validated['nom'],
+            'direction_id' => $direction->id,
+        ]);
+
+        return back()->with('status', 'Service « ' . $validated['nom'] . ' » créé avec succès.');
+    }
+
+    public function destroyService(Service $service): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction || $service->direction_id !== $direction->id, 403);
+
+        Agent::where('service_id', $service->id)->update(['service_id' => null]);
+
+        $nom = $service->nom;
+        $service->delete();
+
+        return back()->with('status', 'Service « ' . $nom . ' » supprimé.');
+    }
+
+    public function storeAgent(Request $request, Service $service): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction || $service->direction_id !== $direction->id, 403);
+
+        $validated = $request->validate([
+            'agent_id' => ['required', 'integer', 'exists:agents,id'],
+        ], ['agent_id.required' => 'Sélectionnez un agent.']);
+
+        $agent = Agent::findOrFail($validated['agent_id']);
+
+        if ((int) $agent->direction_id !== $direction->id) {
+            return back()->with('error', 'Cet agent ne fait pas partie de la Direction Générale.');
+        }
+
+        $agent->update(['service_id' => $service->id]);
+        $this->accounts->ensureAccount($agent->fresh());
+
+        return back()->with('status', $agent->prenom . ' ' . $agent->nom . ' affecté(e) au service « ' . $service->nom . ' ».');
+    }
+
+    public function removeAgent(Service $service, Agent $agent): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction || $service->direction_id !== $direction->id, 403);
+        abort_if((int) $agent->service_id !== $service->id, 403);
+
+        $agent->update(['service_id' => null]);
+
+        return back()->with('status', $agent->prenom . ' ' . $agent->nom . ' retiré(e) du service « ' . $service->nom . ' ».');
     }
 
     public function create(): View|RedirectResponse

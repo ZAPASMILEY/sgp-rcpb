@@ -140,16 +140,18 @@ $kpis = [
                                         : ['label'=>'Insuffisant', 'cls'=>'bg-rose-100 text-rose-600',       'dot'=>'bg-rose-500']));
 
                             $statCls = match($eval->statut) {
-                                'valide' => 'bg-emerald-100 text-emerald-700',
-                                'soumis' => 'bg-amber-100 text-amber-700',
-                                'refuse' => 'bg-rose-100 text-rose-600',
-                                default  => 'bg-slate-100 text-slate-600',
+                                'valide'      => 'bg-emerald-100 text-emerald-700',
+                                'soumis'      => 'bg-amber-100 text-amber-700',
+                                'refuse'      => 'bg-rose-100 text-rose-600',
+                                'reclamation' => 'bg-orange-100 text-orange-700',
+                                default       => 'bg-slate-100 text-slate-600',
                             };
                             $statLabel = match($eval->statut) {
-                                'valide' => 'Validée',
-                                'soumis' => 'Soumise',
-                                'refuse' => 'Refusée',
-                                default  => ucfirst($eval->statut),
+                                'valide'      => 'Validée',
+                                'soumis'      => 'Soumise',
+                                'refuse'      => 'Refusée',
+                                'reclamation' => 'Réclamation',
+                                default       => ucfirst($eval->statut),
                             };
 
                             $pct        = $note > 0 ? min(100, $note * 10) : 0;

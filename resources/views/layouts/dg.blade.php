@@ -39,6 +39,12 @@
                 ['route' => 'dg.structures',  'icon' => 'fas fa-building',          'label' => 'Structures'],
             ],
         ],
+        [
+            'title' => 'Formations',
+            'items' => [
+                ['route' => 'dg.formations.index', 'icon' => 'fas fa-graduation-cap', 'label' => 'Mes formations'],
+            ],
+        ],
     ];
 
     // ── Sections conditionnelles selon permissions ───────────────────────────
@@ -147,6 +153,8 @@
     </style>
 </head>
 <body class="h-full antialiased">
+
+    @include('layouts._alerte_banniere')
 
     <nav class="sidebar shadow" id="sidebar">
         <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Réduire le menu">

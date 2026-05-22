@@ -112,7 +112,7 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-4">
-                                    <p class="font-semibold text-slate-800 max-w-[220px] truncate">{{ $f->titre }}</p>
+                                    <p class="font-semibold text-slate-800 max-w-[220px] truncate">{{ $f->theme }}</p>
                                 </td>
                                 <td class="px-4 py-4">
                                     <span class="inline-flex rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-black text-blue-700">

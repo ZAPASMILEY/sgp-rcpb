@@ -529,9 +529,19 @@ class DirecteurSubordonneController extends Controller
         $semestreId = $semestre->id;
 
         // Normalisation de la date d'évaluation dans la section identification
+        $secretaire->loadMissing(['agent.entite', 'agent.direction', 'agent.delegationTechnique', 'agent.caisse', 'agent.agence']);
+        $agentSec = $secretaire->agent;
         $identification = $validated['identification'] ?? [];
-        $identification['semestre'] = (string) $semestre->numero;
-        $identification['matricule'] = $secretaire->agent?->matricule ?? null;
+        $identification['semestre']          = (string) $semestre->numero;
+        $identification['matricule']         = $agentSec?->matricule ?? null;
+        $identification['nom_prenom']        = $agentSec ? trim($agentSec->prenom . ' ' . $agentSec->nom) : $secretaire->name;
+        $identification['emploi']            = $agentSec?->poste ?: $agentSec?->role;
+        $identification['direction']         = $agentSec?->entite?->sigle ?: ($agentSec?->entite?->nom ?? null);
+        $identification['direction_service'] = $agentSec?->direction?->nom
+            ?? $agentSec?->delegationTechnique?->nom
+            ?? $agentSec?->caisse?->nom
+            ?? $agentSec?->agence?->nom
+            ?? null;
         $raw = $identification['date_evaluation'] ?? null;
         if (! blank($raw)) {
             $normalized = $this->evaluationService->normalizeDateValue($raw);
@@ -561,6 +571,11 @@ class DirecteurSubordonneController extends Controller
         }
 
         $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
+
+        // ── Unicité : 1 évaluation par semestre ─────────────────────────────
+        if ($this->evaluationService->dejaEvalueeSemestre($secretaire->id, User::class, $semestreId)) {
+            return back()->withInput()->with('error', "Une évaluation existe déjà pour {$secretaire->name} sur ce semestre.");
+        }
 
         // Transaction : Evaluation → Identification → Critères → SousCritères
         DB::transaction(function () use ($user, $secretaire, $dateDebut, $dateFin, $anneeId, $semestreId, $scores, $validated, $identification, $normalizedSubjective, $normalizedObjective) {
@@ -614,17 +629,21 @@ class DirecteurSubordonneController extends Controller
         $ident   = $evaluation->identification;
 
         $statusClass = match ($evaluation->statut) {
-            'valide'    => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-            'soumis'    => 'border-amber-200 bg-amber-50 text-amber-700',
-            'refuse'    => 'border-rose-200 bg-rose-50 text-rose-700',
-            default     => 'border-slate-200 bg-slate-100 text-slate-700',
+            'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+            'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+            'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+            'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+            'a_reviser'   => 'border-purple-200 bg-purple-50 text-purple-700',
+            default       => 'border-slate-200 bg-slate-100 text-slate-700',
         };
         $statusLabel = match ($evaluation->statut) {
-            'valide'    => 'Acceptée',
-            'soumis'    => 'Soumise',
-            'refuse'    => 'Refusée',
-            'brouillon' => 'Brouillon',
-            default     => ucfirst((string) $evaluation->statut),
+            'valide'      => 'Acceptée',
+            'soumis'      => 'Soumise',
+            'refuse'      => 'Refusée',
+            'reclamation' => 'Réclamation',
+            'a_reviser'   => 'À réviser',
+            'brouillon'   => 'Brouillon',
+            default       => ucfirst((string) $evaluation->statut),
         };
 
         return view('directeur.subordonnes.evaluations.show', compact(
@@ -642,7 +661,7 @@ class DirecteurSubordonneController extends Controller
     {
         $this->authorizeSecretaireEval($evaluation);
 
-        if ($evaluation->statut !== 'brouillon') {
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
             return back()->with('error', 'Cette évaluation ne peut plus être soumise.');
         }
 
@@ -753,6 +772,12 @@ class DirecteurSubordonneController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        if (FicheObjectif::existsPourAnnee($anneeId, User::class, $chefUser->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour ce chef de service pour l\'année en cours.');
+        }
+
+        $isBrouillon = $request->input('action') === 'brouillon';
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee_id'              => $anneeId,
@@ -761,23 +786,29 @@ class DirecteurSubordonneController extends Controller
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
-            'statut'                => 'en_attente',
+            'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
         ]);
 
         foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        Alerte::notifier(
-            $chefUser->id,
-            'Nouvelle fiche d\'objectifs reçue',
-            "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-            'haute'
-        );
+        if (! $isBrouillon) {
+            Alerte::notifier(
+                $chefUser->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                'haute'
+            );
+        }
+
+        $msg = $isBrouillon
+            ? "Brouillon enregistré pour le chef du service « {$service->nom} »."
+            : "Fiche d'objectifs assignée au chef du service « {$service->nom} ».";
 
         return redirect()
             ->route('directeur.subordonnes.service', ['service' => $service->id, 'tab' => 'objectifs'])
-            ->with('status', "Fiche d'objectifs assignée au chef du service « {$service->nom} ».");
+            ->with('status', $msg);
     }
 
     /**
@@ -795,7 +826,38 @@ class DirecteurSubordonneController extends Controller
 
         return view('directeur.subordonnes.objectifs.show', compact(
             'fiche', 'direction', 'service', 'statusClass', 'statusLabel'
-        ) + ['secretaire' => null]);
+        ) + ['secretaire' => null, 'agence' => null, 'caisse' => null]);
+    }
+
+    public function editServiceObjectif(FicheObjectif $fiche): View|RedirectResponse
+    {
+        [$ctx, $service] = $this->authorizeObjectifService($fiche);
+        $fiche->load('objectifs');
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('directeur.subordonnes.service.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $chefUser = $service->chef ? User::where('agent_id', $service->chef->id)->first() : null;
+
+        return view('directeur.subordonnes.objectifs.edit', [
+            'fiche'        => $fiche,
+            'direction'    => $ctx->entity,
+            'updateRoute'  => 'directeur.subordonnes.service.objectifs.update',
+            'cancelUrl'    => route('directeur.subordonnes.service.objectifs.show', $fiche),
+            'cibleLabel'   => 'Chef de service — '.$service->nom,
+            'assigneeUser' => $chefUser,
+        ]);
+    }
+
+    public function updateServiceObjectif(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        [, $service] = $this->authorizeObjectifService($fiche);
+        $fiche->load('objectifs');
+        $chefUser = $service->chef ? User::where('agent_id', $service->chef->id)->first() : null;
+
+        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.service.objectifs.show', $chefUser);
     }
 
     /**
@@ -876,6 +938,12 @@ class DirecteurSubordonneController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        if (FicheObjectif::existsPourAnnee($anneeId, User::class, $secretaire->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour ce secrétaire pour l\'année en cours.');
+        }
+
+        $isBrouillon = $request->input('action') === 'brouillon';
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee_id'              => $anneeId,
@@ -884,23 +952,28 @@ class DirecteurSubordonneController extends Controller
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
-            'statut'                => 'en_attente',
+            'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
         ]);
 
         foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        // Notification à la secrétaire
-        Alerte::notifier(
-            $secretaire->id,
-            'Nouvelle fiche d\'objectifs reçue',
-            "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-            'haute'
-        );
+        if (! $isBrouillon) {
+            Alerte::notifier(
+                $secretaire->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                'haute'
+            );
+        }
+
+        $msg = $isBrouillon
+            ? "Brouillon enregistré pour {$secretaire->name}."
+            : "Fiche d'objectifs assignée à {$secretaire->name}.";
 
         return redirect()->route('directeur.subordonnes.secretaire', ['tab' => 'objectifs'])
-            ->with('status', "Fiche d'objectifs assignée à {$secretaire->name}.");
+            ->with('status', $msg);
     }
 
     /**
@@ -919,7 +992,37 @@ class DirecteurSubordonneController extends Controller
 
         return view('directeur.subordonnes.objectifs.show', compact(
             'fiche', 'direction', 'secretaire', 'statusClass', 'statusLabel'
-        ) + ['service' => null]);
+        ) + ['service' => null, 'agence' => null, 'caisse' => null]);
+    }
+
+    public function editSecretaireObjectif(FicheObjectif $fiche): View|RedirectResponse
+    {
+        $ctx        = $this->authorizeObjectifSecretaire($fiche);
+        $secretaire = User::find($fiche->assignable_id);
+        $fiche->load('objectifs');
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('directeur.subordonnes.secretaire.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        return view('directeur.subordonnes.objectifs.edit', [
+            'fiche'        => $fiche,
+            'direction'    => $ctx->entity,
+            'updateRoute'  => 'directeur.subordonnes.secretaire.objectifs.update',
+            'cancelUrl'    => route('directeur.subordonnes.secretaire.objectifs.show', $fiche),
+            'cibleLabel'   => 'Secrétaire — '.($secretaire?->name ?? '—'),
+            'assigneeUser' => $secretaire,
+        ]);
+    }
+
+    public function updateSecretaireObjectif(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorizeObjectifSecretaire($fiche);
+        $fiche->load('objectifs');
+        $secretaire = User::find($fiche->assignable_id);
+
+        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.secretaire.objectifs.show', $secretaire);
     }
 
     /**
@@ -1061,6 +1164,12 @@ class DirecteurSubordonneController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        if (FicheObjectif::existsPourAnnee($anneeId, User::class, $chefAgenceUser->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour ce chef d\'agence pour l\'année en cours.');
+        }
+
+        $isBrouillon = $request->input('action') === 'brouillon';
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee_id'              => $anneeId,
@@ -1069,23 +1178,29 @@ class DirecteurSubordonneController extends Controller
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
-            'statut'                => 'en_attente',
+            'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
         ]);
 
         foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        Alerte::notifier(
-            $chefAgenceUser->id,
-            'Nouvelle fiche d\'objectifs reçue',
-            "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-            'haute'
-        );
+        if (! $isBrouillon) {
+            Alerte::notifier(
+                $chefAgenceUser->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                'haute'
+            );
+        }
+
+        $msg = $isBrouillon
+            ? "Brouillon enregistré pour l'agence « {$agence->nom} »."
+            : "Fiche d'objectifs assignée au chef de l'agence « {$agence->nom} ».";
 
         return redirect()
             ->route('directeur.subordonnes.agence', ['agence' => $agence->id, 'tab' => 'objectifs'])
-            ->with('status', "Fiche d'objectifs assignée au chef de l'agence « {$agence->nom} ».");
+            ->with('status', $msg);
     }
 
     public function showAgenceObjectif(FicheObjectif $fiche): View
@@ -1099,7 +1214,38 @@ class DirecteurSubordonneController extends Controller
 
         return view('directeur.subordonnes.objectifs.show', compact(
             'fiche', 'direction', 'statusClass', 'statusLabel'
-        ) + ['service' => null, 'secretaire' => null, 'agence' => $agence]);
+        ) + ['service' => null, 'secretaire' => null, 'agence' => $agence, 'caisse' => null]);
+    }
+
+    public function editAgenceObjectif(FicheObjectif $fiche): View|RedirectResponse
+    {
+        [$ctx, $agence] = $this->authorizeObjectifAgence($fiche);
+        $fiche->load('objectifs');
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('directeur.subordonnes.agence.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $chefUser = $agence->chef_agent_id ? User::where('agent_id', $agence->chef_agent_id)->first() : null;
+
+        return view('directeur.subordonnes.objectifs.edit', [
+            'fiche'        => $fiche,
+            'direction'    => $ctx->entity,
+            'updateRoute'  => 'directeur.subordonnes.agence.objectifs.update',
+            'cancelUrl'    => route('directeur.subordonnes.agence.objectifs.show', $fiche),
+            'cibleLabel'   => 'Agence — '.$agence->nom,
+            'assigneeUser' => $chefUser,
+        ]);
+    }
+
+    public function updateAgenceObjectif(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        [, $agence] = $this->authorizeObjectifAgence($fiche);
+        $fiche->load('objectifs');
+        $chefUser = $agence->chef_agent_id ? User::where('agent_id', $agence->chef_agent_id)->first() : null;
+
+        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.agence.objectifs.show', $chefUser);
     }
 
     public function destroyAgenceObjectif(FicheObjectif $fiche): RedirectResponse
@@ -1237,6 +1383,12 @@ class DirecteurSubordonneController extends Controller
             return back()->withInput()->with('error', $e->getMessage());
         }
 
+        if (FicheObjectif::existsPourAnnee($anneeId, User::class, $directeurUser->id)) {
+            return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour ce directeur de caisse pour l\'année en cours.');
+        }
+
+        $isBrouillon = $request->input('action') === 'brouillon';
+
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
             'annee_id'              => $anneeId,
@@ -1245,14 +1397,14 @@ class DirecteurSubordonneController extends Controller
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
-            'statut'                => 'en_attente',
+            'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
         ]);
 
         foreach ($objectifs as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        if ($directeurUser) {
+        if (! $isBrouillon) {
             Alerte::notifier(
                 $directeurUser->id,
                 'Nouvelle fiche d\'objectifs reçue',
@@ -1261,9 +1413,13 @@ class DirecteurSubordonneController extends Controller
             );
         }
 
+        $msg = $isBrouillon
+            ? "Brouillon enregistré pour la caisse {$caisse->nom}."
+            : "Fiche d'objectifs assignée à la caisse {$caisse->nom}.";
+
         return redirect()
             ->route('directeur.subordonnes.caisse', ['caisse' => $caisse->id, 'tab' => 'objectifs'])
-            ->with('status', "Fiche d'objectifs assignée à la caisse {$caisse->nom}.");
+            ->with('status', $msg);
     }
 
     public function showCaisseObjectif(Request $request, FicheObjectif $fiche): View
@@ -1271,27 +1427,47 @@ class DirecteurSubordonneController extends Controller
         [$ctx, $caisse] = $this->authorizeObjectifCaisse($fiche);
         $fiche->load('objectifs');
 
-        $statusClass = match ($fiche->statut) {
-            'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-            'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
-            'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
-            default      => 'border-slate-200 bg-slate-100 text-slate-700',
-        };
-        $statusLabel = match ($fiche->statut) {
-            'acceptee'   => 'Acceptée',
-            'en_attente' => 'En attente',
-            'refusee'    => 'Refusée',
-            default      => ucfirst((string) $fiche->statut),
-        };
-
         return view('directeur.subordonnes.objectifs.show', [
             'fiche'       => $fiche,
             'direction'   => $ctx->entity,
             'service'     => null,
             'secretaire'  => null,
-            'statusClass' => $statusClass,
-            'statusLabel' => $statusLabel,
+            'agence'      => null,
+            'caisse'      => $caisse,
+            'statusClass' => $this->ficheStatusClass($fiche->statut),
+            'statusLabel' => $this->ficheStatusLabel($fiche->statut),
         ]);
+    }
+
+    public function editCaisseObjectif(FicheObjectif $fiche): View|RedirectResponse
+    {
+        [$ctx, $caisse] = $this->authorizeObjectifCaisse($fiche);
+        $fiche->load('objectifs');
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('directeur.subordonnes.caisse.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $directeurUser = $caisse->directeur_agent_id ? User::where('agent_id', $caisse->directeur_agent_id)->first() : null;
+
+        return view('directeur.subordonnes.objectifs.edit', [
+            'fiche'        => $fiche,
+            'direction'    => $ctx->entity,
+            'updateRoute'  => 'directeur.subordonnes.caisse.objectifs.update',
+            'cancelUrl'    => route('directeur.subordonnes.caisse.objectifs.show', $fiche),
+            'cibleLabel'   => 'Caisse — '.$caisse->nom,
+            'assigneeUser' => $directeurUser,
+        ]);
+    }
+
+    public function updateCaisseObjectif(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        [, $caisse] = $this->authorizeObjectifCaisse($fiche);
+        $fiche->load('objectifs');
+        $directeurUser = $caisse->directeur_agent_id ? User::where('agent_id', $caisse->directeur_agent_id)->first() : null;
+
+        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.caisse.objectifs.show', $directeurUser);
     }
 
     public function destroyCaisseObjectif(FicheObjectif $fiche): RedirectResponse
@@ -1305,6 +1481,82 @@ class DirecteurSubordonneController extends Controller
             ->with('status', "Fiche d'objectifs supprimée.");
     }
 
+    // ── Soumettre un brouillon ─────────────────────────────────────────────
+
+    /**
+     * Passe une fiche d'objectifs de 'brouillon' à 'en_attente'.
+     * Autorisé pour tous les types de subordonnés (service, agence, caisse, secrétaire).
+     */
+    public function soumettreObjectif(FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorize('objectifs.assigner');
+        $ctx = $this->getContext();
+
+        if ($fiche->statut !== 'brouillon') {
+            return back()->with('error', "Cette fiche n'est pas en brouillon.");
+        }
+
+        if ($fiche->assignable_type !== User::class) {
+            abort(403);
+        }
+
+        $assigneeUser = User::find($fiche->assignable_id);
+        if (! $assigneeUser || ! $assigneeUser->agent_id) {
+            abort(403);
+        }
+
+        $agentId       = $assigneeUser->agent_id;
+        $redirectRoute = null;
+
+        // Service chef ?
+        $service = Service::whereIn('id', $ctx->getServiceIds())
+            ->where('chef_agent_id', $agentId)
+            ->first();
+        if ($service) {
+            $redirectRoute = route('directeur.subordonnes.service.objectifs.show', $fiche);
+        }
+
+        // Secrétaire ?
+        if (! $redirectRoute && (int) $ctx->getSecretaireUserId() === $assigneeUser->id) {
+            $redirectRoute = route('directeur.subordonnes.secretaire.objectifs.show', $fiche);
+        }
+
+        // Chef d'agence (Directeur_Caisse) ?
+        if (! $redirectRoute && $ctx->hasAgences()) {
+            $agence = Agence::where('chef_agent_id', $agentId)
+                ->where('caisse_id', $ctx->getId())
+                ->first();
+            if ($agence) {
+                $redirectRoute = route('directeur.subordonnes.agence.objectifs.show', $fiche);
+            }
+        }
+
+        // Directeur de caisse (Directeur_Technique) ?
+        if (! $redirectRoute && $ctx->hasCaisses()) {
+            $caisse = Caisse::where('directeur_agent_id', $agentId)
+                ->where('delegation_technique_id', $ctx->getId())
+                ->first();
+            if ($caisse) {
+                $redirectRoute = route('directeur.subordonnes.caisse.objectifs.show', $fiche);
+            }
+        }
+
+        if (! $redirectRoute) {
+            abort(403);
+        }
+
+        $fiche->update(['statut' => 'en_attente']);
+
+        Alerte::notifier(
+            $assigneeUser->id,
+            'Nouvelle fiche d\'objectifs reçue',
+            "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+            'haute'
+        );
+
+        return redirect($redirectRoute)->with('status', 'Fiche soumise avec succès.');
+    }
+
     // ── Private helpers ────────────────────────────────────────────────────
 
     /** Retourne la classe CSS du badge de statut d'une fiche d'objectifs. */
@@ -1314,6 +1566,7 @@ class DirecteurSubordonneController extends Controller
             'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
             'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
             'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
+            'contesté'   => 'border-orange-200 bg-orange-50 text-orange-700',
             default      => 'border-slate-200 bg-slate-100 text-slate-700',
         };
     }
@@ -1325,8 +1578,62 @@ class DirecteurSubordonneController extends Controller
             'acceptee'   => 'Acceptée',
             'en_attente' => 'En attente',
             'refusee'    => 'Refusée',
+            'contesté'   => 'Contestée',
             default      => ucfirst((string) ($statut ?? 'En attente')),
         };
+    }
+
+    /** Logique partagée de mise à jour / renvoi d'une fiche d'objectifs. */
+    private function _performUpdateObjectif(
+        FicheObjectif $fiche,
+        Request $request,
+        string $showRoute,
+        ?User $assigneeUser
+    ): RedirectResponse {
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route($showRoute, $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $wasContested = $fiche->statut === 'contesté';
+        $wasRefusee   = $fiche->statut === 'refusee';
+        $action       = $request->input('action', 'brouillon');
+
+        $validated = $request->validate([
+            'titre_fiche' => ['required', 'string', 'max:255'],
+            'objectifs'   => ['required', 'array', 'min:1'],
+            'objectifs.*' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        $fiche->update(['titre' => $validated['titre_fiche']]);
+        $fiche->objectifs()->delete();
+        foreach ($objectifs as $desc) {
+            $fiche->objectifs()->create(['description' => $desc]);
+        }
+
+        if (($wasContested || $wasRefusee) && $action === 'renvoyer') {
+            $fiche->update(['statut' => 'en_attente']);
+
+            if ($assigneeUser) {
+                Alerte::notifier(
+                    $assigneeUser->id,
+                    'Fiche d\'objectifs révisée',
+                    "Le Directeur a révisé la fiche d'objectifs « {$fiche->titre} » suite à vos contestations.",
+                    'haute'
+                );
+            }
+
+            $msg = $wasRefusee ? 'Fiche corrigée et renvoyée.' : 'Fiche révisée et renvoyée.';
+
+            return redirect()->route($showRoute, $fiche)->with('status', $msg);
+        }
+
+        return redirect()->route($showRoute, $fiche)->with('status', 'Brouillon mis à jour.');
     }
 
 }

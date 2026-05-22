@@ -122,16 +122,18 @@
                                 @foreach ($evaluations as $eval)
                                     @php
                                         $statutColors = [
-                                            'brouillon' => 'bg-slate-100 text-slate-600',
-                                            'soumis'    => 'bg-amber-50 text-amber-700',
-                                            'valide'    => 'bg-emerald-50 text-emerald-700',
-                                            'refuse'    => 'bg-rose-50 text-rose-700',
+                                            'brouillon'   => 'bg-slate-100 text-slate-600',
+                                            'soumis'      => 'bg-amber-50 text-amber-700',
+                                            'valide'      => 'bg-emerald-50 text-emerald-700',
+                                            'refuse'      => 'bg-rose-50 text-rose-700',
+                                            'reclamation' => 'bg-orange-50 text-orange-700',
                                         ];
                                         $statutLabels = [
-                                            'brouillon' => 'Brouillon',
-                                            'soumis'    => 'Soumise',
-                                            'valide'    => 'Acceptée',
-                                            'refuse'    => 'Refusée',
+                                            'brouillon'   => 'Brouillon',
+                                            'soumis'      => 'Soumise',
+                                            'valide'      => 'Acceptée',
+                                            'refuse'      => 'Refusée',
+                                            'reclamation' => 'Réclamation',
                                         ];
                                     @endphp
                                     <tr class="border-t border-slate-100 hover:bg-slate-50">

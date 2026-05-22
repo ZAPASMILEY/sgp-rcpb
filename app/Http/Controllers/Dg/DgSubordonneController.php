@@ -40,7 +40,7 @@ class DgSubordonneController extends Controller
 
         if ($search && $tab === 'objectifs') {
             $fichesQ->where(fn ($q) => $q->where('titre', 'like', "%{$search}%")
-                ->orWhere('annee', 'like', "%{$search}%"));
+                ->orWhereHas('annee', fn ($a) => $a->where('annee', 'like', "%{$search}%")));
         }
 
         if ($statut && $tab === 'objectifs') {

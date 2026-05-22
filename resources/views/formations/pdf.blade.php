@@ -90,8 +90,8 @@
         <div class="section-title">Détails de la formation</div>
         <div class="info-grid">
             <div class="info-row">
-                <div class="info-label">Intitulé</div>
-                <div class="info-value"><strong>{{ $formation->titre }}</strong></div>
+                <div class="info-label">Thème</div>
+                <div class="info-value"><strong>{{ $formation->theme }}</strong></div>
             </div>
             <div class="info-row">
                 <div class="info-label">Domaine</div>

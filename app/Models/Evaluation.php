@@ -13,6 +13,23 @@ class Evaluation extends Model
 {
     use HasFactory;
 
+    /**
+     * Statuts qui permettent à l'évaluateur de modifier/re-soumettre l'évaluation.
+     * 'brouillon'  → évaluation en cours de rédaction (jamais soumise)
+     * 'a_reviser'  → évaluation réouverte après refus de l'évalué (motif_refus conservé)
+     */
+    public const EDITABLE_STATUTS = ['brouillon', 'a_reviser'];
+
+    /** Libellés affichés dans les vues pour chaque statut. */
+    public const STATUT_LABELS = [
+        'brouillon'  => 'Brouillon',
+        'a_reviser'  => 'À réviser',
+        'soumis'     => 'Soumis',
+        'valide'     => 'Validé',
+        'refuse'     => 'Refusé',
+        'reclamation'=> 'Réclamation',
+    ];
+
     /** @var list<string> */
     protected $fillable = [
         'evaluable_type',
@@ -65,6 +82,12 @@ class Evaluation extends Model
     public function evaluable(): MorphTo
     {
         return $this->morphTo();
+    }
+    
+    public function agent(): MorphTo
+    {
+        // On redirige la relation 'agent' sur le comportement 'evaluable'
+        return $this->evaluable();
     }
 
     public function evaluateur(): BelongsTo

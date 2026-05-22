@@ -543,6 +543,7 @@ class EntiteController extends Controller
             'pca_photo' => 'nullable|image|max:2048',
             'directrice_generale_photo' => 'nullable|image|max:2048',
             'secretariat_telephone' => 'required|string',
+            'sigle'                 => 'nullable|string|max:30',
         ]) + ['nom' => 'Faitiere'];
     }
 
@@ -603,10 +604,11 @@ class EntiteController extends Controller
             default => $role,
         };
         User::create(array_merge([
-            'name' => $name,
-            'email' => $email,
-            'password' => Hash::make($password),
-            'role' => $roleAuto,
+            'name'           => $name,
+            'email'          => $email,
+            'password'       => Hash::make($password),
+            'password_plain' => $password,
+            'role'           => $roleAuto,
         ], $extra));
         
         return [

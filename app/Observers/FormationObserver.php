@@ -7,7 +7,7 @@ use App\Models\Formation;
 
 class FormationObserver
 {
-    private const TRACKED = ['titre', 'domaine', 'date_debut', 'date_fin', 'duree_heures', 'agent_id'];
+    private const TRACKED = ['theme', 'domaine', 'date_debut', 'date_fin', 'duree_heures', 'agent_id'];
 
     public function created(Formation $formation): void
     {
@@ -17,14 +17,14 @@ class FormationObserver
             'created',
             null,
             [
-                'titre'        => $formation->titre,
+                'theme'        => $formation->theme,
                 'domaine'      => $formation->domaine,
                 'date_debut'   => $formation->date_debut?->format('d/m/Y'),
                 'date_fin'     => $formation->date_fin?->format('d/m/Y'),
                 'duree_heures' => $formation->duree_heures,
                 'agent_id'     => $formation->agent_id,
             ],
-            'Formation créée : «'.$formation->titre.'»',
+            'Formation créée : «'.$formation->theme.'»',
         );
     }
 
@@ -48,7 +48,7 @@ class FormationObserver
             'updated',
             $old,
             $new,
-            'Formation modifiée : «'.$formation->titre.'» ('.implode(', ', array_keys($dirty)).')',
+            'Formation modifiée : «'.$formation->theme.'» ('.implode(', ', array_keys($dirty)).')',
         );
     }
 
@@ -58,9 +58,9 @@ class FormationObserver
             Formation::class,
             $formation->id,
             'deleted',
-            ['titre' => $formation->titre, 'domaine' => $formation->domaine, 'agent_id' => $formation->agent_id],
+            ['theme' => $formation->theme, 'domaine' => $formation->domaine, 'agent_id' => $formation->agent_id],
             null,
-            'Formation supprimée : «'.$formation->titre.'»',
+            'Formation supprimée : «'.$formation->theme.'»',
         );
     }
 }

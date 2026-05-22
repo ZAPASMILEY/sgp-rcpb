@@ -15,7 +15,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Ressources Humaines</p>
                 <h1 class="text-xl font-black tracking-tight text-slate-950">Modifier la formation</h1>
-                <p class="mt-0.5 text-sm text-slate-500 truncate">{{ $formation->titre }}</p>
+                <p class="mt-0.5 text-sm text-slate-500 truncate">{{ $formation->theme }}</p>
             </div>
         </div>
     </header>
@@ -48,8 +48,8 @@
 
         {{-- Titre --}}
         <div>
-            <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Titre *</label>
-            <input type="text" name="titre" value="{{ old('titre', $formation->titre) }}" required maxlength="255"
+            <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Thème *</label>
+            <input type="text" name="theme" value="{{ old('theme', $formation->theme) }}" required maxlength="255"
                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
         </div>
 

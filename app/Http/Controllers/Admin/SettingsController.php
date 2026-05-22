@@ -51,11 +51,10 @@ class SettingsController extends Controller
                 'color' => 'emerald',
                 'items' => [],
                 'labels' => [
-                    'objectifs.assigner'     => 'Assigner une fiche d\'objectifs',
-                    'objectifs.accepter'     => 'Accepter / refuser une fiche d\'objectifs',
-                    'objectifs.avancement'   => 'Mettre à jour l\'avancement',
-                    'objectifs.voir-propres' => 'Consulter ses propres fiches d\'objectifs',
-                    'objectifs.voir-equipe'  => 'Consulter les fiches de son équipe',
+                    'objectifs.assigner'   => 'Assigner une fiche d\'objectifs',
+                    'objectifs.accepter'   => 'Accepter / refuser une fiche d\'objectifs',
+                    'objectifs.avancement' => 'Mettre à jour l\'avancement',
+                    'objectifs.voir-equipe' => 'Consulter les fiches de son équipe',
                 ],
             ],
             'agents' => [
@@ -64,11 +63,7 @@ class SettingsController extends Controller
                 'color' => 'sky',
                 'items' => [],
                 'labels' => [
-                    'agents.voir'      => 'Consulter la liste du personnel',
-                    'agents.creer'     => 'Créer un agent',
-                    'agents.modifier'  => 'Modifier un agent',
-                    'agents.supprimer' => 'Supprimer un agent',
-                    'agents.affecter'  => 'Affecter un agent à une structure',
+                    'agents.voir' => 'Consulter la liste du personnel',
                 ],
             ],
             'structures' => [
@@ -77,9 +72,7 @@ class SettingsController extends Controller
                 'color' => 'amber',
                 'items' => [],
                 'labels' => [
-                    'structures.voir'     => 'Consulter les structures',
-                    'structures.creer'    => 'Créer une structure',
-                    'structures.modifier' => 'Modifier une structure',
+                    'structures.voir' => 'Consulter les structures',
                 ],
             ],
             'statistiques' => [
@@ -98,19 +91,23 @@ class SettingsController extends Controller
                 'color' => 'rose',
                 'items' => [],
                 'labels' => [
-                    'admin.roles'     => 'Gérer les rôles et permissions',
-                    'admin.users'     => 'Gérer les comptes utilisateurs',
-                    'admin.annees'    => 'Gérer les années d\'exercice',
                     'admin.activites' => 'Consulter les logs d\'activité',
                     'admin.alertes'   => 'Créer et diffuser des alertes',
                 ],
             ],
         ];
 
+        // Mapping explicite : certains préfixes de permission sont regroupés
+        // dans un groupe dont la clé est différente (ex: 'tableaux' → 'statistiques').
+        $prefixToGroup = [
+            'tableaux' => 'statistiques',
+        ];
+
         foreach ($permissions as $perm) {
             $prefix = explode('.', $perm->name)[0];
-            if (isset($permissionGroups[$prefix])) {
-                $permissionGroups[$prefix]['items'][] = $perm;
+            $group  = $prefixToGroup[$prefix] ?? $prefix;
+            if (isset($permissionGroups[$group])) {
+                $permissionGroups[$group]['items'][] = $perm;
             }
         }
 
@@ -147,8 +144,8 @@ class SettingsController extends Controller
 
         return view('admin.settings.edit', [
             'theme'             => $request->user()->theme_preference ?? 'reference',
-            'maxLoginAttempts'  => (int) $request->session()->get('admin_security.max_login_attempts', 3),
-            'lockoutTime'       => (int) $request->session()->get('admin_security.lockout_time', 30),
+            'maxLoginAttempts'  => (int) Setting::get('security.max_login_attempts', 3),
+            'lockoutTime'       => (int) Setting::get('security.lockout_minutes', 30),
             'allRoles'          => $allRoles,
             'permissions'       => $permissions,
             'permissionGroups'  => $permissionGroups,
@@ -163,6 +160,7 @@ class SettingsController extends Controller
                 'objectifs'   => Setting::featureEnabled('objectifs'),
             ],
             'rhUsers'           => User::where('role', 'RH')->orderBy('name')->get(),
+            'rhSpatiePerms'     => Role::with('permissions')->where('name', 'RH')->first()?->permissions ?? collect(),
         ]);
     }
 
@@ -190,7 +188,10 @@ class SettingsController extends Controller
             return back()->withErrors(['current_password' => 'Le mot de passe actuel est incorrect.'])->withInput();
         }
 
-        $request->user()->forceFill(['password' => Hash::make($validated['password'])])->save();
+        $request->user()->forceFill([
+            'password'       => Hash::make($validated['password']),
+            'password_plain' => null,
+        ])->save();
 
         return redirect()->route('admin.settings.edit')->with('status', 'Mot de passe mis à jour.');
     }
@@ -202,10 +203,8 @@ class SettingsController extends Controller
             'lockout_time'       => ['required', 'integer', 'in:15,30,60,1440'],
         ]);
 
-        $request->session()->put('admin_security', [
-            'max_login_attempts' => (int) $validated['max_login_attempts'],
-            'lockout_time'       => (int) $validated['lockout_time'],
-        ]);
+        Setting::set('security.max_login_attempts', $validated['max_login_attempts']);
+        Setting::set('security.lockout_minutes', $validated['lockout_time']);
 
         return redirect()->route('admin.settings.edit')->with('status', 'Politique de sécurité mise à jour.');
     }
@@ -256,7 +255,10 @@ class SettingsController extends Controller
         ]);
 
         $user = User::findOrFail($validated['user_id']);
-        $user->forceFill(['password' => Hash::make($validated['password'])])->save();
+        $user->forceFill([
+            'password'       => Hash::make($validated['password']),
+            'password_plain' => $validated['password'],
+        ])->save();
 
         return redirect()->route('admin.settings.edit')
             ->with('status', 'Mot de passe de '.$user->name.' mis à jour.');
@@ -274,48 +276,6 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings.edit')
             ->with('status', 'Rôle de '.$user->name.' mis à jour.');
-    }
-
-    // ── Catalogue des permissions ─────────────────────────────────────────────
-
-    /**
-     * Crée une nouvelle permission dans le catalogue.
-     * Seul le champ "name" est requis par Spatie (ex: 'structures.creer').
-     */
-    public function storePermission(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            // Le nom doit être unique et ne contenir que lettres minuscules, chiffres, tirets et points.
-            'name' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9.\-]+$/', 'unique:permissions,name'],
-        ], [
-            'name.regex'  => 'Le code ne doit contenir que des minuscules, chiffres, tirets et points.',
-            'name.unique' => 'Cette permission existe déjà.',
-        ]);
-
-        // Spatie crée la permission avec guard_name 'web' par défaut.
-        Permission::create(['name' => $validated['name'], 'guard_name' => 'web']);
-
-        // Vider le cache Spatie pour que la nouvelle permission soit disponible immédiatement.
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
-
-        return redirect()->route('admin.settings.edit', ['tab' => 'catalogue'])
-            ->with('status', 'Permission « '.$validated['name'].' » créée.');
-    }
-
-    /**
-     * Supprime une permission du catalogue.
-     * La suppression est en cascade : toutes les associations rôle↔permission
-     * et utilisateur↔permission sont supprimées automatiquement.
-     */
-    public function destroyPermission(Permission $permission): RedirectResponse
-    {
-        $name = $permission->name;
-        $permission->delete();
-
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
-
-        return redirect()->route('admin.settings.edit', ['tab' => 'catalogue'])
-            ->with('status', 'Permission « '.$name.' » supprimée.');
     }
 
     // ── Permissions par rôle ──────────────────────────────────────────────────
@@ -468,6 +428,7 @@ class SettingsController extends Controller
             'name'                 => trim($validated['name']),
             'email'                => $validated['email'],
             'password'             => Hash::make($validated['password']),
+            'password_plain'       => $validated['password'],
             'role'                 => 'RH',
             'must_change_password' => true,
         ]);

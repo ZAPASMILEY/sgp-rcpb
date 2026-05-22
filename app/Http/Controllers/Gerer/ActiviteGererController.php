@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Gerer;
 
 use App\Http\Controllers\Controller;
-use App\Models\Activite;
+use App\Models\AuditLog;
 use App\Traits\GererLayout;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,14 +17,14 @@ class ActiviteGererController extends Controller
         $search = $request->input('search');
         $date   = $request->input('date');
 
-        $activites = Activite::with('user')
+        $activites = AuditLog::with('user')
             ->when($search, fn ($q) => $q->where(fn ($s) => $s
-                ->where('action',      'like', "%{$search}%")
+                ->where('action',       'like', "%{$search}%")
                 ->orWhere('description','like', "%{$search}%")
-                ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"))
+                ->orWhere('user_name',  'like', "%{$search}%")
             ))
             ->when($date, fn ($q) => $q->whereDate('created_at', $date))
-            ->latest()
+            ->orderByDesc('created_at')
             ->paginate(50)
             ->withQueryString();
 

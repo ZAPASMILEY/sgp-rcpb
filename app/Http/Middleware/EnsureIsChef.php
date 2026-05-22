@@ -34,6 +34,7 @@ class EnsureIsChef
         'Chef_Service',
         'Chef_Agence',
         'Chef_Guichet',
+        'Secretaire_Agence',
     ];
 
     public function handle(Request $request, Closure $next): Response

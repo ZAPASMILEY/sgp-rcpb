@@ -259,6 +259,12 @@
                     <span class="mt-1 inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statusClass }}">
                         {{ $statusLabel }}
                     </span>
+                    @if(in_array($evaluation->statut, ['reclamation','a_reviser']) && $evaluation->motif_refus)
+                    <div class="mt-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+                        <p class="text-xs font-black uppercase tracking-[0.15em] text-orange-600"><i class="fas fa-triangle-exclamation mr-1"></i> Motif du refus par l'évalué</p>
+                        <p class="mt-1.5 text-sm text-orange-800">{{ $evaluation->motif_refus }}</p>
+                    </div>
+                    @endif
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
                     @if ($evaluation->statut === 'brouillon')

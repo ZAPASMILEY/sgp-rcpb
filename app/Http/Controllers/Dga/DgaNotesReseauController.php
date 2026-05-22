@@ -116,7 +116,7 @@ class DgaNotesReseauController extends Controller
             'brouillon' => $baseStats()->where('statut', 'brouillon')->count(),
             'soumis'    => $baseStats()->where('statut', 'soumis')->count(),
             'valide'    => $baseStats()->where('statut', 'valide')->count(),
-            'refuse'    => $baseStats()->where('statut', 'refuse')->count(),
+            'refuse'    => $baseStats()->whereIn('statut', ['refuse', 'reclamation'])->count(),
         ];
 
         $noteMoyenne = $baseStats()

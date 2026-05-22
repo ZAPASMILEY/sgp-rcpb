@@ -155,6 +155,19 @@ class EvaluationService
     }
 
     /**
+     * Vérifie si l'évalué a déjà une évaluation pour ce semestre.
+     * Retourne true s'il en existe déjà une (hors $excludeId pour les updates).
+     */
+    public function dejaEvalueeSemestre(int $evaluableId, string $evaluableType, int $semestreId, ?int $excludeId = null): bool
+    {
+        return \App\Models\Evaluation::where('evaluable_id', $evaluableId)
+            ->where('evaluable_type', $evaluableType)
+            ->where('semestre_id', $semestreId)
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->exists();
+    }
+
+    /**
      * Parse a date string in Y-m-d or d/m/Y format and return a Y-m-d string,
      * or null if the value is blank or unrecognised.
      */

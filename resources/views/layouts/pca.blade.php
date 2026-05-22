@@ -17,14 +17,19 @@
             [
                 'title' => '1. Pilotage',
                 'items' => [
-                    ['route' => 'pca.dashboard',          'icon' => 'fas fa-gauge-high',   'label' => 'Tableau de bord'],
-                    ['route' => 'pca.objectifs.index',    'icon' => 'fas fa-bullseye',      'label' => 'Objectifs'],
-                    ['route' => 'pca.statistiques.index', 'icon' => 'fas fa-chart-column',  'label' => 'Statistiques'],
+                    ['route' => 'pca.dashboard',          'icon' => 'fas fa-gauge-high',    'label' => 'Tableau de bord'],
+                    ['route' => 'pca.objectifs.index',    'icon' => 'fas fa-bullseye',       'label' => 'Objectifs'],
+                    ['route' => 'pca.statistiques.index', 'icon' => 'fas fa-chart-column',   'label' => 'Statistiques'],
                     ['route' => 'pca.evaluations.index',  'icon' => 'fas fa-clipboard-check','label' => 'Evaluations'],
-                    ['route' => 'pca.comparaison.index',  'icon' => 'fas fa-code-compare',  'label' => 'Comparaison inter-période'],
+                    ['route' => 'pca.comparaison.index',  'icon' => 'fas fa-code-compare',   'label' => 'Comparaison inter-période'],
                 ],
             ],
-           
+            [
+                'title' => 'Formations',
+                'items' => [
+                    ['route' => 'pca.formations.index', 'icon' => 'fas fa-graduation-cap', 'label' => 'Mes formations'],
+                ],
+            ],
         ];
 
         // ── Sections conditionnelles selon permissions ───────────────────────
@@ -352,6 +357,9 @@
     </style>
 </head>
 <body class="h-full antialiased pca-theme {{ $isModalMode ? 'embedded-frame bg-slate-50' : '' }}">
+
+    @if(!$isModalMode) @include('layouts._alerte_banniere') @endif
+
     @if($showSidebar)
         <nav class="sidebar shadow" id="sidebar">
             <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Reduire le menu">

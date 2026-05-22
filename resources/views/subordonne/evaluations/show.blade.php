@@ -11,16 +11,18 @@
         default     => 'border-rose-200 bg-rose-50 text-rose-700',
     };
     $statusClass = match ($evaluation->statut) {
-        'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-        'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-        'refuse' => 'border-rose-200 bg-rose-50 text-rose-700',
-        default  => 'border-slate-200 bg-slate-100 text-slate-700',
+        'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+        'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+        'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+        default       => 'border-slate-200 bg-slate-100 text-slate-700',
     };
     $statusLabel = match ($evaluation->statut) {
-        'valide' => 'Acceptée',
-        'soumis' => 'Soumise',
-        'refuse' => 'Refusée',
-        default  => 'Brouillon',
+        'valide'      => 'Acceptée',
+        'soumis'      => 'Soumise',
+        'refuse'      => 'Refusée',
+        'reclamation' => 'Réclamation',
+        default       => 'Brouillon',
     };
     $note = (float) $evaluation->note_finale;
     $notePercent = max(0, min(100, ($note / 10) * 100));
@@ -383,7 +385,7 @@
         @endif
 
         {{-- Bandeau refus + réclamation --}}
-        @if($evaluation->statut === 'refuse')
+        @if(in_array($evaluation->statut, ['refuse', 'reclamation']))
         <div class="flex flex-col gap-4 rounded-[24px] border-2 border-rose-200 bg-rose-50 px-6 py-5">
             <div class="flex items-start gap-4">
                 <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">

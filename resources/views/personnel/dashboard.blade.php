@@ -165,16 +165,18 @@
                     @foreach ($evaluationsRecentes as $eval)
                         @php
                             $statClass = match ($eval->statut) {
-                                'valide'  => 'bg-emerald-100 text-emerald-700',
-                                'soumis'  => 'bg-amber-100 text-amber-700',
-                                'refuse'  => 'bg-rose-100 text-rose-700',
-                                default   => 'bg-slate-100 text-slate-600',
+                                'valide'      => 'bg-emerald-100 text-emerald-700',
+                                'soumis'      => 'bg-amber-100 text-amber-700',
+                                'refuse'      => 'bg-rose-100 text-rose-700',
+                                'reclamation' => 'bg-orange-100 text-orange-700',
+                                default       => 'bg-slate-100 text-slate-600',
                             };
                             $statLabel = match ($eval->statut) {
-                                'valide'  => 'Validée',
-                                'soumis'  => 'Soumise',
-                                'refuse'  => 'Refusée',
-                                default   => 'Brouillon',
+                                'valide'      => 'Validée',
+                                'soumis'      => 'Soumise',
+                                'refuse'      => 'Refusée',
+                                'reclamation' => 'Réclamation',
+                                default       => 'Brouillon',
                             };
                             $note = $eval->note_finale !== null ? number_format((float)$eval->note_finale, 2, ',', ' ').'/10' : null;
                         @endphp
@@ -230,10 +232,11 @@
                             $statClass = match ($fiche->statut ?? 'en_attente') {
                                 'acceptee' => 'bg-emerald-100 text-emerald-700',
                                 'refusee'  => 'bg-rose-100 text-rose-700',
+                                'contesté' => 'bg-orange-100 text-orange-700',
                                 default    => 'bg-amber-100 text-amber-700',
                             };
                             $statLabel = match ($fiche->statut ?? 'en_attente') {
-                                'acceptee' => 'Acceptée', 'refusee' => 'Refusée', default => 'En attente',
+                                'acceptee' => 'Acceptée', 'refusee' => 'Refusée', 'contesté' => 'Contestée', default => 'En attente',
                             };
                             $av = (int)($fiche->avancement_percentage ?? 0);
                             $avColor = $av >= 80 ? 'bg-emerald-500' : ($av >= 50 ? 'bg-sky-500' : ($av >= 25 ? 'bg-amber-400' : 'bg-slate-300'));

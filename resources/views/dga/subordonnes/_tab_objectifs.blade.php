@@ -89,7 +89,7 @@ $ficheCards = [
                 <tr class="border-b border-slate-200 text-slate-500">
                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Fiche</th>
-                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Période</th>
+                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Année</th>
                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Objectifs</th>
                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Avancement</th>
                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
@@ -103,11 +103,15 @@ $ficheCards = [
                         $statusClasses = match ($statut) {
                             'acceptee' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
                             'refusee'  => 'border-rose-200 bg-rose-50 text-rose-700',
-                            default    => 'border-slate-200 bg-slate-100 text-slate-700',
+                            'contesté' => 'border-orange-200 bg-orange-50 text-orange-700',
+                            'brouillon'=> 'border-slate-200 bg-slate-100 text-slate-500',
+                            default    => 'border-amber-200 bg-amber-50 text-amber-700',
                         };
                         $statusLabel = match ($statut) {
                             'acceptee' => 'Acceptée',
                             'refusee'  => 'Refusée',
+                            'contesté' => 'Contestée',
+                            'brouillon'=> 'Brouillon',
                             default    => 'En attente',
                         };
                         $progress = (int) ($fiche->avancement_percentage ?? 0);
@@ -124,12 +128,9 @@ $ficheCards = [
                             <p class="mt-1 text-xs font-semibold text-slate-500">Année {{ $fiche->annee_value ?? '—' }}</p>
                         </td>
                         <td class="px-4 py-4 whitespace-nowrap">
-                            <p class="font-semibold text-slate-700">
-                                {{ $fiche->date ? \Carbon\Carbon::parse($fiche->date)->format('d/m/Y') : '-' }}
-                            </p>
-                            <p class="mt-1 text-xs font-semibold text-slate-400">
-                                Échéance {{ $fiche->date_echeance ? \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') : '-' }}
-                            </p>
+                            <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-600">
+                                {{ $fiche->annee_value ?? \Carbon\Carbon::parse($fiche->date_echeance ?? $fiche->date)->year }}
+                            </span>
                         </td>
                         <td class="px-4 py-4">
                             <span class="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">
@@ -153,11 +154,24 @@ $ficheCards = [
                             </span>
                         </td>
                         <td class="px-4 py-4 text-center">
-                            <a href="{{ route('dga.sub-objectifs.show', $fiche->id) }}"
-                               class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-violet-100 hover:text-violet-600"
-                               title="Voir la fiche">
-                                <i class="fas fa-eye"></i>
-                            </a>
+                            <div class="inline-flex items-center gap-1">
+                                <a href="{{ route('dga.sub-objectifs.show', $fiche->id) }}"
+                                   class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-violet-100 hover:text-violet-600"
+                                   title="Voir la fiche">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                @if ($statut !== 'acceptee')
+                                    <form method="POST" action="{{ route('dga.sub-objectifs.destroy', $fiche->id) }}"
+                                          onsubmit="return confirm('Supprimer cette fiche d\'objectifs ?')" class="inline">
+                                        @csrf @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600"
+                                                title="Supprimer la fiche">
+                                            <i class="fas fa-trash text-xs"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty

@@ -101,17 +101,19 @@ class PersonnelEvaluationController extends Controller
 
         // Badge de statut
         $statusClass = match ($evaluation->statut) {
-            'valide'    => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-            'soumis'    => 'border-amber-200 bg-amber-50 text-amber-700',
-            'refuse'    => 'border-rose-200 bg-rose-50 text-rose-700',
-            default     => 'border-slate-200 bg-slate-100 text-slate-700',
+            'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+            'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+            'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+            'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+            default       => 'border-slate-200 bg-slate-100 text-slate-700',
         };
         $statusLabel = match ($evaluation->statut) {
-            'valide'    => 'Acceptée',
-            'soumis'    => 'Soumise',
-            'refuse'    => 'Refusée',
-            'brouillon' => 'Brouillon',
-            default     => ucfirst((string) $evaluation->statut),
+            'valide'      => 'Acceptée',
+            'soumis'      => 'Soumise',
+            'refuse'      => 'Refusée',
+            'reclamation' => 'Réclamation',
+            'brouillon'   => 'Brouillon',
+            default       => ucfirst((string) $evaluation->statut),
         };
 
         // L'évalué peut accepter/refuser uniquement si l'évaluation est soumise
@@ -152,7 +154,7 @@ class PersonnelEvaluationController extends Controller
         ]);
 
         $action             = $request->input('action');
-        $evaluation->statut = $action === 'accepter' ? 'valide' : 'refuse';
+        $evaluation->statut = $action === 'accepter' ? 'valide' : 'reclamation';
         if ($action === 'refuser') {
             $evaluation->motif_refus        = $request->input('motif_refus');
             $evaluation->statut_reclamation = 'en_attente';
