@@ -55,8 +55,10 @@
                     default    => 'bg-slate-100 text-slate-400',
                 };
                 $icon = in_array($notif->priorite, ['critique','haute']) ? 'fa-circle-exclamation' : 'fa-bell';
+                $tag  = $notif->lien ? 'a' : 'div';
+                $href = $notif->lien ? 'href="' . e($notif->lien) . '"' : '';
             @endphp
-            <div class="flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50">
+            <{{ $tag }} {{ $href }} class="flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50 {{ $notif->lien ? 'cursor-pointer' : '' }}">
                 <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {{ $iconBg }}">
                     <i class="fas {{ $icon }} text-xs"></i>
                 </div>
@@ -65,9 +67,14 @@
                     @if ($notif->message)
                         <p class="mt-0.5 text-[11px] text-slate-500 line-clamp-2">{{ Str::limit($notif->message, 70) }}</p>
                     @endif
-                    <p class="mt-1 text-[10px] font-semibold text-slate-300">{{ $notif->created_at->diffForHumans() }}</p>
+                    <div class="mt-1 flex items-center gap-2">
+                        <p class="text-[10px] font-semibold text-slate-300">{{ $notif->created_at->diffForHumans() }}</p>
+                        @if ($notif->lien)
+                            <span class="text-[10px] font-bold text-blue-400"><i class="fas fa-arrow-right text-[8px]"></i> Consulter</span>
+                        @endif
+                    </div>
                 </div>
-            </div>
+            </{{ $tag }}>
         @empty
             <div class="px-4 py-10 text-center">
                 <i class="fas fa-check-circle text-2xl text-emerald-300"></i>
@@ -166,14 +173,22 @@
             return;
         }
         list.innerHTML = items.map(function (n) {
-            return '<div class="flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50">'
+            var tag   = n.lien ? 'a' : 'div';
+            var attrs = n.lien ? ' href="' + escHtml(n.lien) + '"' : '';
+            var consulter = n.lien
+                ? '<span class="text-[10px] font-bold text-blue-400"><i class="fas fa-arrow-right text-[8px]"></i> Consulter</span>'
+                : '';
+            return '<' + tag + attrs + ' class="flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50' + (n.lien ? ' cursor-pointer' : '') + '">'
                 + '<div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ' + iconBgClass(n.priorite) + '">'
                 + '<i class="fas ' + iconName(n.priorite) + ' text-xs"></i></div>'
                 + '<div class="min-w-0 flex-1">'
                 + '<p class="truncate text-sm font-bold text-slate-800">' + escHtml(n.titre) + '</p>'
                 + (n.message ? '<p class="mt-0.5 text-[11px] text-slate-500 line-clamp-2">' + escHtml(n.message) + '</p>' : '')
-                + '<p class="mt-1 text-[10px] font-semibold text-slate-300">' + escHtml(n.age) + '</p>'
-                + '</div></div>';
+                + '<div class="mt-1 flex items-center gap-2">'
+                + '<p class="text-[10px] font-semibold text-slate-300">' + escHtml(n.age) + '</p>'
+                + consulter
+                + '</div>'
+                + '</div></' + tag + '>';
         }).join('');
     }
 

@@ -8,7 +8,7 @@
         <p class="mt-1 text-xs text-slate-400">Contactez l'administrateur pour creer le compte.</p>
     </div>
 @else
-    <div class="admin-panel px-6 py-6">
+    <div class="rounded-[20px] border border-slate-100 bg-white px-6 py-6 shadow-sm">
         <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div class="inline-flex gap-1 rounded-2xl border border-slate-200 bg-slate-100/70 p-1">
                 <a href="{{ request()->url() }}?tab=objectifs"

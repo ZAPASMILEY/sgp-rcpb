@@ -58,8 +58,8 @@
         </div>
     </div>
 
-    <div class="px-4 lg:px-8">
-    <div class="w-full flex-col gap-6">
+    <div class="px-4 pt-6 lg:px-8">
+    <div class="w-full flex flex-col gap-5">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -73,20 +73,27 @@
         @endif
 
         {{-- Onglets --}}
-        <div class="flex gap-1 border-b border-slate-200 bg-white px-6 mt-4 rounded-t-2xl">
-            <a href="{{ route('dg.directions.show', ['direction' => $direction->id, 'tab' => 'evaluations']) }}"
-               class="border-b-2 px-4 py-3 text-sm font-bold transition {{ $tab === 'evaluations' ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
-                <i class="fas fa-star mr-2"></i>Évaluations ({{ $evaluations->count() }})
-            </a>
-            <a href="{{ route('dg.directions.show', ['direction' => $direction->id, 'tab' => 'objectifs']) }}"
-               class="border-b-2 px-4 py-3 text-sm font-bold transition {{ $tab === 'objectifs' ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
-                <i class="fas fa-bullseye mr-2"></i>Objectifs ({{ $fiches->count() }})
-            </a>
-        </div>
+        <div class="rounded-[20px] border border-slate-100 bg-white shadow-sm overflow-hidden">
+            <div class="flex gap-1 border-b border-slate-200 bg-slate-50/60 px-6">
+                <a href="{{ route('dg.directions.show', ['direction' => $direction->id, 'tab' => 'evaluations']) }}"
+                   class="border-b-2 px-4 py-3 text-sm font-bold transition {{ $tab === 'evaluations' ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
+                    <i class="fas fa-star mr-2"></i>Évaluations ({{ $evaluations->count() }})
+                </a>
+                <a href="{{ route('dg.directions.show', ['direction' => $direction->id, 'tab' => 'objectifs']) }}"
+                   class="border-b-2 px-4 py-3 text-sm font-bold transition {{ $tab === 'objectifs' ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800' }}">
+                    <i class="fas fa-bullseye mr-2"></i>Objectifs ({{ $fiches->count() }})
+                </a>
+            </div>
 
         {{-- Tab Évaluations --}}
         @if ($tab === 'evaluations')
-            <section class="admin-panel px-6 py-6 lg:px-8">
+            @php
+                $evalTotal     = $evaluations->count();
+                $evalSoumises  = $evaluations->where('statut', 'soumis')->count();
+                $evalAcceptees = $evaluations->where('statut', 'valide')->count();
+                $evalRefusees  = $evaluations->where('statut', 'refuse')->count();
+            @endphp
+            <section class="px-6 py-6 lg:px-8">
                 <div class="flex items-center justify-between gap-4 mb-4">
                     <h2 class="text-lg font-black text-slate-900">Évaluations créées</h2>
                     @if($evaluationsEnabled)
@@ -99,6 +106,26 @@
                             <i class="fas fa-plus mr-2"></i>Nouvelle évaluation
                         </span>
                     @endif
+                </div>
+
+                {{-- KPI Cards --}}
+                <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Total</p>
+                        <p class="mt-1 text-2xl font-black text-slate-800">{{ $evalTotal }}</p>
+                    </div>
+                    <div class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-amber-500">Soumises</p>
+                        <p class="mt-1 text-2xl font-black text-amber-700">{{ $evalSoumises }}</p>
+                    </div>
+                    <div class="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-emerald-500">Acceptées</p>
+                        <p class="mt-1 text-2xl font-black text-emerald-700">{{ $evalAcceptees }}</p>
+                    </div>
+                    <div class="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-rose-400">Refusées</p>
+                        <p class="mt-1 text-2xl font-black text-rose-600">{{ $evalRefusees }}</p>
+                    </div>
                 </div>
 
                 @if ($evaluations->isEmpty())
@@ -186,7 +213,13 @@
 
         {{-- Tab Objectifs --}}
         @if ($tab === 'objectifs')
-            <section class="admin-panel px-6 py-6 lg:px-8">
+            @php
+                $fichesTotal     = $fiches->count();
+                $fichesAcceptees = $fiches->where('statut', 'acceptee')->count();
+                $fichesEnAttente = $fiches->where('statut', 'en_attente')->count();
+                $fichesRefusees  = $fiches->whereIn('statut', ['refusee', 'contesté'])->count();
+            @endphp
+            <section class="px-6 py-6 lg:px-8">
                 <div class="flex items-center justify-between gap-4 mb-4">
                     <h2 class="text-lg font-black text-slate-900">Fiches d'objectifs assignées</h2>
                     @if($objectifsEnabled)
@@ -201,68 +234,109 @@
                     @endif
                 </div>
 
+                {{-- KPI Cards --}}
+                <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400">Total</p>
+                        <p class="mt-1 text-2xl font-black text-slate-800">{{ $fichesTotal }}</p>
+                    </div>
+                    <div class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-amber-500">En attente</p>
+                        <p class="mt-1 text-2xl font-black text-amber-700">{{ $fichesEnAttente }}</p>
+                    </div>
+                    <div class="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-emerald-500">Acceptées</p>
+                        <p class="mt-1 text-2xl font-black text-emerald-700">{{ $fichesAcceptees }}</p>
+                    </div>
+                    <div class="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-center">
+                        <p class="text-[11px] font-bold uppercase tracking-widest text-rose-400">Refusées</p>
+                        <p class="mt-1 text-2xl font-black text-rose-600">{{ $fichesRefusees }}</p>
+                    </div>
+                </div>
+
                 @if ($fiches->isEmpty())
                     <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
                         <i class="fas fa-bullseye text-2xl text-slate-300"></i>
                         <p class="mt-3 text-sm text-slate-500">Aucune fiche d'objectifs assignée à cette direction.</p>
                     </div>
                 @else
-                    <div class="space-y-3">
-                        @foreach ($fiches as $fiche)
-                            @php
-                                $statutColors = [
-                                    'en_attente' => 'bg-amber-50 text-amber-700',
-                                    'acceptee'   => 'bg-emerald-50 text-emerald-700',
-                                    'refusee'    => 'bg-rose-50 text-rose-700',
-                                ];
-                                $statutLabels = [
-                                    'en_attente' => 'En attente',
-                                    'acceptee'   => 'Acceptée',
-                                    'refusee'    => 'Refusée',
-                                ];
-                                $av = (int) ($fiche->avancement_percentage ?? 0);
-                                $avColor = $av >= 80 ? 'bg-emerald-500' : ($av >= 50 ? 'bg-sky-500' : ($av >= 25 ? 'bg-amber-400' : 'bg-slate-300'));
-                            @endphp
-                            <div class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                                    <i class="fas fa-bullseye text-sm"></i>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-bold text-slate-900">{{ $fiche->titre }}</p>
-                                    <p class="text-xs text-slate-500">
-                                        {{ $fiche->objectifs_count }} objectif(s) —
-                                        Échéance {{ \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') }}
-                                    </p>
-                                    <div class="mt-1.5 flex items-center gap-2">
-                                        <div class="h-1.5 flex-1 rounded-full bg-slate-100">
-                                            <div class="h-full rounded-full {{ $avColor }}" style="width: {{ $av }}%"></div>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-slate-500">{{ $av }}%</span>
-                                    </div>
-                                </div>
-                                <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black {{ $statutColors[$fiche->statut ?? 'en_attente'] ?? 'bg-slate-100 text-slate-500' }}">
-                                    {{ $statutLabels[$fiche->statut ?? 'en_attente'] ?? ucfirst($fiche->statut ?? 'En attente') }}
-                                </span>
-                                <div class="flex shrink-0 items-center gap-2">
-                                    <a href="{{ route('dg.directions.objectifs.show', $fiche) }}"
-                                       class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
-                                        Voir
-                                    </a>
-
-                                    <form method="POST" action="{{ route('dg.directions.objectifs.destroy', $fiche) }}"
-                                          onsubmit="return confirm('Supprimer cette fiche ?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100">
-                                            <i class="fas fa-trash text-[10px]"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        @endforeach
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table class="min-w-full text-sm text-slate-700">
+                            <thead class="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Titre</th>
+                                    <th class="px-4 py-3 text-left">Objectifs</th>
+                                    <th class="px-4 py-3 text-left">Avancement</th>
+                                    <th class="px-4 py-3 text-left">Échéance</th>
+                                    <th class="px-4 py-3 text-left">Statut</th>
+                                    <th class="px-4 py-3 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($fiches as $fiche)
+                                    @php
+                                        $statutColors = [
+                                            'en_attente' => 'bg-amber-50 text-amber-700',
+                                            'acceptee'   => 'bg-emerald-50 text-emerald-700',
+                                            'refusee'    => 'bg-rose-50 text-rose-700',
+                                            'brouillon'  => 'bg-slate-100 text-slate-600',
+                                            'contesté'   => 'bg-orange-50 text-orange-700',
+                                        ];
+                                        $statutLabels = [
+                                            'en_attente' => 'En attente',
+                                            'acceptee'   => 'Acceptée',
+                                            'refusee'    => 'Refusée',
+                                            'brouillon'  => 'Brouillon',
+                                            'contesté'   => 'Contestée',
+                                        ];
+                                        $av      = (int) ($fiche->avancement_percentage ?? 0);
+                                        $avColor = $av >= 75 ? 'bg-emerald-500' : ($av >= 40 ? 'bg-sky-500' : ($av > 0 ? 'bg-amber-400' : 'bg-slate-300'));
+                                    @endphp
+                                    <tr class="border-t border-slate-100 hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-medium text-slate-900">{{ $fiche->titre }}</td>
+                                        <td class="px-4 py-3 text-slate-500">
+                                            {{ $fiche->objectifs_count ?? $fiche->objectifs->count() }} objectif(s)
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div class="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                                                    <div class="h-full rounded-full {{ $avColor }}" style="width: {{ $av }}%"></div>
+                                                </div>
+                                                <span class="text-[11px] font-black text-slate-600">{{ $av }}%</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-slate-500">
+                                            {{ $fiche->date_echeance ? \Carbon\Carbon::parse($fiche->date_echeance)->format('d/m/Y') : '—' }}
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="rounded-full px-2.5 py-1 text-[11px] font-black {{ $statutColors[$fiche->statut ?? 'en_attente'] ?? 'bg-slate-100 text-slate-500' }}">
+                                                {{ $statutLabels[$fiche->statut ?? 'en_attente'] ?? ucfirst($fiche->statut ?? 'En attente') }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <a href="{{ route('dg.directions.objectifs.show', $fiche) }}"
+                                                   class="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+                                                    Voir
+                                                </a>
+                                                <form method="POST" action="{{ route('dg.directions.objectifs.destroy', $fiche) }}"
+                                                      onsubmit="return confirm('Supprimer cette fiche ?')">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100">
+                                                        <i class="fas fa-trash text-[10px]"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 @endif
             </section>
         @endif
+        </div>{{-- /outer card --}}
 
     </div>
     </div>

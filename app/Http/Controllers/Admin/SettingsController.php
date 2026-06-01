@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CustomRole;
+use App\Models\Evaluation;
+use App\Models\FicheObjectif;
+use App\Models\Objectif;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -145,7 +149,7 @@ class SettingsController extends Controller
         return view('admin.settings.edit', [
             'theme'             => $request->user()->theme_preference ?? 'reference',
             'maxLoginAttempts'  => (int) Setting::get('security.max_login_attempts', 3),
-            'lockoutTime'       => (int) Setting::get('security.lockout_minutes', 30),
+            'lockoutTime'       => (int) Setting::get('security.lockout_minutes', 2),
             'allRoles'          => $allRoles,
             'permissions'       => $permissions,
             'permissionGroups'  => $permissionGroups,
@@ -153,6 +157,7 @@ class SettingsController extends Controller
             'selectedRole'      => $selectedRole,
             'rolePermissions'   => $rolePermissions,
             'allUsers'          => User::orderBy('name')->get(['id', 'name', 'email', 'role']),
+            'pagedUsers'        => User::orderBy('name')->paginate(10, ['id', 'name', 'email', 'role']),
             'selectedUser'      => $selectedUser,
             'userPermissions'   => $userPermissions,
             'featuresEnabled'   => [
@@ -381,6 +386,51 @@ class SettingsController extends Controller
 
         return redirect()->route('admin.settings.edit', ['tab' => 'fonctionnalites'])
             ->with('status', "{$label} {$state} avec succès.");
+    }
+
+    // ── Purge de données ──────────────────────────────────────────────────────
+
+    public function purgeEvaluations(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'confirm_password' => ['required', 'string'],
+        ]);
+
+        if (! Hash::check($validated['confirm_password'], (string) $request->user()->password)) {
+            return back()->withErrors(['confirm_password' => 'Mot de passe incorrect.'])->withFragment('danger');
+        }
+
+        $count = Evaluation::count();
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('evaluation_sous_criteres')->truncate();
+        DB::table('evaluation_criteres')->truncate();
+        DB::table('evaluation_identifications')->truncate();
+        DB::table('evaluations')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'danger'])
+            ->with('status', "{$count} évaluation(s) supprimée(s) définitivement.");
+    }
+
+    public function purgeObjectifs(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'confirm_password' => ['required', 'string'],
+        ]);
+
+        if (! Hash::check($validated['confirm_password'], (string) $request->user()->password)) {
+            return back()->withErrors(['confirm_password' => 'Mot de passe incorrect.'])->withFragment('danger');
+        }
+
+        $count = Objectif::count() + FicheObjectif::count();
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('objectifs')->truncate();
+        DB::table('lignes_fiche_objectif')->truncate();
+        DB::table('fiche_objectifs')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'danger'])
+            ->with('status', "{$count} objectif(s) supprimé(s) définitivement.");
     }
 
     public function syncUserPermissions(Request $request, User $user): RedirectResponse

@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB; // Ajouté pour interroger les settings
 use Illuminate\View\View;
 
 class DgaReseauController extends Controller
@@ -29,13 +30,22 @@ class DgaReseauController extends Controller
 
     /**
      * Calcule la note moyenne des évaluations validées pour une liste d'agent IDs,
-     * en excluant les agents dont l'utilisateur associé est de la faîtière.
+     * UNIQUEMENT si le semestre actuel est clôturé.
      *
-     * @param  int[]  $agentIds
+     * @param   int[]  $agentIds
      * @return array{moyenne: float|null, total: int}
      */
     private function noteStats(array $agentIds): array
     {
+        // ── RÈGLE MÉTIER : Vérification de la clôture du semestre ──
+        // On récupère le paramètre depuis ta table 'settings'
+        $semestreClotureSetting = DB::table('settings')->where('key', 'semestre_cloture')->first();
+        
+        // Si le setting n'existe pas ou que sa valeur n'est pas "true" / "1", on masque TOUTES les notes
+        if (!$semestreClotureSetting || !$semestreClotureSetting->value) {
+            return ['moyenne' => null, 'total' => 0];
+        }
+
         if (empty($agentIds)) {
             return ['moyenne' => null, 'total' => 0];
         }
@@ -98,7 +108,7 @@ class DgaReseauController extends Controller
 
         $delegations = $query->paginate(15)->withQueryString();
 
-        // Calcul des notes par délégation
+        // Calcul des notes par délégation (géré par noteStats qui intègre le verrou)
         $delegationNotes = [];
         foreach ($delegations as $d) {
             $agentIds = Agent::where('delegation_technique_id', $d->id)->pluck('id')->all();

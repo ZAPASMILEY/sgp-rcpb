@@ -80,15 +80,6 @@
                         <a href="{{ route('pca.evaluations.index') }}" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-950">
                             <i class="fas fa-rotate-right mr-2 text-xs opacity-80"></i>Réinitialiser
                         </a>
-                        @if($evaluationsEnabled)
-                        <a href="{{ route('pca.evaluations.create') }}" data-open-create-modal data-modal-title="Ajouter une evaluation" class="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700">
-                            <i class="fas fa-plus mr-2 text-xs"></i>Nouvelle évaluation
-                        </a>
-                        @else
-                        <span class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-400 cursor-not-allowed" title="Désactivé par l'administrateur">
-                            <i class="fas fa-ban text-xs"></i> Évaluations désactivées
-                        </span>
-                        @endif
                     </div>
                 </div>
 
@@ -158,33 +149,131 @@
                     </form>
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-slate-600 whitespace-nowrap">
-                            <thead class="bg-slate-50/80 border-b border-slate-200 text-slate-500">
-                                <tr>
-                                    <th class="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider w-16 border-r border-slate-100">#</th>
-                                    <th class="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider border-r border-slate-100">Cible de l'évaluation</th>
-                                    <th class="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider border-r border-slate-100">Période & Evaluateur</th>
-                                    <th class="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider border-r border-slate-100">Résultat / Note</th>
-                                    <th class="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider border-r border-slate-100">Mention</th>
-                                    <th class="px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider">Statut</th>
-                                    <th class="px-5 py-3.5 text-center text-[11px] font-bold uppercase tracking-wider w-24">Actions</th>
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 bg-slate-50/80">
+                                    <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Cible</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Période</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Note</th>
+                                    <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Statut</th>
+                                    <th class="px-5 py-3 text-center text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @forelse ($evaluations as $evaluation)
-                                    @empty
-                                    <tr>
-                                        <td colspan="7" class="px-5 py-16 bg-gradient-to-b from-white to-slate-50/50">
-                                            <div class="mx-auto max-w-sm rounded-2xl border border-dashed border-slate-200 bg-white p-8 shadow-sm">
-                                                <div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 mb-4 shadow-sm border border-cyan-100">
-                                                    <i class="fas fa-folder-open text-lg"></i>
+                                    @php
+                                        $target        = $evaluation->evaluable;
+                                        $cibleLabel    = trim((string) ($evaluation->identification?->nom_prenom ?? '')) ?: ($target?->name ?? '-');
+                                        $hasNote       = $evaluation->note_finale !== null;
+                                        $noteVal       = (float) ($evaluation->note_finale ?? 0);
+                                        $mention       = $noteVal >= 8.5 ? 'Excellent' : ($noteVal >= 7 ? 'Bien' : ($noteVal >= 5 ? 'Passable' : 'Insuffisant'));
+                                        $mentionTxtCls = match ($mention) {
+                                            'Excellent' => 'text-emerald-600',
+                                            'Bien'      => 'text-sky-600',
+                                            'Passable'  => 'text-amber-600',
+                                            default     => 'text-rose-600',
+                                        };
+                                        $notePct     = $hasNote ? max(0, min(100, ($noteVal / 10) * 100)) : 0;
+                                        $noteBarCls  = $notePct >= 85 ? 'bg-emerald-500' : ($notePct >= 70 ? 'bg-sky-500' : ($notePct >= 50 ? 'bg-amber-400' : 'bg-rose-400'));
+                                        $notePillCls = $notePct >= 85
+                                            ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                                            : ($notePct >= 70 ? 'bg-sky-50 text-sky-700 ring-1 ring-sky-200'
+                                            : ($notePct >= 50 ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
+                                            : 'bg-rose-50 text-rose-700 ring-1 ring-rose-200'));
+                                        $statusCls = match ($evaluation->statut) {
+                                            'valide'      => 'bg-emerald-100 text-emerald-700',
+                                            'soumis'      => 'bg-amber-100 text-amber-700',
+                                            'refuse'      => 'bg-rose-100 text-rose-700',
+                                            'reclamation' => 'bg-orange-100 text-orange-700',
+                                            'a_reviser'   => 'bg-purple-100 text-purple-700',
+                                            default       => 'bg-slate-100 text-slate-600',
+                                        };
+                                        $dotCls = match ($evaluation->statut) {
+                                            'valide'      => 'bg-emerald-500',
+                                            'soumis'      => 'bg-amber-400',
+                                            'refuse'      => 'bg-rose-500',
+                                            'reclamation' => 'bg-orange-500',
+                                            'a_reviser'   => 'bg-purple-500',
+                                            default       => 'bg-slate-400',
+                                        };
+                                        $statusLabel = match ($evaluation->statut) {
+                                            'valide'      => 'Validée',
+                                            'soumis'      => 'Soumise',
+                                            'refuse'      => 'Refusée',
+                                            'reclamation' => 'Réclamation',
+                                            'a_reviser'   => 'À réviser',
+                                            'brouillon'   => 'Brouillon',
+                                            default       => ucfirst((string) $evaluation->statut),
+                                        };
+                                        $identification = $evaluation->identification;
+                                        $anneeEval = $identification?->date_evaluation?->format('Y') ?? $evaluation->date_debut->format('Y');
+                                        $sem = trim((string) ($identification?->semestre ?? ''));
+                                        if ($sem === '') { $sem = $evaluation->date_debut->month <= 6 ? '1' : '2'; }
+                                    @endphp
+                                    <tr class="hover:bg-slate-50/60 transition-colors">
+                                        {{-- Cible --}}
+                                        <td class="px-5 py-3.5">
+                                            <p class="font-black text-slate-800">{{ $cibleLabel }}</p>
+                                            <p class="mt-0.5 text-[11px] text-slate-400">{{ $identification?->emploi ?? '-' }}</p>
+                                        </td>
+                                        {{-- Période --}}
+                                        <td class="px-5 py-3.5">
+                                            <div class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-700">
+                                                <i class="fas fa-calendar-alt text-[9px] text-slate-400"></i>
+                                                S{{ $sem }} / {{ $anneeEval }}
+                                            </div>
+                                            <p class="mt-1 text-[11px] text-slate-400">{{ $evaluation->evaluateur?->name ?? '-' }}</p>
+                                        </td>
+                                        {{-- Note --}}
+                                        <td class="px-5 py-3.5">
+                                            @if ($hasNote)
+                                                <span class="inline-flex items-baseline gap-0.5 rounded-lg px-2.5 py-1 text-sm font-black {{ $notePillCls }}">
+                                                    {{ number_format($noteVal, 2, ',', ' ') }}<span class="text-[10px] font-bold opacity-60">/10</span>
+                                                </span>
+                                                <div class="mt-1.5 h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
+                                                    <div class="h-full rounded-full {{ $noteBarCls }}" style="width:{{ $notePct }}%"></div>
                                                 </div>
-                                                <p class="text-base font-bold text-slate-800">Aucune évaluation enregistrée</p>
-                                                <p class="mt-1.5 text-xs leading-relaxed text-slate-400">
-                                                    Il n'y a actuellement aucune fiche d'évaluation PCA à afficher. Vous pouvez ajuster vos critères de recherche ou cliquer sur le bouton ci-dessus pour initialiser un nouveau parcours de suivi.
-                                                </p>
+                                                <p class="mt-0.5 text-[10px] font-bold {{ $mentionTxtCls }}">{{ $mention }}</p>
+                                            @else
+                                                <span class="text-slate-300 text-xs">—</span>
+                                            @endif
+                                        </td>
+                                        {{-- Statut --}}
+                                        <td class="px-5 py-3.5">
+                                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black {{ $statusCls }}">
+                                                <span class="h-1.5 w-1.5 rounded-full {{ $dotCls }}"></span>
+                                                {{ $statusLabel }}
+                                            </span>
+                                        </td>
+                                        {{-- Actions --}}
+                                        <td class="px-5 py-3.5 text-center">
+                                            <div class="inline-flex items-center gap-1">
+                                                <a href="{{ route('pca.evaluations.show', $evaluation) }}"
+                                                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-100 hover:text-blue-600"
+                                                   title="Voir">
+                                                    <i class="fas fa-eye text-xs"></i>
+                                                </a>
+                                                @if ($evaluation->statut !== 'brouillon')
+                                                    <a href="{{ route('pca.evaluations.pdf', $evaluation) }}"
+                                                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-100 hover:text-rose-600"
+                                                       title="PDF" target="_blank">
+                                                        <i class="fas fa-file-pdf text-xs"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="px-4 py-14 text-center">
+                                            <div class="mx-auto max-w-xs">
+                                                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+                                                    <i class="fas fa-clipboard-list text-xl text-slate-300"></i>
+                                                </div>
+                                                <p class="text-sm font-black text-slate-700">Aucune évaluation enregistrée</p>
+                                                <p class="mt-1 text-xs text-slate-400">Ajustez vos critères ou créez une nouvelle évaluation.</p>
                                             </div>
                                         </td>
                                     </tr>

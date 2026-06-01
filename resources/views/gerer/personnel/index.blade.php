@@ -15,7 +15,7 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-[0.2em] text-sky-200">Gestion · RCPB</p>
                 <h1 class="mt-0.5 text-2xl font-black text-white">Personnel</h1>
-                <p class="mt-0.5 text-sm text-sky-100/75">Liste de l'ensemble du personnel du réseau</p>
+                <p class="mt-0.5 text-sm text-sky-100/75">{{ $agents->total() }} agent(s) — réseau complet RCPB</p>
             </div>
         </div>
     </div>

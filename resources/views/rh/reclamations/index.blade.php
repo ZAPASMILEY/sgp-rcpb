@@ -15,7 +15,12 @@
                     <i class="fas fa-triangle-exclamation mr-2 text-amber-500"></i> Refus &amp; Réclamations
                 </h1>
                 <p class="mt-1 text-sm text-slate-500">
-                    {{ $evaluations->count() }} évaluation(s) refusée(s) en attente de traitement
+                    {{ $evaluations->count() }} réclamation(s) au total
+                    @if($enAttente > 0)
+                        — <span class="font-semibold text-amber-600">{{ $enAttente }} en attente de traitement</span>
+                    @else
+                        — <span class="font-semibold text-emerald-600">Tout traité</span>
+                    @endif
                 </p>
             </div>
             <div class="flex shrink-0 items-center gap-2">
@@ -41,8 +46,8 @@
             <i class="fas fa-check-circle text-2xl text-emerald-500"></i>
         </div>
         <div>
-            <h3 class="text-lg font-bold text-slate-800">Aucun refus en cours</h3>
-            <p class="mt-1 text-sm text-slate-500">Toutes les évaluations ont été acceptées.</p>
+            <h3 class="text-lg font-bold text-slate-800">Aucune réclamation</h3>
+            <p class="mt-1 text-sm text-slate-500">Aucune évaluation refusée ou réclamée pour le moment.</p>
         </div>
     </div>
 
@@ -76,13 +81,13 @@
                         $badgeClass = match($statutReclam) {
                             'en_attente' => 'bg-amber-100 text-amber-700 border-amber-200',
                             'maintenu'   => 'bg-red-100 text-red-700 border-red-200',
-                            'rouvert'    => 'bg-blue-100 text-blue-700 border-blue-200',
+                            'rouvert'    => 'bg-emerald-100 text-emerald-700 border-emerald-200',
                             default      => 'bg-slate-100 text-slate-500 border-slate-200',
                         };
                         $statutLabel = match($statutReclam) {
                             'en_attente' => 'En attente',
-                            'maintenu'   => 'Refus maintenu',
-                            'rouvert'    => 'Rouvert',
+                            'maintenu'   => 'Maintenu',
+                            'rouvert'    => 'Réglé',
                             default      => '—',
                         };
                     @endphp
@@ -117,7 +122,7 @@
                                 @elseif($statutReclam === 'maintenu')
                                     <i class="fas fa-ban text-[10px]"></i>
                                 @elseif($statutReclam === 'rouvert')
-                                    <i class="fas fa-rotate-left text-[10px]"></i>
+                                    <i class="fas fa-check-circle text-[10px]"></i>
                                 @endif
                                 {{ $statutLabel }}
                             </span>

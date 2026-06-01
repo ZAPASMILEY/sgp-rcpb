@@ -126,6 +126,12 @@
                                             <i class="fas fa-check mr-1"></i>Lu le {{ \Carbon\Carbon::parse($notif->pivot->lu_at)->translatedFormat('d M Y à H:i') }}
                                         </span>
                                     @endif
+                                    @if ($notif->lien)
+                                        <a href="{{ $notif->lien }}"
+                                           class="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-600 transition hover:bg-blue-100">
+                                            <i class="fas fa-arrow-up-right-from-square text-[9px]"></i> Consulter
+                                        </a>
+                                    @endif
                                 </div>
                             </div>
 

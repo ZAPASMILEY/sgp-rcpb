@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -57,9 +58,11 @@ class Semestre extends Model
             ->exists();
     }
 
-    public function label(): string
+    public function label(): Attribute
     {
-        return "Semestre {$this->numero} — {$this->annee->annee}";
+        return Attribute::make(
+            get: fn () => "Semestre {$this->numero}" . ($this->annee ? " — {$this->annee->annee}" : ''),
+        );
     }
 
     /** Date de début du semestre (1er jan ou 1er juil) */

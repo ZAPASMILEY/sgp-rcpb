@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('statut')->default('active');        // 'active', 'resolue', 'ignoree'
             $table->string('ip_address', 45)->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('lien', 2048)->nullable(); // URL de la ressource concernée
             $table->timestamps();
         });
     }

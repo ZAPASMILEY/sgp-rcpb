@@ -7,9 +7,7 @@ use App\Models\SubjectiveCriteriaTemplate;
 use Carbon\Carbon;
 
 /**
- * Shared evaluation computation helpers extracted from DgSubEvaluationController,
- * DgaSubEvaluationController, DgDirectionController, DirecteurEvaluationController,
- * DirecteurSubordonneController, and PcaEvaluationController.
+ * Shared evaluation computation helpers used by EvaluationController.
  */
 class EvaluationService
 {
@@ -66,9 +64,13 @@ class EvaluationService
     /**
      * Sanitise and reshape raw criterion rows from the form submission.
      *
+     * Criteria may have subcriteria OR a direct note (note_directe) — both cases
+     * are accepted regardless of the $strict flag.  When subcriteria are present
+     * their average becomes note_globale; otherwise note_directe is used.
+     *
      * @param  array<int, mixed>  $criteria
-     * @param  bool  $strict  When false (subjective mode): empty sub-libelles become '-'
-     *                        and criteria with no subcriteria keep a default placeholder row.
+     * @param  bool  $strict  When false (subjective mode): empty sub-libelles become '-'.
+     *                        Criteria with no subcriteria are now kept in both modes.
      * @return array<int, array<string, mixed>>
      */
     public function normalizeCriteria(array $criteria, string $type, int $minNote, int $maxNote, bool $strict = true): array
@@ -106,11 +108,11 @@ class EvaluationService
                 ];
             }
 
-            if ($strict && $subcriteria === []) {
-                continue;
-            }
-            if (! $strict && $subcriteria === []) {
-                $subcriteria = [['ordre' => 1, 'libelle' => '-', 'note' => $minNote, 'observation' => null]];
+            if ($subcriteria === []) {
+                // No subcriteria: use note_directe (or minNote as fallback)
+                $noteGlobale = max($minNote, min($maxNote, (float) ($criterion['note_directe'] ?? $minNote)));
+            } else {
+                $noteGlobale = round(collect($subcriteria)->avg('note') ?? 0, 2);
             }
 
             $normalized[] = [
@@ -118,7 +120,7 @@ class EvaluationService
                 'ordre'                             => $idx + 1,
                 'titre'                             => $title,
                 'description'                       => filled($criterion['description'] ?? null) ? trim((string) $criterion['description']) : null,
-                'note_globale'                      => round(collect($subcriteria)->avg('note') ?? 0, 2),
+                'note_globale'                      => $noteGlobale,
                 'observation'                       => filled($criterion['observation'] ?? null) ? trim((string) $criterion['observation']) : null,
                 'source_template_id'                => isset($criterion['source_template_id']) ? (int) $criterion['source_template_id'] : null,
                 'source_fiche_objectif_id'          => isset($criterion['source_fiche_objectif_id']) ? (int) $criterion['source_fiche_objectif_id'] : null,
@@ -237,7 +239,15 @@ class EvaluationService
      */
     public function persistCriteria(Evaluation $evaluation, array $criteria): void
     {
+        // Pre-load valid template IDs to avoid FK violations with orphaned references
+        $validTemplateIds = SubjectiveCriteriaTemplate::pluck('id')->flip()->all();
+
         foreach ($criteria as $criterion) {
+            $sourceTemplateId = $criterion['source_template_id'];
+            if ($sourceTemplateId !== null && ! isset($validTemplateIds[$sourceTemplateId])) {
+                $sourceTemplateId = null;
+            }
+
             $critere = $evaluation->criteres()->create([
                 'type'                              => $criterion['type'],
                 'ordre'                             => $criterion['ordre'],
@@ -245,7 +255,7 @@ class EvaluationService
                 'description'                       => $criterion['description'],
                 'note_globale'                      => $criterion['note_globale'],
                 'observation'                       => $criterion['observation'],
-                'source_template_id'                => $criterion['source_template_id'],
+                'source_template_id'                => $sourceTemplateId,
                 'source_fiche_objectif_id'          => $criterion['source_fiche_objectif_id'],
                 'source_fiche_objectif_objectif_id' => $criterion['source_fiche_objectif_objectif_id'],
             ]);

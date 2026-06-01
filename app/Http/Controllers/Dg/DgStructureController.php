@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dg;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Shared\StructureStats;
+use App\Models\Agent;
 use App\Models\Annee;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
@@ -63,7 +64,7 @@ class DgStructureController extends Controller
         $notesWithValue = $allStructures->filter(fn ($s) => $s->note_moyenne !== null);
         return [
             'nb_structures'   => $allStructures->count(),
-            'nb_agents'       => $allStructures->sum('nb_agents'),
+            'nb_agents'       => Agent::personnel()->count(),
             'note_moy_reseau' => $notesWithValue->count() > 0
                 ? round($notesWithValue->avg('note_moyenne'), 2)
                 : null,

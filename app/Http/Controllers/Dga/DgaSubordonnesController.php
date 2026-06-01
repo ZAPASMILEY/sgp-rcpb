@@ -8,6 +8,7 @@ use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\User;
 use App\Traits\ResolvesEntite;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -47,6 +48,24 @@ class DgaSubordonnesController extends Controller
         $secretaire = $this->getDgaSecretaireUser($entite);
 
         return view('dga.subordonnes.index', compact('directeursTechniques', 'secretaire', 'entite'));
+    }
+
+    /**
+     * Redirige vers le dossier de la secrétaire du DGA, ou affiche un écran
+     * "non configurée" si aucune secrétaire n'est définie.
+     */
+    public function secretaire(): View|RedirectResponse
+    {
+        $this->checkDga();
+
+        $entite    = $this->getEntiteForDGA();
+        $secretaire = $this->getDgaSecretaireUser($entite);
+
+        if (! $secretaire) {
+            return view('dga.secretaire.index', compact('entite'));
+        }
+
+        return redirect()->route('dga.subordonnes.show', $secretaire);
     }
 
     /**

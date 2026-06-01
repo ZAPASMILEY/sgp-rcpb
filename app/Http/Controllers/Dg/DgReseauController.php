@@ -109,7 +109,7 @@ class DgReseauController extends Controller
     {
         $this->authorize('evaluations.voir-reseau');
 
-        $delegation->load(['caisses.agences']);
+        $delegation->load(['directeur', 'secretaire', 'caisses.directeur', 'caisses.agences.chef']);
 
         $agentIds = Agent::where('delegation_technique_id', $delegation->id)->pluck('id')->all();
 
@@ -165,7 +165,7 @@ class DgReseauController extends Controller
     {
         $this->authorize('evaluations.voir-reseau');
 
-        $caisse->load(['delegationTechnique', 'agences']);
+        $caisse->load(['delegationTechnique', 'directeur', 'secretaire', 'agences.chef']);
 
         $agenceIds = $caisse->agences()->pluck('id')->all();
         $agentIds  = Agent::whereIn('agence_id', $agenceIds)->pluck('id')->all();
@@ -218,7 +218,7 @@ class DgReseauController extends Controller
     {
         $this->authorize('evaluations.voir-reseau');
 
-        $agence->load(['caisse', 'delegationTechnique', 'guichets']);
+        $agence->load(['caisse', 'delegationTechnique', 'chef', 'secretaire', 'guichets.chef']);
 
         $agentIds = Agent::where('agence_id', $agence->id)->pluck('id')->all();
 
@@ -269,7 +269,7 @@ class DgReseauController extends Controller
     {
         $this->authorize('evaluations.voir-reseau');
 
-        $guichet->load('agence.caisse');
+        $guichet->load(['chef', 'agence.caisse']);
 
         // Les agents appartiennent à l'agence du guichet
         $agentIds = Agent::where('agence_id', $guichet->agence_id)->pluck('id')->all();

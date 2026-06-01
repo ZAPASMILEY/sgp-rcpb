@@ -31,17 +31,33 @@
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                     <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Directeur Technique</p>
-                    <p class="mt-2 font-bold text-slate-900">{{ $delegation->directeur_prenom }} {{ $delegation->directeur_nom }}</p>
-                    <p class="text-xs text-slate-500">{{ $delegation->directeur_email }}</p>
-                    <p class="text-xs text-slate-500">{{ $delegation->directeur_telephone }}</p>
-                    <p class="mt-1 text-xs text-slate-400">Depuis {{ $delegation->directeur_date_debut_mois ?? '—' }}</p>
+                    @if ($delegation->directeur)
+                        <p class="mt-2 font-bold text-slate-900">{{ $delegation->directeur->prenom }} {{ $delegation->directeur->nom }}</p>
+                        @if ($delegation->directeur->email)
+                            <p class="text-xs text-slate-500">{{ $delegation->directeur->email }}</p>
+                        @endif
+                        @if ($delegation->directeur->telephone)
+                            <p class="text-xs text-slate-500">{{ $delegation->directeur->telephone }}</p>
+                        @endif
+                    @else
+                        <p class="mt-2 font-bold text-slate-400">—</p>
+                        <p class="text-xs text-slate-400">Non assigné</p>
+                    @endif
                 </div>
                 <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                     <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Secrétaire</p>
-                    <p class="mt-2 font-bold text-slate-900">{{ $delegation->secretaire_prenom }} {{ $delegation->secretaire_nom }}</p>
-                    <p class="text-xs text-slate-500">{{ $delegation->secretaire_email }}</p>
-                    <p class="text-xs text-slate-500">{{ $delegation->secretaire_telephone }}</p>
-                    <p class="mt-1 text-xs text-slate-400">Depuis {{ $delegation->secretaire_date_debut_mois ?? '—' }}</p>
+                    @if ($delegation->secretaire)
+                        <p class="mt-2 font-bold text-slate-900">{{ $delegation->secretaire->prenom }} {{ $delegation->secretaire->nom }}</p>
+                        @if ($delegation->secretaire->email)
+                            <p class="text-xs text-slate-500">{{ $delegation->secretaire->email }}</p>
+                        @endif
+                        @if ($delegation->secretaire->telephone)
+                            <p class="text-xs text-slate-500">{{ $delegation->secretaire->telephone }}</p>
+                        @endif
+                    @else
+                        <p class="mt-2 font-bold text-slate-400">—</p>
+                        <p class="text-xs text-slate-400">Non assigné</p>
+                    @endif
                 </div>
             </div>
         </section>
@@ -62,7 +78,7 @@
                         <div class="flex items-center justify-between px-6 py-4">
                             <div>
                                 <p class="font-bold text-slate-900">{{ $caisse->nom }}</p>
-                                <p class="text-xs text-slate-400">{{ $caisse->quartier }} — {{ $caisse->directeur_prenom }} {{ $caisse->directeur_nom }}</p>
+                                <p class="text-xs text-slate-400">{{ $caisse->quartier }}{{ $caisse->directeur ? ' — '.$caisse->directeur->prenom.' '.$caisse->directeur->nom : '' }}</p>
                             </div>
                             <div class="flex items-center gap-3">
                                 <span class="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-black text-sky-700">{{ $caisse->agences->count() }} agence(s)</span>

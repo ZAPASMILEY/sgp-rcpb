@@ -8,11 +8,14 @@
         ],
         [
             'title' => 'Pilotage',
-            'items' => [
-                ['route' => 'dg.dashboard',          'icon' => 'fas fa-gauge-high',    'label' => 'Tableau de bord'],
-                ['route' => 'dg.comparaison.index',  'icon' => 'fas fa-code-compare',  'label' => 'Comparaison inter-période'],
-                ['route' => 'dg.statistiques',       'icon' => 'fas fa-chart-bar',     'label' => 'Statistiques'],
-            ],
+            'items' => array_filter([
+                ['route' => 'dg.dashboard',         'icon' => 'fas fa-gauge-high',   'label' => 'Tableau de bord'],
+                ['route' => 'dg.comparaison.index', 'icon' => 'fas fa-code-compare', 'label' => 'Comparaison inter-période'],
+                ['route' => 'dg.statistiques',      'icon' => 'fas fa-chart-bar',    'label' => 'Statistiques'],
+                auth()->user()?->can('tableaux.voir')
+                    ? ['route' => 'dg.tableaux.index', 'icon' => 'fas fa-file-excel', 'label' => 'Tableaux Excel']
+                    : null,
+            ]),
         ],
         [
             'title' => 'Mes collaborateurs',
@@ -57,8 +60,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Espace DG')</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 
@@ -140,7 +141,6 @@
             .sidebar-collapse-btn { display: none !important; }
         }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
     <style>
     .ts-wrapper.single .ts-control{background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.55rem 1rem;font-size:.875rem;color:#1e293b;box-shadow:none;cursor:pointer;}
     .ts-wrapper.single.focus .ts-control{border-color:#34d399;background:#fff;box-shadow:0 0 0 3px rgba(52,211,153,.15);}
@@ -257,7 +257,6 @@
     </script>
 
     @stack('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
     (function(){
         var tsOpts={searchField:['text'],maxOptions:300,render:{

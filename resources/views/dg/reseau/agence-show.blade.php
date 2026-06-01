@@ -35,15 +35,33 @@
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                     <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Chef d'agence</p>
-                    <p class="mt-2 font-bold text-slate-900">{{ $agence->chef_nom ?? '—' }}</p>
-                    <p class="text-xs text-slate-500">{{ $agence->chef_email }}</p>
-                    <p class="text-xs text-slate-500">{{ $agence->chef_telephone }}</p>
+                    @if ($agence->chef)
+                        <p class="mt-2 font-bold text-slate-900">{{ $agence->chef->prenom }} {{ $agence->chef->nom }}</p>
+                        @if ($agence->chef->email)
+                            <p class="text-xs text-slate-500">{{ $agence->chef->email }}</p>
+                        @endif
+                        @if ($agence->chef->telephone)
+                            <p class="text-xs text-slate-500">{{ $agence->chef->telephone }}</p>
+                        @endif
+                    @else
+                        <p class="mt-2 font-bold text-slate-400">—</p>
+                        <p class="text-xs text-slate-400">Non assigné</p>
+                    @endif
                 </div>
                 <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                     <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Secrétaire</p>
-                    <p class="mt-2 font-bold text-slate-900">{{ $agence->secretaire_nom ?? '—' }}</p>
-                    <p class="text-xs text-slate-500">{{ $agence->secretaire_email }}</p>
-                    <p class="text-xs text-slate-500">{{ $agence->secretaire_telephone }}</p>
+                    @if ($agence->secretaire)
+                        <p class="mt-2 font-bold text-slate-900">{{ $agence->secretaire->prenom }} {{ $agence->secretaire->nom }}</p>
+                        @if ($agence->secretaire->email)
+                            <p class="text-xs text-slate-500">{{ $agence->secretaire->email }}</p>
+                        @endif
+                        @if ($agence->secretaire->telephone)
+                            <p class="text-xs text-slate-500">{{ $agence->secretaire->telephone }}</p>
+                        @endif
+                    @else
+                        <p class="mt-2 font-bold text-slate-400">—</p>
+                        <p class="text-xs text-slate-400">Non assigné</p>
+                    @endif
                 </div>
             </div>
         </section>
@@ -62,7 +80,7 @@
                     <div class="flex items-center justify-between px-6 py-4">
                         <div>
                             <p class="font-bold text-slate-900">{{ $guichet->nom }}</p>
-                            <p class="text-xs text-slate-400">Chef : {{ $guichet->chef_nom ?? '—' }} · {{ $guichet->chef_telephone ?? '' }}</p>
+                            <p class="text-xs text-slate-400">Chef : {{ $guichet->chef ? $guichet->chef->prenom.' '.$guichet->chef->nom : '—' }}</p>
                         </div>
                         <a href="{{ route('dg.guichets.show', $guichet) }}" class="ent-btn ent-btn-soft py-1 px-3 text-xs">
                             <i class="fas fa-eye mr-1"></i>Voir

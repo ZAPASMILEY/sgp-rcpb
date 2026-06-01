@@ -109,10 +109,10 @@
     {{-- ── Cartes stats rapides ─────────────────────────────────────────────── --}}
     @php
         $totalAgents = $agents->count();
-        $avecS1      = $agents->filter(fn ($a) => $a->evaluationsPersonnel->contains(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->count();
-        $avecS2      = $agents->filter(fn ($a) => $a->evaluationsPersonnel->contains(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->count();
-        $moyS1       = $agents->map(fn ($a) => optional($a->evaluationsPersonnel->first(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->note_finale)->filter()->avg();
-        $moyS2       = $agents->map(fn ($a) => optional($a->evaluationsPersonnel->first(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->note_finale)->filter()->avg();
+        $avecS1      = $agents->filter(fn ($a) => $a->evaluations->merge($a->evaluationsPersonnel)->contains(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->count();
+        $avecS2      = $agents->filter(fn ($a) => $a->evaluations->merge($a->evaluationsPersonnel)->contains(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->count();
+        $moyS1       = $agents->map(fn ($a) => optional($a->evaluations->merge($a->evaluationsPersonnel)->first(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->note_finale)->filter()->avg();
+        $moyS2       = $agents->map(fn ($a) => optional($a->evaluations->merge($a->evaluationsPersonnel)->first(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->note_finale)->filter()->avg();
     @endphp
     <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div class="rounded-2xl bg-white px-5 py-4 shadow-sm ring-1 ring-slate-100">
@@ -147,10 +147,11 @@
                 <p class="text-sm font-semibold text-slate-400">Aucun agent trouvé pour ces critères.</p>
             </div>
         @else
-        <div class="overflow-x-auto">
+        {{-- Conteneur scrollable : header fixe, ~10 lignes visibles (~480 px), défilement molette --}}
+        <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
             <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b border-slate-100 bg-slate-50/70">
+                <thead class="sticky top-0 z-10">
+                    <tr class="border-b border-slate-100 bg-slate-50">
                         <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Matricule</th>
                         <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Nom et Prénom</th>
                         <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Sexe</th>
@@ -174,7 +175,7 @@
                 <tbody class="divide-y divide-slate-50">
                     @foreach($agents as $agent)
                     @php
-                        $evals  = $agent->evaluationsPersonnel->keyBy(fn ($e) => $e->semestre?->numero);
+                        $evals  = $agent->evaluations->merge($agent->evaluationsPersonnel)->keyBy(fn ($e) => $e->semestre?->numero);
                         $evalS1 = $s1 ? $evals->get(1) : null;
                         $evalS2 = $s2 ? $evals->get(2) : null;
                         $grade  = $evalS1?->identification?->grade ?? $evalS2?->identification?->grade ?? null;

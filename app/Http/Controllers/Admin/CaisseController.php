@@ -50,13 +50,12 @@ class CaisseController extends Controller
         return view('admin.caisses.create', $this->formData());
     }
 
-   public function show(Caisse $caisse)
-{
-    // On charge les services et la relation 'chef' qu'on vient de trouver !
-    $caisse->load(['services.chef']); 
+    public function show(Caisse $caisse): View
+    {
+        $caisse->load(['services.chef', 'agences.chef', 'delegationTechnique']);
 
-    return view('admin.caisses.show', compact('caisse'));
-}
+        return view('admin.caisses.show', compact('caisse'));
+    }
     public function directionsIndex(Caisse $caisse): View
     {
         return view('admin.caisses.directions', [
@@ -77,6 +76,23 @@ class CaisseController extends Controller
 
     return view('admin.caisses.services', compact('caisse', 'chefs'));
 }
+
+    public function affecterAgence(Caisse $caisse): View
+    {
+        $caisse->load('delegationTechnique');
+
+        $chefs = Agent::where('role', "Chef d'Agence")
+            ->whereDoesntHave('ledAgence')
+            ->orderBy('nom')->orderBy('prenom')
+            ->get();
+
+        $secretaires = Agent::where('role', "Secrétaire d'Agence")
+            ->whereDoesntHave('secretariedAgence')
+            ->orderBy('nom')->orderBy('prenom')
+            ->get();
+
+        return view('admin.caisses.agences', compact('caisse', 'chefs', 'secretaires'));
+    }
 
     public function servicesIndex(Caisse $caisse): View
     {

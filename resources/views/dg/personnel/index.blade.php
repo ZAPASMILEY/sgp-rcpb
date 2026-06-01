@@ -2,24 +2,26 @@
 @section('title', 'Personnel du réseau | '.config('app.name'))
 
 @section('content')
-<div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
 
-        {{-- Header --}}
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Espace DG / Réseau RCPB</p>
-                    <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Personnel évalué</h1>
-                    <p class="mt-1 text-sm text-slate-500">{{ $evaluations->total() }} fiche(s) — réseau complet RCPB</p>
-                </div>
-                <a href="{{ route('dg.personnel.pdf', request()->query()) }}"
-                   class="inline-flex items-center gap-2 rounded-2xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800">
-                    <i class="fas fa-file-pdf"></i>
-                    Télécharger PDF
-                </a>
+    {{-- Hero --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+        <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+        <div class="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-300">Espace DG · Réseau RCPB</p>
+                <h1 class="mt-1 text-2xl font-black text-white leading-tight">Personnel évalué</h1>
+                <p class="mt-0.5 text-sm text-emerald-100/80">{{ $stats['total'] }} agent(s) — réseau complet RCPB</p>
             </div>
-        </header>
+            <a href="{{ route('dg.personnel.pdf', request()->query()) }}"
+               class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+                <i class="fas fa-file-pdf"></i> Télécharger PDF
+            </a>
+        </div>
+    </div>
+
+    <div class="px-4 pt-6 lg:px-8">
+    <div class="w-full flex flex-col gap-6">
 
         {{-- KPIs ──────────────────────────────────────────────────────────── --}}
         @php
@@ -52,7 +54,7 @@
         </div>
 
         {{-- Filtres ─────────────────────────────────────────────────────────── --}}
-        <form method="GET" action="{{ route('dg.personnel') }}" class="admin-panel px-5 py-5">
+        <form method="GET" action="{{ route('dg.personnel') }}" class="rounded-[20px] border border-slate-100 bg-white px-5 py-5 shadow-sm">
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
                 {{-- Recherche --}}
@@ -117,17 +119,17 @@
                     </select>
                 </div>
 
-                {{-- Statut --}}
-                <div>
-                    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Statut</label>
-                    <select name="statut" class="ent-input w-full">
-                        <option value="">Tous</option>
-                        <option value="soumis" {{ $filters['statut'] === 'soumis' ? 'selected' : '' }}>Soumise</option>
-                        <option value="valide" {{ $filters['statut'] === 'valide' ? 'selected' : '' }}>Validée</option>
-                        <option value="refuse" {{ $filters['statut'] === 'refuse' ? 'selected' : '' }}>Refusée</option>
-                    </select>
-                </div>
-
+              {{-- Statut --}}
+<div>
+    <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Statut</label>
+    <select name="statut" class="ent-input w-full">
+        {{-- En mettant 'valide' par défaut si aucun filtre n'est encore appliqué --}}
+        <option value="">Tous</option>
+        <option value="soumis" {{ $filters['statut'] === 'soumis' ? 'selected' : '' }}>Soumise</option>
+        <option value="valide" {{ ($filters['statut'] === 'valide' || is_null($filters['statut'])) ? 'selected' : '' }}>Validée</option>
+        <option value="refuse" {{ $filters['statut'] === 'refuse' ? 'selected' : '' }}>Refusée</option>
+    </select>
+</div>
                 {{-- Tri --}}
                 <div>
                     <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Trier par</label>
@@ -155,7 +157,7 @@
         </form>
 
         {{-- Tableau ──────────────────────────────────────────────────────────── --}}
-        <section class="admin-panel overflow-hidden">
+        <section class="rounded-[20px] border border-slate-100 bg-white overflow-hidden shadow-sm">
             <div class="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
                 <h2 class="text-sm font-black uppercase tracking-widest text-slate-700">
                     Liste du personnel évalué
@@ -318,6 +320,7 @@
             @endif
         </section>
 
+    </div>
     </div>
 </div>
 @endsection

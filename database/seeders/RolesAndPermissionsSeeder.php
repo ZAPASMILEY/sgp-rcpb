@@ -38,15 +38,15 @@ class RolesAndPermissionsSeeder extends Seeder
         'evaluations.creer',        // Rédiger une fiche d'évaluation
         'evaluations.soumettre',    // Soumettre une évaluation à la personne évaluée
         'evaluations.accepter',     // Accepter ou refuser une évaluation reçue
-        'evaluations.voir-propres', // Consulter ses propres évaluations
         'evaluations.voir-equipe',  // Consulter les évaluations de son équipe
         'evaluations.voir-reseau',  // Consulter toutes les évaluations du réseau (DG)
         'evaluations.exporter-pdf', // Télécharger une évaluation en PDF
 
         // ── Fiches d'objectifs ─────────────────────────────────────────────
-        'objectifs.assigner',   // Créer et assigner une fiche d'objectifs
-        'objectifs.accepter',   // Accepter ou refuser une fiche reçue
-        'objectifs.avancement', // Mettre à jour le % d'avancement
+        'objectifs.assigner',    // Créer et assigner une fiche d'objectifs
+        'objectifs.accepter',    // Accepter ou refuser une fiche d'objectifs reçue
+        'objectifs.contester',   // Contester un objectif individuel d'une fiche reçue
+        'objectifs.avancement',  // Mettre à jour le % d'avancement
         'objectifs.voir-equipe', // Consulter les fiches de son équipe
 
         // ── Formations ────────────────────────────────────────────────────
@@ -73,6 +73,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'Admin' => [
             'agents.voir',
             'structures.voir',
+            'evaluations.exporter-pdf',
             'admin.activites', 'admin.alertes',
         ],
 
@@ -80,8 +81,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'PCA' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre',
-            'evaluations.voir-equipe', 'evaluations.exporter-pdf',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.exporter-pdf',
+            'evaluations.voir-equipe',
             'objectifs.assigner', 'objectifs.voir-equipe',
         ],
 
@@ -89,10 +90,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'DG' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.voir-equipe', 'evaluations.voir-reseau', 'evaluations.exporter-pdf',
-            'objectifs.assigner', 'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
+            'evaluations.voir-equipe', 'evaluations.voir-reseau',
+            'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
             'admin.activites', 'admin.alertes',
         ],
@@ -101,10 +101,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'DGA' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.voir-equipe', 'evaluations.exporter-pdf',
-            'objectifs.assigner', 'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
+            'evaluations.voir-equipe',
+            'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
             'admin.alertes',
         ],
@@ -113,10 +112,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'Directeur_Direction' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.voir-equipe', 'evaluations.exporter-pdf',
-            'objectifs.assigner', 'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
+            'evaluations.voir-equipe',
+            'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
         ],
 
@@ -124,10 +122,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'Directeur_Technique' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.voir-equipe', 'evaluations.exporter-pdf',
-            'objectifs.assigner', 'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
+            'evaluations.voir-equipe',
+            'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
         ],
 
@@ -135,10 +132,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'Directeur_Caisse' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.voir-equipe', 'evaluations.exporter-pdf',
-            'objectifs.assigner', 'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
+            'evaluations.voir-equipe',
+            'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
         ],
 
@@ -146,10 +142,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'Chef_Service' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.voir-equipe', 'evaluations.exporter-pdf',
-            'objectifs.assigner', 'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
+            'evaluations.voir-equipe',
+            'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
         ],
 
@@ -157,10 +152,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'Chef_Agence' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.voir-equipe', 'evaluations.exporter-pdf',
-            'objectifs.assigner', 'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
+            'evaluations.voir-equipe',
+            'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
         ],
 
@@ -168,88 +162,79 @@ class RolesAndPermissionsSeeder extends Seeder
         'Chef_Guichet' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.exporter-pdf',
-            'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.accepter', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
         ],
 
         // ── Assistante DG ──────────────────────────────────────────────────
         'Assistante_Dg' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.exporter-pdf',
-            'objectifs.avancement',
+            'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
         ],
 
         // ── Conseiller DG ──────────────────────────────────────────────────
         'Conseillers_Dg' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.exporter-pdf',
+            'evaluations.accepter', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester',
         ],
 
         // ── Secrétaire Assistante DG ───────────────────────────────────────
         'Secretaire_Assistante' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.accepter', 'evaluations.voir-propres', 'evaluations.voir-equipe',
-            'evaluations.exporter-pdf',
-            'objectifs.accepter', 'objectifs.avancement', 'objectifs.voir-equipe',
+            'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Secrétaire de Direction ────────────────────────────────────────
         'Secretaire_Direction' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.accepter', 'evaluations.voir-propres', 'evaluations.voir-equipe',
-            'evaluations.exporter-pdf',
-            'objectifs.accepter', 'objectifs.avancement', 'objectifs.voir-equipe',
+            'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Secrétaire Technique ───────────────────────────────────────────
         'Secretaire_Technique' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.accepter', 'evaluations.voir-propres', 'evaluations.voir-equipe',
-            'evaluations.exporter-pdf',
-            'objectifs.accepter', 'objectifs.avancement', 'objectifs.voir-equipe',
+            'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Secrétaire de Caisse ───────────────────────────────────────────
         'Secretaire_Caisse' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.accepter', 'evaluations.voir-propres', 'evaluations.voir-equipe',
-            'evaluations.exporter-pdf',
-            'objectifs.accepter', 'objectifs.avancement', 'objectifs.voir-equipe',
+            'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Secrétaire d'Agence ────────────────────────────────────────────
-        // Accède à l'espace chef via EnsureIsChef (agence déduite depuis agents.agence_id)
         'Secretaire_Agence' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.accepter', 'evaluations.voir-propres', 'evaluations.voir-equipe',
-            'evaluations.exporter-pdf',
-            'objectifs.accepter', 'objectifs.avancement', 'objectifs.voir-equipe',
+            'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Responsable RH ─────────────────────────────────────────────────
         'RH' => [
             'agents.voir',
             'structures.voir',
-            'evaluations.voir-propres', 'evaluations.exporter-pdf',
-            'objectifs.avancement',
+            'evaluations.voir-equipe', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'formations.assigner',
         ],
 
         // ── Agent de base ──────────────────────────────────────────────────
         'Agent' => [
-            'evaluations.accepter', 'evaluations.voir-propres',
-            'evaluations.exporter-pdf',
-            'objectifs.accepter', 'objectifs.avancement',
+            'evaluations.accepter', 'evaluations.exporter-pdf',
+            'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
         ],
     ];
 

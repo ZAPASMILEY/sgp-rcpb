@@ -215,17 +215,6 @@
                         <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">{{ $evaluations->total() }}</span>
                     </h2>
                 </div>
-                @if($evaluationsEnabled)
-                    <a href="{{ route('dg.sub-evaluations.create') }}"
-                       class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700">
-                        <i class="fas fa-plus"></i> Nouvelle évaluation
-                    </a>
-                @else
-                    <span title="Fonctionnalité désactivée par l'administrateur"
-                          class="ent-btn-disabled-light">
-                        <i class="fas fa-plus"></i> Nouvelle évaluation
-                    </span>
-                @endif
             </div>
 
             @if ($evaluations->isEmpty())

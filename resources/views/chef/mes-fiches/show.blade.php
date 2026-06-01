@@ -8,6 +8,7 @@
         'acceptee'  => ['label'=>'Acceptée',   'bg'=>'bg-emerald-100', 'text'=>'text-emerald-700', 'dot'=>'bg-emerald-500', 'border'=>'border-emerald-200'],
         'refusee'   => ['label'=>'Refusée',    'bg'=>'bg-rose-100',    'text'=>'text-rose-700',    'dot'=>'bg-rose-500',    'border'=>'border-rose-200'],
         'contesté'  => ['label'=>'Contestée',  'bg'=>'bg-orange-100',  'text'=>'text-orange-700',  'dot'=>'bg-orange-500',  'border'=>'border-orange-200'],
+        'brouillon' => ['label'=>'Brouillon',  'bg'=>'bg-slate-100',   'text'=>'text-slate-600',   'dot'=>'bg-slate-400',   'border'=>'border-slate-200'],
         default     => ['label'=>'En attente', 'bg'=>'bg-amber-100',   'text'=>'text-amber-700',   'dot'=>'bg-amber-400',   'border'=>'border-amber-200'],
     };
     $avancement    = (int) ($fiche->avancement_percentage ?? 0);

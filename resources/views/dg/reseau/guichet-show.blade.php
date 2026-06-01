@@ -33,12 +33,17 @@
             <h2 class="text-sm font-black uppercase tracking-widest text-slate-700 mb-4">Responsable</h2>
             <div class="max-w-sm rounded-2xl border border-slate-100 bg-slate-50 p-4">
                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Chef de guichet</p>
-                <p class="mt-2 font-bold text-slate-900">{{ $guichet->chef_nom ?? '—' }}</p>
-                @if ($guichet->chef_email)
-                    <p class="text-xs text-slate-500">{{ $guichet->chef_email }}</p>
-                @endif
-                @if ($guichet->chef_telephone)
-                    <p class="text-xs text-slate-500">{{ $guichet->chef_telephone }}</p>
+                @if ($guichet->chef)
+                    <p class="mt-2 font-bold text-slate-900">{{ $guichet->chef->prenom }} {{ $guichet->chef->nom }}</p>
+                    @if ($guichet->chef->email)
+                        <p class="text-xs text-slate-500">{{ $guichet->chef->email }}</p>
+                    @endif
+                    @if ($guichet->chef->telephone)
+                        <p class="text-xs text-slate-500">{{ $guichet->chef->telephone }}</p>
+                    @endif
+                @else
+                    <p class="mt-2 font-bold text-slate-400">—</p>
+                    <p class="text-xs text-slate-400">Non assigné</p>
                 @endif
             </div>
             @if ($guichet->agence)

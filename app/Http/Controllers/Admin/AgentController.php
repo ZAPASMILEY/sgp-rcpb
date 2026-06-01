@@ -77,7 +77,7 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
         'search'        => $search,
         'roles'         => Agent::ROLES,
         'countsByRole'  => $countsByRole,
-        'totalAgents'   => Agent::count(),
+        'totalAgents'   => Agent::reseau()->count(),
         'totalAffectes' => $totalAffectes,
     ]);
 }

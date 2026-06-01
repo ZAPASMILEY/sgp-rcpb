@@ -3,14 +3,13 @@
 namespace App\Helpers;
 
 use App\Models\Agent;
-use App\Models\Entite;
 
 /**
  * Calcule les labels d'entité et de structure d'un agent
  * pour les champs "Entité" et "Direction / Service" des fiches d'évaluation.
  *
  * Règle :
- *  – entite_nom      : toujours le nom de la faîtière RCPB
+ *  – entite_nom      : "Réseaux des caisses populaires" si caisse/agence, sinon "Faitière des Caisses Populaires du Burkina"
  *  – direction_service : structure réelle de l'agent
  *      • a un service                → "Service.nom — Caisse.nom" ou "Service.nom — Agence.nom"
  *      • a une caisse (sans service) → "Caisse.nom"
@@ -25,19 +24,29 @@ class AgentStructure
     /** Retourne un tableau ['entite_nom' => …, 'direction_service' => …] */
     public static function labels(Agent $agent): array
     {
-        static $faitiere = null;
-        if ($faitiere === null) {
-            $faitiere = Entite::first();
-        }
-
-        $entiteNom = $faitiere?->sigle ?: ($faitiere?->nom ?? 'RCPB');
-
         $ds = self::resolveDirectionService($agent);
 
         return [
-            'entite_nom'        => $entiteNom,
+            'entite_nom'        => self::entiteLabel($agent),
             'direction_service' => $ds,
         ];
+    }
+
+    /**
+     * Retourne le libellé de l'entité à afficher sur la fiche d'évaluation.
+     *
+     * – Agents du réseau (caisse, agence, service dans une caisse/agence)
+     *   → "Réseaux des caisses populaires"
+     * – Agents du siège ou d'une délégation technique
+     *   → "Faitière des Caisses Populaires du Burkina"
+     */
+    public static function entiteLabel(Agent $agent): string
+    {
+        if ($agent->caisse_id || $agent->agence_id) {
+            return 'Réseaux des caisses populaires';
+        }
+
+        return 'Faitière des Caisses Populaires du Burkina';
     }
 
     private static function resolveDirectionService(Agent $agent): string

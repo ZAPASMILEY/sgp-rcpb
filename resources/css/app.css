@@ -1,4 +1,15 @@
-@import url('https://fonts.bunny.net/css?family=public-sans:400,500,600,700,800|space-grotesk:500,700');
+@import '@fontsource/public-sans/400.css';
+@import '@fontsource/public-sans/500.css';
+@import '@fontsource/public-sans/600.css';
+@import '@fontsource/public-sans/700.css';
+@import '@fontsource/public-sans/800.css';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/700.css';
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import 'tom-select/dist/css/tom-select.min.css';
 
 @import 'tailwindcss';
 

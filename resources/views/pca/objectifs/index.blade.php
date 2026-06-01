@@ -26,16 +26,6 @@
                         <i class="fas fa-times text-xs"></i> Réinitialiser
                     </a>
                 @endif
-                @if($objectifsEnabled)
-                <a href="{{ route('pca.objectifs.create') }}"
-                   class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-black text-emerald-700 shadow-md transition hover:bg-emerald-50">
-                    <i class="fas fa-plus text-xs"></i> Nouvelle fiche
-                </a>
-                @else
-                <span class="inline-flex items-center gap-2 rounded-xl border-2 border-white/30 bg-white/10 px-5 py-2.5 text-sm font-black text-white/50 cursor-not-allowed" title="Désactivé par l'administrateur">
-                    <i class="fas fa-ban text-xs"></i> Objectifs désactivés
-                </span>
-                @endif
             </div>
         </div>
     </div>
@@ -427,12 +417,6 @@
                                 Créez une première fiche pour démarrer le suivi du Directeur Général.
                             @endif
                         </p>
-                        @if (!$activeStatut && !$filters['search'] && $objectifsEnabled)
-                            <a href="{{ route('pca.objectifs.create') }}"
-                               class="mt-5 inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700">
-                                <i class="fas fa-plus"></i> Nouvelle fiche
-                            </a>
-                        @endif
                     </div>
                 </div>
             @endforelse

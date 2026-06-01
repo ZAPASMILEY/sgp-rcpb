@@ -173,10 +173,14 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     // ── Tom Select pour le champ Agent ──────────────────────────────────────
-    new TomSelect('#select-agent', {
-        placeholder: '— Rechercher un agent —',
-        searchField: ['text'],
-        maxOptions: 100,
+   new TomSelect('#select-agent', {
+    placeholder: '— Rechercher un agent —',
+    searchField: ['text'],
+    maxOptions: 1000, // Augmenté à 1000 (ou supprime carrément la ligne pour n'avoir aucune limite)
+    render: {
+        // ... les fonctions render restent inchangées
+    }
+});
         render: {
             option: function(data, escape) {
                 return `<div>${escape(data.text)}</div>`;

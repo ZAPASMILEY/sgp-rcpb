@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Chef;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\Agence;
 use App\Models\Alerte;
+use App\Models\Caisse;
 use App\Models\FicheObjectif;
 use App\Models\LigneFicheObjectif;
+use App\Models\Service;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -88,31 +91,16 @@ class ChefReceivedFicheController extends Controller
         // Charge les lignes d'objectifs de la fiche (relation hasMany)
         $fiche->load(['objectifs', 'annee']);
 
-        $statut = $fiche->statut ?? 'en_attente';
-
-        // Classes CSS et libellés pour le badge de statut
-        $sc = match ($statut) {
-            'acceptee'  => ['label' => 'Acceptée',   'bg' => 'bg-emerald-100', 'text' => 'text-emerald-700', 'dot' => 'bg-emerald-500', 'border' => 'border-emerald-200'],
-            'refusee'   => ['label' => 'Refusée',    'bg' => 'bg-rose-100',    'text' => 'text-rose-700',    'dot' => 'bg-rose-500',    'border' => 'border-rose-200'],
-            default     => ['label' => 'En attente', 'bg' => 'bg-amber-100',   'text' => 'text-amber-700',   'dot' => 'bg-amber-400',   'border' => 'border-amber-200'],
-        };
-
-        $avancement    = (int) ($fiche->avancement_percentage ?? 0);
-        $progressColor = $avancement >= 75 ? 'bg-emerald-500' : ($avancement >= 40 ? 'bg-sky-500' : ($avancement > 0 ? 'bg-amber-400' : 'bg-slate-200'));
-        $echeance      = $fiche->date_echeance ? \Carbon\Carbon::parse($fiche->date_echeance) : null;
-        $expired       = $echeance && $echeance->isPast();
-        $isPending     = $statut === 'en_attente';
-
-        return view('chef.mes-fiches.show', compact(
-            'ctx',
-            'fiche',
-            'sc',
-            'avancement',
-            'progressColor',
-            'echeance',
-            'expired',
-            'isPending',
-        ));
+        return view('objectifs.show', [
+            'layout'          => 'layouts.chef',
+            'fiche'           => $fiche,
+            'backRoute'       => route('chef.mon-espace') . '?tab=fiches',
+            'statusRoute'     => 'chef.mes-fiches.statut',
+            'avancementRoute' => 'chef.mes-fiches.lignes.avancement',
+            'contesterRoute'  => 'chef.mes-fiches.lignes.contester',
+            'pdfRoute'        => 'chef.mes-fiches.pdf',
+            'isAssignee'      => true,
+        ]);
     }
 
     /**
@@ -139,6 +127,21 @@ class ChefReceivedFicheController extends Controller
             $fiche->date_validation = now()->toDateString();
         }
         $fiche->save();
+
+        // Notifier le supérieur hiérarchique qui a assigné la fiche
+        $assigneur = $this->resolveAssigneurUser($ctx);
+        if ($assigneur) {
+            $evalue      = Auth::user();
+            $roleLabel   = $ctx->getRoleLabel();
+            $actionLabel = $action === 'accepter' ? 'accepté' : 'refusé';
+            Alerte::notifier(
+                $assigneur->id,
+                "Fiche d'objectifs {$actionLabel}e",
+                "{$roleLabel} {$evalue->name} a {$actionLabel} la fiche d'objectifs « {$fiche->titre} » que vous lui avez assignée.",
+                $action === 'accepter' ? 'moyenne' : 'haute',
+                route('directeur.dashboard')
+            );
+        }
 
         $msg = $action === 'accepter'
             ? "Fiche d'objectifs acceptée."
@@ -223,19 +226,94 @@ class ChefReceivedFicheController extends Controller
         $ligne->update(['statut' => 'contesté']);
         $fiche->update(['statut' => 'contesté']);
 
-        $evalue     = Auth::user();
-        $directeurs = User::where('role', 'Directeur')->get();
-        foreach ($directeurs as $directeur) {
+        $evalue    = Auth::user();
+        $roleLabel = $ctx->getRoleLabel();
+
+        $assigneur = $this->resolveAssigneurUser($ctx);
+        if ($assigneur) {
             Alerte::notifier(
-                $directeur->id,
+                $assigneur->id,
                 'Objectif contesté',
-                "{$evalue->name} (Chef) a contesté un objectif dans la fiche « {$fiche->titre} ».",
-                'haute'
+                "{$roleLabel} {$evalue->name} a contesté un objectif dans la fiche « {$fiche->titre} ».",
+                'haute',
+                route('directeur.dashboard')
             );
         }
 
+        $notifMsg = $assigneur ? 'Votre supérieur a été notifié.' : '';
         return redirect()->route('chef.mes-fiches.show', $fiche)
-            ->with('status', 'Objectif contesté. Le directeur a été notifié.');
+            ->with('status', "Objectif contesté. {$notifMsg}");
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Résout le User qui a assigné la fiche au chef connecté,
+     * en remontant la hiérarchie à partir du contexte.
+     *
+     *  Chef_Guichet  → Chef d'Agence (agence.chef_agent_id)
+     *  Chef_Agence   → Directeur de Caisse (caisse.directeur_agent_id)
+     *  Chef_Service  → Directeur de la structure parente (direction/caisse/DT)
+     */
+    private function resolveAssigneurUser(ChefEntity $ctx): ?User
+    {
+        return match ($ctx->type) {
+            'guichet' => $this->chefAgenceUserFromGuichet($ctx),
+            'agence'  => $this->directeurUserFromAgence($ctx),
+            'service' => $this->directeurUserFromService($ctx),
+            default   => null,
+        };
+    }
+
+    /** Chef de Guichet → remonte à l'Agence → trouve le Chef d'Agence User */
+    private function chefAgenceUserFromGuichet(ChefEntity $ctx): ?User
+    {
+        $agenceId = $ctx->entity->agence_id ?? null;
+        if (! $agenceId) {
+            return null;
+        }
+        $agence = Agence::find($agenceId);
+        if (! $agence?->chef_agent_id) {
+            return null;
+        }
+        return User::where('agent_id', $agence->chef_agent_id)->first();
+    }
+
+    /** Chef d'Agence → remonte à la Caisse → trouve le Directeur de Caisse User */
+    private function directeurUserFromAgence(ChefEntity $ctx): ?User
+    {
+        $caisseId = $ctx->entity->caisse_id ?? null;
+        if (! $caisseId) {
+            return null;
+        }
+        $caisse = Caisse::find($caisseId);
+        if (! $caisse?->directeur_agent_id) {
+            return null;
+        }
+        return User::where('agent_id', $caisse->directeur_agent_id)->first();
+    }
+
+    /** Chef de Service → remonte à la structure parente (Direction, Caisse ou DT) */
+    private function directeurUserFromService(ChefEntity $ctx): ?User
+    {
+        /** @var Service $service */
+        $service = $ctx->entity;
+
+        if ($service->direction_id) {
+            $direction = \App\Models\Direction::find($service->direction_id);
+            if ($direction?->directeur_agent_id) {
+                return User::where('agent_id', $direction->directeur_agent_id)->first();
+            }
+        }
+
+        if ($service->caisse_id) {
+            $caisse = Caisse::find($service->caisse_id);
+            if ($caisse?->directeur_agent_id) {
+                return User::where('agent_id', $caisse->directeur_agent_id)->first();
+            }
+        }
+
+        return null;
     }
 
     /**

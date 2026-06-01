@@ -81,24 +81,33 @@ class PermissionMenu
         }
 
         // ── Section Rapports ──────────────────────────────────────────────────
-        // Pour le RH les liens stats/tableaux sont déjà dans le layout RH,
-        // donc on ne les ajoute ici QUE pour les rôles non-RH.
+        // Chaque rôle qui a ses propres routes stats/tableaux est géré séparément.
+        // • RH  : stats/tableaux dans layouts/rh.blade.php (conditionnés par can:)
+        // • DG  : dg.statistiques hardcodé dans Pilotage ; dg.tableaux.index dédié
+        // • PCA : pca.statistiques.index hardcodé dans leur layout
         $rapportItems = [];
 
-        if ($user?->can('statistiques.voir') && $user?->role !== 'RH') {
-            $rapportItems[] = [
-                'route' => 'personnel.statistiques',
-                'icon'  => 'fas fa-chart-bar',
-                'label' => 'Statistiques',
-            ];
+        if ($user?->can('statistiques.voir')) {
+            $statsRoute = match ($user?->role) {
+                'DG'  => null,  // déjà dans section Pilotage du layout DG
+                'PCA' => null,  // déjà dans le layout PCA
+                'RH'  => null,  // géré directement dans layouts/rh.blade.php
+                default => 'personnel.statistiques',
+            };
+            if ($statsRoute) {
+                $rapportItems[] = ['route' => $statsRoute, 'icon' => 'fas fa-chart-bar', 'label' => 'Statistiques'];
+            }
         }
 
-        if ($user?->can('tableaux.voir') && $user?->role !== 'RH') {
-            $rapportItems[] = [
-                'route' => 'personnel.tableaux.index',
-                'icon'  => 'fas fa-file-excel',
-                'label' => 'Tableaux Excel',
-            ];
+        if ($user?->can('tableaux.voir')) {
+            $tableauxRoute = match ($user?->role) {
+                'DG'  => null,  // géré dans la section Pilotage du layout DG (dg.tableaux.index)
+                'RH'  => null,  // géré directement dans layouts/rh.blade.php
+                default => 'personnel.tableaux.index',
+            };
+            if ($tableauxRoute) {
+                $rapportItems[] = ['route' => $tableauxRoute, 'icon' => 'fas fa-file-excel', 'label' => 'Tableaux Excel'];
+            }
         }
 
         if (! empty($rapportItems)) {

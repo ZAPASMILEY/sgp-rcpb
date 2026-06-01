@@ -19,6 +19,10 @@ class Annee extends Model
         'statut',
     ];
 
+    protected $casts = [
+        'annee' => 'integer',
+    ];
+
     public function objectifs(): HasMany
     {
         return $this->hasMany(Objectif::class);

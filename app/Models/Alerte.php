@@ -18,6 +18,7 @@ class Alerte extends Model
         'statut',
         'ip_address',
         'created_by',
+        'lien',
     ];
 
     protected function casts(): array
@@ -54,7 +55,7 @@ class Alerte extends Model
     /**
      * Créer une notification système et l'envoyer à un utilisateur précis.
      */
-    public static function notifier(int $userId, string $titre, string $message, string $priorite = 'moyenne'): void
+    public static function notifier(int $userId, string $titre, string $message = '', string $priorite = 'moyenne', ?string $lien = null): void
     {
         $alerte = static::create([
             'type'       => 'systeme',
@@ -63,6 +64,7 @@ class Alerte extends Model
             'message'    => $message,
             'statut'     => 'active',
             'created_by' => null,
+            'lien'       => $lien,
         ]);
         $alerte->destinataires()->attach($userId, ['lu' => false]);
     }

@@ -50,26 +50,22 @@
         ],
         [
             'title' => 'Mon équipe',
-            'items' => [
+            'items' => array_values(array_filter([
                 [
                     'route'    => 'chef.equipe',
                     'icon'     => 'fas fa-users',
                     'label'    => 'Mes agents',
                     'disabled' => false,
                 ],
-                [
-                    'route'    => 'chef.evaluations.create',
-                    'icon'     => 'fas fa-star-half-stroke',
-                    'label'    => 'Évaluer un agent',
-                    'disabled' => ! $evaluationsEnabled,
-                ],
-                [
-                    'route'    => 'chef.objectifs.create',
-                    'icon'     => 'fas fa-list-check',
-                    'label'    => 'Assigner des objectifs',
-                    'disabled' => ! $objectifsEnabled,
-                ],
-            ],
+                // Guichets : affiché uniquement pour le Chef_Agence
+                $chefCtx?->type === 'agence' ? [
+                    'route'    => 'chef.guichets',
+                    'icon'     => 'fas fa-store',
+                    'label'    => 'Mes Chefs de Guichet',
+                    'disabled' => false,
+                ] : null,
+
+            ])),
         ],
         [
             'title' => 'Formations',
@@ -94,8 +90,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Espace Chef — ' . config('app.name', 'SGP-RCPB'))</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 
@@ -202,7 +196,6 @@
             .sidebar-collapse-btn { display: none !important; }
         }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
     <style>
     .ts-wrapper.single .ts-control{background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.55rem 1rem;font-size:.875rem;color:#1e293b;box-shadow:none;cursor:pointer;}
     .ts-wrapper.single.focus .ts-control{border-color:#34d399;background:#fff;box-shadow:0 0 0 3px rgba(52,211,153,.15);}
@@ -360,7 +353,6 @@
     </script>
 
     @stack('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
     (function(){
         var tsOpts={searchField:['text'],maxOptions:300,render:{

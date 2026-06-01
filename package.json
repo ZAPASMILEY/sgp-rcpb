@@ -15,6 +15,11 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "@fortawesome/fontawesome-free": "^7.2.0"
+        "@fontsource/inter": "^5.2.8",
+        "@fontsource/public-sans": "^5.2.7",
+        "@fontsource/space-grotesk": "^5.2.10",
+        "@fortawesome/fontawesome-free": "^7.2.0",
+        "apexcharts": "^5.13.0",
+        "tom-select": "^2.6.1"
     }
 }

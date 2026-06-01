@@ -15,14 +15,6 @@
                     <h1 class="mt-1 text-2xl font-black tracking-tight text-white">Mes Directeurs de Caisse</h1>
                     <p class="mt-1 text-sm text-violet-100/80">{{ $ctx->getNom() }} · {{ $directeursData->count() }} caisse(s)</p>
                 </div>
-                @if($evaluationsEnabled)
-                    <a href="{{ route('directeur.evaluations.create') }}"
-                       class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-black text-violet-700 shadow transition hover:bg-violet-50">
-                        <i class="fas fa-plus text-xs"></i> Nouvelle évaluation
-                    </a>
-                @else
-                    <span class="ent-btn-disabled-dark"><i class="fas fa-plus text-xs"></i> Nouvelle évaluation</span>
-                @endif
             </div>
         </div>
 
@@ -108,11 +100,12 @@
                                 'soumis'      => 'bg-amber-100 text-amber-700 border-amber-200',
                                 'refuse'      => 'bg-rose-100 text-rose-700 border-rose-200',
                                 'reclamation' => 'bg-orange-100 text-orange-700 border-orange-200',
+                                'a_reviser'   => 'bg-purple-100 text-purple-700 border-purple-200',
                                 default       => 'bg-slate-100 text-slate-600 border-slate-200',
                             } : null;
                             $statutLabel = $eval ? match($eval->statut) {
                                 'valide' => 'Validée', 'soumis' => 'Soumise',
-                                'refuse' => 'Refusée', 'reclamation' => 'Réclamation', default => 'Brouillon',
+                                'refuse' => 'Refusée', 'reclamation' => 'Réclamation', 'a_reviser' => 'À réviser', 'brouillon' => 'Brouillon', default => ucfirst((string) $eval->statut),
                             } : null;
                         @endphp
                         <div class="flex flex-wrap items-center gap-5 px-6 py-5 transition hover:bg-slate-50/70 lg:px-8">

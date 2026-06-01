@@ -53,10 +53,16 @@ abstract class StatistiqueBaseController extends Controller
                     'delegationTechnique',
                     'caisse.delegationTechnique',
                     'direction',
+                    // Évaluations créées via User (Directeur, DGA, DG, Assistante)
                     'evaluationsPersonnel' => fn ($q) => $q
                         ->where('annee_id', $anneeSelectionnee->id)
-                        ->where('statut', 'valide')
-                        ->with(['semestre', 'identification']),
+                        ->where('statut', '!=', 'brouillon')
+                        ->with(['semestre.annee', 'identification']),
+                    // Évaluations créées directement sur Agent (Chef de Service/Guichet)
+                    'evaluations' => fn ($q) => $q
+                        ->where('annee_id', $anneeSelectionnee->id)
+                        ->where('statut', '!=', 'brouillon')
+                        ->with(['semestre.annee', 'identification']),
                 ])
                 // ── Filtres de périmètre ─────────────────────────────────────
                 ->when($type === 'siege', fn ($q) => $q
@@ -134,7 +140,8 @@ abstract class StatistiqueBaseController extends Controller
 
         $rows = [];
         foreach ($agents as $agent) {
-            $evals  = $agent->evaluationsPersonnel->keyBy(fn ($e) => $e->semestre?->numero);
+            $evals  = $agent->evaluations->merge($agent->evaluationsPersonnel)
+                ->keyBy(fn ($e) => $e->semestre?->numero);
             $evalS1 = $s1 ? $evals->get(1) : null;
             $evalS2 = $s2 ? $evals->get(2) : null;
             $grade  = ($evalS1?->identification?->grade ?? $evalS2?->identification?->grade) ?? '—';

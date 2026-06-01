@@ -3,23 +3,29 @@
 @section('title', $subordonne->name.' | '.config('app.name'))
 
 @section('content')
-<div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
 
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-                        Espace DG / <a href="{{ route('dg.conseillers') }}" class="hover:underline">Mes Conseillers</a>
-                    </p>
-                    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">{{ $subordonne->name }}</h1>
-                    <p class="mt-1 text-sm text-slate-500">Conseiller du DG</p>
-                </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-100 text-cyan-700 font-black text-xl shadow-sm">
-                    {{ strtoupper(substr($subordonne->name, 0, 1)) }}
-                </div>
+    {{-- Hero --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
+        <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+        <div class="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-300">
+                    Espace DG · <a href="{{ route('dg.conseillers') }}" class="hover:text-white/80">Mes Conseillers</a>
+                </p>
+                <h1 class="mt-1 text-2xl font-black text-white leading-tight">{{ $subordonne->name }}</h1>
+                <p class="mt-0.5 text-sm text-emerald-100/80">Conseiller du DG</p>
             </div>
-        </header>
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+                <a href="{{ route('dg.conseillers') }}"
+                   class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+                    <i class="fas fa-arrow-left text-[10px]"></i> Retour
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="px-4 pt-6 lg:px-8">
+    <div class="w-full flex flex-col gap-5">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -29,6 +35,7 @@
 
         @include('dg.subordonnes._dossier_tabs')
 
+    </div>
     </div>
 </div>
 @endsection

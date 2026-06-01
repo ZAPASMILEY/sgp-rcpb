@@ -2,28 +2,26 @@
 @section('title', 'Mes Subordonnés | '.config('app.name'))
 
 @section('content')
-<div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
 
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Espace DGA</p>
-                    <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Mes Subordonnés</h1>
-                    <p class="mt-1 text-sm text-slate-500">Directeurs Techniques et secrétaire.</p>
-                </div>
-                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 shadow-sm">
-                    <i class="fas fa-users text-xl"></i>
-                </div>
-            </div>
-        </header>
+    {{-- Hero --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-violet-700 via-violet-600 to-purple-600 px-6 py-8 lg:px-10">
+        <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+        <div class="relative">
+            <p class="text-xs font-black uppercase tracking-[0.25em] text-violet-300">Espace DGA</p>
+            <h1 class="mt-1 text-2xl font-black text-white leading-tight">Mes Subordonnés</h1>
+            <p class="mt-0.5 text-sm text-violet-100/80">Directeurs Techniques et secrétaire.</p>
+        </div>
+    </div>
+    <div class="px-4 pt-6 lg:px-8">
+    <div class="w-full flex flex-col gap-5">
 
         @if(session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
         @endif
 
         {{-- Secrétaire du DGA --}}
-        <section class="admin-panel overflow-hidden">
+        <section class="rounded-[20px] border border-slate-100 bg-white overflow-hidden shadow-sm">
             <div class="border-b border-slate-100 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
                     <i class="fas fa-user-tie text-sm"></i>
@@ -59,7 +57,7 @@
         </section>
 
         {{-- Directeurs Techniques --}}
-        <section class="admin-panel overflow-hidden">
+        <section class="rounded-[20px] border border-slate-100 bg-white overflow-hidden shadow-sm">
             <div class="border-b border-slate-100 px-6 py-4 flex items-center gap-3">
                 <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
                     <i class="fas fa-sitemap text-sm"></i>
@@ -105,6 +103,7 @@
             @endif
         </section>
 
+    </div>
     </div>
 </div>
 @endsection

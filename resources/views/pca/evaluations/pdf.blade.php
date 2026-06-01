@@ -14,6 +14,10 @@
         .grid td { border: 1px solid #cbd5e1; padding: 5px 6px; vertical-align: top; font-size: 9.5px; word-wrap: break-word; }
         .group-row td { background: #e2e8f0; font-weight: 700; font-size: 9.5px; padding: 4px 6px; }
         .note-col { width: 10%; text-align: center; }
+        .calc-header td { background: #1e3a5f; color: #ffffff; font-weight: 700; font-size: 9.5px; padding: 4px 6px; }
+        .calc-total td  { background: #dbeafe; font-weight: 700; font-size: 9.5px; }
+        .text-center { text-align: center; }
+        .formula-box { margin-top: 4px; padding: 5px 8px; background: #f8fafc; border: 1px solid #cbd5e1; font-size: 9px; color: #374151; }
     </style>
 </head>
 <body>
@@ -42,6 +46,49 @@
             <td>{{ $mention }}</td>
         </tr>
     </table>
+
+    <h2>Criteres de calcul</h2>
+    <table class="grid">
+        <colgroup>
+            <col style="width:32%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:14%">
+            <col style="width:26%">
+        </colgroup>
+        <tr class="calc-header">
+            <td>Composante</td>
+            <td class="text-center">Moyenne /5</td>
+            <td class="text-center">Ponderation</td>
+            <td class="text-center">Contribution /10</td>
+            <td>Formule</td>
+        </tr>
+        <tr>
+            <td><strong>Criteres objectifs</strong></td>
+            <td class="text-center">{{ number_format((float) $evaluation->moyenne_objectifs,  2, ',', ' ') }}</td>
+            <td class="text-center">75 %</td>
+            <td class="text-center">{{ number_format((float) $evaluation->note_criteres_objectifs,  2, ',', ' ') }}</td>
+            <td style="font-size:8.5px;">Moy. objectifs &times; 0,75</td>
+        </tr>
+        <tr>
+            <td><strong>Criteres subjectifs</strong></td>
+            <td class="text-center">{{ number_format((float) $evaluation->moyenne_subjectifs, 2, ',', ' ') }}</td>
+            <td class="text-center">25 %</td>
+            <td class="text-center">{{ number_format((float) $evaluation->note_criteres_subjectifs, 2, ',', ' ') }}</td>
+            <td style="font-size:8.5px;">Moy. subjectifs &times; 0,25</td>
+        </tr>
+        <tr class="calc-total">
+            <td><strong>Note finale /10</strong></td>
+            <td class="text-center">—</td>
+            <td class="text-center">100 %</td>
+            <td class="text-center"><strong>{{ number_format((float) $evaluation->note_finale, 2, ',', ' ') }}</strong></td>
+            <td style="font-size:8.5px;">(Contrib. obj. + Contrib. subj.) &times; 2</td>
+        </tr>
+    </table>
+    <div class="formula-box">
+        <strong>Grille d'appreciation :</strong>
+        Excellent (&ge; 8,5) &nbsp;|&nbsp; Bien (&ge; 7) &nbsp;|&nbsp; Passable (&ge; 5) &nbsp;|&nbsp; Insuffisant (&lt; 5)
+    </div>
 
     <h2>Identification</h2>
     <table class="grid">

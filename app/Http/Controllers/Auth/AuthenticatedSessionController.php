@@ -57,8 +57,10 @@ class AuthenticatedSessionController extends Controller
         $remember = $request->boolean('remember');
 
         // ── 1. Vérifier si ce compte est actuellement suspendu ───────────────
-        $candidate = User::where('email', $credentials['email'])->first();
-        if ($candidate && $candidate->isBlocked()) {
+        $candidate  = User::where('email', $credentials['email'])->first();
+        $isAdmin    = $candidate && $candidate->isAdmin();
+
+        if (! $isAdmin && $candidate && $candidate->isBlocked()) {
             $restant = now()->diffInMinutes($candidate->blocked_until, false);
             throw ValidationException::withMessages([
                 'email' => "Compte temporairement suspendu après plusieurs tentatives échouées. Réessayez dans {$restant} minute(s).",
@@ -74,26 +76,32 @@ class AuthenticatedSessionController extends Controller
                 'attempted_at' => now(),
             ]);
 
-            // ── 3. Compter les échecs récents et bloquer si dépassé ──────────
-            $maxAttempts  = (int) Setting::get('security.max_login_attempts', 3);
-            $lockMinutes  = (int) Setting::get('security.lockout_minutes', 30);
+            // ── 3. Compter les échecs et bloquer si dépassé (Admin exempté) ──
+            if (! $isAdmin) {
+                $maxAttempts = (int) Setting::get('security.max_login_attempts', 3);
+                $lockMinutes = (int) Setting::get('security.lockout_minutes', 30);
 
-            $recentFails = LoginFailure::where('email', $credentials['email'])
-                ->where('attempted_at', '>=', now()->subMinutes($lockMinutes))
-                ->count();
+                $recentFails = LoginFailure::where('email', $credentials['email'])
+                    ->where('attempted_at', '>=', now()->subMinutes($lockMinutes))
+                    ->count();
 
-            if ($recentFails >= $maxAttempts) {
-                if ($candidate) {
-                    $candidate->update(['blocked_until' => now()->addMinutes($lockMinutes)]);
+                if ($recentFails >= $maxAttempts) {
+                    if ($candidate) {
+                        $candidate->update(['blocked_until' => now()->addMinutes($lockMinutes)]);
+                    }
+                    throw ValidationException::withMessages([
+                        'email' => "Compte suspendu pendant {$lockMinutes} minutes après {$maxAttempts} tentatives échouées.",
+                    ]);
                 }
+
+                $remaining = $maxAttempts - $recentFails;
                 throw ValidationException::withMessages([
-                    'email' => "Compte suspendu pendant {$lockMinutes} minutes après {$maxAttempts} tentatives échouées.",
+                    'email' => __('auth.failed') . " ({$remaining} tentative(s) restante(s) avant suspension)",
                 ]);
             }
 
-            $remaining = $maxAttempts - $recentFails;
             throw ValidationException::withMessages([
-                'email' => __('auth.failed') . " ({$remaining} tentative(s) restante(s) avant suspension)",
+                'email' => __('auth.failed'),
             ]);
         }
 

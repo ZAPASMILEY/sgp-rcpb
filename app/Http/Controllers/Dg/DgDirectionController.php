@@ -171,7 +171,10 @@ class DgDirectionController extends Controller
             'date_echeance' => ['required', 'date', 'after_or_equal:today'],
             'objectifs'     => ['required', 'array', 'min:1'],
             'objectifs.*'   => ['required', 'string', 'max:5000'],
+            'action'        => ['nullable', 'in:envoyer,brouillon'],
         ]);
+
+        $isBrouillon = ($request->input('action') === 'brouillon');
 
         $direction = Direction::findOrFail($validated['direction_id']);
 
@@ -187,12 +190,11 @@ class DgDirectionController extends Controller
 
         try {
             $anneeIdFiche = Annee::resolveOpenYearId(now());
-            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        if (FicheObjectif::existsPourAnnee($anneeIdFiche, User::class, $directeurUser->id)) {
+        if (! $isBrouillon && FicheObjectif::existsPourAnnee($anneeIdFiche, User::class, $directeurUser->id)) {
             return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour ce directeur pour l\'année en cours.');
         }
 
@@ -204,23 +206,30 @@ class DgDirectionController extends Controller
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
-            'statut'                => 'en_attente',
+            'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
         ]);
 
         foreach ($validated['objectifs'] as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        Alerte::notifier(
-            $directeurUser->id,
-            'Nouvelle fiche d\'objectifs reçue',
-            "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-            'haute'
-        );
+        if (! $isBrouillon) {
+            Alerte::notifier(
+                $directeurUser->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                'haute',
+                route('directeur.objectifs.show', $fiche)
+            );
+        }
+
+        $msg = $isBrouillon
+            ? "Fiche d'objectifs enregistrée en brouillon."
+            : "Fiche d'objectifs assignée au directeur de « {$direction->nom} ».";
 
         return redirect()
             ->route('dg.directions.show', ['direction' => $direction->id, 'tab' => 'objectifs'])
-            ->with('status', "Fiche d'objectifs assignée au directeur de « {$direction->nom} ».");
+            ->with('status', $msg);
     }
 
     public function showObjectif(FicheObjectif $fiche): View
@@ -233,16 +242,172 @@ class DgDirectionController extends Controller
             'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
             'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
             'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
+            'contesté'   => 'border-orange-200 bg-orange-50 text-orange-700',
+            'brouillon'  => 'border-slate-200 bg-slate-100 text-slate-600',
             default      => 'border-slate-200 bg-slate-100 text-slate-700',
         };
         $statusLabel = match ($fiche->statut) {
             'acceptee'   => 'Acceptée',
             'en_attente' => 'En attente',
             'refusee'    => 'Refusée',
+            'contesté'   => 'Contestée',
+            'brouillon'  => 'Brouillon',
             default      => ucfirst((string) ($fiche->statut ?? 'En attente')),
         };
 
         return view('dg.directions.objectifs.show', compact('fiche', 'direction', 'statusClass', 'statusLabel'));
+    }
+
+    public function editObjectif(FicheObjectif $fiche): View|RedirectResponse
+    {
+        $this->authorize('objectifs.assigner');
+        $direction = $this->authorizeObjectif($fiche);
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()->route('dg.directions.objectifs.show', $fiche)
+                ->with('error', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $fiche->load('objectifs');
+        $direction->load('directeur');
+
+        return view('dg.directions.objectifs.edit', compact('fiche', 'direction'));
+    }
+
+    public function updateObjectif(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorize('objectifs.assigner');
+        $direction = $this->authorizeObjectif($fiche);
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return back()->with('error', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $wasContested = $fiche->statut === 'contesté';
+        $wasRefusee   = $fiche->statut === 'refusee';
+        $action       = $request->input('action', 'brouillon'); // 'brouillon' ou 'renvoyer'
+
+        $validated = $request->validate([
+            'titre_fiche' => ['required', 'string', 'max:255'],
+            'objectifs'   => ['required', 'array', 'min:1'],
+            'objectifs.*' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        $fiche->update(['titre' => $validated['titre_fiche']]);
+
+        // Recrée tous les objectifs (statut revient à null/normal)
+        $fiche->objectifs()->delete();
+        foreach ($objectifs as $desc) {
+            $fiche->objectifs()->create(['description' => $desc]);
+        }
+
+        // Si contestée ou refusée et action=renvoyer → soumettre au directeur
+        if (($wasContested || $wasRefusee) && $action === 'renvoyer') {
+            $fiche->update(['statut' => 'en_attente']);
+
+            $directeurUser = $direction->directeur_agent_id
+                ? User::where('agent_id', $direction->directeur_agent_id)->first()
+                : null;
+
+            if ($directeurUser) {
+                Alerte::notifier(
+                    $directeurUser->id,
+                    'Fiche d\'objectifs révisée',
+                    "Le Directeur Général a révisé la fiche d'objectifs « {$fiche->titre} » suite à vos retours.",
+                    'haute',
+                    route('directeur.objectifs.show', $fiche)
+                );
+            }
+
+            $msg = $wasRefusee
+                ? 'Fiche corrigée et renvoyée au directeur avec succès.'
+                : 'Fiche révisée et renvoyée au directeur avec succès.';
+
+            return redirect()->route('dg.directions.objectifs.show', $fiche)->with('status', $msg);
+        }
+
+        // Brouillon normal → soumettre ou garder en brouillon
+        if (! $wasContested && ! $wasRefusee && $action === 'renvoyer') {
+            $fiche->update(['statut' => 'en_attente']);
+
+            $directeurUser = $direction->directeur_agent_id
+                ? User::where('agent_id', $direction->directeur_agent_id)->first()
+                : null;
+
+            if ($directeurUser) {
+                Alerte::notifier(
+                    $directeurUser->id,
+                    'Nouvelle fiche d\'objectifs reçue',
+                    "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                    'haute',
+                    route('directeur.objectifs.show', $fiche)
+                );
+            }
+
+            return redirect()->route('dg.directions.objectifs.show', $fiche)
+                ->with('status', "Fiche soumise au directeur de « {$direction->nom} ».");
+        }
+
+        return redirect()->route('dg.directions.objectifs.show', $fiche)
+            ->with('status', 'Brouillon mis à jour.');
+    }
+
+    public function soumettreObjectif(FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorize('objectifs.assigner');
+        $direction = $this->authorizeObjectif($fiche);
+
+        if ($fiche->statut !== 'brouillon') {
+            return back()->with('error', 'Seule une fiche en brouillon peut être soumise.');
+        }
+
+        $directeurUser = $direction->directeur_agent_id
+            ? User::where('agent_id', $direction->directeur_agent_id)->first()
+            : null;
+
+        if (! $directeurUser) {
+            return back()->with('error', "Aucun directeur avec un compte utilisateur n'est assigné à cette direction.");
+        }
+
+        $fiche->update([
+            'assignable_type' => User::class,
+            'assignable_id'   => $directeurUser->id,
+            'statut'          => 'en_attente',
+        ]);
+
+        Alerte::notifier(
+            $directeurUser->id,
+            'Nouvelle fiche d\'objectifs reçue',
+            "Le Directeur Général vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+            'haute',
+            route('directeur.objectifs.show', $fiche)
+        );
+
+        return redirect()
+            ->route('dg.directions.objectifs.show', $fiche)
+            ->with('status', "Fiche soumise au directeur de « {$direction->nom} ».");
+    }
+
+    public function reouvrirObjectif(FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorize('objectifs.assigner');
+        $this->authorizeObjectif($fiche);
+
+        if ($fiche->statut !== 'contesté') {
+            return back()->with('error', 'Seule une fiche contestée peut être réouverte.');
+        }
+
+        $fiche->update(['statut' => 'brouillon']);
+        $fiche->objectifs()->update(['statut' => null]);
+
+        return redirect()
+            ->route('dg.directions.objectifs.show', $fiche)
+            ->with('status', 'Fiche réouverte en brouillon. Vous pouvez la modifier et la soumettre à nouveau.');
     }
 
     public function destroyObjectif(FicheObjectif $fiche): RedirectResponse
@@ -287,7 +452,7 @@ class DgDirectionController extends Controller
             'date_echeance' => $f->date_echeance instanceof Carbon
                 ? $f->date_echeance->toDateString()
                 : (string) $f->date_echeance,
-            'objectifs'     => $f->objectifs->map(fn ($item) => [
+            'objectifs'     => $f->objectifs->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)->map(fn ($item) => [
                 'source_fiche_objectif_objectif_id' => $item->id,
                 'titre'                             => $item->description,
             ])->values()->all(),
@@ -474,17 +639,254 @@ class DgDirectionController extends Controller
             default     => ucfirst((string) $evaluation->statut),
         };
 
-        return view('dg.directions.evaluations.show', compact(
+        $subjectiveTemplates = $subjectiveCriteria->isEmpty()
+            ? \App\Models\SubjectiveCriteriaTemplate::with('subcriteria')->where('is_active', true)->orderBy('ordre')->get()
+            : collect();
+
+        return view('evaluations.show', [
+            'evaluation'          => $evaluation,
+            'objectiveCriteria'   => $objectiveCriteria,
+            'subjectiveCriteria'  => $subjectiveCriteria,
+            'note'                => $note,
+            'mention'             => $mention,
+            'ident'               => $ident,
+            'cibleLabel'          => $ident?->nom_prenom ?? ($direction->directeur?->name ?? $direction->nom),
+            'cibleType'           => 'Direction — ' . $direction->nom,
+            'statusLabel'         => $statusLabel,
+            'statusClass'         => $statusClass,
+            'layout'              => 'layouts.dg',
+            'backRoute'           => route('dg.directions.show', ['direction' => $direction->id, 'tab' => 'evaluations']),
+            'breadcrumb'          => 'Espace DG · Évaluation direction',
+            'editRoute'           => 'dg.directions.evaluations.edit',
+            'soumettreRoute'      => 'dg.directions.evaluations.submit',
+            'destroyRoute'        => 'dg.directions.evaluations.destroy',
+            'pdfRoute'            => 'dg.directions.evaluations.pdf',
+            'subjectiveTemplates' => $subjectiveTemplates,
+        ]);
+    }
+
+    public function editEvaluation(Evaluation $evaluation): \Illuminate\View\View|\Illuminate\Http\RedirectResponse
+    {
+        $this->authorize('evaluations.creer');
+        $direction = $this->authorizeEvaluation($evaluation);
+
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
+            return redirect()->route('dg.directions.evaluations.show', $evaluation)
+                ->with('error', 'Cette évaluation ne peut plus être modifiée.');
+        }
+
+        $evaluation->load(['identification', 'criteres.sousCriteres']);
+        $direction->load('directeur');
+        $ident = $evaluation->identification;
+
+        $existingSubjectiveCriteria = $evaluation->criteres
+            ->where('type', 'subjectif')
+            ->map(fn ($c) => [
+                'titre'              => $c->titre,
+                'observation'        => $c->observation ?? '',
+                'source_template_id' => $c->source_template_id ?? '',
+                'note_directe'       => $c->note_globale ?? 1,
+                'subcriteria'        => $c->sousCriteres->map(fn ($s) => [
+                    'libelle'     => $s->libelle,
+                    'note'        => $s->note,
+                    'observation' => $s->observation ?? '',
+                ])->values()->all(),
+            ])->values()->all();
+
+        $existingObjectiveCriteria = $evaluation->criteres
+            ->where('type', 'objectif')
+            ->map(fn ($c) => [
+                'titre'                             => $c->titre,
+                'observation'                       => $c->observation ?? '',
+                'source_fiche_objectif_id'          => $c->source_fiche_objectif_id ?? '',
+                'source_fiche_objectif_objectif_id' => $c->source_fiche_objectif_objectif_id ?? '',
+                'note_directe'                      => $c->note_globale ?? 1,
+                'subcriteria'                       => $c->sousCriteres->map(fn ($s) => [
+                    'libelle'                           => $s->libelle,
+                    'note'                              => $s->note,
+                    'observation'                       => $s->observation ?? '',
+                    'source_fiche_objectif_objectif_id' => $s->source_fiche_objectif_objectif_id ?? '',
+                ])->values()->all(),
+            ])->values()->all();
+
+        $directeurUser = $direction->directeur_agent_id
+            ? User::where('agent_id', $direction->directeur_agent_id)->first()
+            : null;
+
+        $today  = now()->toDateString();
+        $fiches = $directeurUser
+            ? FicheObjectif::with('objectifs')
+                ->where('statut', 'acceptee')
+                ->whereDate('date_echeance', '>=', $today)
+                ->where('assignable_type', User::class)
+                ->where('assignable_id', $directeurUser->id)
+                ->orderBy('titre')
+                ->get()
+            : collect();
+
+        $objectiveOptions = $fiches->map(fn ($f) => [
+            'id'            => $f->id,
+            'titre'         => $f->titre,
+            'date_echeance' => $f->date_echeance instanceof Carbon
+                ? $f->date_echeance->toDateString()
+                : (string) $f->date_echeance,
+            'objectifs'     => $f->objectifs->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)->map(fn ($item) => [
+                'source_fiche_objectif_objectif_id' => $item->id,
+                'titre'                             => $item->description,
+            ])->values()->all(),
+        ])->values()->all();
+
+        $openAnnee     = Annee::currentOpen();
+        $openSemestres = $openAnnee ? $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->get() : collect();
+        $entiteNom     = \App\Models\Entite::find($this->getEntiteId())?->nom ?? '';
+        $formationsData  = $ident?->formations ?? [];
+        $experiencesData = $ident?->experiences ?? [];
+
+        return view('dg.directions.evaluations.edit', compact(
             'evaluation',
             'direction',
-            'objectiveCriteria',
-            'subjectiveCriteria',
-            'note',
-            'mention',
             'ident',
-            'statusClass',
-            'statusLabel',
+            'objectiveOptions',
+            'existingSubjectiveCriteria',
+            'existingObjectiveCriteria',
+            'openAnnee',
+            'openSemestres',
+            'entiteNom',
+            'formationsData',
+            'experiencesData',
         ));
+    }
+
+    public function updateEvaluation(Request $request, Evaluation $evaluation): RedirectResponse
+    {
+        $this->authorize('evaluations.creer');
+        $direction = $this->authorizeEvaluation($evaluation);
+
+        if (! in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS)) {
+            abort(403, 'Modification interdite pour cette évaluation.');
+        }
+
+        $validated = $request->validate([
+            'identification.nom_prenom'        => ['nullable', 'string', 'max:255'],
+            'identification.date_evaluation'   => ['nullable', 'string', 'max:20'],
+            'identification.matricule'         => ['nullable', 'string', 'max:255'],
+            'identification.grade'             => ['required', 'string', 'max:255'],
+            'identification.emploi'            => ['nullable', 'string', 'max:255'],
+            'identification.direction'         => ['nullable', 'string', 'max:255'],
+            'identification.direction_service' => ['nullable', 'string', 'max:255'],
+            'identification.formations'        => ['nullable', 'array'],
+            'identification.formations.*.periode' => ['nullable', 'string', 'max:255'],
+            'identification.formations.*.libelle' => ['nullable', 'string', 'max:255'],
+            'identification.formations.*.domaine' => ['nullable', 'string', 'max:255'],
+            'identification.experiences'       => ['nullable', 'array'],
+            'identification.experiences.*.periode'      => ['nullable', 'string', 'max:255'],
+            'identification.experiences.*.poste'        => ['nullable', 'string', 'max:255'],
+            'identification.experiences.*.observations' => ['nullable', 'string', 'max:255'],
+            'subjective_criteres'              => ['required', 'array', 'min:1'],
+            'objective_criteres'               => ['required', 'array', 'min:1'],
+            'points_a_ameliorer'               => ['nullable', 'string'],
+            'strategies_amelioration'          => ['nullable', 'string'],
+            'commentaire'                      => ['nullable', 'string', 'max:2000'],
+            'signature_evalue_nom'             => ['nullable', 'string', 'max:255'],
+            'signature_evaluateur_nom'         => ['nullable', 'string', 'max:255'],
+            'date_signature_evalue'            => ['nullable', 'date'],
+            'date_signature_evaluateur'        => ['nullable', 'date'],
+        ]);
+
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->withInput()->with('error', "Aucune année d'exercice ouverte.");
+        }
+        $semestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
+        if (! $semestre) {
+            return back()->withInput()->with('error', "Aucun semestre ouvert pour {$openAnnee->annee}.");
+        }
+
+        $normalizedSubjective = $this->evaluationService->normalizeCriteria((array) $request->input('subjective_criteres', []), 'subjectif', 1, 5, false);
+        $normalizedObjective  = $this->evaluationService->normalizeCriteria((array) $request->input('objective_criteres', []), 'objectif', 1, 5);
+
+        if ($normalizedSubjective === [] || $normalizedObjective === []) {
+            return back()->withInput()->withErrors(['subjective_criteres' => 'Les critères subjectifs et objectifs doivent contenir au moins une ligne notée.']);
+        }
+
+        $scores = $this->evaluationService->computeScores($normalizedSubjective, $normalizedObjective);
+
+        $identification = $validated['identification'] ?? [];
+        $identification['semestre'] = (string) $semestre->numero;
+
+        $raw = $identification['date_evaluation'] ?? null;
+        if (! blank($raw)) {
+            $normalized = $this->evaluationService->normalizeDateValue($raw);
+            if ($normalized === null) {
+                return back()->withInput()->withErrors(['identification.date_evaluation' => 'Format de date invalide. Utilisez JJ/MM/AAAA.']);
+            }
+            $identification['date_evaluation'] = $normalized;
+        }
+
+        $identification['formations'] = collect($identification['formations'] ?? [])
+            ->map(fn ($row) => [
+                'periode' => trim((string) ($row['periode'] ?? '')),
+                'libelle' => trim((string) ($row['libelle'] ?? '')),
+                'domaine' => trim((string) ($row['domaine'] ?? '')),
+            ])
+            ->filter(fn ($row) => $row['periode'] !== '' || $row['libelle'] !== '' || $row['domaine'] !== '')
+            ->values()->all();
+
+        $identification['experiences'] = collect($identification['experiences'] ?? [])
+            ->map(fn ($row) => [
+                'periode'      => trim((string) ($row['periode'] ?? '')),
+                'poste'        => trim((string) ($row['poste'] ?? '')),
+                'observations' => trim((string) ($row['observations'] ?? '')),
+            ])
+            ->filter(fn ($row) => $row['periode'] !== '' || $row['poste'] !== '' || $row['observations'] !== '')
+            ->values()->all();
+
+        DB::transaction(function () use ($evaluation, $openAnnee, $semestre, $scores, $identification, $normalizedSubjective, $normalizedObjective, $validated) {
+            $evaluation->update([
+                'annee_id'                  => $openAnnee->id,
+                'semestre_id'               => $semestre->id,
+                'date_debut'                => $semestre->dateDebut()->toDateString(),
+                'date_fin'                  => $semestre->dateFin()->toDateString(),
+                'moyenne_subjectifs'        => $scores['moyenne_subjectifs'],
+                'note_criteres_subjectifs'  => $scores['note_criteres_subjectifs'],
+                'moyenne_objectifs'         => $scores['moyenne_objectifs'],
+                'note_criteres_objectifs'   => $scores['note_criteres_objectifs'],
+                'note_finale'               => $scores['note_finale'],
+                'commentaire'               => $validated['commentaire'] ?? null,
+                'points_a_ameliorer'        => $validated['points_a_ameliorer'] ?? null,
+                'strategies_amelioration'   => $validated['strategies_amelioration'] ?? null,
+                'signature_evalue_nom'      => $validated['signature_evalue_nom'] ?? null,
+                'signature_evaluateur_nom'  => $validated['signature_evaluateur_nom'] ?? null,
+                'date_signature_evalue'     => $validated['date_signature_evalue'] ?? null,
+                'date_signature_evaluateur' => $validated['date_signature_evaluateur'] ?? null,
+            ]);
+            $evaluation->identification()->update($identification);
+            $evaluation->criteres()->delete();
+            $this->evaluationService->persistCriteria($evaluation, array_merge($normalizedSubjective, $normalizedObjective));
+        });
+
+        if ($request->boolean('_renvoyer')) {
+            $evaluation->update(['statut' => 'soumis']);
+            if ($direction->directeur_agent_id) {
+                $directeurUser = User::where('agent_id', $direction->directeur_agent_id)->first();
+                if ($directeurUser) {
+                    Alerte::notifier(
+                        $directeurUser->id,
+                        'Nouvelle fiche d\'évaluation reçue',
+                        'Le Directeur Général vous a soumis une fiche d\'évaluation. Connectez-vous pour la consulter.',
+                        'haute',
+                        route('directeur.evaluations.show', $evaluation)
+                    );
+                }
+            }
+            return redirect()
+                ->route('dg.directions.evaluations.show', $evaluation)
+                ->with('status', 'Évaluation mise à jour et soumise.');
+        }
+
+        return redirect()
+            ->route('dg.directions.evaluations.show', $evaluation)
+            ->with('status', 'Évaluation mise à jour.');
     }
 
     public function submitEvaluation(Evaluation $evaluation): RedirectResponse
@@ -507,7 +909,8 @@ class DgDirectionController extends Controller
                     $directeurUser->id,
                     'Nouvelle fiche d\'évaluation reçue',
                     'Le Directeur Général vous a soumis une fiche d\'évaluation. Connectez-vous pour la consulter.',
-                    'haute'
+                    'haute',
+                    route('directeur.evaluations.show', $evaluation)
                 );
             }
         }

@@ -20,6 +20,7 @@
             'message'  => \Illuminate\Support\Str::limit($a->message ?? '', 120),
             'priorite' => $a->priorite,
             'age'      => $a->created_at->diffForHumans(),
+            'lien'     => $a->lien,
         ])
         ->values();
 @endphp
@@ -104,15 +105,24 @@
             + '</div>'
             // Horodatage
             + '<span style="flex-shrink:0;font-size:10px;color:' + p.text + ';opacity:.5;">' + esc(notif.age) + '</span>'
-            // Bouton OK
-            + '<button type="button" onclick="sgpDismissAlert(' + notif.id + ')" '
-                + 'style="flex-shrink:0;padding:5px 14px;border-radius:6px;'
-                + 'background:' + p.accent + ';color:#fff;'
-                + 'font-size:11px;font-weight:700;border:none;cursor:pointer;'
-                + 'letter-spacing:.05em;transition:opacity .2s;" '
-                + 'onmouseover="this.style.opacity=\'.8\'" onmouseout="this.style.opacity=\'1\'">'
-                + 'OK'
-            + '</button>';
+            // Bouton OK (lien si disponible, sinon simple dismiss)
+            + (notif.lien
+                ? '<a href="' + esc(notif.lien) + '" onclick="sgpDismissAlert(' + notif.id + ')" '
+                    + 'style="flex-shrink:0;padding:5px 14px;border-radius:6px;'
+                    + 'background:' + p.accent + ';color:#fff;'
+                    + 'font-size:11px;font-weight:700;border:none;cursor:pointer;text-decoration:none;'
+                    + 'letter-spacing:.05em;transition:opacity .2s;display:inline-block;" '
+                    + 'onmouseover="this.style.opacity=\'.8\'" onmouseout="this.style.opacity=\'1\'">'
+                    + 'Voir <i class="fas fa-arrow-right" style="font-size:9px;margin-left:2px;"></i>'
+                + '</a>'
+                : '<button type="button" onclick="sgpDismissAlert(' + notif.id + ')" '
+                    + 'style="flex-shrink:0;padding:5px 14px;border-radius:6px;'
+                    + 'background:' + p.accent + ';color:#fff;'
+                    + 'font-size:11px;font-weight:700;border:none;cursor:pointer;'
+                    + 'letter-spacing:.05em;transition:opacity .2s;" '
+                    + 'onmouseover="this.style.opacity=\'.8\'" onmouseout="this.style.opacity=\'1\'">'
+                    + 'Voir'
+                + '</button>');
 
         return div;
     }

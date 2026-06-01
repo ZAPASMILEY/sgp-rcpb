@@ -56,8 +56,6 @@
         <link rel="stylesheet" href="{{ asset('css/admin-fallback.css') }}">
     @endif
 
-    <link rel="stylesheet" href="{{ asset('resources/css/all.min.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
     <style>
     .ts-wrapper.single .ts-control{background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.55rem 1rem;font-size:.875rem;color:#1e293b;box-shadow:none;cursor:pointer;}
     .ts-wrapper.single.focus .ts-control{border-color:#34d399;background:#fff;box-shadow:0 0 0 3px rgba(52,211,153,.15);}
@@ -463,12 +461,6 @@
 
                     <div id="topbar-quick-panel" class="admin-topbar__panel admin-topbar__panel--quick hidden" role="menu" aria-label="Actions rapides">
                         <p class="admin-topbar__panel-caption">Actions rapides</p>
-                        @if($evaluationsEnabled)
-                        <a href="{{ route('pca.evaluations.create') }}" data-open-create-modal data-modal-title="Nouvelle evaluation" class="admin-topbar__quick-link">Nouvelle evaluation</a>
-                        @endif
-                        @if($objectifsEnabled)
-                        <a href="{{ route('pca.objectifs.create') }}" data-open-create-modal data-modal-title="Nouvel objectif" class="admin-topbar__quick-link">Nouvel objectif</a>
-                        @endif
                         <a href="{{ route('pca.settings.edit') }}" class="admin-topbar__quick-link">Ouvrir parametres</a>
                     </div>
 
@@ -630,7 +622,6 @@
     </script>
 
     @stack('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
     (function(){
         var tsOpts={searchField:['text'],maxOptions:300,render:{

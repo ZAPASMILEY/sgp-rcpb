@@ -9,6 +9,7 @@ use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\User;
 use App\Services\EvaluationService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -147,7 +148,7 @@ class AssistanteController extends Controller
             'date_echeance' => $f->date_echeance instanceof Carbon
                 ? $f->date_echeance->toDateString()
                 : (string) $f->date_echeance,
-            'objectifs'     => $f->objectifs->map(fn ($item) => [
+            'objectifs'     => $f->objectifs->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)->map(fn ($item) => [
                 'source_fiche_objectif_objectif_id' => $item->id,
                 'titre'                             => $item->description,
             ])->values()->all(),
@@ -241,7 +242,7 @@ class AssistanteController extends Controller
         $identification['matricule']         = $agentSec?->matricule ?? null;
         $identification['nom_prenom']        = $agentSec ? trim($agentSec->prenom . ' ' . $agentSec->nom) : $secretaire->name;
         $identification['emploi']            = $agentSec?->poste ?: $agentSec?->role;
-        $identification['direction']         = $agentSec?->entite?->sigle ?: ($agentSec?->entite?->nom ?? null);
+        $identification['direction']         = 'Faitière des Caisses Populaires du Burkina';
         $identification['direction_service'] = $agentSec?->direction?->nom
             ?? $agentSec?->delegationTechnique?->nom
             ?? $agentSec?->caisse?->nom
@@ -313,7 +314,8 @@ class AssistanteController extends Controller
             $secretaire->id,
             'Nouvelle évaluation reçue',
             "L'Assistante DG vous a soumis une évaluation.",
-            'haute'
+            'haute',
+            route('personnel.evaluations.show', $evaluation)
         );
 
         return redirect()
@@ -327,14 +329,50 @@ class AssistanteController extends Controller
         $secretaire = $this->findSecretaire();
         $evaluation->load(['identification', 'criteres.sousCriteres']);
 
-        return view('directeur.subordonnes.evaluations.show', [
-            'evaluation' => $evaluation,
-            'secretaire' => $secretaire,
-            'direction'  => (object) ['nom' => 'Direction Générale'],
-            'submitRoute'  => route('assistante.secretaire.evaluations.submit', $evaluation),
-            'destroyRoute' => route('assistante.secretaire.evaluations.destroy', $evaluation),
-            'backRoute'    => route('assistante.secretaire', ['tab' => 'evaluations']),
-            'layout'       => 'layouts.subordonne',
+        $note               = (float) $evaluation->note_finale;
+        $mention            = $note >= 8.5 ? 'Excellent' : ($note >= 7 ? 'Bien' : ($note >= 5 ? 'Passable' : 'Insuffisant'));
+        $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
+        $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
+        $ident              = $evaluation->identification;
+        $subjectiveTemplates = $subjectiveCriteria->isEmpty()
+            ? \App\Models\SubjectiveCriteriaTemplate::with('subcriteria')->where('is_active', true)->orderBy('ordre')->get()
+            : collect();
+        $statusClass = match ($evaluation->statut) {
+            'brouillon'   => 'bg-gray-100 text-gray-700',
+            'soumis'      => 'bg-blue-100 text-blue-700',
+            'accepte'     => 'bg-green-100 text-green-700',
+            'reclamation' => 'bg-orange-100 text-orange-700',
+            'a_reviser'   => 'bg-yellow-100 text-yellow-700',
+            'finalise'    => 'bg-purple-100 text-purple-700',
+            default       => 'bg-gray-100 text-gray-600',
+        };
+        $statusLabel = match ($evaluation->statut) {
+            'brouillon'   => 'Brouillon',
+            'soumis'      => 'Soumis',
+            'accepte'     => 'Accepté',
+            'reclamation' => 'Réclamation',
+            'a_reviser'   => 'À réviser',
+            'finalise'    => 'Finalisé',
+            default       => ucfirst($evaluation->statut ?? ''),
+        };
+
+        return view('evaluations.show', [
+            'evaluation'          => $evaluation,
+            'objectiveCriteria'   => $objectiveCriteria,
+            'subjectiveCriteria'  => $subjectiveCriteria,
+            'note'                => $note,
+            'mention'             => $mention,
+            'ident'               => $ident,
+            'cibleLabel'          => $secretaire?->name ?? '—',
+            'cibleType'           => 'Secrétaire',
+            'statusLabel'         => $statusLabel,
+            'statusClass'         => $statusClass,
+            'layout'              => 'layouts.subordonne',
+            'backRoute'           => route('assistante.secretaire', ['tab' => 'evaluations']),
+            'breadcrumb'          => 'Espace Assistante · Secrétaire',
+            'soumettreRoute'      => 'assistante.secretaire.evaluations.submit',
+            'destroyRoute'        => 'assistante.secretaire.evaluations.destroy',
+            'subjectiveTemplates' => $subjectiveTemplates,
         ]);
     }
 
@@ -352,7 +390,8 @@ class AssistanteController extends Controller
             $evaluation->evaluable_id,
             'Évaluation soumise',
             "L'Assistante DG a soumis votre évaluation pour validation.",
-            'normale'
+            'normale',
+            route('personnel.evaluations.show', $evaluation)
         );
 
         return redirect()
@@ -422,7 +461,6 @@ class AssistanteController extends Controller
 
         try {
             $anneeIdFiche = Annee::resolveOpenYearId(now());
-            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -430,6 +468,8 @@ class AssistanteController extends Controller
         if (FicheObjectif::existsPourAnnee($anneeIdFiche, User::class, $secretaire->id)) {
             return back()->withInput()->with('error', 'Une fiche d\'objectifs existe déjà pour ce secrétaire pour l\'année en cours.');
         }
+
+        $isBrouillon = $request->input('action') === 'brouillon';
 
         $fiche = FicheObjectif::create([
             'titre'                 => $validated['titre_fiche'],
@@ -439,53 +479,173 @@ class AssistanteController extends Controller
             'date'                  => now()->toDateString(),
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
-            'statut'                => 'en_attente',
+            'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
         ]);
 
         foreach ($validated['objectifs'] as $desc) {
             $fiche->objectifs()->create(['description' => $desc]);
         }
 
-        Alerte::notifier(
-            $secretaire->id,
-            'Nouvelle fiche d\'objectifs reçue',
-            "L'Assistante DG vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-            'haute'
-        );
+        if (! $isBrouillon) {
+            Alerte::notifier(
+                $secretaire->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "L'Assistante DG vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
+                'haute',
+                route('personnel.fiches.show', $fiche)
+            );
+        }
+
+        $msg = $isBrouillon
+            ? "Brouillon enregistré pour {$secretaire->name}."
+            : "Fiche d'objectifs assignée à {$secretaire->name}.";
 
         return redirect()
-            ->route('assistante.secretaire', ['tab' => 'objectifs'])
-            ->with('status', "Fiche d'objectifs assignée à {$secretaire->name}.");
+            ->route('assistante.secretaire.objectifs.show', $fiche)
+            ->with('status', $msg);
     }
 
     public function showObjectif(FicheObjectif $fiche): View
     {
         $this->authorizeFiche($fiche);
+        $fiche->load(['objectifs', 'annee']);
+
+        return view('objectifs.show', [
+            'layout'         => 'layouts.subordonne',
+            'fiche'          => $fiche,
+            'backRoute'      => route('assistante.secretaire', ['tab' => 'objectifs']),
+            'editRoute'      => 'assistante.secretaire.objectifs.edit',
+            'destroyRoute'   => 'assistante.secretaire.objectifs.destroy',
+            'soumettreRoute' => 'assistante.secretaire.objectifs.soumettre',
+            'pdfRoute'       => 'assistante.secretaire.objectifs.pdf',
+            'isAssignee'     => false,
+        ]);
+    }
+
+    public function pdfObjectif(FicheObjectif $fiche): \Illuminate\Http\Response
+    {
+        $this->authorizeFiche($fiche);
+        $secretaire = $this->findSecretaire();
+        $fiche->load(['objectifs', 'annee']);
+
+        $pdf = Pdf::loadView('pdf.fiche-objectifs', [
+            'fiche'         => $fiche,
+            'assigneNom'    => $secretaire?->name ?? '—',
+            'assigneRole'   => 'Secrétaire',
+            'assigneurNom'  => Auth::user()->name ?? '—',
+            'assigneurRole' => 'Assistante DG',
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('fiche-objectifs-' . $fiche->id . '.pdf');
+    }
+
+    public function editObjectif(FicheObjectif $fiche): \Illuminate\View\View|RedirectResponse
+    {
+        $this->authorizeFiche($fiche);
         $secretaire = $this->findSecretaire();
         $fiche->load('objectifs');
 
-        $statusClass = match ($fiche->statut) {
-            'acceptee'   => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-            'en_attente' => 'border-amber-200 bg-amber-50 text-amber-700',
-            'refusee'    => 'border-rose-200 bg-rose-50 text-rose-700',
-            default      => 'border-slate-200 bg-slate-100 text-slate-700',
-        };
-        $statusLabel = match ($fiche->statut) {
-            'acceptee'   => 'Acceptée',
-            'en_attente' => 'En attente',
-            'refusee'    => 'Refusée',
-            default      => ucfirst((string) ($fiche->statut ?? 'En attente')),
-        };
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()
+                ->route('assistante.secretaire.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
 
-        return view('directeur.subordonnes.objectifs.show', [
-            'fiche'       => $fiche,
-            'direction'   => (object) ['nom' => 'Direction Générale'],
-            'service'     => null,
-            'secretaire'  => $secretaire,
-            'statusClass' => $statusClass,
-            'statusLabel' => $statusLabel,
-            'layout'      => 'layouts.subordonne',
+        return view('directeur.subordonnes.objectifs.edit', [
+            'fiche'        => $fiche,
+            'direction'    => (object) ['nom' => 'Direction Générale'],
+            'updateRoute'  => 'assistante.secretaire.objectifs.update',
+            'cancelUrl'    => route('assistante.secretaire.objectifs.show', $fiche),
+            'cibleLabel'   => 'Secrétaire — '.($secretaire?->name ?? '—'),
+            'assigneeUser' => $secretaire,
+            'layout'       => 'layouts.subordonne',
         ]);
+    }
+
+    public function updateObjectif(Request $request, FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorizeFiche($fiche);
+        $secretaire = $this->findSecretaire();
+        $fiche->load('objectifs');
+
+        if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
+            return redirect()
+                ->route('assistante.secretaire.objectifs.show', $fiche)
+                ->with('status', 'Cette fiche ne peut pas être modifiée.');
+        }
+
+        $wasContested = $fiche->statut === 'contesté';
+        $wasRefusee   = $fiche->statut === 'refusee';
+        $action       = $request->input('action', 'brouillon');
+
+        $validated = $request->validate([
+            'titre_fiche' => ['required', 'string', 'max:255'],
+            'objectifs'   => ['required', 'array', 'min:1'],
+            'objectifs.*' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $objectifs = array_values(array_filter(array_map('trim', $validated['objectifs']), fn ($v) => $v !== ''));
+        if (count($objectifs) === 0) {
+            return back()->withInput()->withErrors(['objectifs' => 'Vous devez renseigner au moins un objectif.']);
+        }
+
+        $fiche->update(['titre' => $validated['titre_fiche']]);
+        $fiche->objectifs()->delete();
+        foreach ($objectifs as $desc) {
+            $fiche->objectifs()->create(['description' => $desc]);
+        }
+
+        if (($wasContested || $wasRefusee) && $action === 'renvoyer') {
+            $fiche->update(['statut' => 'en_attente']);
+
+            if ($secretaire) {
+                Alerte::notifier(
+                    $secretaire->id,
+                    'Fiche d\'objectifs révisée',
+                    "L'Assistante DG a révisé la fiche d'objectifs « {$fiche->titre} ».",
+                    'haute',
+                    route('personnel.fiches.show', $fiche)
+                );
+            }
+
+            $msg = $wasRefusee ? 'Fiche corrigée et renvoyée.' : 'Fiche révisée et renvoyée.';
+
+            return redirect()
+                ->route('assistante.secretaire.objectifs.show', $fiche)
+                ->with('status', $msg);
+        }
+
+        return redirect()
+            ->route('assistante.secretaire.objectifs.show', $fiche)
+            ->with('status', 'Brouillon mis à jour.');
+    }
+
+    public function soumettreObjectif(FicheObjectif $fiche): RedirectResponse
+    {
+        $this->authorizeFiche($fiche);
+        $secretaire = $this->findSecretaire();
+
+        if ($fiche->statut !== 'brouillon') {
+            return redirect()
+                ->route('assistante.secretaire.objectifs.show', $fiche)
+                ->with('status', "Cette fiche n'est pas en brouillon.");
+        }
+
+        $fiche->update(['statut' => 'en_attente']);
+
+        if ($secretaire) {
+            Alerte::notifier(
+                $secretaire->id,
+                'Nouvelle fiche d\'objectifs reçue',
+                "L'Assistante DG vous a soumis une fiche d'objectifs « {$fiche->titre} ».",
+                'haute',
+                route('personnel.fiches.show', $fiche)
+            );
+        }
+
+        return redirect()
+            ->route('assistante.secretaire.objectifs.show', $fiche)
+            ->with('status', 'Fiche soumise à la secrétaire.');
     }
 
     public function destroyObjectif(FicheObjectif $fiche): RedirectResponse

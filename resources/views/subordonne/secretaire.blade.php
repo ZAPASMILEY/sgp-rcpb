@@ -3,19 +3,27 @@
 @section('title', 'Dossier Secrétaire | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
 
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mon Espace / Secrétaire</p>
-                    <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $secretaire->name }}</h1>
-                    <p class="mt-1 text-sm text-slate-500">Secrétaire Assistante</p>
-                </div>
-                <a href="{{ route('subordonne.mon-espace') }}" class="ent-btn ent-btn-soft">Retour</a>
+    {{-- Hero --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 px-6 py-8 lg:px-10">
+        <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+        <div class="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-slate-400">Mon Espace · Secrétaire</p>
+                <h1 class="mt-1 text-2xl font-black text-white leading-tight">{{ $secretaire->name }}</h1>
+                <p class="mt-0.5 text-sm text-slate-300/80">Secrétaire Assistante</p>
             </div>
-        </header>
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+                <a href="{{ route('subordonne.mon-espace') }}"
+                   class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-xs font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+                    <i class="fas fa-arrow-left text-[10px]"></i> Retour
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="px-4 pt-6 lg:px-8">
+    <div class="w-full flex flex-col gap-5">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
@@ -25,7 +33,7 @@
         @endif
 
         {{-- Tabs --}}
-        <div class="admin-panel px-6 py-6 lg:px-8">
+        <div class="rounded-[20px] border border-slate-100 bg-white px-6 py-6 shadow-sm">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
                 <div class="inline-flex gap-1 rounded-2xl border border-slate-200 bg-slate-100/70 p-1">
                     @foreach ([
@@ -55,13 +63,15 @@
                 @forelse ($evaluations as $eval)
                     @php
                         $sc = match($eval->statut) {
-                            'valide' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                            'soumis' => 'border-amber-200 bg-amber-50 text-amber-700',
-                            'refuse' => 'border-rose-200 bg-rose-50 text-rose-700',
-                            default  => 'border-slate-200 bg-slate-100 text-slate-600',
+                            'valide'      => 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                            'soumis'      => 'border-amber-200 bg-amber-50 text-amber-700',
+                            'refuse'      => 'border-rose-200 bg-rose-50 text-rose-700',
+                            'reclamation' => 'border-orange-200 bg-orange-50 text-orange-700',
+                            'a_reviser'   => 'border-purple-200 bg-purple-50 text-purple-700',
+                            default       => 'border-slate-200 bg-slate-100 text-slate-600',
                         };
                         $sl = match($eval->statut) {
-                            'valide' => 'Acceptée', 'soumis' => 'Soumise', 'refuse' => 'Refusée', default => 'Brouillon',
+                            'valide' => 'Acceptée', 'soumis' => 'Soumise', 'refuse' => 'Refusée', 'reclamation' => 'Réclamation', 'a_reviser' => 'À réviser', 'brouillon' => 'Brouillon', default => ucfirst((string) $eval->statut),
                         };
                         $note = number_format((float) $eval->note_finale, 2, ',', ' ');
                         $noteClass = match(true) {
@@ -83,6 +93,9 @@
                                 <span class="inline-flex rounded-full border px-3 py-1 text-[11px] font-black {{ $sc }}">{{ $sl }}</span>
                                 <span class="inline-flex rounded-full px-3 py-1 text-[11px] font-black {{ $noteClass }}">{{ $note }}/10</span>
                                 <a href="{{ route('assistante.secretaire.evaluations.show', $eval) }}" class="ent-btn ent-btn-soft text-xs">Voir</a>
+                                @if ($eval->statut !== 'brouillon')
+                                    <a href="{{ route('assistante.secretaire.evaluations.pdf', $eval) }}" class="ent-btn ent-btn-soft text-xs" target="_blank"><i class="fas fa-file-pdf mr-1"></i>PDF</a>
+                                @endif
                                 @if ($eval->statut === 'brouillon')
                                     <form method="POST" action="{{ route('assistante.secretaire.evaluations.submit', $eval) }}">
                                         @csrf @method('PATCH')
@@ -148,6 +161,7 @@
             @endif
         </div>
 
+    </div>
     </div>
 </div>
 @endsection

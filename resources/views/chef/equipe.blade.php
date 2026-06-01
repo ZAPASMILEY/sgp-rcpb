@@ -18,24 +18,6 @@
                         <p class="mt-1 text-sm text-blue-100/80">{{ $ctx->getParentNom() }}</p>
                     @endif
                 </div>
-                <div class="flex items-center gap-2 mt-2 sm:mt-0">
-                    @if($evaluationsEnabled)
-                        <a href="{{ route('chef.evaluations.create') }}"
-                           class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
-                            <i class="fas fa-star-half-stroke text-xs"></i> Évaluer
-                        </a>
-                    @else
-                        <span class="ent-btn-disabled-dark"><i class="fas fa-star-half-stroke text-xs"></i> Évaluer</span>
-                    @endif
-                    @if($objectifsEnabled)
-                        <a href="{{ route('chef.objectifs.create') }}"
-                           class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-black text-blue-700 shadow transition hover:bg-blue-50">
-                            <i class="fas fa-list-check text-xs"></i> Assigner objectifs
-                        </a>
-                    @else
-                        <span class="ent-btn-disabled-dark"><i class="fas fa-list-check text-xs"></i> Assigner objectifs</span>
-                    @endif
-                </div>
             </div>
         </div>
 
@@ -202,6 +184,10 @@
 
                             {{-- Actions --}}
                             <div class="flex shrink-0 items-center gap-2">
+                                <a href="{{ route('chef.agent.show', $ag->id) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-violet-700">
+                                    <i class="fas fa-folder-open text-[10px]"></i> Dossier
+                                </a>
                                 @if($evaluationsEnabled)
                                     <a href="{{ route('chef.evaluations.create', ['agent_id' => $ag->id]) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
@@ -223,12 +209,6 @@
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
-                                @endif
-                                @if ($eval)
-                                    <a href="{{ route('chef.evaluations.show', $eval) }}"
-                                       class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-blue-700">
-                                        <i class="fas fa-eye text-[10px]"></i> Voir éval.
-                                    </a>
                                 @endif
                             </div>
                         </div>

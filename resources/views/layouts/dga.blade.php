@@ -22,16 +22,17 @@
         [
             'title' => 'Mes subordonnés',
             'items' => [
-                ['route' => 'dga.subordonnes.index',   'icon' => 'fas fa-users',         'label' => 'Directeurs Techniques'],
-                ['route' => 'dga.notes-reseau.index',  'icon' => 'fas fa-chart-bar',     'label' => 'Notes du Réseau'],
-                ['route' => 'dga.structures.index',    'icon' => 'fas fa-network-wired', 'label' => 'Structures'],
+                ['route' => 'dga.subordonnes.index',    'icon' => 'fas fa-users',         'label' => 'Directeurs Techniques'],
+                ['route' => 'dga.secretaire',           'icon' => 'fas fa-user-tie',      'label' => 'Ma Secrétaire'],
+                ['route' => 'dga.chefs-service.index',  'icon' => 'fas fa-user-shield',   'label' => 'Chefs de Service'],
+                ['route' => 'dga.notes-reseau.index',   'icon' => 'fas fa-chart-bar',     'label' => 'Notes du Réseau'],
             ],
         ],
         [
             'title' => 'Réseau RCPB',
             'items' => [
                 ['route' => 'dga.reseau.delegations', 'icon' => 'fas fa-map-marker-alt', 'label' => 'Délégations'],
-                ['route' => 'dga.reseau.caisses',     'icon' => 'fas fa-landmark',        'label' => 'Caisses'],
+                ['route' => 'dga.reseau.caisses',     'icon' => 'fas fa-landmark',         'label' => 'Caisses'],
                 ['route' => 'dga.reseau.agences',     'icon' => 'fas fa-building',         'label' => 'Agences'],
                 ['route' => 'dga.reseau.guichets',    'icon' => 'fas fa-cash-register',    'label' => 'Guichets'],
             ],
@@ -54,8 +55,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Espace DGA')</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 
@@ -132,7 +131,6 @@
             .sidebar-collapse-btn { display: none !important; }
         }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
     <style>
     .ts-wrapper.single .ts-control{background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:.55rem 1rem;font-size:.875rem;color:#1e293b;box-shadow:none;cursor:pointer;}
     .ts-wrapper.single.focus .ts-control{border-color:#34d399;background:#fff;box-shadow:0 0 0 3px rgba(52,211,153,.15);}
@@ -245,7 +243,6 @@
     </script>
 
     @stack('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
     (function(){
         var tsOpts={searchField:['text'],maxOptions:300,render:{

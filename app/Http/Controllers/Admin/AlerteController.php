@@ -251,6 +251,7 @@ class AlerteController extends Controller
                 'message' => Str::limit($a->message ?? '', 70),
                 'priorite'=> $a->priorite,
                 'age'     => $a->created_at->diffForHumans(),
+                'lien'    => $a->lien,
             ]),
         ]);
     }

@@ -377,6 +377,21 @@ class ChefEntity
     }
 
     /**
+     * Retourne les guichets rattachés à l'agence pour un Chef_Agence.
+     * Retourne une collection vide pour les autres types de chef.
+     */
+    public function getGuichets(): Collection
+    {
+        if ($this->type !== 'agence') {
+            return collect();
+        }
+
+        return Guichet::where('agence_id', $this->entity->id)
+            ->with('chef')
+            ->get();
+    }
+
+    /**
      * Retourne uniquement les IDs des agents subordonnés (sans le chef).
      * Utilisé pour les vérifications d'appartenance et les requêtes "in".
      */

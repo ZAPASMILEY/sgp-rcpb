@@ -173,12 +173,14 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate font-bold text-slate-800 text-sm">{{ $conseiller->name }}</p>
-                                    <p class="text-xs text-slate-400">
-                                        {{ $conseiller->sexe ?? '—' }}
-                                        @if($conseiller->date_prise_fonction)
-                                            · En poste depuis {{ \Carbon\Carbon::createFromFormat('Y-m', $conseiller->date_prise_fonction)->translatedFormat('M Y') }}
-                                        @endif
-                                    </p>
+                                    @if($conseiller->agent?->role)
+                                        <p class="text-xs font-medium text-indigo-600">{{ $conseiller->agent->role }}</p>
+                                    @endif
+                                    @if($conseiller->agent?->date_debut_fonction)
+                                        <p class="text-xs text-slate-400">
+                                            En poste depuis {{ \Carbon\Carbon::parse($conseiller->agent->date_debut_fonction)->translatedFormat('M Y') }}
+                                        </p>
+                                    @endif
                                     @if($conseiller->email)
                                         <p class="text-xs text-slate-400 truncate">{{ $conseiller->email }}</p>
                                     @endif

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Gerer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Agent;
 use App\Models\Annee;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Evaluation;
+use App\Models\User;
 use App\Traits\GererLayout;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,7 +17,7 @@ class EvaluationGererController extends Controller
 {
     use GererLayout;
 
-   public function index(Request $request): View
+    public function index(Request $request): View
     {
         $annees  = Annee::orderByDesc('annee')->get();
         $annee   = $request->filled('annee_id')
@@ -27,31 +29,48 @@ class EvaluationGererController extends Controller
         $delegId  = $request->integer('delegation_id') ?: null;
         $caisseId = $request->integer('caisse_id') ?: null;
 
-        // Début de la requête
-        // Début de la requête corrigée
+        // ── Requête principale sécurisée via la relation identification ──
         $evaluations = Evaluation::with([
-                'agent.agent.delegationTechnique',        // User -> Agent -> DelegationTechnique
-                'agent.agent.caisse.delegationTechnique', // User -> Agent -> Caisse -> DelegationTechnique
-                'agent.agent.direction',                 // User -> Agent -> Direction
-                'semestre',
+                'identification', // Contient déjà les instantanés (nom, prenom, matricule, direction, etc.)
+                'semestre.annee',
                 'evaluateur',
             ])
+            ->whereHas('identification') // Sécurité : uniquement les fiches identifiées
             ->when($annee, fn ($q) => $q->where('annee_id', $annee->id))
             ->when($statut, fn ($q) => $q->where('statut', $statut))
-            ->when($search, fn ($q) => $q->whereHas('agent.agent', fn ($a) => $a
-                ->where('nom',        'like', "%{$search}%")
-                ->orWhere('prenom',   'like', "%{$search}%")
-                ->orWhere('matricule','like', "%{$search}%")
+            
+            // Filtre de recherche textuelle sur l'identification fétiche
+            ->when($search, fn ($q) => $q->whereHas('identification', fn ($i) => $i
+                ->where('nom_prenom', 'like', "%{$search}%")
+                ->orWhere('matricule', 'like', "%{$search}%")
+                ->orWhere('emploi', 'like', "%{$search}%")
             ))
-            ->when($delegId, fn ($q) => $q->whereHas('agent.agent', fn ($a) => $a
-                ->where(fn ($s) => $s
+            
+            // Filtre par Délégation Technique — couvre User::class ET Agent::class
+            ->when($delegId, fn ($q) => $q->where(fn ($sub) => $sub
+                ->whereHasMorph('evaluable', [User::class], fn ($u) => $u
+                    ->whereHas('agent', fn ($a) => $a
+                        ->where('delegation_technique_id', $delegId)
+                        ->orWhereHas('caisse', fn ($c) => $c->where('delegation_technique_id', $delegId))
+                    )
+                )
+                ->orWhereHasMorph('evaluable', [Agent::class], fn ($a) => $a
                     ->where('delegation_technique_id', $delegId)
                     ->orWhereHas('caisse', fn ($c) => $c->where('delegation_technique_id', $delegId))
                 )
             ))
-            ->when($caisseId, fn ($q) => $q->whereHas('agent.agent', fn ($a) => $a->where('caisse_id', $caisseId)))
+
+            // Filtre par Caisse — couvre User::class ET Agent::class
+            ->when($caisseId, fn ($q) => $q->where(fn ($sub) => $sub
+                ->whereHasMorph('evaluable', [User::class], fn ($u) => $u
+                    ->whereHas('agent', fn ($a) => $a->where('caisse_id', $caisseId))
+                )
+                ->orWhereHasMorph('evaluable', [Agent::class], fn ($a) => $a
+                    ->where('caisse_id', $caisseId)
+                )
+            ))
             ->latest()
-            ->paginate(50)
+            ->paginate(50) // Remis à 50 comme initialement prévu pour la gestion réseau
             ->withQueryString();
 
         // Chargement des données pour les filtres de la vue

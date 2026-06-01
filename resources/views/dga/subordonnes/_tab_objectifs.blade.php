@@ -3,170 +3,153 @@
 
 @php
 $ficheCards = [
-    [
-        'label'    => 'Total',
-        'value'    => $fichesStats['total'],
-        'icon'     => 'fas fa-folder-open',
-        'tone'     => 'border-slate-100 bg-white text-slate-900',
-        'iconWrap' => 'bg-slate-100 text-slate-600',
-    ],
-    [
-        'label'    => 'Acceptées',
-        'value'    => $fichesStats['acceptees'],
-        'icon'     => 'fas fa-circle-check',
-        'tone'     => 'border-emerald-100 bg-emerald-50/80 text-emerald-900',
-        'iconWrap' => 'bg-white text-emerald-600',
-    ],
-    [
-        'label'    => 'En attente',
-        'value'    => $fichesStats['en_attente'],
-        'icon'     => 'fas fa-hourglass-half',
-        'tone'     => 'border-amber-100 bg-amber-50/80 text-amber-900',
-        'iconWrap' => 'bg-white text-amber-600',
-    ],
-    [
-        'label'    => 'Refusées',
-        'value'    => $fichesStats['refusees'],
-        'icon'     => 'fas fa-ban',
-        'tone'     => 'border-rose-100 bg-rose-50/80 text-rose-900',
-        'iconWrap' => 'bg-white text-rose-600',
-    ],
+    ['label' => 'Total',      'value' => $fichesStats['total'],    'accent' => 'bg-slate-300',   'tone' => 'border-slate-100 bg-white'],
+    ['label' => 'Acceptées',  'value' => $fichesStats['acceptees'],'accent' => 'bg-emerald-500', 'tone' => 'border-emerald-100 bg-emerald-50/60'],
+    ['label' => 'En attente', 'value' => $fichesStats['en_attente'],'accent'=> 'bg-amber-400',   'tone' => 'border-amber-100 bg-amber-50/60'],
+    ['label' => 'Refusées',   'value' => $fichesStats['refusees'], 'accent' => 'bg-rose-500',    'tone' => 'border-rose-100 bg-rose-50/60'],
 ];
 @endphp
 
-{{-- Stats --}}
+{{-- ── Cartes stats ──────────────────────────────────────────────────────────── --}}
 <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
     @foreach ($ficheCards as $card)
-        <div class="rounded-2xl border px-4 py-4 shadow-sm {{ $card['tone'] }}">
-            <div class="flex items-start justify-between gap-3">
-                <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.18em] opacity-60">{{ $card['label'] }}</p>
-                    <p class="mt-1 text-3xl font-black leading-none">{{ $card['value'] }}</p>
-                </div>
-                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $card['iconWrap'] }}">
-                    <i class="{{ $card['icon'] }}"></i>
-                </span>
-            </div>
+    <div class="relative overflow-hidden rounded-2xl border shadow-sm {{ $card['tone'] }}">
+        <div class="absolute inset-y-0 left-0 w-1 {{ $card['accent'] }}"></div>
+        <div class="px-5 py-4 pl-6">
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{{ $card['label'] }}</p>
+            <p class="mt-2 text-4xl font-black leading-none text-slate-900">{{ $card['value'] }}</p>
         </div>
+    </div>
     @endforeach
 </div>
 
-{{-- Recherche + filtre --}}
+{{-- ── Filtre ─────────────────────────────────────────────────────────────────── --}}
 <form method="GET" action="{{ request()->url() }}"
-      class="mb-5 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+      class="mb-5 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
     <input type="hidden" name="tab" value="objectifs">
-    <div class="flex-1 min-w-48">
-        <div class="relative">
-            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                <i class="fas fa-search text-sm"></i>
-            </span>
-            <input name="search" type="text" value="{{ $filters['search'] }}" placeholder="Titre, année..."
-                   class="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100">
-        </div>
+    <i class="fas fa-filter text-xs text-slate-400 mr-1"></i>
+    <div class="relative flex-1 min-w-44">
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+            <i class="fas fa-search text-[10px]"></i>
+        </span>
+        <input name="search" type="text" value="{{ $filters['search'] }}" placeholder="Titre, année..."
+               class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-8 pr-3 text-xs font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100">
     </div>
     <select name="statut"
-            class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100">
+            class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100">
         <option value="">Tous les statuts</option>
         <option value="en_attente" @selected($filters['statut'] === 'en_attente')>En attente</option>
         <option value="acceptee"   @selected($filters['statut'] === 'acceptee')>Acceptée</option>
         <option value="refusee"    @selected($filters['statut'] === 'refusee')>Refusée</option>
     </select>
     <button type="submit"
-            class="inline-flex items-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
-        <i class="fas fa-filter mr-2 text-xs"></i> Filtrer
+            class="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-slate-700">
+        Filtrer
     </button>
+    @if ($filters['search'] || $filters['statut'])
     <a href="{{ request()->url() }}?tab=objectifs"
-       class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
-        Effacer
+       class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 transition hover:text-slate-800">
+        <i class="fas fa-times text-[10px]"></i>
     </a>
+    @endif
 </form>
 
-{{-- Tableau --}}
-<div class="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
+{{-- ── Tableau ─────────────────────────────────────────────────────────────────── --}}
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="overflow-x-auto">
-        <table class="min-w-full text-left text-sm text-slate-700">
-            <thead class="bg-slate-50/80">
-                <tr class="border-b border-slate-200 text-slate-500">
-                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
-                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Fiche</th>
-                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Année</th>
-                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Objectifs</th>
-                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Avancement</th>
-                    <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Statut</th>
-                    <th class="px-4 py-4 text-center text-xs font-black uppercase tracking-[0.16em]">Actions</th>
+        <table class="min-w-full text-sm">
+            <thead>
+                <tr class="border-b border-slate-200 bg-slate-50/80">
+                    <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Fiche</th>
+                    <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Avancement</th>
+                    <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Statut</th>
+                    <th class="px-5 py-3 text-center text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @forelse ($fiches as $fiche)
                     @php
                         $statut = $fiche->statut ?? 'en_attente';
-                        $statusClasses = match ($statut) {
-                            'acceptee' => 'border-emerald-200 bg-emerald-50 text-emerald-700',
-                            'refusee'  => 'border-rose-200 bg-rose-50 text-rose-700',
-                            'contesté' => 'border-orange-200 bg-orange-50 text-orange-700',
-                            'brouillon'=> 'border-slate-200 bg-slate-100 text-slate-500',
-                            default    => 'border-amber-200 bg-amber-50 text-amber-700',
+                        $statusCls = match ($statut) {
+                            'acceptee'  => 'bg-emerald-100 text-emerald-700',
+                            'refusee'   => 'bg-rose-100 text-rose-700',
+                            'contesté'  => 'bg-orange-100 text-orange-700',
+                            'brouillon' => 'bg-slate-100 text-slate-600',
+                            default     => 'bg-amber-100 text-amber-700',
+                        };
+                        $dotCls = match ($statut) {
+                            'acceptee'  => 'bg-emerald-500',
+                            'refusee'   => 'bg-rose-500',
+                            'contesté'  => 'bg-orange-400',
+                            'brouillon' => 'bg-slate-400',
+                            default     => 'bg-amber-400',
                         };
                         $statusLabel = match ($statut) {
-                            'acceptee' => 'Acceptée',
-                            'refusee'  => 'Refusée',
-                            'contesté' => 'Contestée',
-                            'brouillon'=> 'Brouillon',
-                            default    => 'En attente',
+                            'acceptee'  => 'Acceptée',
+                            'refusee'   => 'Refusée',
+                            'contesté'  => 'Contestée',
+                            'brouillon' => 'Brouillon',
+                            default     => 'En attente',
                         };
                         $progress = (int) ($fiche->avancement_percentage ?? 0);
-                        $progressColor = $progress >= 50
-                            ? 'bg-emerald-500'
-                            : ($progress > 0 ? 'bg-amber-400' : 'bg-rose-400');
+                        $avBarCls = $progress >= 80 ? 'bg-emerald-500' : ($progress >= 50 ? 'bg-sky-500' : ($progress >= 25 ? 'bg-amber-400' : 'bg-slate-300'));
+                        $avTxtCls = $progress >= 80 ? 'text-emerald-700' : ($progress >= 50 ? 'text-sky-700' : ($progress >= 25 ? 'text-amber-600' : 'text-slate-500'));
+                        $objCount = $fiche->objectifs_count ?? 0;
+                        $echeance = $fiche->date_echeance ? \Carbon\Carbon::parse($fiche->date_echeance) : null;
+                        $expired  = $echeance && $echeance->isPast();
                     @endphp
-                    <tr class="align-top hover:bg-slate-50/60">
-                        <td class="px-4 py-4 font-black text-slate-900">
-                            {{ ($fiches->firstItem() ?? 1) + $loop->index }}
-                        </td>
-                        <td class="px-4 py-4">
-                            <p class="text-sm font-black text-slate-900">{{ $fiche->titre }}</p>
-                            <p class="mt-1 text-xs font-semibold text-slate-500">Année {{ $fiche->annee_value ?? '—' }}</p>
-                        </td>
-                        <td class="px-4 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-600">
-                                {{ $fiche->annee_value ?? \Carbon\Carbon::parse($fiche->date_echeance ?? $fiche->date)->year }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-4">
-                            <span class="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">
-                                {{ $fiche->objectifs_count ?? 0 }} objectif(s)
-                            </span>
-                        </td>
-                        <td class="px-4 py-4">
-                            <div class="min-w-[130px]">
-                                <div class="mb-1.5 flex items-center justify-between gap-2">
-                                    <span class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Progression</span>
-                                    <span class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-black text-slate-700">{{ $progress }}%</span>
-                                </div>
-                                <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                                    <div class="h-full rounded-full {{ $progressColor }}" style="width: {{ $progress }}%"></div>
-                                </div>
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        {{-- Fiche --}}
+                        <td class="px-5 py-3.5">
+                            <p class="font-black text-slate-800">{{ $fiche->titre }}</p>
+                            <div class="mt-1 flex flex-wrap items-center gap-2">
+                                <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                                    <i class="fas fa-calendar-alt text-[9px]"></i>
+                                    {{ $fiche->annee_value ?? \Carbon\Carbon::parse($fiche->date_echeance ?? $fiche->date)->year }}
+                                </span>
+                                <span class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600">
+                                    <i class="fas fa-bullseye text-[9px]"></i>
+                                    {{ $objCount }} objectif{{ $objCount > 1 ? 's' : '' }}
+                                </span>
+                                @if ($echeance)
+                                <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold {{ $expired ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-500' }}">
+                                    <i class="fas fa-clock text-[9px]"></i>
+                                    Éch. {{ $echeance->format('d/m/Y') }}
+                                </span>
+                                @endif
                             </div>
                         </td>
-                        <td class="px-4 py-4">
-                            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statusClasses }}">
+                        {{-- Avancement --}}
+                        <td class="px-5 py-3.5">
+                            <div class="flex items-center gap-2.5">
+                                <div class="h-2 w-28 overflow-hidden rounded-full bg-slate-100">
+                                    <div class="h-full rounded-full transition-all {{ $avBarCls }}" style="width:{{ $progress }}%"></div>
+                                </div>
+                                <span class="text-sm font-black {{ $avTxtCls }}">{{ $progress }}%</span>
+                            </div>
+                        </td>
+                        {{-- Statut --}}
+                        <td class="px-5 py-3.5">
+                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-black {{ $statusCls }}">
+                                <span class="h-1.5 w-1.5 rounded-full {{ $dotCls }}"></span>
                                 {{ $statusLabel }}
                             </span>
                         </td>
-                        <td class="px-4 py-4 text-center">
+                        {{-- Actions --}}
+                        <td class="px-5 py-3.5 text-center">
                             <div class="inline-flex items-center gap-1">
                                 <a href="{{ route('dga.sub-objectifs.show', $fiche->id) }}"
-                                   class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-violet-100 hover:text-violet-600"
+                                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-100 hover:text-blue-600"
                                    title="Voir la fiche">
-                                    <i class="fas fa-eye"></i>
+                                    <i class="fas fa-eye text-xs"></i>
                                 </a>
                                 @if ($statut !== 'acceptee')
                                     <form method="POST" action="{{ route('dga.sub-objectifs.destroy', $fiche->id) }}"
-                                          onsubmit="return confirm('Supprimer cette fiche d\'objectifs ?')" class="inline">
+                                          onsubmit="return confirm('Supprimer cette fiche ?')" class="inline">
                                         @csrf @method('DELETE')
                                         <button type="submit"
-                                                class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600"
-                                                title="Supprimer la fiche">
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-100 hover:text-rose-600"
+                                                title="Supprimer">
                                             <i class="fas fa-trash text-xs"></i>
                                         </button>
                                     </form>
@@ -176,11 +159,13 @@ $ficheCards = [
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-12 text-center">
-                            <div class="mx-auto max-w-sm rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-8">
-                                <i class="fas fa-inbox text-2xl text-slate-300"></i>
-                                <p class="mt-2 text-sm font-black text-slate-700">Aucune fiche d'objectifs</p>
-                                <p class="mt-1 text-xs text-slate-500">Créez une nouvelle fiche pour démarrer le suivi.</p>
+                        <td colspan="4" class="px-4 py-14 text-center">
+                            <div class="mx-auto max-w-xs">
+                                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
+                                    <i class="fas fa-bullseye text-xl text-slate-300"></i>
+                                </div>
+                                <p class="text-sm font-black text-slate-700">Aucune fiche d'objectifs</p>
+                                <p class="mt-1 text-xs text-slate-400">Créez une nouvelle fiche pour démarrer le suivi.</p>
                             </div>
                         </td>
                     </tr>
@@ -191,7 +176,7 @@ $ficheCards = [
 </div>
 
 @if ($fiches->hasPages())
-    <div class="mt-5 border-t border-slate-200 pt-4">
+    <div class="mt-4 border-t border-slate-100 pt-4">
         {{ $fiches->links() }}
     </div>
 @endif

@@ -3,22 +3,26 @@
 @section('title', 'Personnel | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')
-<div class="min-h-screen bg-slate-50 px-4 pb-8 pt-4 lg:px-8">
-    <div class="w-full flex flex-col gap-6">
+<div class="min-h-screen bg-[#f1f5f9] pb-10">
 
-        <header class="admin-panel px-6 py-6 lg:px-8">
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Espace Directeur / Personnel</p>
-                    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950">Personnel</h1>
-                    <p class="mt-1 text-sm text-slate-500">{{ $ctx->getNom() }}</p>
-                </div>
-                <a href="{{ route('directeur.personnel.export', request()->query()) }}"
-                   class="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
-                    <i class="fas fa-file-excel"></i> Exporter Excel
-                </a>
+    {{-- Hero --}}
+    <div class="relative overflow-hidden bg-gradient-to-br from-indigo-700 via-indigo-600 to-blue-600 px-6 py-8 lg:px-10">
+        <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+        <div class="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <p class="text-xs font-black uppercase tracking-[0.25em] text-indigo-300">Espace Directeur · Personnel</p>
+                <h1 class="mt-1 text-2xl font-black text-white leading-tight">Personnel</h1>
+                <p class="mt-0.5 text-sm text-indigo-100/80">{{ $stats['total'] }} agent(s) · {{ $ctx->getNom() }}</p>
             </div>
-        </header>
+            <a href="{{ route('directeur.personnel.export', request()->query()) }}"
+               class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+                <i class="fas fa-file-excel"></i> Exporter Excel
+            </a>
+        </div>
+    </div>
+
+    <div class="px-4 pt-6 lg:px-8">
+    <div class="w-full flex flex-col gap-6">
 
         @if (session('status'))
             <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{{ session('status') }}</div>
@@ -47,7 +51,7 @@
         </div>
 
         {{-- Filtres --}}
-        <section class="admin-panel px-6 py-5 lg:px-8">
+        <section class="rounded-[20px] border border-slate-100 bg-white shadow-sm px-6 py-5 lg:px-8">
             <form method="GET" action="{{ route('directeur.personnel') }}" class="flex flex-wrap items-end gap-3">
 
                 <div class="space-y-1">
@@ -133,7 +137,7 @@
         </section>
 
         {{-- Liste --}}
-        <section class="admin-panel overflow-hidden">
+        <section class="rounded-[20px] border border-slate-100 bg-white shadow-sm overflow-hidden">
             <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 lg:px-8">
                 <p class="text-sm font-black text-slate-700">{{ $agents->count() }} agent(s) affiché(s)</p>
                 <a href="{{ route('directeur.personnel.export', request()->query()) }}"
@@ -256,6 +260,7 @@
             @endif
         </section>
 
+    </div>
     </div>
 </div>
 @endsection

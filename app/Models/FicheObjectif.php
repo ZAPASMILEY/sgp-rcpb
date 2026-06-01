@@ -71,13 +71,19 @@ class FicheObjectif extends Model
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * Vérifie qu'une fiche existe déjà pour ce couple (assignable, année).
+     * Vérifie qu'une fiche active existe déjà pour ce couple (assignable, année).
+     *
+     * Une fiche "refusee" est exclue : si le destinataire a refusé la fiche,
+     * l'assignateur peut en créer une nouvelle pour la même année.
+     * Les fiches en brouillon, en_attente, acceptée ou contestée bloquent
+     * la création d'une nouvelle fiche.
      */
     public static function existsPourAnnee(int $anneeId, string $assignableType, int $assignableId): bool
     {
         return static::where('annee_id', $anneeId)
             ->where('assignable_type', $assignableType)
             ->where('assignable_id', $assignableId)
+            ->where('statut', '!=', 'refusee')
             ->exists();
     }
 

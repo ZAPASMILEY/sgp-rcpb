@@ -36,14 +36,14 @@ class StatistiqueController extends Controller
         $caissesCount = Caisse::query()->whereYear('created_at', $selectedYear)->count();
         $agencesCount = Agence::query()->whereYear('created_at', $selectedYear)->count();
         $guichetsCount = Guichet::query()->whereYear('created_at', $selectedYear)->count();
-        $agentsCount = Agent::query()->count();
+        $agentsCount = Agent::reseau()->count();
 
         $maleValues   = ['homme', 'Homme', 'Masculin', 'masculin', 'M'];
         $femaleValues = ['femme', 'Femme', 'Féminin', 'féminin', 'Feminine', 'feminine', 'F'];
         $agentsBySexe = [
-            'Hommes'        => Agent::query()->whereIn('sexe', $maleValues)->count(),
-            'Femmes'        => Agent::query()->whereIn('sexe', $femaleValues)->count(),
-            'Non renseigné' => Agent::query()
+            'Hommes'        => Agent::reseau()->whereIn('sexe', $maleValues)->count(),
+            'Femmes'        => Agent::reseau()->whereIn('sexe', $femaleValues)->count(),
+            'Non renseigné' => Agent::reseau()
                 ->where(fn ($q) => $q
                     ->whereNotIn('sexe', array_merge($maleValues, $femaleValues))
                     ->orWhereNull('sexe')

@@ -26,19 +26,20 @@ class DgPersonnelController extends Controller
     {
         $this->checkDg();
 
-        $search      = trim((string) $request->get('search', ''));
-        $anneeId     = (int) $request->get('annee', 0);
-        $semestre    = trim((string) $request->get('semestre', ''));
+        $search       = trim((string) $request->get('search', ''));
+        $anneeId      = (int) $request->get('annee', 0);
+        $semestre     = trim((string) $request->get('semestre', ''));
         $appreciation = trim((string) $request->get('appreciation', ''));
-        $statut      = trim((string) $request->get('statut', ''));
-        $emploi      = trim((string) $request->get('emploi', ''));
-        $structure   = trim((string) $request->get('structure', ''));
-        $sort        = $request->get('sort', 'note_desc');
+        $statut       = trim((string) $request->get('statut', ''));
+        $emploi       = trim((string) $request->get('emploi', ''));
+        $structure    = trim((string) $request->get('structure', ''));
+        $sort         = $request->get('sort', 'note_desc');
 
         // ── Base query ────────────────────────────────────────────────────────
+        // Changement ici : On force le statut à 'valide' au lieu de exclure uniquement le 'brouillon'
         $query = Evaluation::query()
             ->with(['identification', 'evaluateur', 'annee'])
-            ->where('statut', '!=', 'brouillon')
+            ->where('statut', 'valide') 
             ->whereHas('identification');
 
         // ── Filtres ───────────────────────────────────────────────────────────
@@ -46,6 +47,8 @@ class DgPersonnelController extends Controller
             $query->where('annee_id', $anneeId);
         }
 
+        // Ce filtre devient optionnel si la base est déjà restreinte à 'valide', 
+        // mais conservé au cas où vous ajusteriez la logique plus tard.
         if ($statut) {
             $query->where('statut', $statut);
         }
@@ -102,8 +105,9 @@ class DgPersonnelController extends Controller
         $evaluations = $query->paginate(25)->withQueryString();
 
         // ── Stats rapides ─────────────────────────────────────────────────────
+        // Changement ici aussi : Les compteurs KPI se basent uniquement sur le validé
         $baseStats = Evaluation::query()
-            ->where('statut', '!=', 'brouillon')
+            ->where('statut', 'valide')
             ->whereHas('identification');
 
         $stats = [
@@ -118,13 +122,11 @@ class DgPersonnelController extends Controller
         // ── Listes pour filtres ───────────────────────────────────────────────
         $annees  = Annee::orderByDesc('annee')->get();
 
-        // Emplois distincts dans les identifications
         $emplois = EvaluationIdentification::distinct()
             ->whereNotNull('emploi')
             ->orderBy('emploi')
             ->pluck('emploi');
 
-        // Structures distinctes (direction)
         $structures = EvaluationIdentification::distinct()
             ->whereNotNull('direction')
             ->orderBy('direction')
@@ -155,9 +157,10 @@ class DgPersonnelController extends Controller
         $structure    = trim((string) $request->get('structure', ''));
         $sort         = $request->get('sort', 'note_desc');
 
+        // Mis à jour également pour l'export PDF
         $query = Evaluation::query()
             ->with(['identification', 'evaluateur', 'annee'])
-            ->where('statut', '!=', 'brouillon')
+            ->where('statut', 'valide')
             ->whereHas('identification');
 
         if ($anneeId) {
@@ -216,7 +219,6 @@ class DgPersonnelController extends Controller
 
         $evaluations = $query->get();
 
-        // Stats sur les résultats filtrés
         $total = $evaluations->count();
         $stats = [
             'total'       => $total,

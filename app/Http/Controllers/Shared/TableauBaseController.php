@@ -107,7 +107,8 @@ abstract class TableauBaseController extends Controller
             ->with([
                 'delegationTechnique',
                 'caisse.delegationTechnique',
-                'evaluationsPersonnel' => fn ($q) => $q->where('annee_id', $annee->id)->where('statut', 'valide')->with('semestre'),
+                'evaluationsPersonnel' => fn ($q) => $q->where('annee_id', $annee->id)->where('statut', 'valide')->with('semestre.annee'),
+                'evaluations' => fn ($q) => $q->where('annee_id', $annee->id)->where('statut', 'valide')->with('semestre.annee'),
             ])
             ->when($scope === 'faitiere', fn ($q) => $q
                 ->where(fn ($s) => $s
@@ -136,15 +137,15 @@ abstract class TableauBaseController extends Controller
             'rapport_notes_par_delegation' => $this->groupesParDelegation($agents, $s1, $s2, $semestreNum),
             'rapport_notes_par_caisse'     => $this->groupesParCaisse($agents, $s1, $s2, $semestreNum),
             'distribution_notes'           => collect([['nom' => 'ENSEMBLE DU RÉSEAU',
-                                                'rows' => $this->notesRows($agents, $s1, $s2, $semestreNum)]]),
+                                                        'rows' => $this->notesRows($agents, $s1, $s2, $semestreNum)]]),
             'notes_par_poste'              => collect([$this->groupeParPoste($agents, $s1, $s2, $semestreNum)]),
             'notes_par_entite'             => collect([$this->groupeParEntite($agents, $s1, $s2, $semestreNum)]),
             'effectif_par_sexe'            => collect([['nom' => 'EFFECTIF PAR SEXE',
-                                                'rows' => $this->sexeRows($agents),
-                                                'colonnes' => ['Sexe', 'Nombre', '%']]]),
+                                                        'rows' => $this->sexeRows($agents),
+                                                        'colonnes' => ['Sexe', 'Nombre', '%']]]),
             'effectif_par_fonction'        => collect([['nom' => 'EFFECTIF PAR FONCTION',
-                                                'rows' => $this->fonctionRows($agents),
-                                                'colonnes' => ['Fonction', 'Nombre', '%']]]),
+                                                        'rows' => $this->fonctionRows($agents),
+                                                        'colonnes' => ['Fonction', 'Nombre', '%']]]),
             default => collect(),
         };
 
@@ -190,7 +191,7 @@ abstract class TableauBaseController extends Controller
         if ($total === 0) return collect();
 
         $notesParAgent = $agents->map(function ($agent) use ($s1, $s2, $sem) {
-            $evals = $agent->evaluationsPersonnel->keyBy(fn ($e) => $e->semestre?->numero);
+            $evals = $agent->evaluations->merge($agent->evaluationsPersonnel)->keyBy(fn ($e) => $e->semestre?->numero);
             $n1    = ($s1 && $evals->get(1)?->note_finale !== null) ? (float)$evals->get(1)->note_finale : null;
             $n2    = ($s2 && $evals->get(2)?->note_finale !== null) ? (float)$evals->get(2)->note_finale : null;
             $raw   = match ($sem) {
@@ -246,7 +247,8 @@ abstract class TableauBaseController extends Controller
     private function fonctionRows(Collection $agents): Collection
     {
         $total  = $agents->count();
-        $groups = $agents->groupBy(fn ($a) => $a->role ?? 'Non renseigné');
+        $groups = $agents->groupBy(fn ($a) => $a->poste ?? 'Non renseigné');
+        
         $rows   = $groups->sortByDesc(fn ($g) => $g->count())
             ->map(fn ($g, $label) => [
                 'col1'  => $label, 'nombre' => $g->count(),
@@ -260,7 +262,7 @@ abstract class TableauBaseController extends Controller
 
     private function agentNote($agent, $s1, $s2, string $sem): ?int
     {
-        $evals = $agent->evaluationsPersonnel->keyBy(fn ($e) => $e->semestre?->numero);
+        $evals = $agent->evaluations->merge($agent->evaluationsPersonnel)->keyBy(fn ($e) => $e->semestre?->numero);
         $n1    = ($s1 && $evals->get(1)?->note_finale !== null) ? (float)$evals->get(1)->note_finale : null;
         $n2    = ($s2 && $evals->get(2)?->note_finale !== null) ? (float)$evals->get(2)->note_finale : null;
         $raw   = match ($sem) {
@@ -283,7 +285,7 @@ abstract class TableauBaseController extends Controller
         $noteVals = [5, 6, 7, 8, 9, 10];
 
         $data = $agents->map(fn ($a) => [
-            'poste' => $a->poste ?? $a->role ?? 'Non défini',
+            'poste' => $a->poste ?? 'Non défini',
             'note'  => $this->agentNote($a, $s1, $s2, $sem),
         ]);
 
@@ -671,27 +673,34 @@ abstract class TableauBaseController extends Controller
         $hasCharts = $payload['isNotes'] && count($chartRanges) > 0;
 
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-             . '<worksheet xmlns="'.$ns.'"'.($hasCharts ? ' xmlns:r="'.$nsR.'"' : '').'>'
+             . '<worksheet xmlns="' . $ns . '" xmlns:r="' . $nsR . '">'
+             . '<sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews>'
+             . '<sheetFormatPr defaultRowHeight="15"/>'
              . $colsXml
              . '<sheetData>';
 
-        $maxRow = 3;
-        if (!empty($rowHt)) $maxRow = max($maxRow, max(array_keys($rowHt)));
-        if (!empty($grid))  $maxRow = max($maxRow, max(array_keys($grid)));
+        $maxRow = count($grid) > 0 ? max(array_keys($grid)) : 0;
 
-        for ($rn = 1; $rn <= $maxRow; $rn++) {
-            $ht = $rowHt[$rn] ?? 15;
-            $xml .= '<row r="'.$rn.'" ht="'.$ht.'" customHeight="1">';
-            $cells = $grid[$rn] ?? [];
-            ksort($cells);
-            foreach ($cells as $cn => $cell) {
-                $ref = $L($cn) . $rn;
-                $s   = $cell['s'];
-                if ($cell['t'] === 's') {
-                    $v   = htmlspecialchars((string)$cell['v'], ENT_XML1 | ENT_QUOTES);
-                    $xml .= '<c r="'.$ref.'" t="inlineStr" s="'.$s.'"><is><t>'.$v.'</t></is></c>';
-                } else {
-                    $xml .= '<c r="'.$ref.'" s="'.$s.'"><v>'.(int)$cell['v'].'</v></c>';
+        for ($r = 1; $r <= $maxRow; $r++) {
+            $ht = $rowHt[$r] ?? 15;
+            if (!isset($grid[$r]) && !isset($rowHt[$r])) {
+                continue;
+            }
+            $xml .= '<row r="' . $r . '" ht="' . $ht . '" customHeight="1">';
+            if (isset($grid[$r])) {
+                foreach ($grid[$r] as $c => $cell) {
+                    $ref = $L($c) . $r;
+                    $s   = $cell['s'] ?? 0;
+                    $t   = $cell['t'] ?? 's';
+                    $v   = $cell['v'];
+
+                    $xml .= '<c r="' . $ref . '" s="' . $s . '" t="' . $t . '">';
+                    if ($t === 's') {
+                        $xml .= '<v>' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</v>';
+                    } else {
+                        $xml .= '<v>' . $v . '</v>';
+                    }
+                    $xml .= '</c>';
                 }
             }
             $xml .= '</row>';
@@ -699,9 +708,11 @@ abstract class TableauBaseController extends Controller
 
         $xml .= '</sheetData>';
 
-        if (! empty($merges)) {
-            $xml .= '<mergeCells count="'.count($merges).'">';
-            foreach ($merges as $m) { $xml .= '<mergeCell ref="'.$m.'"/>'; }
+        if (count($merges) > 0) {
+            $xml .= '<mergeCells count="' . count($merges) . '">';
+            foreach ($merges as $m) {
+                $xml .= '<mergeCell ref="' . $m . '"/>';
+            }
             $xml .= '</mergeCells>';
         }
 
@@ -710,129 +721,78 @@ abstract class TableauBaseController extends Controller
         }
 
         $xml .= '</worksheet>';
+
         return [$xml, $chartRanges];
     }
-
-    // ─── Graphiques ──────────────────────────────────────────────────────────
 
     private function xlsxSheetRels(): string
     {
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-             . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-             . '<Relationship Id="rId1"'
-             .   ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing"'
-             .   ' Target="../drawings/drawing1.xml"/>'
-             . '</Relationships>';
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>'
+            . '</Relationships>';
     }
 
     private function xlsxDrawingXml(array $chartRanges): string
     {
-        $ns_xdr = 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing';
-        $ns_a   = 'http://schemas.openxmlformats.org/drawingml/2006/main';
-        $ns_c   = 'http://schemas.openxmlformats.org/drawingml/2006/chart';
-        $ns_r   = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-             . '<xdr:wsDr xmlns:xdr="'.$ns_xdr.'" xmlns:a="'.$ns_a.'" xmlns:r="'.$ns_r.'">';
-
+            . '<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">';
+        
         foreach ($chartRanges as $i => $range) {
-            $fromRow = (int) ($range['fromRow'] ?? 3);
-            $toRow   = (int) ($range['toRow']   ?? $fromRow + 10);
+            $rId = 'rId' . ($i + 1);
+            $topRow = $range['fromRow'];
+            $botRow = $range['toRow'];
 
-            $xml .= '<xdr:twoCellAnchor moveWithCells="1" sizeWithCells="1">'
-                  . '<xdr:from>'
-                  .   '<xdr:col>5</xdr:col><xdr:colOff>114300</xdr:colOff>'
-                  .   '<xdr:row>'.$fromRow.'</xdr:row><xdr:rowOff>0</xdr:rowOff>'
-                  . '</xdr:from>'
-                  . '<xdr:to>'
-                  .   '<xdr:col>15</xdr:col><xdr:colOff>0</xdr:colOff>'
-                  .   '<xdr:row>'.$toRow.'</xdr:row><xdr:rowOff>0</xdr:rowOff>'
-                  . '</xdr:to>'
-                  . '<xdr:graphicFrame macro="">'
-                  .   '<xdr:nvGraphicFramePr>'
-                  .     '<xdr:cNvPr id="'.($i + 2).'" name="Graphique '.($i + 1).'"/>'
-                  .     '<xdr:cNvGraphicFramePr/>'
-                  .   '</xdr:nvGraphicFramePr>'
-                  .   '<xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm>'
-                  .   '<a:graphic><a:graphicData uri="'.$ns_c.'">'
-                  .     '<c:chart xmlns:c="'.$ns_c.'" r:id="rId'.($i + 1).'"/>'
-                  .   '</a:graphicData></a:graphic>'
-                  . '</xdr:graphicFrame>'
-                  . '<xdr:clientData/>'
-                  . '</xdr:twoCellAnchor>';
+            $xml .= '<xdr:twoCellAnchor>'
+                . '<xdr:from><xdr:col>5</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' . $topRow . '</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>'
+                . '<xdr:to><xdr:col>12</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>' . $botRow . '</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to>'
+                . '<xdr:graphicFrame macro="">'
+                . '<xdr:nvGraphicFramePr><xdr:cNvPr id="' . ($i + 10) . '" name="Graphique ' . ($i + 1) . '"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr>'
+                . '<xdr:xfrm><a:off x="0" y="0"/><a:ext x="0" y="0"/></xdr:xfrm>'
+                . '<a:graphic><a:graphicData xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="' . $rId . '" Type="http://schemas.openxmlformats.org/drawingml/2006/chart"/></a:graphic>'
+                . '</xdr:graphicFrame>'
+                . '<xdr:clientData/>'
+                . '</xdr:twoCellAnchor>';
         }
-
         return $xml . '</xdr:wsDr>';
     }
 
     private function xlsxDrawingRels(int $numCharts): string
     {
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-             . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
         for ($i = 1; $i <= $numCharts; $i++) {
-            $xml .= '<Relationship Id="rId'.$i.'"'
-                  .   ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"'
-                  .   ' Target="../charts/chart'.$i.'.xml"/>';
+            $xml .= '<Relationship Id="rId' . $i . '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart' . $i . '.xml"/>';
         }
         return $xml . '</Relationships>';
     }
 
     private function xlsxChartXml(array $range): string
     {
-        $nc = 'http://schemas.openxmlformats.org/drawingml/2006/chart';
-        $na = 'http://schemas.openxmlformats.org/drawingml/2006/main';
-        $nr = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
-
-        $sheet     = 'Statistiques';
-        $labelCol  = $range['labelCol'] ?? 'B';
-        $valueCol  = $range['valueCol'] ?? 'C';
-        $labelRef  = $sheet.'!$'.$labelCol.'$'.$range['dataStart'].':$'.$labelCol.'$'.$range['dataEnd'];
-        $valueRef  = $sheet.'!$'.$valueCol.'$'.$range['dataStart'].':$'.$valueCol.'$'.$range['dataEnd'];
-        $title     = htmlspecialchars('NOTES '.$range['name'], ENT_XML1);
+        $title = htmlspecialchars($range['name'], ENT_QUOTES, 'UTF-8');
+        $lCol  = $range['labelCol'];
+        $vCol  = $range['valueCol'];
+        $sRow  = $range['dataStart'];
+        $eRow  = $range['dataEnd'];
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-             . '<c:chartSpace xmlns:c="'.$nc.'" xmlns:a="'.$na.'" xmlns:r="'.$nr.'">'
-             . '<c:lang val="fr-FR"/>'
-             . '<c:chart>'
-             . '<c:title><c:tx><c:rich>'
-             .   '<a:bodyPr/><a:lstStyle/>'
-             .   '<a:p><a:pPr><a:defRPr b="1" sz="1100"/></a:pPr>'
-             .   '<a:r><a:t>'.$title.'</a:t></a:r>'
-             . '</a:p></c:rich></c:tx><c:overlay val="0"/></c:title>'
-             . '<c:autoTitleDeleted val="0"/>'
-             . '<c:plotArea>'
-             . '<c:barChart>'
-             .   '<c:barDir val="col"/>'
-             .   '<c:grouping val="clustered"/>'
-             .   '<c:varyColors val="1"/>'
-             .   '<c:ser>'
-             .     '<c:idx val="0"/><c:order val="0"/>'
-             .     '<c:tx><c:strRef><c:f/>'
-             .       '<c:strCache><c:ptCount val="1"/>'
-             .       '<c:pt idx="0"><c:v>Nombre d\'agents</c:v></c:pt>'
-             .     '</c:strCache></c:strRef></c:tx>'
-             .     '<c:cat><c:strRef><c:f>'.$labelRef.'</c:f></c:strRef></c:cat>'
-             .     '<c:val><c:numRef><c:f>'.$valueRef.'</c:f></c:numRef></c:val>'
-             .   '</c:ser>'
-             .   '<c:axId val="10"/><c:axId val="20"/>'
-             . '</c:barChart>'
-             . '<c:catAx>'
-             .   '<c:axId val="10"/>'
-             .   '<c:scaling><c:orientation val="minMax"/></c:scaling>'
-             .   '<c:delete val="0"/><c:axPos val="b"/>'
-             .   '<c:crossAx val="20"/>'
-             . '</c:catAx>'
-             . '<c:valAx>'
-             .   '<c:axId val="20"/>'
-             .   '<c:scaling><c:orientation val="minMax"/></c:scaling>'
-             .   '<c:delete val="0"/><c:axPos val="l"/>'
-             .   '<c:numFmt formatCode="General" sourceLinked="1"/>'
-             .   '<c:crossAx val="10"/>'
-             . '</c:valAx>'
-             . '</c:plotArea>'
-             . '<c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend>'
-             . '<c:plotVisOnly val="1"/>'
-             . '</c:chart>'
-             . '</c:chartSpace>';
+            . '<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            . '<c:chart>'
+            . '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr b="1"/><a:t>' . $title . '</a:t></a:r></a:p></c:rich></c:tx></c:title>'
+            . '<c:plotArea>'
+            . '<c:barChart>'
+            . '<c:barDir val="col"/><c:grouping val="clustered"/>'
+            . '<c:ser>'
+            . '<c:idx val="0"/><c:order val="0"/>'
+            . '<c:cat><c:strRef><c:f>Statistiques!$' . $lCol . '$' . $sRow . ':$' . $lCol . '$' . $eRow . '</c:f></c:strRef></c:cat>'
+            . '<c:val><c:numRef><c:f>Statistiques!$' . $vCol . '$' . $sRow . ':$' . $vCol . '$' . $eRow . '</c:f></c:numRef></c:val>'
+            . '</c:ser>'
+            . '<c:axId val="11111"/><c:axId val="22222"/>'
+            . '</c:barChart>'
+            . '<c:catAx><c:axId val="11111"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="b"/><c:lblAlgn val="ctr"/></c:catAx>'
+            . '<c:valAx><c:axId val="22222"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:axPos val="l"/><c:majorGridlines/></c:valAx>'
+            . '</c:plotArea>'
+            . '</c:chart>'
+            . '</c:chartSpace>';
     }
 }

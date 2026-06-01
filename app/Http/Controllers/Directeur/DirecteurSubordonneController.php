@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Directeur;
 
+use App\Helpers\AgentStructure;
 use App\Http\Controllers\Controller;
 use App\Models\Agence;
 use App\Models\Alerte;
 use App\Models\Annee;
 use App\Models\Caisse;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
@@ -179,6 +181,50 @@ class DirecteurSubordonneController extends Controller
         return view('directeur.subordonnes.chefs', compact('ctx', 'direction', 'chefsData'));
     }
 
+    // ── Index — Chefs d'agence (Directeur_Caisse uniquement) ──────────────
+
+    /**
+     * Liste des chefs d'agence — pour le Directeur de Caisse uniquement.
+     * Une carte par agence avec la dernière évaluation et le nombre de fiches.
+     */
+    public function indexAgenceChefs(): View
+    {
+        $ctx = $this->getContext();
+        if (! $ctx->hasAgences()) {
+            abort(403, 'Accès réservé au Directeur de Caisse.');
+        }
+
+        $direction = $ctx->entity;
+
+        $agencesData = $ctx->getAgencesWithGuichets()->map(function (Agence $agence) {
+            $chef     = $agence->chef; // Agent|null (via chef_agent_id)
+            $chefUser = $chef ? User::where('agent_id', $chef->id)->first() : null;
+
+            $latestEval = Evaluation::where('evaluable_type', Agence::class)
+                ->where('evaluable_id', $agence->id)
+                ->where('evaluable_role', 'manager')
+                ->where('evaluateur_id', Auth::id())
+                ->orderByDesc('date_debut')
+                ->first();
+
+            return [
+                'agence'      => $agence,
+                'chef'        => $chef,
+                'chefUser'    => $chefUser,
+                'latestEval'  => $latestEval,
+                'evalCount'   => Evaluation::where('evaluable_type', Agence::class)
+                    ->where('evaluable_id', $agence->id)
+                    ->where('evaluateur_id', Auth::id())->count(),
+                'ficheCount'  => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->count()
+                    : 0,
+                'agentsCount' => $agence->agents->count(),
+            ];
+        });
+
+        return view('directeur.subordonnes.agences', compact('ctx', 'direction', 'agencesData'));
+    }
+
     // ── Index — Directeurs de caisse (DT uniquement, persons) ─────────────
 
     /**
@@ -349,29 +395,65 @@ class DirecteurSubordonneController extends Controller
         $direction = $ctx->entity;
         $tab       = $request->get('tab', 'evaluations');
 
-        $evaluations = Evaluation::where('evaluable_type', Service::class)
+        $statut = (string) $request->get('statut', '');
+        $search = (string) $request->get('search', '');
+
+        $baseE = fn () => Evaluation::where('evaluable_type', Service::class)
             ->where('evaluable_id', $service->id)
             ->where('evaluable_role', 'manager')
-            ->where('evaluateur_id', Auth::id())
-            ->with('identification')
-            ->orderByDesc('date_debut')
-            ->get();
+            ->where('evaluateur_id', Auth::id());
+
+        $evalsQ = $baseE()->with(['evaluateur', 'identification'])->orderByDesc('date_debut');
+        if ($statut && $tab === 'evaluations') {
+            $evalsQ->where('statut', $statut);
+        }
+        $evaluations = $evalsQ->get();
+
+        $evaluationsStats = [
+            'total'     => $baseE()->count(),
+            'brouillon' => $baseE()->where('statut', 'brouillon')->count(),
+            'soumis'    => $baseE()->where('statut', 'soumis')->count(),
+            'valide'    => $baseE()->where('statut', 'valide')->count(),
+        ];
 
         $service->load('chef');
         $chefUser = $service->chef
             ? User::where('agent_id', $service->chef->id)->first()
             : null;
 
-        $fiches = $chefUser
-            ? FicheObjectif::where('assignable_type', User::class)
-                ->where('assignable_id', $chefUser->id)
-                ->withCount('objectifs')
-                ->orderByDesc('date')
-                ->get()
-            : collect();
+        if ($chefUser) {
+            $baseF   = fn () => FicheObjectif::where('assignable_type', User::class)
+                ->where('assignable_id', $chefUser->id);
+            $fichesQ = $baseF()->with('objectifs')->withCount('objectifs')->orderByDesc('date');
+            if ($tab === 'objectifs') {
+                if ($statut) {
+                    if ($statut === 'en_attente') {
+                        $fichesQ->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'));
+                    } else {
+                        $fichesQ->where('statut', $statut);
+                    }
+                }
+                if ($search) {
+                    $fichesQ->where('titre', 'like', "%{$search}%");
+                }
+            }
+            $fiches      = $fichesQ->get();
+            $fichesStats = [
+                'total'      => $baseF()->count(),
+                'acceptees'  => $baseF()->where('statut', 'acceptee')->count(),
+                'en_attente' => $baseF()->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
+                'refusees'   => $baseF()->where('statut', 'refusee')->count(),
+            ];
+        } else {
+            $fiches      = collect();
+            $fichesStats = ['total' => 0, 'acceptees' => 0, 'en_attente' => 0, 'refusees' => 0];
+        }
+
+        $filters = compact('tab', 'statut', 'search');
 
         return view('directeur.subordonnes.service', compact(
-            'direction', 'service', 'tab', 'evaluations', 'fiches'
+            'direction', 'service', 'tab', 'evaluations', 'evaluationsStats',
+            'fiches', 'fichesStats', 'filters', 'chefUser'
         ));
     }
 
@@ -395,21 +477,55 @@ class DirecteurSubordonneController extends Controller
         $secretaire = User::findOrFail($ctx->getSecretaireUserId());
         $tab        = $request->get('tab', 'evaluations');
 
-        $evaluations = Evaluation::where('evaluable_type', User::class)
-            ->where('evaluable_id', $secretaire->id)
-            ->where('evaluateur_id', Auth::id())
-            ->with('identification')
-            ->orderByDesc('date_debut')
-            ->get();
+        $statut = (string) $request->get('statut', '');
+        $search = (string) $request->get('search', '');
 
-        $fiches = FicheObjectif::where('assignable_type', User::class)
-            ->where('assignable_id', $secretaire->id)
-            ->withCount('objectifs')
-            ->orderByDesc('date')
-            ->get();
+        $baseE = fn () => Evaluation::where('evaluable_type', User::class)
+            ->where('evaluable_id', $secretaire->id)
+            ->where('evaluateur_id', Auth::id());
+
+        $evalsQ = $baseE()->with(['evaluateur', 'identification'])->orderByDesc('date_debut');
+        if ($statut && $tab === 'evaluations') {
+            $evalsQ->where('statut', $statut);
+        }
+        $evaluations = $evalsQ->get();
+
+        $evaluationsStats = [
+            'total'     => $baseE()->count(),
+            'brouillon' => $baseE()->where('statut', 'brouillon')->count(),
+            'soumis'    => $baseE()->where('statut', 'soumis')->count(),
+            'valide'    => $baseE()->where('statut', 'valide')->count(),
+        ];
+
+        $baseF   = fn () => FicheObjectif::where('assignable_type', User::class)
+            ->where('assignable_id', $secretaire->id);
+        $fichesQ = $baseF()->with('objectifs')->withCount('objectifs')->orderByDesc('date');
+        if ($tab === 'objectifs') {
+            if ($statut) {
+                if ($statut === 'en_attente') {
+                    $fichesQ->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'));
+                } else {
+                    $fichesQ->where('statut', $statut);
+                }
+            }
+            if ($search) {
+                $fichesQ->where('titre', 'like', "%{$search}%");
+            }
+        }
+        $fiches = $fichesQ->get();
+
+        $fichesStats = [
+            'total'      => $baseF()->count(),
+            'acceptees'  => $baseF()->where('statut', 'acceptee')->count(),
+            'en_attente' => $baseF()->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
+            'refusees'   => $baseF()->where('statut', 'refusee')->count(),
+        ];
+
+        $filters = compact('tab', 'statut', 'search');
 
         return view('directeur.subordonnes.secretaire', compact(
-            'direction', 'secretaire', 'tab', 'evaluations', 'fiches'
+            'direction', 'secretaire', 'tab', 'evaluations', 'evaluationsStats',
+            'fiches', 'fichesStats', 'filters'
         ));
     }
 
@@ -446,7 +562,7 @@ class DirecteurSubordonneController extends Controller
             'id'            => $f->id,
             'titre'         => $f->titre,
             'date_echeance' => $f->date_echeance instanceof Carbon ? $f->date_echeance->toDateString() : (string) $f->date_echeance,
-            'objectifs'     => $f->objectifs->map(fn ($item) => [
+            'objectifs'     => $f->objectifs->filter(fn ($item) => (int) ($item->avancement_percentage ?? 0) > 0)->map(fn ($item) => [
                 'source_fiche_objectif_objectif_id' => $item->id,
                 'titre'                             => $item->description,
             ])->values()->all(),
@@ -536,7 +652,9 @@ class DirecteurSubordonneController extends Controller
         $identification['matricule']         = $agentSec?->matricule ?? null;
         $identification['nom_prenom']        = $agentSec ? trim($agentSec->prenom . ' ' . $agentSec->nom) : $secretaire->name;
         $identification['emploi']            = $agentSec?->poste ?: $agentSec?->role;
-        $identification['direction']         = $agentSec?->entite?->sigle ?: ($agentSec?->entite?->nom ?? null);
+        $identification['direction']         = $agentSec
+            ? AgentStructure::entiteLabel($agentSec)
+            : 'Faitière des Caisses Populaires du Burkina';
         $identification['direction_service'] = $agentSec?->direction?->nom
             ?? $agentSec?->delegationTechnique?->nom
             ?? $agentSec?->caisse?->nom
@@ -646,11 +764,28 @@ class DirecteurSubordonneController extends Controller
             default       => ucfirst((string) $evaluation->statut),
         };
 
-        return view('directeur.subordonnes.evaluations.show', compact(
-            'evaluation', 'direction', 'secretaire',
-            'objectiveCriteria', 'subjectiveCriteria',
-            'note', 'mention', 'ident', 'statusClass', 'statusLabel'
-        ));
+        $subjectiveTemplates = $subjectiveCriteria->isEmpty()
+            ? \App\Models\SubjectiveCriteriaTemplate::with('subcriteria')->where('is_active', true)->orderBy('ordre')->get()
+            : collect();
+
+        return view('evaluations.show', [
+            'evaluation'          => $evaluation,
+            'objectiveCriteria'   => $objectiveCriteria,
+            'subjectiveCriteria'  => $subjectiveCriteria,
+            'note'                => $note,
+            'mention'             => $mention,
+            'ident'               => $ident,
+            'cibleLabel'          => $secretaire->name,
+            'cibleType'           => 'Secrétaire',
+            'statusLabel'         => $statusLabel,
+            'statusClass'         => $statusClass,
+            'layout'              => 'layouts.directeur',
+            'backRoute'           => route('directeur.subordonnes.secretaire', ['tab' => 'evaluations']),
+            'breadcrumb'          => 'Espace Directeur · Secrétaire',
+            'soumettreRoute'      => 'directeur.subordonnes.secretaire.evaluations.submit',
+            'destroyRoute'        => 'directeur.subordonnes.secretaire.evaluations.destroy',
+            'subjectiveTemplates' => $subjectiveTemplates,
+        ]);
     }
 
     /**
@@ -673,7 +808,8 @@ class DirecteurSubordonneController extends Controller
             (int) $evaluation->evaluable_id,
             'Nouvelle fiche d\'évaluation reçue',
             'Le Directeur vous a soumis une fiche d\'évaluation. Connectez-vous pour la consulter.',
-            'haute'
+            'haute',
+            route('personnel.evaluations.show', $evaluation)
         );
 
         return redirect()->route('directeur.subordonnes.secretaire', ['tab' => 'evaluations'])
@@ -767,7 +903,6 @@ class DirecteurSubordonneController extends Controller
 
         try {
             $anneeId = Annee::resolveOpenYearId(now());
-            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -798,7 +933,8 @@ class DirecteurSubordonneController extends Controller
                 $chefUser->id,
                 'Nouvelle fiche d\'objectifs reçue',
                 "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-                'haute'
+                'haute',
+                route('chef.mes-fiches.show', $fiche)
             );
         }
 
@@ -818,15 +954,18 @@ class DirecteurSubordonneController extends Controller
     public function showServiceObjectif(FicheObjectif $fiche): View
     {
         [$ctx, $service] = $this->authorizeObjectifService($fiche);
-        $direction = $ctx->entity;
-        $fiche->load('objectifs');
+        $fiche->load(['objectifs', 'annee']);
 
-        $statusClass = $this->ficheStatusClass($fiche->statut);
-        $statusLabel = $this->ficheStatusLabel($fiche->statut);
-
-        return view('directeur.subordonnes.objectifs.show', compact(
-            'fiche', 'direction', 'service', 'statusClass', 'statusLabel'
-        ) + ['secretaire' => null, 'agence' => null, 'caisse' => null]);
+        return view('objectifs.show', [
+            'layout'         => 'layouts.directeur',
+            'fiche'          => $fiche,
+            'backRoute'      => route('directeur.subordonnes.service', ['service' => $service->id, 'tab' => 'objectifs']),
+            'editRoute'      => 'directeur.subordonnes.service.objectifs.edit',
+            'destroyRoute'   => 'directeur.subordonnes.service.objectifs.destroy',
+            'soumettreRoute' => 'directeur.subordonnes.objectifs.soumettre',
+            'pdfRoute'       => 'directeur.subordonnes.objectifs.pdf',
+            'isAssignee'     => false,
+        ]);
     }
 
     public function editServiceObjectif(FicheObjectif $fiche): View|RedirectResponse
@@ -857,7 +996,7 @@ class DirecteurSubordonneController extends Controller
         $fiche->load('objectifs');
         $chefUser = $service->chef ? User::where('agent_id', $service->chef->id)->first() : null;
 
-        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.service.objectifs.show', $chefUser);
+        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.service.objectifs.show', $chefUser, $chefUser ? route('chef.mes-fiches.show', $fiche) : null);
     }
 
     /**
@@ -933,7 +1072,6 @@ class DirecteurSubordonneController extends Controller
 
         try {
             $anneeId = Annee::resolveOpenYearId(now());
-            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -964,7 +1102,8 @@ class DirecteurSubordonneController extends Controller
                 $secretaire->id,
                 'Nouvelle fiche d\'objectifs reçue',
                 "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-                'haute'
+                'haute',
+                route('personnel.fiches.show', $fiche)
             );
         }
 
@@ -982,17 +1121,19 @@ class DirecteurSubordonneController extends Controller
      */
     public function showSecretaireObjectif(FicheObjectif $fiche): View
     {
-        $ctx        = $this->authorizeObjectifSecretaire($fiche);
-        $direction  = $ctx->entity;
-        $secretaire = User::findOrFail($fiche->assignable_id);
-        $fiche->load('objectifs');
+        $this->authorizeObjectifSecretaire($fiche);
+        $fiche->load(['objectifs', 'annee']);
 
-        $statusClass = $this->ficheStatusClass($fiche->statut);
-        $statusLabel = $this->ficheStatusLabel($fiche->statut);
-
-        return view('directeur.subordonnes.objectifs.show', compact(
-            'fiche', 'direction', 'secretaire', 'statusClass', 'statusLabel'
-        ) + ['service' => null, 'agence' => null, 'caisse' => null]);
+        return view('objectifs.show', [
+            'layout'         => 'layouts.directeur',
+            'fiche'          => $fiche,
+            'backRoute'      => route('directeur.subordonnes.secretaire', ['tab' => 'objectifs']),
+            'editRoute'      => 'directeur.subordonnes.secretaire.objectifs.edit',
+            'destroyRoute'   => 'directeur.subordonnes.secretaire.objectifs.destroy',
+            'soumettreRoute' => 'directeur.subordonnes.objectifs.soumettre',
+            'pdfRoute'       => 'directeur.subordonnes.objectifs.pdf',
+            'isAssignee'     => false,
+        ]);
     }
 
     public function editSecretaireObjectif(FicheObjectif $fiche): View|RedirectResponse
@@ -1022,7 +1163,7 @@ class DirecteurSubordonneController extends Controller
         $fiche->load('objectifs');
         $secretaire = User::find($fiche->assignable_id);
 
-        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.secretaire.objectifs.show', $secretaire);
+        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.secretaire.objectifs.show', $secretaire, $secretaire ? route('personnel.fiches.show', $fiche) : null);
     }
 
     /**
@@ -1061,9 +1202,9 @@ class DirecteurSubordonneController extends Controller
             abort(403);
         }
 
-        // Le chef doit diriger une agence appartenant à ce directeur.
+        // Le chef doit diriger une agence appartenant à la caisse de ce directeur.
         $agence = Agence::where('chef_agent_id', $user->agent_id)
-            ->whereHas('caisse', fn ($q) => $q->where('delegation_technique_id', $ctx->getId()))
+            ->where('caisse_id', $ctx->getId())
             ->first();
 
         if (! $agence || ! $ctx->agenceOwnedBy($agence)) {
@@ -1079,30 +1220,66 @@ class DirecteurSubordonneController extends Controller
         $direction = $ctx->entity;
         $tab       = $request->get('tab', 'evaluations');
 
+        $statut = (string) $request->get('statut', '');
+        $search = (string) $request->get('search', '');
+
         $agence->load(['chef', 'guichets']);
 
-        $evaluations = Evaluation::where('evaluable_type', Agence::class)
+        $baseE = fn () => Evaluation::where('evaluable_type', Agence::class)
             ->where('evaluable_id', $agence->id)
             ->where('evaluable_role', 'manager')
-            ->where('evaluateur_id', Auth::id())
-            ->with('identification')
-            ->orderByDesc('date_debut')
-            ->get();
+            ->where('evaluateur_id', Auth::id());
+
+        $evalsQ = $baseE()->with(['evaluateur', 'identification'])->orderByDesc('date_debut');
+        if ($statut && $tab === 'evaluations') {
+            $evalsQ->where('statut', $statut);
+        }
+        $evaluations = $evalsQ->get();
+
+        $evaluationsStats = [
+            'total'     => $baseE()->count(),
+            'brouillon' => $baseE()->where('statut', 'brouillon')->count(),
+            'soumis'    => $baseE()->where('statut', 'soumis')->count(),
+            'valide'    => $baseE()->where('statut', 'valide')->count(),
+        ];
 
         $chefAgenceUser = $agence->chef_agent_id
             ? User::where('agent_id', $agence->chef_agent_id)->first()
             : null;
 
-        $fiches = $chefAgenceUser
-            ? FicheObjectif::where('assignable_type', User::class)
-                ->where('assignable_id', $chefAgenceUser->id)
-                ->withCount('objectifs')
-                ->orderByDesc('date')
-                ->get()
-            : collect();
+        if ($chefAgenceUser) {
+            $baseF   = fn () => FicheObjectif::where('assignable_type', User::class)
+                ->where('assignable_id', $chefAgenceUser->id);
+            $fichesQ = $baseF()->with('objectifs')->withCount('objectifs')->orderByDesc('date');
+            if ($tab === 'objectifs') {
+                if ($statut) {
+                    if ($statut === 'en_attente') {
+                        $fichesQ->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'));
+                    } else {
+                        $fichesQ->where('statut', $statut);
+                    }
+                }
+                if ($search) {
+                    $fichesQ->where('titre', 'like', "%{$search}%");
+                }
+            }
+            $fiches      = $fichesQ->get();
+            $fichesStats = [
+                'total'      => $baseF()->count(),
+                'acceptees'  => $baseF()->where('statut', 'acceptee')->count(),
+                'en_attente' => $baseF()->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
+                'refusees'   => $baseF()->where('statut', 'refusee')->count(),
+            ];
+        } else {
+            $fiches      = collect();
+            $fichesStats = ['total' => 0, 'acceptees' => 0, 'en_attente' => 0, 'refusees' => 0];
+        }
+
+        $filters = compact('tab', 'statut', 'search');
 
         return view('directeur.subordonnes.agence', compact(
-            'direction', 'agence', 'tab', 'evaluations', 'fiches'
+            'direction', 'agence', 'tab', 'evaluations', 'evaluationsStats',
+            'fiches', 'fichesStats', 'filters', 'chefAgenceUser'
         ));
     }
 
@@ -1122,8 +1299,7 @@ class DirecteurSubordonneController extends Controller
             'agence'       => $agence,
             'oldObjectifs' => $oldObjectifs,
             'storeRoute'   => 'directeur.subordonnes.agence.objectifs.store',
-            'hiddenField'  => 'agence_id',
-            'hiddenValue'  => $agence->id,
+            'hiddenField'  => ['name' => 'agence_id', 'value' => $agence->id],
             'cibleLabel'   => 'Agence — '.$agence->nom,
             'backRoute'    => route('directeur.subordonnes.agence', ['agence' => $agence->id, 'tab' => 'objectifs']),
         ]);
@@ -1159,7 +1335,6 @@ class DirecteurSubordonneController extends Controller
 
         try {
             $anneeId = Annee::resolveOpenYearId(now());
-            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -1190,7 +1365,8 @@ class DirecteurSubordonneController extends Controller
                 $chefAgenceUser->id,
                 'Nouvelle fiche d\'objectifs reçue',
                 "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-                'haute'
+                'haute',
+                route('chef.mes-fiches.show', $fiche)
             );
         }
 
@@ -1206,15 +1382,18 @@ class DirecteurSubordonneController extends Controller
     public function showAgenceObjectif(FicheObjectif $fiche): View
     {
         [$ctx, $agence] = $this->authorizeObjectifAgence($fiche);
-        $direction = $ctx->entity;
-        $fiche->load('objectifs');
+        $fiche->load(['objectifs', 'annee']);
 
-        $statusClass = $this->ficheStatusClass($fiche->statut);
-        $statusLabel = $this->ficheStatusLabel($fiche->statut);
-
-        return view('directeur.subordonnes.objectifs.show', compact(
-            'fiche', 'direction', 'statusClass', 'statusLabel'
-        ) + ['service' => null, 'secretaire' => null, 'agence' => $agence, 'caisse' => null]);
+        return view('objectifs.show', [
+            'layout'         => 'layouts.directeur',
+            'fiche'          => $fiche,
+            'backRoute'      => route('directeur.subordonnes.agence', ['agence' => $agence->id, 'tab' => 'objectifs']),
+            'editRoute'      => 'directeur.subordonnes.agence.objectifs.edit',
+            'destroyRoute'   => 'directeur.subordonnes.agence.objectifs.destroy',
+            'soumettreRoute' => 'directeur.subordonnes.objectifs.soumettre',
+            'pdfRoute'       => 'directeur.subordonnes.objectifs.pdf',
+            'isAssignee'     => false,
+        ]);
     }
 
     public function editAgenceObjectif(FicheObjectif $fiche): View|RedirectResponse
@@ -1245,7 +1424,7 @@ class DirecteurSubordonneController extends Controller
         $fiche->load('objectifs');
         $chefUser = $agence->chef_agent_id ? User::where('agent_id', $agence->chef_agent_id)->first() : null;
 
-        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.agence.objectifs.show', $chefUser);
+        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.agence.objectifs.show', $chefUser, $chefUser ? route('chef.mes-fiches.show', $fiche) : null);
     }
 
     public function destroyAgenceObjectif(FicheObjectif $fiche): RedirectResponse
@@ -1301,26 +1480,64 @@ class DirecteurSubordonneController extends Controller
         $ctx = $this->authorizeCaisse($caisse);
         $tab = $request->get('tab', 'evaluations');
 
-        $evaluations = Evaluation::where('evaluable_type', Caisse::class)
+        $statut = (string) $request->get('statut', '');
+        $search = (string) $request->get('search', '');
+
+        $baseE = fn () => Evaluation::where('evaluable_type', Caisse::class)
             ->where('evaluable_id', $caisse->id)
-            ->where('evaluateur_id', Auth::id())
-            ->with('identification')
-            ->orderByDesc('date_debut')
-            ->get();
+            ->where('evaluateur_id', Auth::id());
+
+        $evalsQ = $baseE()->with(['evaluateur', 'identification'])->orderByDesc('date_debut');
+        if ($statut && $tab === 'evaluations') {
+            $evalsQ->where('statut', $statut);
+        }
+        $evaluations = $evalsQ->get();
+
+        $evaluationsStats = [
+            'total'     => $baseE()->count(),
+            'brouillon' => $baseE()->where('statut', 'brouillon')->count(),
+            'soumis'    => $baseE()->where('statut', 'soumis')->count(),
+            'valide'    => $baseE()->where('statut', 'valide')->count(),
+        ];
 
         $directeurUser = $caisse->directeur_agent_id
             ? User::where('agent_id', $caisse->directeur_agent_id)->first()
             : null;
 
-        $fiches = $directeurUser
-            ? FicheObjectif::where('assignable_type', User::class)
-                ->where('assignable_id', $directeurUser->id)
-                ->withCount('objectifs')
-                ->orderByDesc('date')
-                ->get()
-            : collect();
+        if ($directeurUser) {
+            $baseF   = fn () => FicheObjectif::where('assignable_type', User::class)
+                ->where('assignable_id', $directeurUser->id);
+            $fichesQ = $baseF()->with('objectifs')->withCount('objectifs')->orderByDesc('date');
+            if ($tab === 'objectifs') {
+                if ($statut) {
+                    if ($statut === 'en_attente') {
+                        $fichesQ->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'));
+                    } else {
+                        $fichesQ->where('statut', $statut);
+                    }
+                }
+                if ($search) {
+                    $fichesQ->where('titre', 'like', "%{$search}%");
+                }
+            }
+            $fiches      = $fichesQ->get();
+            $fichesStats = [
+                'total'      => $baseF()->count(),
+                'acceptees'  => $baseF()->where('statut', 'acceptee')->count(),
+                'en_attente' => $baseF()->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
+                'refusees'   => $baseF()->where('statut', 'refusee')->count(),
+            ];
+        } else {
+            $fiches      = collect();
+            $fichesStats = ['total' => 0, 'acceptees' => 0, 'en_attente' => 0, 'refusees' => 0];
+        }
 
-        return view('directeur.subordonnes.caisse', compact('caisse', 'tab', 'evaluations', 'fiches', 'directeurUser', 'ctx'));
+        $filters = compact('tab', 'statut', 'search');
+
+        return view('directeur.subordonnes.caisse', compact(
+            'caisse', 'tab', 'evaluations', 'evaluationsStats',
+            'fiches', 'fichesStats', 'filters', 'directeurUser', 'ctx'
+        ));
     }
 
     public function createCaisseObjectif(Caisse $caisse): View
@@ -1378,7 +1595,6 @@ class DirecteurSubordonneController extends Controller
 
         try {
             $anneeId = Annee::resolveOpenYearId(now());
-            Annee::resolveOpenSemestreId(now()); // bloque si semestre clôturé
         } catch (\RuntimeException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
@@ -1409,7 +1625,8 @@ class DirecteurSubordonneController extends Controller
                 $directeurUser->id,
                 'Nouvelle fiche d\'objectifs reçue',
                 "Le Directeur Technique vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-                'haute'
+                'haute',
+                route('directeur.objectifs.show', $fiche)
             );
         }
 
@@ -1422,20 +1639,20 @@ class DirecteurSubordonneController extends Controller
             ->with('status', $msg);
     }
 
-    public function showCaisseObjectif(Request $request, FicheObjectif $fiche): View
+    public function showCaisseObjectif(FicheObjectif $fiche): View
     {
         [$ctx, $caisse] = $this->authorizeObjectifCaisse($fiche);
-        $fiche->load('objectifs');
+        $fiche->load(['objectifs', 'annee']);
 
-        return view('directeur.subordonnes.objectifs.show', [
-            'fiche'       => $fiche,
-            'direction'   => $ctx->entity,
-            'service'     => null,
-            'secretaire'  => null,
-            'agence'      => null,
-            'caisse'      => $caisse,
-            'statusClass' => $this->ficheStatusClass($fiche->statut),
-            'statusLabel' => $this->ficheStatusLabel($fiche->statut),
+        return view('objectifs.show', [
+            'layout'         => 'layouts.directeur',
+            'fiche'          => $fiche,
+            'backRoute'      => route('directeur.subordonnes.caisse', ['caisse' => $caisse->id, 'tab' => 'objectifs']),
+            'editRoute'      => 'directeur.subordonnes.caisse.objectifs.edit',
+            'destroyRoute'   => 'directeur.subordonnes.caisse.objectifs.destroy',
+            'soumettreRoute' => 'directeur.subordonnes.objectifs.soumettre',
+            'pdfRoute'       => 'directeur.subordonnes.objectifs.pdf',
+            'isAssignee'     => false,
         ]);
     }
 
@@ -1467,7 +1684,7 @@ class DirecteurSubordonneController extends Controller
         $fiche->load('objectifs');
         $directeurUser = $caisse->directeur_agent_id ? User::where('agent_id', $caisse->directeur_agent_id)->first() : null;
 
-        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.caisse.objectifs.show', $directeurUser);
+        return $this->_performUpdateObjectif($fiche, $request, 'directeur.subordonnes.caisse.objectifs.show', $directeurUser, $directeurUser ? route('directeur.objectifs.show', $fiche) : null);
     }
 
     public function destroyCaisseObjectif(FicheObjectif $fiche): RedirectResponse
@@ -1507,6 +1724,7 @@ class DirecteurSubordonneController extends Controller
 
         $agentId       = $assigneeUser->agent_id;
         $redirectRoute = null;
+        $assigneeLien  = null;
 
         // Service chef ?
         $service = Service::whereIn('id', $ctx->getServiceIds())
@@ -1514,11 +1732,13 @@ class DirecteurSubordonneController extends Controller
             ->first();
         if ($service) {
             $redirectRoute = route('directeur.subordonnes.service.objectifs.show', $fiche);
+            $assigneeLien  = route('chef.mes-fiches.show', $fiche);
         }
 
         // Secrétaire ?
         if (! $redirectRoute && (int) $ctx->getSecretaireUserId() === $assigneeUser->id) {
             $redirectRoute = route('directeur.subordonnes.secretaire.objectifs.show', $fiche);
+            $assigneeLien  = route('personnel.fiches.show', $fiche);
         }
 
         // Chef d'agence (Directeur_Caisse) ?
@@ -1528,6 +1748,7 @@ class DirecteurSubordonneController extends Controller
                 ->first();
             if ($agence) {
                 $redirectRoute = route('directeur.subordonnes.agence.objectifs.show', $fiche);
+                $assigneeLien  = route('chef.mes-fiches.show', $fiche);
             }
         }
 
@@ -1538,6 +1759,7 @@ class DirecteurSubordonneController extends Controller
                 ->first();
             if ($caisse) {
                 $redirectRoute = route('directeur.subordonnes.caisse.objectifs.show', $fiche);
+                $assigneeLien  = route('directeur.objectifs.show', $fiche);
             }
         }
 
@@ -1551,10 +1773,80 @@ class DirecteurSubordonneController extends Controller
             $assigneeUser->id,
             'Nouvelle fiche d\'objectifs reçue',
             "Le Directeur vous a assigné une fiche d'objectifs « {$fiche->titre} ».",
-            'haute'
+            'haute',
+            $assigneeLien
         );
 
         return redirect($redirectRoute)->with('status', 'Fiche soumise avec succès.');
+    }
+
+    // ── PDF export objectif subordonné ─────────────────────────────────────
+
+    /**
+     * Télécharge la fiche d'objectifs en PDF.
+     * Accessible au Directeur (assignateur) uniquement si avancement = 0.
+     * La restriction d'avancement est gérée côté vue ; ici on s'assure
+     * simplement que le Directeur a bien créé cette fiche.
+     */
+    public function exportObjectifPdf(FicheObjectif $fiche): \Illuminate\Http\Response
+    {
+        $this->authorize('objectifs.voir-equipe');
+        $ctx = $this->getContext();
+
+        if ($fiche->assignable_type !== User::class) {
+            abort(403);
+        }
+
+        $assigneeUser = User::find($fiche->assignable_id);
+        if (! $assigneeUser || ! $assigneeUser->agent_id) {
+            // Secrétaire (pas d'agent_id obligatoire) — vérif séparée ci-dessous
+            if (! $assigneeUser || (int) $ctx->getSecretaireUserId() !== $assigneeUser->id) {
+                abort(403);
+            }
+        }
+
+        // Réutilise la logique de soumettreObjectif pour vérifier l'appartenance
+        $agentId    = $assigneeUser?->agent_id;
+        $authorized = false;
+
+        if (! $authorized && $agentId && count($ctx->getServiceIds())) {
+            $authorized = Service::whereIn('id', $ctx->getServiceIds())
+                ->where('chef_agent_id', $agentId)->exists();
+        }
+        if (! $authorized && (int) $ctx->getSecretaireUserId() === $assigneeUser->id) {
+            $authorized = true;
+        }
+        if (! $authorized && $agentId && $ctx->hasAgences()) {
+            $authorized = Agence::where('chef_agent_id', $agentId)
+                ->where('caisse_id', $ctx->getId())->exists();
+        }
+        if (! $authorized && $agentId && $ctx->hasCaisses()) {
+            $authorized = Caisse::where('directeur_agent_id', $agentId)
+                ->where('delegation_technique_id', $ctx->getId())->exists();
+        }
+
+        if (! $authorized) {
+            abort(403);
+        }
+
+        $fiche->load(['objectifs', 'annee']);
+
+        $roleLabels = [
+            'Chef_Service'          => 'Chef de Service',
+            'Chef_Agence'           => "Chef d'Agence",
+            'Chef_Guichet'          => 'Chef de Guichet',
+            'Secretaire_Assistante' => 'Secrétaire',
+        ];
+
+        $pdf = Pdf::loadView('pdf.fiche-objectifs', [
+            'fiche'         => $fiche,
+            'assigneNom'    => $assigneeUser->name ?? '—',
+            'assigneRole'   => $roleLabels[$assigneeUser->role ?? ''] ?? ($assigneeUser->role ?? '—'),
+            'assigneurNom'  => $ctx->getDirecteurNomPrenom(),
+            'assigneurRole' => $ctx->getRoleLabel(),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('fiche-objectifs-' . $fiche->id . '.pdf');
     }
 
     // ── Private helpers ────────────────────────────────────────────────────
@@ -1588,7 +1880,8 @@ class DirecteurSubordonneController extends Controller
         FicheObjectif $fiche,
         Request $request,
         string $showRoute,
-        ?User $assigneeUser
+        ?User $assigneeUser,
+        ?string $assigneeLien = null
     ): RedirectResponse {
         if (! in_array($fiche->statut, ['brouillon', 'contesté', 'refusee'], true)) {
             return redirect()->route($showRoute, $fiche)
@@ -1624,7 +1917,8 @@ class DirecteurSubordonneController extends Controller
                     $assigneeUser->id,
                     'Fiche d\'objectifs révisée',
                     "Le Directeur a révisé la fiche d'objectifs « {$fiche->titre} » suite à vos contestations.",
-                    'haute'
+                    'haute',
+                    $assigneeLien
                 );
             }
 

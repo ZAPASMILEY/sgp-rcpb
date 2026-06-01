@@ -1,4 +1,4 @@
-@extends('layouts.directeur')
+@extends($layout ?? 'layouts.directeur')
 @section('title', 'Modifier fiche | '.config('app.name', 'SGP-RCPB'))
 
 @section('content')

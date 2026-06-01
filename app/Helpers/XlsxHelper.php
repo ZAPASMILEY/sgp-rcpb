@@ -26,8 +26,16 @@ class XlsxHelper
         $nCols = count($headers);
 
         // ── Feuille ────────────────────────────────────────────────────────────
+        $lastCol  = $colLetter($nCols);
+        $filterRef = 'A1:' . $lastCol . '1';
+
         $sheetXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            // Gel de la première ligne (en-tête fixe au défilement)
+            . '<sheetViews><sheetView tabSelected="1" workbookViewId="0">'
+            .   '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'
+            .   '<selection pane="bottomLeft" activeCell="A2" sqref="A2"/>'
+            . '</sheetView></sheetViews>'
             . '<cols>';
         for ($i = 1; $i <= $nCols; $i++) {
             $w = 18;
@@ -63,7 +71,10 @@ class XlsxHelper
             }
             $sheetXml .= '</row>';
         }
-        $sheetXml .= '</sheetData></worksheet>';
+        $sheetXml .= '</sheetData>'
+            // AutoFilter : flèches de tri/filtrage sur chaque colonne d'en-tête
+            . '<autoFilter ref="' . $filterRef . '"/>'
+            . '</worksheet>';
 
         // ── Package ZIP/XLSX ────────────────────────────────────────────────────
         $uid     = uniqid('xlsx_', true);

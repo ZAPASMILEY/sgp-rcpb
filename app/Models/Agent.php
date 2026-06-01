@@ -82,6 +82,7 @@ class Agent extends Model
     /**
      * Scope "personnel" : agents affectés à une structure
      * et dont le rôle système n'est pas PCA / Admin / RH.
+     * Utilisé pour les espaces DG, DGA, RH, PCA (le PCA n'est pas compté).
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @return \Illuminate\Database\Eloquent\Builder
@@ -104,6 +105,34 @@ class Agent extends Model
             ->where(fn ($q) => $q
                 ->whereDoesntHave('user')
                 ->orWhereHas('user', fn ($u) => $u->whereNotIn('role', self::NON_PERSONNEL_ROLES))
+            );
+    }
+
+    /**
+     * Scope "reseau" : agents affectés à une structure,
+     * sans les rôles Admin et RH, mais PCA INCLUS.
+     * Utilisé uniquement pour les totaux de l'espace Admin
+     * (dashboard KPI, statistiques, liste agents).
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeReseau($query)
+    {
+        return $query
+            ->where(fn ($q) => $q
+                ->whereNotNull('entite_id')
+                ->orWhereNotNull('direction_id')
+                ->orWhereNotNull('delegation_technique_id')
+                ->orWhereNotNull('caisse_id')
+                ->orWhereNotNull('agence_id')
+                ->orWhereNotNull('guichet_id')
+                ->orWhereNotNull('service_id')
+                ->orWhereHas('user', fn ($u) => $u->whereIn('role', ['DG', 'Assistante_Dg', 'PCA']))
+            )
+            ->where(fn ($q) => $q
+                ->whereDoesntHave('user')
+                ->orWhereHas('user', fn ($u) => $u->whereNotIn('role', ['Admin', 'RH']))
             );
     }
 

@@ -206,32 +206,5 @@ class DgaNotesReseauController extends Controller
             'fonctions'
         ));
     }
-
-    public function show(Evaluation $evaluation): View
-    {
-        $this->checkDga();
-
-        $userIds = $this->perimetre();
-        if (! $userIds->contains($evaluation->evaluable_id)) {
-            abort(403, 'Cette évaluation ne fait pas partie de votre périmètre.');
-        }
-
-        $evaluation->load(['evaluable', 'evaluateur', 'identification', 'criteres.sousCriteres']);
-
-        $subordonne         = $evaluation->evaluable;
-        $mention            = $this->evaluationService->mention((float) $evaluation->note_finale);
-        $periodeLabel       = $this->evaluationService->periodeLabel($evaluation);
-        $cibleLabel         = trim((string) ($evaluation->identification?->nom_prenom ?? '')) ?: ($subordonne?->name ?? '-');
-        $backUrl            = route('dga.notes-reseau.index');
-        $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
-        $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
-
-        $readOnly = true;
-
-        return view('dga.subordonnes.evaluations.show', compact(
-            'evaluation', 'subordonne', 'mention', 'periodeLabel',
-            'cibleLabel', 'backUrl', 'objectiveCriteria', 'subjectiveCriteria',
-            'readOnly'
-        ));
-    }
 }
+

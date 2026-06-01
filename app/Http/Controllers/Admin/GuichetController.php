@@ -63,7 +63,9 @@ class GuichetController extends Controller
         $guichet = Guichet::create($validated);
 
         if ($validated['chef_agent_id']) {
-            Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => 'Chef de Guichet de ' . $guichet->nom]);
+            $chef = Agent::findOrFail($validated['chef_agent_id']);
+            $chef->update(['poste' => 'Chef de Guichet de ' . $guichet->nom]);
+            $this->accounts->ensureAccount($chef->fresh());
         }
 
         return redirect()
@@ -89,10 +91,17 @@ class GuichetController extends Controller
             'telephone_accueil' => ['required', 'string', 'max:30'],
         ]);
 
+        // Si le chef change, désactiver le compte de l'ancien chef
+        if ($guichet->chef_agent_id && $guichet->chef_agent_id !== (int) $validated['chef_agent_id']) {
+            $this->accounts->deactivateAccount(Agent::findOrFail($guichet->chef_agent_id));
+        }
+
         $guichet->update($validated);
 
         if ($validated['chef_agent_id']) {
-            Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => 'Chef de Guichet de ' . $guichet->nom]);
+            $chef = Agent::findOrFail($validated['chef_agent_id']);
+            $chef->update(['poste' => 'Chef de Guichet de ' . $guichet->nom]);
+            $this->accounts->ensureAccount($chef->fresh());
         }
 
         return redirect()

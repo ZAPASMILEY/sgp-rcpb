@@ -5,6 +5,7 @@
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-10 pt-4 lg:px-8">
     <div class="w-full flex flex-col gap-6">
 
+        {{-- En-tête de la page --}}
         <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 px-6 py-8 lg:px-10">
             <div class="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/5"></div>
             <div class="absolute -bottom-6 right-16 h-20 w-20 rounded-full bg-white/5"></div>
@@ -16,6 +17,34 @@
             </div>
         </div>
 
+        {{-- ── NOUVEAU : BANNIÈRE D'INFORMATION POUR LES NOTES MASQUÉES ── --}}
+        @php 
+            // On vérifie si au moins une caisse a des notes masquées pour afficher l'avertissement
+            $unSeulNull = false;
+            foreach($caisses as $c) {
+                if (($caisseNotes[$c->id]['moyenne'] ?? null) === null) {
+                    $unSeulNull = true;
+                    break;
+                }
+            }
+        @endphp
+
+        @if($unSeulNull)
+            <div class="flex items-start gap-4 rounded-xl border border-amber-100 bg-amber-50 p-4 text-amber-800 shadow-sm">
+                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-600">
+                    <i class="fas fa-clock-rotate-left text-sm"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-sm font-bold tracking-tight">Période d'évaluation en cours</h3>
+                    <p class="mt-0.5 text-xs text-amber-700/90 leading-relaxed">
+                        Les notes moyennes des caisses, agences et délégations sont temporairement masquées. Elles seront automatiquement calculées et publiées dès que la Direction Generale aura procédé à la <strong>clôture officielle du semestre</strong>.
+                    </p>
+                </div>
+            </div>
+        @endif
+        {{-- ───────────────────────────────────────────────────────────── --}}
+
+        {{-- Formulaire de filtre --}}
         <form method="GET" class="admin-panel px-5 py-4">
             <div class="flex flex-wrap items-end gap-3">
                 <div class="flex-1 min-w-[180px]">
@@ -40,6 +69,7 @@
             </div>
         </form>
 
+        {{-- Liste des données --}}
         <section class="admin-panel overflow-hidden">
             <div class="border-b border-slate-100 px-6 py-4">
                 <h2 class="text-sm font-black uppercase tracking-widest text-slate-700">Liste des caisses</h2>
@@ -82,7 +112,7 @@
                                             @php $c = $cn['moyenne'] >= 8.5 ? 'bg-emerald-100 text-emerald-700' : ($cn['moyenne'] >= 7 ? 'bg-blue-100 text-blue-700' : ($cn['moyenne'] >= 5 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700')); @endphp
                                             <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold {{ $c }}">{{ number_format($cn['moyenne'], 2) }}</span>
                                         @else
-                                            <span class="text-xs font-bold text-slate-300">—</span>
+                                            <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full" title="Masqué jusqu'à la clôture du semestre">En cours</span>
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-center">

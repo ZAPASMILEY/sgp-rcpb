@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Rh;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Shared\StructureStats;
+use App\Models\Agent;
 use App\Models\Annee;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
@@ -60,7 +61,9 @@ class RhStructureController extends Controller
         $notesWithValue = $allStructures->filter(fn ($s) => $s->note_moyenne !== null);
         return [
             'nb_structures'   => $allStructures->count(),
-            'nb_agents'       => $allStructures->sum('nb_agents'),
+            // Comptage direct pour éviter le double-comptage des agents
+            // qui ont plusieurs FKs renseignés (agence_id + guichet_id, etc.)
+            'nb_agents'       => Agent::personnel()->count(),
             'note_moy_reseau' => $notesWithValue->count() > 0
                 ? round($notesWithValue->avg('note_moyenne'), 2)
                 : null,

@@ -65,6 +65,7 @@ class DirectionGeneraleController extends Controller
 
             $conseillers = User::where('role', 'Conseillers_Dg')
                 ->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))
+                ->with('agent')
                 ->get();
         }
 

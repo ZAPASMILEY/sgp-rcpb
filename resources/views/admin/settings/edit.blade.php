@@ -51,6 +51,14 @@
                         {{ $meta['label'] }}
                     </a>
                 @endforeach
+                <a href="{{ route('admin.settings.edit', array_merge(request()->except('tab'), ['tab' => 'danger'])) }}"
+                   class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider transition
+                          {{ $activeTab === 'danger'
+                              ? 'bg-rose-700 text-white shadow-sm'
+                              : 'bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700' }}">
+                    <i class="fas fa-skull text-[10px]"></i>
+                    Zone de danger
+                </a>
             </div>
         </div>
 
@@ -428,7 +436,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50">
-                        @foreach($allUsers as $u)
+                        @foreach($pagedUsers as $u)
                         <tr class="group hover:bg-slate-50/50">
                             <td class="py-3 font-bold text-slate-700">{{ $u->name }}</td>
                             <td class="py-3 text-slate-500">{{ $u->email }}</td>
@@ -461,6 +469,72 @@
                     </tbody>
                 </table>
             </div>
+            @if($pagedUsers->hasPages())
+            <div class="mt-4 flex items-center justify-between px-1">
+                <p class="text-xs text-slate-400">
+                    {{ $pagedUsers->firstItem() }}–{{ $pagedUsers->lastItem() }} sur {{ $pagedUsers->total() }} utilisateurs
+                </p>
+                <div class="flex items-center gap-1">
+                    {{-- Précédent --}}
+                    @if($pagedUsers->onFirstPage())
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-300 text-xs cursor-default">
+                            <i class="fas fa-chevron-left"></i>
+                        </span>
+                    @else
+                        <a href="{{ $pagedUsers->appends(request()->except('page'))->previousPageUrl() }}&tab=comptes"
+                           class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 transition">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    @endif
+
+                    {{-- Pages --}}
+                    @php
+                        $current  = $pagedUsers->currentPage();
+                        $last     = $pagedUsers->lastPage();
+                        $from     = max(1, $current - 2);
+                        $to       = min($last, $current + 2);
+                    @endphp
+                    @if($from > 1)
+                        <a href="{{ $pagedUsers->appends(request()->except('page'))->url(1) }}&tab=comptes"
+                           class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 transition">1</a>
+                        @if($from > 2)
+                            <span class="inline-flex h-8 items-center px-1 text-slate-300 text-xs">…</span>
+                        @endif
+                    @endif
+                    @for($page = $from; $page <= $to; $page++)
+                        @if($page == $current)
+                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white text-xs font-black">
+                                {{ $page }}
+                            </span>
+                        @else
+                            <a href="{{ $pagedUsers->appends(request()->except('page'))->url($page) }}&tab=comptes"
+                               class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 transition">
+                                {{ $page }}
+                            </a>
+                        @endif
+                    @endfor
+                    @if($to < $last)
+                        @if($to < $last - 1)
+                            <span class="inline-flex h-8 items-center px-1 text-slate-300 text-xs">…</span>
+                        @endif
+                        <a href="{{ $pagedUsers->appends(request()->except('page'))->url($last) }}&tab=comptes"
+                           class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 transition">{{ $last }}</a>
+                    @endif
+
+                    {{-- Suivant --}}
+                    @if($pagedUsers->hasMorePages())
+                        <a href="{{ $pagedUsers->appends(request()->except('page'))->nextPageUrl() }}&tab=comptes"
+                           class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 transition">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    @else
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-300 text-xs cursor-default">
+                            <i class="fas fa-chevron-right"></i>
+                        </span>
+                    @endif
+                </div>
+            </div>
+            @endif
         </div>
 
         {{-- Modal changer rôle --}}
@@ -1056,7 +1130,140 @@
         </div>
         @endif {{-- /droits --}}
 
+        {{-- ══════════════════════════════════════════════════════════════
+             TAB: ZONE DE DANGER
+        ══════════════════════════════════════════════════════════════ --}}
+        @if($activeTab === 'danger')
+        <div class="space-y-6" id="danger">
 
+            {{-- Erreurs --}}
+            @if($errors->has('confirm_password'))
+            <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {{ $errors->first('confirm_password') }}
+            </div>
+            @endif
+
+            {{-- Avertissement --}}
+            <div class="flex items-start gap-4 rounded-2xl border-2 border-rose-200 bg-rose-50 px-5 py-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <p class="font-black text-rose-900">Actions irréversibles</p>
+                    <p class="mt-0.5 text-sm text-rose-700">Ces opérations suppriment définitivement toutes les données. Elles ne peuvent pas être annulées. Confirmez avec votre mot de passe admin.</p>
+                </div>
+            </div>
+
+            {{-- Purge évaluations --}}
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h3 class="font-black text-slate-900">Vider toutes les évaluations</h3>
+                        <p class="mt-1 text-sm text-slate-500">Supprime toutes les fiches d'évaluation, leurs critères, sous-critères et données d'identification. Les comptes utilisateurs et objectifs ne sont pas affectés.</p>
+                        <p class="mt-2 text-xs font-semibold text-rose-600">
+                            <i class="fas fa-database mr-1"></i>
+                            {{ \App\Models\Evaluation::count() }} évaluation(s) actuellement en base
+                        </p>
+                    </div>
+                    <button type="button"
+                            onclick="document.getElementById('modal-purge-evaluations').classList.remove('hidden')"
+                            class="shrink-0 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                        <i class="fas fa-trash-alt text-xs"></i> Tout supprimer
+                    </button>
+                </div>
+            </div>
+
+            {{-- Purge objectifs --}}
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h3 class="font-black text-slate-900">Vider tous les objectifs</h3>
+                        <p class="mt-1 text-sm text-slate-500">Supprime toutes les fiches d'objectifs et leurs lignes, ainsi que les objectifs classiques. Les évaluations ne sont pas affectées.</p>
+                        <p class="mt-2 text-xs font-semibold text-rose-600">
+                            <i class="fas fa-database mr-1"></i>
+                            {{ \App\Models\FicheObjectif::count() }} fiche(s) d'objectifs · {{ \App\Models\Objectif::count() }} objectif(s) classique(s)
+                        </p>
+                    </div>
+                    <button type="button"
+                            onclick="document.getElementById('modal-purge-objectifs').classList.remove('hidden')"
+                            class="shrink-0 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                        <i class="fas fa-trash-alt text-xs"></i> Tout supprimer
+                    </button>
+                </div>
+            </div>
+
+        </div>
+        @endif {{-- /danger --}}
+
+
+    </div>
+</div>
+
+{{-- ── MODALE : PURGE ÉVALUATIONS ──────────────────────────────────────── --}}
+<div id="modal-purge-evaluations" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
+    <div class="relative w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+        <div class="mb-5">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 mb-4">
+                <i class="fas fa-exclamation-triangle text-xl"></i>
+            </div>
+            <p class="text-xs font-black uppercase tracking-[0.25em] text-rose-500">Zone de danger</p>
+            <h2 class="mt-1 text-xl font-black text-slate-900">Vider toutes les évaluations</h2>
+            <p class="mt-2 text-sm text-slate-500">Cette action est <strong>irréversible</strong>. Toutes les fiches d'évaluation seront définitivement supprimées.</p>
+        </div>
+        <form method="POST" action="{{ route('admin.settings.purge.evaluations') }}" class="space-y-4">
+            @csrf
+            <div>
+                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Confirmez avec votre mot de passe <span class="text-rose-500">*</span></label>
+                <input name="confirm_password" type="password" required
+                       class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-rose-400 focus:ring-rose-400"
+                       placeholder="Votre mot de passe admin">
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit"
+                        class="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                    <i class="fas fa-trash-alt text-xs"></i> Confirmer la suppression
+                </button>
+                <button type="button" onclick="document.getElementById('modal-purge-evaluations').classList.add('hidden')"
+                        class="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50">
+                    Annuler
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ── MODALE : PURGE OBJECTIFS ─────────────────────────────────────────── --}}
+<div id="modal-purge-objectifs" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
+    <div class="relative w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+        <div class="mb-5">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 mb-4">
+                <i class="fas fa-exclamation-triangle text-xl"></i>
+            </div>
+            <p class="text-xs font-black uppercase tracking-[0.25em] text-rose-500">Zone de danger</p>
+            <h2 class="mt-1 text-xl font-black text-slate-900">Vider tous les objectifs</h2>
+            <p class="mt-2 text-sm text-slate-500">Cette action est <strong>irréversible</strong>. Toutes les fiches d'objectifs et objectifs classiques seront définitivement supprimés.</p>
+        </div>
+        <form method="POST" action="{{ route('admin.settings.purge.objectifs') }}" class="space-y-4">
+            @csrf
+            <div>
+                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Confirmez avec votre mot de passe <span class="text-rose-500">*</span></label>
+                <input name="confirm_password" type="password" required
+                       class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-rose-400 focus:ring-rose-400"
+                       placeholder="Votre mot de passe admin">
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button type="submit"
+                        class="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                    <i class="fas fa-trash-alt text-xs"></i> Confirmer la suppression
+                </button>
+                <button type="button" onclick="document.getElementById('modal-purge-objectifs').classList.add('hidden')"
+                        class="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50">
+                    Annuler
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
