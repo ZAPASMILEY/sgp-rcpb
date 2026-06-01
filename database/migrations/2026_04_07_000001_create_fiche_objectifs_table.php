@@ -28,6 +28,7 @@ return new class extends Migration
             $table->enum('statut', ['brouillon', 'en_attente', 'acceptee', 'refusee', 'contesté'])->default('brouillon');
 
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -234,6 +234,17 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::post('/admin/parametres/comptes/rh', [SettingsController::class, 'storeRhAccount'])->name('admin.settings.rh.store');
     Route::post('/admin/parametres/purger/evaluations', [SettingsController::class, 'purgeEvaluations'])->name('admin.settings.purge.evaluations');
     Route::post('/admin/parametres/purger/objectifs', [SettingsController::class, 'purgeObjectifs'])->name('admin.settings.purge.objectifs');
+
+    // Archives (soft-deleted)
+    Route::get('/admin/archives/evaluations', [SettingsController::class, 'archivesEvaluations'])->name('admin.archives.evaluations');
+    Route::get('/admin/archives/evaluations/{id}', [SettingsController::class, 'showArchiveEvaluation'])->name('admin.archives.evaluations.show');
+    Route::post('/admin/archives/evaluations/{id}/restaurer', [SettingsController::class, 'restoreEvaluation'])->name('admin.archives.evaluations.restore');
+    Route::delete('/admin/archives/evaluations/{id}/supprimer-definitif', [SettingsController::class, 'forceDeleteEvaluation'])->name('admin.archives.evaluations.force-delete');
+
+    Route::get('/admin/archives/objectifs', [SettingsController::class, 'archivesObjectifs'])->name('admin.archives.objectifs');
+    Route::get('/admin/archives/objectifs/{id}', [SettingsController::class, 'showArchiveFiche'])->name('admin.archives.objectifs.show');
+    Route::post('/admin/archives/objectifs/{id}/restaurer', [SettingsController::class, 'restoreFiche'])->name('admin.archives.objectifs.restore');
+    Route::delete('/admin/archives/objectifs/{id}/supprimer-definitif', [SettingsController::class, 'forceDeleteFiche'])->name('admin.archives.objectifs.force-delete');
 });
 
 // Route accessible au PCA sans entité associée (évite la boucle middleware)

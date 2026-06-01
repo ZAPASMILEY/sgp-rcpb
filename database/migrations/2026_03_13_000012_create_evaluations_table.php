@@ -59,6 +59,7 @@ return new class extends Migration
             $table->date('date_signature_directeur')->nullable();
 
             $table->timestamps();
+            $table->softDeletes();
         });
         Schema::enableForeignKeyConstraints();
     }

@@ -28,6 +28,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('avancement_percentage')->default(0);
             
             $table->timestamps();
+            $table->softDeletes();
         });
         Schema::enableForeignKeyConstraints();
     }

@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CustomRole;
 use App\Models\Evaluation;
+use App\Models\EvaluationCritere;
 use App\Models\FicheObjectif;
 use App\Models\Objectif;
 use App\Models\Setting;
+use App\Models\SubjectiveCriteriaTemplate;
 use App\Models\User;
+use App\Services\EvaluationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -401,15 +404,10 @@ class SettingsController extends Controller
         }
 
         $count = Evaluation::count();
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        DB::table('evaluation_sous_criteres')->truncate();
-        DB::table('evaluation_criteres')->truncate();
-        DB::table('evaluation_identifications')->truncate();
-        DB::table('evaluations')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        Evaluation::query()->update(['deleted_at' => now()]);
 
         return redirect()->route('admin.settings.edit', ['tab' => 'danger'])
-            ->with('status', "{$count} évaluation(s) supprimée(s) définitivement.");
+            ->with('status', "{$count} évaluation(s) archivée(s). Elles restent consultables et restaurables depuis l'archive.");
     }
 
     public function purgeObjectifs(Request $request): RedirectResponse
@@ -422,15 +420,170 @@ class SettingsController extends Controller
             return back()->withErrors(['confirm_password' => 'Mot de passe incorrect.'])->withFragment('danger');
         }
 
-        $count = Objectif::count() + FicheObjectif::count();
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        DB::table('objectifs')->truncate();
-        DB::table('lignes_fiche_objectif')->truncate();
-        DB::table('fiche_objectifs')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        $countFiches   = FicheObjectif::count();
+        $countObjectifs = Objectif::count();
+        FicheObjectif::query()->update(['deleted_at' => now()]);
+        Objectif::query()->update(['deleted_at' => now()]);
 
         return redirect()->route('admin.settings.edit', ['tab' => 'danger'])
-            ->with('status', "{$count} objectif(s) supprimé(s) définitivement.");
+            ->with('status', "{$countFiches} fiche(s) et {$countObjectifs} objectif(s) archivé(s). Ils restent consultables et restaurables depuis l'archive.");
+    }
+
+    // ── Archives (soft-deleted) ───────────────────────────────────────────────
+
+    public function archivesEvaluations(Request $request): \Illuminate\Contracts\View\View
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        $evaluations = Evaluation::onlyTrashed()
+            ->with(['evaluable', 'evaluateur'])
+            ->when($search !== '', function ($q) use ($search): void {
+                $q->where(function ($sub) use ($search): void {
+                    $sub->whereHasMorph('evaluable', [\App\Models\Agent::class],
+                            fn ($a) => $a->where('nom', 'like', "%{$search}%")->orWhere('prenom', 'like', "%{$search}%"))
+                        ->orWhereHasMorph('evaluable', [\App\Models\Direction::class],
+                            fn ($d) => $d->where('nom', 'like', "%{$search}%")->orWhere('directeur_nom', 'like', "%{$search}%"))
+                        ->orWhereHasMorph('evaluable', [\App\Models\Service::class],
+                            fn ($s) => $s->where('nom', 'like', "%{$search}%")->orWhere('chef_nom', 'like', "%{$search}%"));
+                });
+            })
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin.archives.evaluations', [
+            'evaluations' => $evaluations,
+            'search'      => $search,
+        ]);
+    }
+
+    public function restoreEvaluation(int $id): RedirectResponse
+    {
+        $evaluation = Evaluation::onlyTrashed()->findOrFail($id);
+        $evaluation->restore();
+
+        return back()->with('status', 'Évaluation restaurée avec succès.');
+    }
+
+    public function forceDeleteEvaluation(int $id): RedirectResponse
+    {
+        $evaluation = Evaluation::onlyTrashed()->findOrFail($id);
+        DB::table('evaluation_sous_criteres')->where('evaluation_id', $evaluation->id)->delete();
+        DB::table('evaluation_criteres')->where('evaluation_id', $evaluation->id)->delete();
+        DB::table('evaluation_identifications')->where('evaluation_id', $evaluation->id)->delete();
+        $evaluation->forceDelete();
+
+        return back()->with('status', 'Évaluation supprimée définitivement.');
+    }
+
+    public function archivesObjectifs(Request $request): \Illuminate\Contracts\View\View
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        $fiches = FicheObjectif::onlyTrashed()
+            ->with(['assignable', 'annee'])
+            ->when($search !== '', function ($q) use ($search): void {
+                $q->where('titre', 'like', "%{$search}%");
+            })
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin.archives.objectifs', [
+            'fiches' => $fiches,
+            'search' => $search,
+        ]);
+    }
+
+    public function restoreFiche(int $id): RedirectResponse
+    {
+        $fiche = FicheObjectif::onlyTrashed()->findOrFail($id);
+        $fiche->restore();
+
+        return back()->with('status', 'Fiche d\'objectifs restaurée avec succès.');
+    }
+
+    public function forceDeleteFiche(int $id): RedirectResponse
+    {
+        $fiche = FicheObjectif::onlyTrashed()->findOrFail($id);
+        $fiche->forceDelete();
+
+        return back()->with('status', 'Fiche supprimée définitivement.');
+    }
+
+    public function showArchiveEvaluation(int $id): View
+    {
+        $evaluation = Evaluation::withTrashed()
+            ->with(['evaluable', 'evaluateur', 'identification', 'criteres.sousCriteres'])
+            ->findOrFail($id);
+
+        $service = app(EvaluationService::class);
+
+        $note               = (float) ($evaluation->note_finale ?? 0);
+        $mention            = $service->mention($note);
+        $objectiveCriteria  = $evaluation->criteres->where('type', 'objectif')->values();
+        $subjectiveCriteria = $evaluation->criteres->where('type', 'subjectif')->values();
+        $subjectiveTemplates = $subjectiveCriteria->isEmpty()
+            ? SubjectiveCriteriaTemplate::with('subcriteria')->where('is_active', true)->orderBy('ordre')->get()
+            : collect();
+
+        $target     = $evaluation->evaluable;
+        $cibleLabel = trim((string) ($evaluation->identification?->nom_prenom ?? ''))
+            ?: ($target?->name ?? ($target?->nom ?? '-'));
+        $cibleType  = match (true) {
+            $evaluation->evaluable_role === 'DG'     => 'Directeur Général',
+            $evaluation->evaluable_role === 'DGA'    => 'Directeur Général Adjoint',
+            $evaluation->evaluable_role === 'manager'=> 'Directeur / Chef',
+            default                                  => 'Agent',
+        };
+
+        $statusLabel = match ($evaluation->statut) {
+            'brouillon'   => 'Brouillon',
+            'soumis'      => 'Soumis',
+            'valide'      => 'Validé',
+            'refuse'      => 'Refusé',
+            'reclamation' => 'Réclamation',
+            'a_reviser'   => 'À réviser',
+            default       => ucfirst($evaluation->statut ?? ''),
+        };
+        $statusClass = match ($evaluation->statut) {
+            'valide'      => 'bg-green-100 text-green-700',
+            'soumis'      => 'bg-blue-100 text-blue-700',
+            'reclamation' => 'bg-orange-100 text-orange-700',
+            'a_reviser'   => 'bg-yellow-100 text-yellow-700',
+            default       => 'bg-gray-100 text-gray-600',
+        };
+
+        return view('evaluations.show', [
+            'evaluation'          => $evaluation,
+            'objectiveCriteria'   => $objectiveCriteria,
+            'subjectiveCriteria'  => $subjectiveCriteria,
+            'note'                => $note,
+            'mention'             => $mention,
+            'ident'               => $evaluation->identification,
+            'statusLabel'         => '[ARCHIVÉE] ' . $statusLabel,
+            'statusClass'         => $statusClass,
+            'subjectiveTemplates' => $subjectiveTemplates,
+            'layout'              => 'layouts.app',
+            'cibleLabel'          => $cibleLabel,
+            'cibleType'           => $cibleType,
+            'backRoute'           => route('admin.archives.evaluations'),
+            'breadcrumb'          => 'Admin · Archives Évaluations',
+        ]);
+    }
+
+    public function showArchiveFiche(int $id): View
+    {
+        $fiche = FicheObjectif::withTrashed()
+            ->with(['objectifs', 'annee', 'assignable'])
+            ->findOrFail($id);
+
+        return view('Objectifs.show', [
+            'layout'     => 'layouts.app',
+            'fiche'      => $fiche,
+            'backRoute'  => route('admin.archives.objectifs'),
+            'isAssignee' => false,
+        ]);
     }
 
     public function syncUserPermissions(Request $request, User $user): RedirectResponse

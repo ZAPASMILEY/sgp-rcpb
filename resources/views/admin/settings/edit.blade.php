@@ -1158,18 +1158,37 @@
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h3 class="font-black text-slate-900">Vider toutes les évaluations</h3>
-                        <p class="mt-1 text-sm text-slate-500">Supprime toutes les fiches d'évaluation, leurs critères, sous-critères et données d'identification. Les comptes utilisateurs et objectifs ne sont pas affectés.</p>
-                        <p class="mt-2 text-xs font-semibold text-rose-600">
-                            <i class="fas fa-database mr-1"></i>
-                            {{ \App\Models\Evaluation::count() }} évaluation(s) actuellement en base
+                        <h3 class="font-black text-slate-900">Archiver toutes les évaluations</h3>
+                        <p class="mt-1 text-sm text-slate-500">
+                            Déplace toutes les fiches d'évaluation dans l'archive. Elles disparaissent des vues normales
+                            mais restent <strong>consultables et restaurables</strong> depuis la page d'archives.
                         </p>
+                        <div class="mt-2 flex flex-wrap items-center gap-3">
+                            <span class="text-xs font-semibold text-rose-600">
+                                <i class="fas fa-database mr-1"></i>
+                                {{ \App\Models\Evaluation::count() }} évaluation(s) active(s)
+                            </span>
+                            @php $archivedEvals = \App\Models\Evaluation::onlyTrashed()->count(); @endphp
+                            @if($archivedEvals)
+                            <a href="{{ route('admin.archives.evaluations') }}"
+                               class="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 hover:underline">
+                                <i class="fas fa-archive"></i>
+                                {{ $archivedEvals }} archivée(s) — Voir l'archive
+                            </a>
+                            @endif
+                        </div>
                     </div>
-                    <button type="button"
-                            onclick="document.getElementById('modal-purge-evaluations').classList.remove('hidden')"
-                            class="shrink-0 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
-                        <i class="fas fa-trash-alt text-xs"></i> Tout supprimer
-                    </button>
+                    <div class="flex shrink-0 gap-2">
+                        <a href="{{ route('admin.archives.evaluations') }}"
+                           class="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100">
+                            <i class="fas fa-archive text-xs"></i> Archives
+                        </a>
+                        <button type="button"
+                                onclick="document.getElementById('modal-purge-evaluations').classList.remove('hidden')"
+                                class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                            <i class="fas fa-box-archive text-xs"></i> Tout archiver
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1177,18 +1196,37 @@
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h3 class="font-black text-slate-900">Vider tous les objectifs</h3>
-                        <p class="mt-1 text-sm text-slate-500">Supprime toutes les fiches d'objectifs et leurs lignes, ainsi que les objectifs classiques. Les évaluations ne sont pas affectées.</p>
-                        <p class="mt-2 text-xs font-semibold text-rose-600">
-                            <i class="fas fa-database mr-1"></i>
-                            {{ \App\Models\FicheObjectif::count() }} fiche(s) d'objectifs · {{ \App\Models\Objectif::count() }} objectif(s) classique(s)
+                        <h3 class="font-black text-slate-900">Archiver tous les objectifs</h3>
+                        <p class="mt-1 text-sm text-slate-500">
+                            Déplace toutes les fiches d'objectifs et objectifs classiques dans l'archive.
+                            Ils restent <strong>consultables et restaurables</strong> depuis la page d'archives.
                         </p>
+                        <div class="mt-2 flex flex-wrap items-center gap-3">
+                            <span class="text-xs font-semibold text-rose-600">
+                                <i class="fas fa-database mr-1"></i>
+                                {{ \App\Models\FicheObjectif::count() }} fiche(s) · {{ \App\Models\Objectif::count() }} objectif(s) actif(s)
+                            </span>
+                            @php $archivedFiches = \App\Models\FicheObjectif::onlyTrashed()->count(); @endphp
+                            @if($archivedFiches)
+                            <a href="{{ route('admin.archives.objectifs') }}"
+                               class="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 hover:underline">
+                                <i class="fas fa-archive"></i>
+                                {{ $archivedFiches }} archivée(s) — Voir l'archive
+                            </a>
+                            @endif
+                        </div>
                     </div>
-                    <button type="button"
-                            onclick="document.getElementById('modal-purge-objectifs').classList.remove('hidden')"
-                            class="shrink-0 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
-                        <i class="fas fa-trash-alt text-xs"></i> Tout supprimer
-                    </button>
+                    <div class="flex shrink-0 gap-2">
+                        <a href="{{ route('admin.archives.objectifs') }}"
+                           class="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100">
+                            <i class="fas fa-archive text-xs"></i> Archives
+                        </a>
+                        <button type="button"
+                                onclick="document.getElementById('modal-purge-objectifs').classList.remove('hidden')"
+                                class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
+                            <i class="fas fa-box-archive text-xs"></i> Tout archiver
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1208,8 +1246,12 @@
                 <i class="fas fa-exclamation-triangle text-xl"></i>
             </div>
             <p class="text-xs font-black uppercase tracking-[0.25em] text-rose-500">Zone de danger</p>
-            <h2 class="mt-1 text-xl font-black text-slate-900">Vider toutes les évaluations</h2>
-            <p class="mt-2 text-sm text-slate-500">Cette action est <strong>irréversible</strong>. Toutes les fiches d'évaluation seront définitivement supprimées.</p>
+            <h2 class="mt-1 text-xl font-black text-slate-900">Archiver toutes les évaluations</h2>
+            <p class="mt-2 text-sm text-slate-500">
+                Toutes les évaluations seront <strong>archivées</strong> (pas supprimées).
+                Elles resteront visibles et restaurables depuis la page
+                <a href="{{ route('admin.archives.evaluations') }}" class="font-semibold text-indigo-600 hover:underline">Archives évaluations</a>.
+            </p>
         </div>
         <form method="POST" action="{{ route('admin.settings.purge.evaluations') }}" class="space-y-4">
             @csrf
@@ -1222,7 +1264,7 @@
             <div class="flex gap-3 pt-2">
                 <button type="submit"
                         class="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
-                    <i class="fas fa-trash-alt text-xs"></i> Confirmer la suppression
+                    <i class="fas fa-box-archive text-xs"></i> Confirmer l'archivage
                 </button>
                 <button type="button" onclick="document.getElementById('modal-purge-evaluations').classList.add('hidden')"
                         class="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50">
@@ -1242,8 +1284,12 @@
                 <i class="fas fa-exclamation-triangle text-xl"></i>
             </div>
             <p class="text-xs font-black uppercase tracking-[0.25em] text-rose-500">Zone de danger</p>
-            <h2 class="mt-1 text-xl font-black text-slate-900">Vider tous les objectifs</h2>
-            <p class="mt-2 text-sm text-slate-500">Cette action est <strong>irréversible</strong>. Toutes les fiches d'objectifs et objectifs classiques seront définitivement supprimés.</p>
+            <h2 class="mt-1 text-xl font-black text-slate-900">Archiver tous les objectifs</h2>
+            <p class="mt-2 text-sm text-slate-500">
+                Toutes les fiches d'objectifs et objectifs classiques seront <strong>archivés</strong> (pas supprimés).
+                Ils resteront visibles et restaurables depuis la page
+                <a href="{{ route('admin.archives.objectifs') }}" class="font-semibold text-indigo-600 hover:underline">Archives objectifs</a>.
+            </p>
         </div>
         <form method="POST" action="{{ route('admin.settings.purge.objectifs') }}" class="space-y-4">
             @csrf
@@ -1256,7 +1302,7 @@
             <div class="flex gap-3 pt-2">
                 <button type="submit"
                         class="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700">
-                    <i class="fas fa-trash-alt text-xs"></i> Confirmer la suppression
+                    <i class="fas fa-box-archive text-xs"></i> Confirmer l'archivage
                 </button>
                 <button type="button" onclick="document.getElementById('modal-purge-objectifs').classList.add('hidden')"
                         class="rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50">

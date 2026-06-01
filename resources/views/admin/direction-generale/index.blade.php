@@ -173,8 +173,8 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate font-bold text-slate-800 text-sm">{{ $conseiller->name }}</p>
-                                    @if($conseiller->agent?->role)
-                                        <p class="text-xs font-medium text-indigo-600">{{ $conseiller->agent->role }}</p>
+                                    @if($conseiller->agent?->poste)
+                                        <p class="text-xs font-medium text-indigo-600">{{ $conseiller->agent->poste }}</p>
                                     @endif
                                     @if($conseiller->agent?->date_debut_fonction)
                                         <p class="text-xs text-slate-400">
