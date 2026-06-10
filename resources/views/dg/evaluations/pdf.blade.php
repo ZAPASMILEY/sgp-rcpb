@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Evaluation #{{ $evaluation->id }}</title>
     <style>
-        { box-sizing: border-box; }
+        * { box-sizing: border-box; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #111827; line-height: 1.4; margin: 0; padding: 10px 14px; }
         h1 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
         h2 { margin: 14px 0 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
@@ -34,6 +34,28 @@
         | Semestre : {{ $evaluation->identification->semestre }}
     @endif
     </p>
+
+    <h2>Identification</h2>
+    <table class="grid">
+        <tr>
+            <th>Nom et prenom</th>
+            <th>Emploi</th>
+            <th>Matricule</th>
+            <th>Entite</th>
+            <th>Direction / Service</th>
+            <th>Date de prise de fonction</th>
+            <th>Date d'evaluation</th>
+        </tr>
+        <tr>
+            <td>{{ $evaluation->identification->nom_prenom ?? '-' }}</td>
+            <td>{{ $evaluation->identification->emploi ?? '-' }}</td>
+            <td>{{ $evaluation->identification->matricule ?? '-' }}</td>
+            <td>{{ $evaluation->identification->direction ?? '-' }}</td>
+            <td>{{ $evaluation->identification->direction_service ?? '-' }}</td>
+            <td>{{ $evaluation->identification->date_prise_fonction ? $evaluation->identification->date_prise_fonction->format('d/m/Y') : '-' }}</td>
+            <td>{{ $evaluation->identification->date_evaluation ? $evaluation->identification->date_evaluation->format('d/m/Y') : '-' }}</td>
+        </tr>
+    </table>
 
     <table class="grid">
         <tr>
@@ -108,44 +130,6 @@
             <td class="text-center">100 %</td>
             <td class="text-center"><strong>{{ number_format((float) $evaluation->note_finale, 2, ',', ' ') }}</strong></td>
             <td style="font-size:8.5px;">(Contrib. obj. + Contrib. subj.) &times; 2</td>
-        </tr>
-    </table>
-    @php
-        $note = (float) $evaluation->note_finale;
-        $grille = [
-            ['min' => 9,   'label' => 'Excellent'],
-            ['min' => 8,   'label' => 'Tres satisfaisant'],
-            ['min' => 7,   'label' => 'Satisfaisant'],
-            ['min' => 6,   'label' => 'Assez satisfaisant'],
-            ['min' => 5,   'label' => 'Passable'],
-            ['min' => 0,   'label' => 'Insuffisant'],
-        ];
-    @endphp
-    <div class="formula-box">
-        <strong>Grille d'appreciation :</strong>
-        @foreach ($grille as $g)
-            {{ $g['label'] }} ({{ $g['min'] >= 9 ? '&ge; 9' : ($g['min'] == 0 ? '&lt; 5' : $g['min'].' &ndash; '.($g['min'] + 0.99)) }})
-            @if (! $loop->last) &nbsp;|&nbsp; @endif
-        @endforeach
-    </div>
-
-    <h2>Identification</h2>
-    <table class="grid">
-        <tr>
-            <th>Nom et prenom</th>
-            <th>Emploi</th>
-            <th>Matricule</th>
-            <th>Entite</th>
-            <th>Direction / Service</th>
-            <th>Date d'evaluation</th>
-        </tr>
-        <tr>
-            <td>{{ $evaluation->identification->nom_prenom ?? '-' }}</td>
-            <td>{{ $evaluation->identification->emploi ?? '-' }}</td>
-            <td>{{ $evaluation->identification->matricule ?? '-' }}</td>
-            <td>{{ $evaluation->identification->direction ?? '-' }}</td>
-            <td>{{ $evaluation->identification->direction_service ?? '-' }}</td>
-            <td>{{ $evaluation->identification->date_evaluation ? $evaluation->identification->date_evaluation->format('d/m/Y') : '-' }}</td>
         </tr>
     </table>
 
@@ -281,14 +265,22 @@
         if ($evaluation->evaluateur && $evaluation->evaluateur->entite) {
             $ville = $evaluation->evaluateur->entite->ville;
         }
-        // Si PCA (faitière), la ville est Ouagadougou
+        // Si PCA ou personnel siège (DGA, DG…), la ville est Ouagadougou
         if ($evaluation->evaluateur && $evaluation->evaluateur->isPca()) {
             $ville = 'Ouagadougou';
         }
+        $rolesSiege = ['DG', 'DGA', 'Assistante_Dg', 'Conseillers_Dg', 'Secretaire_Assistante', 'Directeur_Direction'];
+        if (! $ville && in_array($evaluation->evaluateur?->role ?? '', $rolesSiege, true)) {
+            $ville = 'Ouagadougou';
+        }
+        // Date de signature de l'évaluateur
+        $dateSignature = $evaluation->date_signature_evaluateur
+            ? $evaluation->date_signature_evaluateur->format('d/m/Y')
+            : null;
     @endphp
     <div style="margin-top: 30px; text-align: right; font-size: 11px;">
-        Fait à <span style="display:inline-block; min-width:180px; border-bottom:1px dotted #888;">...........................................</span>,
-        le <span style="display:inline-block; min-width:120px; border-bottom:1px dotted #888;">........../........../..........</span>
+        Fait à <span style="display:inline-block; min-width:180px; border-bottom:1px dotted #888;">{{ $ville ?? '...........................................' }}</span>,
+        le <span style="display:inline-block; min-width:120px; border-bottom:1px dotted #888;">{{ $dateSignature ?? '........../........../..........' }}</span>
     </div>
 </body>
 </html>

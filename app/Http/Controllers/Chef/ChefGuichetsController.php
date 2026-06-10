@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Chef;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\Guichet;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,33 +40,41 @@ class ChefGuichetsController extends Controller
             $chef     = $guichet->chef;
             $chefUser = $chef ? User::where('agent_id', $chef->id)->first() : null;
 
-            $nbEvals = $chefUser
-                ? Evaluation::where('evaluable_type', User::class)
-                    ->where('evaluable_id', $chefUser->id)
-                    ->count()
-                : 0;
+            // Évaluations guichet : stockées avec evaluable_type=Guichet::class
+            $nbEvals = Evaluation::where('evaluable_type', Guichet::class)
+                ->where('evaluable_id', $guichet->id)
+                ->count();
 
+            // Fiches objectifs guichet : stockées avec assignable_type=User::class
             $nbObjectifs = $chefUser
                 ? FicheObjectif::where('assignable_type', User::class)
                     ->where('assignable_id', $chefUser->id)
                     ->count()
                 : 0;
 
-            $noteAvg = $chefUser
-                ? Evaluation::where('evaluable_type', User::class)
-                    ->where('evaluable_id', $chefUser->id)
-                    ->where('statut', 'valide')
-                    ->whereNotNull('note_finale')
-                    ->avg('note_finale')
-                : null;
+            $noteAvg = Evaluation::where('evaluable_type', Guichet::class)
+                ->where('evaluable_id', $guichet->id)
+                ->where('statut', 'valide')
+                ->whereNotNull('note_finale')
+                ->avg('note_finale');
 
             return [
-                'guichet'     => $guichet,
-                'chef'        => $chef,
-                'chefUser'    => $chefUser,
-                'nbEvals'     => $nbEvals,
-                'nbObjectifs' => $nbObjectifs,
-                'noteAvg'     => $noteAvg !== null ? round((float) $noteAvg, 2) : null,
+                'guichet'        => $guichet,
+                'chef'           => $chef,
+                'chefUser'       => $chefUser,
+                'nbEvals'        => $nbEvals,
+                'nbObjectifs'    => $nbObjectifs,
+                'noteAvg'        => $noteAvg !== null ? round((float) $noteAvg, 2) : null,
+                'ficheBlocksNew'    => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->whereNotIn('statut', ['refusee'])->exists()
+                    : false,
+                'ficheAcceptee'     => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->where('statut', 'acceptee')->exists()
+                    : false,
+                'evaluationEnCours' => Evaluation::where('evaluable_type', Guichet::class)
+                    ->where('evaluable_id', $guichet->id)
+                    ->whereIn('statut', ['soumis', 'brouillon'])
+                    ->exists(),
             ];
         });
 
@@ -77,6 +86,12 @@ class ChefGuichetsController extends Controller
 
         $filters = compact('search');
 
-        return view('chef.guichets.index', compact('ctx', 'guichets', 'stats', 'filters'));
+        $evaluationsEnabled = Setting::featureEnabled('evaluations') && $user->can('evaluations.creer');
+        $objectifsEnabled   = Setting::featureEnabled('objectifs')   && $user->can('objectifs.assigner');
+
+        return view('chef.guichets.index', compact(
+            'ctx', 'guichets', 'stats', 'filters',
+            'evaluationsEnabled', 'objectifsEnabled',
+        ));
     }
 }

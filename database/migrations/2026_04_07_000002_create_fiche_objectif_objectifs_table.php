@@ -15,6 +15,7 @@ return new class extends Migration
             $table->decimal('note_obtenue', 5, 2)->default(0);
             $table->unsignedTinyInteger('avancement_percentage')->default(0);
             $table->string('statut')->default('normal');
+            $table->text('motif')->nullable();
             $table->timestamps();
         });
     }

@@ -37,26 +37,30 @@
                 </a>
             </div>
 
+            @php
+                $ficheBlocksNew = $ficheBlocksNew ?? false;
+                $ficheAcceptee  = $ficheAcceptee  ?? false;
+            @endphp
             @if ($tab === 'objectifs')
-                @if ($objectifsEnabled)
+                @if ($objectifsEnabled && !$ficheBlocksNew)
                     <a href="{{ route('dg.objectifs.create', ['subordonne_id' => $currentSubordonneId]) }}"
                        class="inline-flex items-center rounded-2xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-emerald-600">
                         <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle fiche
                     </a>
                 @else
-                    <span title="Fonctionnalité désactivée par l'administrateur"
+                    <span title="{{ $ficheBlocksNew ? 'Une fiche d\'objectifs est déjà assignée.' : ($objectifsDisabledMessage ?: 'Assignation d\'objectifs désactivée par l\'administrateur.') }}"
                           class="ent-btn-disabled-light">
                         <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle fiche
                     </span>
                 @endif
             @elseif ($tab === 'evaluations')
-                @if ($evaluationsEnabled)
+                @if ($evaluationsEnabled && $ficheAcceptee && !($evaluationEnCours ?? false))
                     <a href="{{ route('dg.sub-evaluations.create', ['subordonne_id' => $currentSubordonneId]) }}"
                        class="inline-flex items-center rounded-2xl bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-cyan-700">
                         <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle evaluation
                     </a>
                 @else
-                    <span title="Fonctionnalité désactivée par l'administrateur"
+                    <span title="{{ ($evaluationEnCours ?? false) ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$ficheAcceptee ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.')) }}"
                           class="ent-btn-disabled-light">
                         <i class="fas fa-plus mr-2 text-xs"></i> Nouvelle evaluation
                     </span>

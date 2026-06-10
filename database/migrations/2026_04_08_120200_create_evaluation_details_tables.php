@@ -32,6 +32,7 @@ return new class extends Migration
             $table->date('date_recrutement')->nullable();
             $table->date('date_titularisation')->nullable();
             $table->date('date_affectation')->nullable();
+            $table->date('date_prise_fonction')->nullable();
             $table->date('date_naissance')->nullable();
 
             // Sections dynamiques JSON

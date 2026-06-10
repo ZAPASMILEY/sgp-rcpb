@@ -10,7 +10,7 @@
             <div class="absolute -bottom-6 right-16 h-20 w-20 rounded-full bg-white/5"></div>
             <p class="text-[11px] font-black uppercase tracking-[0.25em] text-emerald-200">Espace DGA · Réseau</p>
             <h1 class="mt-1 text-2xl font-black tracking-tight text-white">Guichets</h1>
-            <p class="mt-1 text-sm text-emerald-100/80">{{ $guichets->total() }} guichet(s) dans le réseau.</p>
+            <p class="mt-1 text-sm text-emerald-100/80">{{ $guichets->count() }} guichet(s) dans le réseau.</p>
             <div class="absolute right-6 top-1/2 -translate-y-1/2 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10">
                 <i class="fas fa-cash-register text-2xl text-white"></i>
             </div>
@@ -50,9 +50,9 @@
                     <p class="mt-3 text-sm font-semibold text-slate-400">Aucun guichet trouvé.</p>
                 </div>
             @else
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="min-w-full text-left text-sm text-slate-700">
-                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400 sticky top-0 z-10">
                             <tr>
                                 <th class="px-4 py-3">Guichet</th>
                                 <th class="px-4 py-3">Agence</th>
@@ -99,9 +99,7 @@
                         </tbody>
                     </table>
                 </div>
-                @if($guichets->hasPages())
-                    <div class="border-t border-slate-100 px-6 py-4">{{ $guichets->withQueryString()->links() }}</div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $guichets->count() }} résultat(s)</div>
             @endif
         </section>
 

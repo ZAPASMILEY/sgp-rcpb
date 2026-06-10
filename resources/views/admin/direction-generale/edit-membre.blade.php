@@ -11,10 +11,11 @@
         'Assistante_Dg' => 'Assistante DG',
         default         => $user->role,
     };
-    // Décomposer name en prénom + nom (première partie = prénom, reste = nom)
-    $parts  = explode(' ', $user->name, 2);
-    $prenom = $parts[0] ?? '';
-    $nom    = $parts[1] ?? '';
+    $agent  = $user->agent;
+    $prenom = $agent?->prenom ?? '';
+    $nom    = $agent?->nom ?? '';
+    $sexe   = $agent?->sexe ?? '';
+    $dateFF = $agent?->date_debut_fonction ? $agent->date_debut_fonction->format('Y-m') : '';
 @endphp
 <div class="min-h-screen bg-[#f1f5f9] px-4 pb-8 pt-4 lg:px-8">
     <div class="w-full max-w-2xl space-y-6">
@@ -48,7 +49,7 @@
                     {{-- Prénom --}}
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-slate-700">Prénom</label>
-                        <input type="text" name="prenom" value="{{ old('prenom', $prenom) }}"
+                        <input type="text" name="prenom" value="{{ old('prenom', $prenom) }}" autocomplete="off"
                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-100"
                                required>
                     </div>
@@ -74,9 +75,8 @@
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-slate-700">Genre</label>
                         <select name="sexe" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-100" required>
-                            @foreach (['Homme', 'Femme', 'Autres'] as $genre)
-                                <option value="{{ $genre }}" @selected(old('sexe', $user->sexe) === $genre)>{{ $genre }}</option>
-                            @endforeach
+                            <option value="homme" @selected(old('sexe', $sexe) === 'homme')>Homme</option>
+                            <option value="femme" @selected(old('sexe', $sexe) === 'femme')>Femme</option>
                         </select>
                     </div>
 
@@ -84,7 +84,7 @@
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-slate-700">Date de prise de fonction</label>
                         <input type="month" name="date_prise_fonction"
-                               value="{{ old('date_prise_fonction', $user->date_prise_fonction) }}"
+                               value="{{ old('date_prise_fonction', $dateFF) }}"
                                class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-100"
                                required>
                     </div>

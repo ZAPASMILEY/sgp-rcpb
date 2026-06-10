@@ -94,8 +94,16 @@ class DashboardController extends Controller
         $agent = $ctx->agent;
         $annee = (int) $request->query('annee', now()->year);
 
-        $evalsRecBase = fn () => Evaluation::where(function ($q) use ($user, $agent) {
-            $q->where('evaluable_type', User::class)->where('evaluable_id', $user->id);
+        $evalsRecBase = fn () => Evaluation::where(function ($q) use ($ctx, $user, $agent) {
+            // Évaluations de la structure gérée (Guichet, Service, Agence)
+            $q->where(function ($q2) use ($ctx) {
+                $q2->where('evaluable_type', $ctx->modelClass)
+                   ->where('evaluable_id', $ctx->getId())
+                   ->where('evaluable_role', 'manager');
+            });
+            // Évaluations directement sur le compte User
+            $q->orWhere(fn ($q2) => $q2->where('evaluable_type', User::class)->where('evaluable_id', $user->id));
+            // Évaluations sur le compte Agent
             if ($agent) {
                 $q->orWhere(fn ($q2) => $q2->where('evaluable_type', Agent::class)->where('evaluable_id', $agent->id));
             }
@@ -103,8 +111,15 @@ class DashboardController extends Controller
 
         $evalsRecStats = $this->ds->evalStats($evalsRecBase);
 
-        $fichesRecBase = fn () => FicheObjectif::where(function ($q) use ($user, $agent) {
-            $q->where('assignable_type', User::class)->where('assignable_id', $user->id);
+        $fichesRecBase = fn () => FicheObjectif::where(function ($q) use ($ctx, $user, $agent) {
+            // Fiches adressées à la structure gérée (Guichet, Service, Agence)
+            $q->where(function ($q2) use ($ctx) {
+                $q2->where('assignable_type', $ctx->modelClass)
+                   ->where('assignable_id', $ctx->getId());
+            });
+            // Fiches adressées directement au compte User
+            $q->orWhere(fn ($q2) => $q2->where('assignable_type', User::class)->where('assignable_id', $user->id));
+            // Fiches adressées via le compte Agent
             if ($agent) {
                 $q->orWhere(fn ($q2) => $q2->where('assignable_type', Agent::class)->where('assignable_id', $agent->id));
             }
@@ -421,9 +436,17 @@ class DashboardController extends Controller
         $openAnnee      = Annee::currentOpen();
         $agentsSansEval = 0;
         if ($openAnnee) {
-            $agentsSansEval = Agent::whereDoesntHave('evaluations', function ($q) use ($openAnnee) {
-                $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
-            })->count();
+            $totalPersonnel = Agent::personnel()->count();
+            $agentsEvalues  = Agent::personnel()
+                ->where(fn ($q) => $q
+                    ->whereHas('evaluationsPersonnel', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
+                    ->orWhereHas('evaluations',        fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
+                    ->orWhereHas('directedDirection',  fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                    ->orWhereHas('directedCaisse',     fn ($c) => $c->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                    ->orWhereHas('directedDelegation', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                )
+                ->count();
+            $agentsSansEval = $totalPersonnel - $agentsEvalues;
         }
 
         $filters = compact('statut', 'search', 'anneeId');
@@ -460,7 +483,17 @@ class DashboardController extends Controller
             };
         }
 
+        // Calcul anticipé de l'année ouverte pour scoper les stats par défaut
+        $openAnnee    = Annee::currentOpen();
+        $openSemestre = null;
+        $totalAgents  = Agent::personnel()->count();
+        $agentsEvalues = $agentsSansEval = 0;
+
         $evalQuery = Evaluation::query();
+        // Par défaut (aucun filtre d'année saisi) : limiter à l'année ouverte
+        if (! $annee && $openAnnee) {
+            $evalQuery->where('annee_id', $openAnnee->id);
+        }
         if ($statut) {
             $evalQuery->where($statut === 'refusee'
                 ? fn ($q) => $q->whereIn('statut', ['refuse', 'reclamation'])
@@ -524,17 +557,27 @@ class DashboardController extends Controller
         $directions  = Direction::orderBy('nom')->get(['id', 'nom']);
         $fonctions   = Agent::ROLES;
 
-        $openAnnee = Annee::currentOpen();
-        $totalAgents = Agent::personnel()->count();
-        $agentsEvalues = $agentsSansEval = 0;
-        $openSemestre = null;
-
         if ($openAnnee) {
             $openSemestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
-            $agentsEvalues = Agent::personnel()->whereHas('evaluationsPersonnel', function ($q) use ($openAnnee, $openSemestre) {
-                $q->where('annee_id', $openAnnee->id);
-                if ($openSemestre) $q->where('semestre_id', $openSemestre->id);
-            })->count();
+            // Agents avec au moins une évaluation VALIDÉE dans l'année+semestre ouverts
+            // (même périmètre que $stats['valide'] → les deux chiffres sont comparables)
+            $agentsEvalues = Agent::personnel()
+                ->where(function ($q) use ($openAnnee, $openSemestre) {
+                    $ef = function ($e) use ($openAnnee, $openSemestre) {
+                        $e->where('annee_id', $openAnnee->id)
+                          ->where('statut', 'valide');
+                        if ($openSemestre) $e->where('semestre_id', $openSemestre->id);
+                    };
+                    $q->whereHas('evaluationsPersonnel', $ef)
+                      ->orWhereHas('evaluations', $ef)
+                      ->orWhereHas('directedDirection',  fn ($d) => $d->whereHas('evaluations', $ef))
+                      ->orWhereHas('directedCaisse',     fn ($c) => $c->whereHas('evaluations', $ef))
+                      ->orWhereHas('directedDelegation', fn ($d) => $d->whereHas('evaluations', $ef))
+                      ->orWhereHas('ledAgence',          fn ($a) => $a->whereHas('evaluations', $ef))
+                      ->orWhereHas('ledService',         fn ($s) => $s->whereHas('evaluations', $ef))
+                      ->orWhereHas('ledGuichet',         fn ($g) => $g->whereHas('evaluations', $ef));
+                })
+                ->count();
             $agentsSansEval = $totalAgents - $agentsEvalues;
         }
 

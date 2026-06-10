@@ -18,7 +18,7 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Modifier le service</h1>
                         <p class="mt-2 text-sm text-slate-600">Mettez a jour les informations demandees.</p>
                     </div>
-                    <a href="{{ route('admin.services.show', $service) }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
 
                 @if ($errors->any())

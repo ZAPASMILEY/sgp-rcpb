@@ -166,23 +166,23 @@
 
                             {{-- Actions --}}
                             <div class="flex shrink-0 items-center gap-2">
-                                @if($evaluationsEnabled)
+                                @if($evaluationsEnabled && $item['ficheAcceptee'] && !$item['evaluationEnCours'])
                                     <a href="{{ route('directeur.evaluations.create', ['agence_id' => $agence->id]) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée" class="ent-btn-disabled-light">
+                                    <span title="{{ $item['evaluationEnCours'] ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$item['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée pour ce chef.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}" class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
-                                @if($objectifsEnabled)
+                                @if($objectifsEnabled && !$item['ficheBlocksNew'])
                                     <a href="{{ route('directeur.subordonnes.agence.objectifs.create', $agence) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée" class="ent-btn-disabled-light">
+                                    <span title="{{ $item['ficheBlocksNew'] ? 'Une fiche d\'objectifs est déjà assignée à ce chef.' : ($objectifsDisabledMessage ?: 'Assignation désactivée.') }}" class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
                                 @endif

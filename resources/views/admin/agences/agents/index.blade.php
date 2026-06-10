@@ -34,7 +34,7 @@
                 </div>
                 <div class="mt-4">
                     <div class="inline-flex px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">
-                        {{ $agents->total() }} agent(s)
+                        {{ $agents->count() }} agent(s)
                     </div>
                 </div>
             </section>
@@ -46,9 +46,9 @@
             @endif
 
             <section class="admin-panel p-6">
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="ent-table text-left text-sm text-slate-700">
-                        <thead>
+                        <thead class="sticky top-0 z-10">
                             <tr>
                                 <th>#</th>
                                 <th>Nom</th>
@@ -64,7 +64,7 @@
                         <tbody>
                             @forelse ($agents as $agent)
                                 <tr>
-                                    <td>{{ ($agents->firstItem() ?? 1) + $loop->index }}</td>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td class="font-medium text-slate-900">{{ $agent->nom }}</td>
                                     <td>{{ $agent->prenom }}</td>
                                     <td>{{ ucfirst($agent->sexe ?? '-') }}</td>
@@ -119,11 +119,7 @@
                     </table>
                 </div>
 
-                @if ($agents->hasPages())
-                    <div class="mt-6 border-t border-slate-200 pt-4">
-                        {{ $agents->links() }}
-                    </div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $agents->count() }} résultat(s)</div>
             </section>
         </div>
     </div>

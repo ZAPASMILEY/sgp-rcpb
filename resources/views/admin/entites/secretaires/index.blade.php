@@ -22,7 +22,7 @@
                 <p class="text-sm text-slate-400 mt-1">Toutes les secrétaires du réseau RCPB</p>
             </div>
             <div class="px-5 py-3 rounded-2xl bg-white border border-slate-200 shadow-sm text-sm font-black uppercase tracking-widest text-slate-500">
-                {{ $secretaires->total() }} secrétaire(s)
+                {{ $secretaires->count() }} secrétaire(s)
             </div>
         </div>
 
@@ -83,9 +83,9 @@
 
         {{-- Table --}}
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                 <table class="w-full text-sm text-slate-700">
-                    <thead class="bg-slate-50 border-b border-slate-100">
+                    <thead class="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
                         <tr>
                             <th class="px-5 py-3.5 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">#</th>
                             <th class="px-5 py-3.5 text-left text-[11px] font-black uppercase tracking-wider text-slate-400">Secrétaire</th>
@@ -122,7 +122,7 @@
                             @endphp
                             <tr class="hover:bg-cyan-50/50 transition cursor-pointer"
                                 onclick="window.location='{{ $showUrl }}'">
-                                <td class="px-5 py-3.5 text-slate-400 font-mono text-xs">{{ ($secretaires->firstItem() ?? 1) + $loop->index }}</td>
+                                <td class="px-5 py-3.5 text-slate-400 font-mono text-xs">{{ $loop->iteration }}</td>
                                 <td class="px-5 py-3.5">
                                     <a href="{{ $showUrl }}" class="font-semibold text-slate-800 hover:text-cyan-700 transition" onclick="event.stopPropagation()">
                                         {{ $agent->prenom }} {{ $agent->nom }}
@@ -187,11 +187,7 @@
                 </table>
             </div>
 
-            @if($secretaires->hasPages())
-                <div class="px-5 py-4 border-t border-slate-100">
-                    {{ $secretaires->links() }}
-                </div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $secretaires->count() }} résultat(s)</div>
         </div>
 
     </div>

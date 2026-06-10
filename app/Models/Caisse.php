@@ -118,4 +118,9 @@ public function getEffectifReelAttribute(): int
     {
         return $this->morphMany(Objectif::class, 'assignable');
     }
+
+    public function evaluations(): MorphMany
+    {
+        return $this->morphMany(Evaluation::class, 'evaluable');
+    }
 }

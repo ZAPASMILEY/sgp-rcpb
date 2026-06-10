@@ -10,7 +10,7 @@
                 <div>
                     <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Espace DG / Réseau RCPB</p>
                     <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Caisses</h1>
-                    <p class="mt-1 text-sm text-slate-500">{{ $caisses->total() }} caisse(s) dans le réseau.</p>
+                    <p class="mt-1 text-sm text-slate-500">{{ $caisses->count() }} caisse(s) dans le réseau.</p>
                 </div>
                 <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 shadow-sm">
                     <i class="fas fa-building-columns text-xl"></i>
@@ -54,9 +54,9 @@
                     <p class="mt-3 text-sm font-semibold text-slate-400">Aucune caisse enregistrée.</p>
                 </div>
             @else
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="min-w-full text-left text-sm text-slate-700">
-                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400 sticky top-0 z-10">
                             <tr>
                                 <th class="px-4 py-3">Nom / Quartier</th>
                                 <th class="px-4 py-3">Délégation</th>
@@ -103,9 +103,7 @@
                         </tbody>
                     </table>
                 </div>
-                @if ($caisses->hasPages())
-                    <div class="border-t border-slate-100 px-6 py-4">{{ $caisses->withQueryString()->links() }}</div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $caisses->count() }} résultat(s)</div>
             @endif
         </section>
 

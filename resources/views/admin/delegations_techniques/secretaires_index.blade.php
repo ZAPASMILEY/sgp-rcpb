@@ -11,7 +11,7 @@
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Delegation Technique / Index</p>
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Secretaires</h1>
                     </div>
-                    <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $secretaires->total() }} secrétaire(s)</div>
+                    <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $secretaires->count() }} secrétaire(s)</div>
                 </div>
             </section>
 
@@ -37,9 +37,9 @@
                     </div>
                 @endif
 
-                <div class="mt-6 overflow-x-auto">
+                <div class="mt-6 overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="ent-table text-left text-sm text-slate-700">
-                        <thead>
+                        <thead class="sticky top-0 z-10">
                             <tr>
                                 <th>#</th>
                                 <th>Delegation</th>
@@ -51,7 +51,7 @@
                         <tbody>
                             @forelse ($secretaires as $direction)
                                 <tr>
-                                    <td>{{ ($secretaires->firstItem() ?? 1) + $loop->index }}</td>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $direction->delegationTechnique?->region }} / {{ $direction->delegationTechnique?->ville }}</td>
                                     <td>{{ $direction->secretaire_prenom }} {{ $direction->secretaire_nom }}</td>
                                     <td>{{ $direction->secretaire_email }}</td>
@@ -71,9 +71,7 @@
                     </table>
                 </div>
 
-                @if ($secretaires->hasPages())
-                    <div class="mt-4">{{ $secretaires->links() }}</div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $secretaires->count() }} résultat(s)</div>
             </section>
         </div>
     </div>

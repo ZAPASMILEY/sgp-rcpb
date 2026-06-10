@@ -119,12 +119,19 @@ class ChefReceivedFicheController extends Controller
             return back()->with('error', 'Cette fiche a déjà été traitée.');
         }
 
-        $request->validate(['action' => ['required', 'in:accepter,refuser']]);
+        $request->validate([
+            'action'      => ['required', 'in:accepter,refuser'],
+            'motif_refus' => ['required_if:action,refuser', 'nullable', 'string', 'max:1000'],
+        ], [
+            'motif_refus.required_if' => 'Veuillez indiquer le motif du refus.',
+        ]);
 
         $action        = $request->input('action');
         $fiche->statut = $action === 'accepter' ? 'acceptee' : 'refusee';
         if ($action === 'accepter') {
             $fiche->date_validation = now()->toDateString();
+        } else {
+            $fiche->motif_refus = $request->input('motif_refus');
         }
         $fiche->save();
 
@@ -139,7 +146,7 @@ class ChefReceivedFicheController extends Controller
                 "Fiche d'objectifs {$actionLabel}e",
                 "{$roleLabel} {$evalue->name} a {$actionLabel} la fiche d'objectifs « {$fiche->titre} » que vous lui avez assignée.",
                 $action === 'accepter' ? 'moyenne' : 'haute',
-                route('directeur.dashboard')
+                $this->ficheLinkForAssigneurRole($assigneur->role, $fiche)
             );
         }
 
@@ -222,8 +229,14 @@ class ChefReceivedFicheController extends Controller
                 ->with('status', 'Impossible de contester une fiche déjà acceptée.');
         }
 
+        $request->validate([
+            'motif' => ['required', 'string', 'max:1000'],
+        ], [
+            'motif.required' => 'Veuillez indiquer le motif de la contestation.',
+        ]);
+
         $ligne = LigneFicheObjectif::where('fiche_objectif_id', $ficheId)->findOrFail($ligneId);
-        $ligne->update(['statut' => 'contesté']);
+        $ligne->update(['statut' => 'contesté', 'motif' => $request->input('motif')]);
         $fiche->update(['statut' => 'contesté']);
 
         $evalue    = Auth::user();
@@ -236,7 +249,7 @@ class ChefReceivedFicheController extends Controller
                 'Objectif contesté',
                 "{$roleLabel} {$evalue->name} a contesté un objectif dans la fiche « {$fiche->titre} ».",
                 'haute',
-                route('directeur.dashboard')
+                $this->ficheLinkForAssigneurRole($assigneur->role, $fiche)
             );
         }
 
@@ -246,6 +259,26 @@ class ChefReceivedFicheController extends Controller
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Résout le lien de notification adapté au rôle de l'assigneur.
+     *
+     * Le lien doit pointer vers une page accessible par le rôle de l'assigneur
+     * et idéalement vers la fiche concernée.
+     */
+    private function ficheLinkForAssigneurRole(string $role, FicheObjectif $fiche): string
+    {
+        return match ($role) {
+            'Chef_Agence', 'Chef_Service'
+                => route('chef.objectifs.show', $fiche),
+            'Directeur_Direction', 'Directeur_Technique'
+                => route('directeur.subordonnes.service.objectifs.show', $fiche),
+            'Directeur_Caisse'
+                => route('directeur.subordonnes.agence.objectifs.show', $fiche),
+            default
+                => route('chef.dashboard'),
+        };
+    }
 
     /**
      * Résout le User qui a assigné la fiche au chef connecté,
@@ -313,6 +346,13 @@ class ChefReceivedFicheController extends Controller
             }
         }
 
+        if ($service->delegation_technique_id) {
+            $dt = \App\Models\DelegationTechnique::find($service->delegation_technique_id);
+            if ($dt?->directeur_agent_id) {
+                return User::where('agent_id', $dt->directeur_agent_id)->first();
+            }
+        }
+
         return null;
     }
 
@@ -326,11 +366,11 @@ class ChefReceivedFicheController extends Controller
         $ctx = $this->getContext();
         $this->checkOwnership($fiche, $ctx);
 
-        $fiche->load(['objectifs', 'annee']);
+        $fiche->load(['objectifs', 'annee', 'creator']);
 
         $assigneNom    = $ctx->getChefNomPrenom();
         $assigneRole   = $ctx->getRoleLabel();
-        $assigneurNom  = '-';
+        $assigneurNom  = $fiche->creator?->name ?? '-';
         $assigneurRole = 'Supérieur hiérarchique';
 
         $pdf = Pdf::loadView('pdf.fiche-objectifs', compact(

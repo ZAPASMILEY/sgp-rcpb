@@ -103,12 +103,20 @@ abstract class TableauBaseController extends Controller
         $s1 = Semestre::where('annee_id', $annee->id)->where('numero', 1)->first();
         $s2 = Semestre::where('annee_id', $annee->id)->where('numero', 2)->first();
 
+        $evalQ = fn ($q) => $q->where('annee_id', $annee->id)->where('statut', 'valide')->with('semestre');
+
         $agents = Agent::personnel()
             ->with([
                 'delegationTechnique',
                 'caisse.delegationTechnique',
-                'evaluationsPersonnel' => fn ($q) => $q->where('annee_id', $annee->id)->where('statut', 'valide')->with('semestre.annee'),
-                'evaluations' => fn ($q) => $q->where('annee_id', $annee->id)->where('statut', 'valide')->with('semestre.annee'),
+                'evaluationsPersonnel'           => $evalQ,
+                'evaluations'                    => $evalQ,
+                'directedDirection.evaluations'  => $evalQ,
+                'directedCaisse.evaluations'     => $evalQ,
+                'directedDelegation.evaluations' => $evalQ,
+                'ledAgence.evaluations'          => $evalQ,
+                'ledService.evaluations'         => $evalQ,
+                'ledGuichet.evaluations'         => $evalQ,
             ])
             ->when($scope === 'faitiere', fn ($q) => $q
                 ->where(fn ($s) => $s
@@ -191,9 +199,11 @@ abstract class TableauBaseController extends Controller
         if ($total === 0) return collect();
 
         $notesParAgent = $agents->map(function ($agent) use ($s1, $s2, $sem) {
-            $evals = $agent->evaluations->merge($agent->evaluationsPersonnel)->keyBy(fn ($e) => $e->semestre?->numero);
-            $n1    = ($s1 && $evals->get(1)?->note_finale !== null) ? (float)$evals->get(1)->note_finale : null;
-            $n2    = ($s2 && $evals->get(2)?->note_finale !== null) ? (float)$evals->get(2)->note_finale : null;
+            $evals = $agent->evaluations->merge($agent->evaluationsPersonnel)->merge($agent->directedDirection?->evaluations ?? collect())->merge($agent->directedCaisse?->evaluations ?? collect())->merge($agent->directedDelegation?->evaluations ?? collect())->merge($agent->ledAgence?->evaluations ?? collect())->merge($agent->ledService?->evaluations ?? collect())->merge($agent->ledGuichet?->evaluations ?? collect());
+            $e1    = $s1 ? $evals->firstWhere('semestre_id', $s1->id) : null;
+            $e2    = $s2 ? $evals->firstWhere('semestre_id', $s2->id) : null;
+            $n1    = ($e1 && $e1->note_finale !== null) ? (float)$e1->note_finale : null;
+            $n2    = ($e2 && $e2->note_finale !== null) ? (float)$e2->note_finale : null;
             $raw   = match ($sem) {
                 '1'      => $n1,
                 '2'      => $n2,
@@ -262,9 +272,11 @@ abstract class TableauBaseController extends Controller
 
     private function agentNote($agent, $s1, $s2, string $sem): ?int
     {
-        $evals = $agent->evaluations->merge($agent->evaluationsPersonnel)->keyBy(fn ($e) => $e->semestre?->numero);
-        $n1    = ($s1 && $evals->get(1)?->note_finale !== null) ? (float)$evals->get(1)->note_finale : null;
-        $n2    = ($s2 && $evals->get(2)?->note_finale !== null) ? (float)$evals->get(2)->note_finale : null;
+        $evals = $agent->evaluations->merge($agent->evaluationsPersonnel)->merge($agent->directedDirection?->evaluations ?? collect())->merge($agent->directedCaisse?->evaluations ?? collect())->merge($agent->directedDelegation?->evaluations ?? collect())->merge($agent->ledAgence?->evaluations ?? collect())->merge($agent->ledService?->evaluations ?? collect())->merge($agent->ledGuichet?->evaluations ?? collect());
+        $e1    = $s1 ? $evals->firstWhere('semestre_id', $s1->id) : null;
+        $e2    = $s2 ? $evals->firstWhere('semestre_id', $s2->id) : null;
+        $n1    = ($e1 && $e1->note_finale !== null) ? (float)$e1->note_finale : null;
+        $n2    = ($e2 && $e2->note_finale !== null) ? (float)$e2->note_finale : null;
         $raw   = match ($sem) {
             '1'      => $n1,
             '2'      => $n2,
@@ -694,13 +706,13 @@ abstract class TableauBaseController extends Controller
                     $t   = $cell['t'] ?? 's';
                     $v   = $cell['v'];
 
-                    $xml .= '<c r="' . $ref . '" s="' . $s . '" t="' . $t . '">';
                     if ($t === 's') {
-                        $xml .= '<v>' . htmlspecialchars($v, ENT_QUOTES, 'UTF-8') . '</v>';
+                        // inlineStr : le texte est embarqué directement, pas un index shared-string
+                        $esc = htmlspecialchars((string)$v, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+                        $xml .= '<c r="' . $ref . '" s="' . $s . '" t="inlineStr"><is><t>' . $esc . '</t></is></c>';
                     } else {
-                        $xml .= '<v>' . $v . '</v>';
+                        $xml .= '<c r="' . $ref . '" s="' . $s . '"><v>' . $v . '</v></c>';
                     }
-                    $xml .= '</c>';
                 }
             }
             $xml .= '</row>';

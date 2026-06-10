@@ -1,5 +1,9 @@
 @php
     $user = auth()->user();
+
+    // ── Badges sidebar ──────────────────────────────────────────────────────
+    $_dossierBadge = $user ? $user->alertesNonLues()->where('lien', 'like', '%mon-espace%')->count() : 0;
+
     $menuSections = [
         [
             'title' => 'Mon espace',
@@ -10,7 +14,7 @@
         [
             'title' => 'Mon dossier',
             'items' => [
-                ['route' => 'personnel.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon dossier'],
+                ['route' => 'personnel.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon dossier', 'badge' => $_dossierBadge, 'badgeTip' => 'Notification(s) non lue(s)'],
             ],
         ],
         [
@@ -139,7 +143,13 @@
                     @endphp
                     <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                         <i class="{{ $item['icon'] }}"></i>
-                        <span>{{ $item['label'] }}</span>
+                        <span class="flex-1">{{ $item['label'] }}</span>
+                        @if(($item['badge'] ?? 0) > 0)
+                            <span class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                                  title="{{ $item['badgeTip'] ?? ($item['badge'] . ' en attente') }}">
+                                {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                            </span>
+                        @endif
                     </a>
                 @endforeach
             @endforeach

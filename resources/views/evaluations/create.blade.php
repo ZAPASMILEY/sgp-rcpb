@@ -337,9 +337,9 @@
                                            class="ent-input bg-slate-50 text-slate-600" readonly placeholder="Renseigné automatiquement">
                                 </div>
                                 <div class="space-y-2">
-                                    <label for="identification_grade" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Grade</label>
+                                    <label for="identification_grade" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Grade <span class="text-red-500">*</span></label>
                                     <input id="identification_grade" name="identification[grade]" type="text"
-                                           value="{{ old('identification.grade') }}" class="ent-input" placeholder="Grade de l'évalué">
+                                           value="{{ old('identification.grade') }}" class="ent-input" placeholder="Grade de l'évalué" required>
                                 </div>
                                 <div class="space-y-2">
                                     <label for="identification_emploi" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Emploi / Fonction</label>
@@ -391,6 +391,12 @@
                                            value="{{ old('identification.direction_service', $dsDefault) }}"
                                            class="ent-input{{ $dsReadonly ? ' bg-slate-50 text-slate-600' : '' }}"
                                            {{ $dsReadonly ? 'readonly' : '' }}>
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="identification_date_prise_fonction" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date de prise de fonction <span class="text-red-500">*</span></label>
+                                    <input id="identification_date_prise_fonction" name="identification[date_prise_fonction]" type="text"
+                                           value="{{ old('identification.date_prise_fonction', $prefilledDatePriseFonction ?? '') }}"
+                                           class="ent-input" placeholder="JJ/MM/YYYY" required>
                                 </div>
                             </div>
 

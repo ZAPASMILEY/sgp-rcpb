@@ -110,6 +110,53 @@
             </div>
         @endif
 
+        {{-- ── Bandeau RH : Maintenir / Rouvrir ──────────────────────────── --}}
+        @if (!empty($isRh) && in_array($evaluation->statut, ['refuse', 'reclamation']) && in_array($evaluation->statut_reclamation, ['en_attente', null]))
+        <div class="flex flex-col gap-4 rounded-[24px] border-2 border-amber-200 bg-amber-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+                    <i class="fas fa-gavel text-xl"></i>
+                </div>
+                <div>
+                    <p class="font-black text-amber-900">Décision RH requise</p>
+                    <p class="mt-0.5 text-sm text-amber-700">
+                        @if($evaluation->reclamation)
+                            Réclamation déposée par l'évalué. Examinez-la puis choisissez la suite.
+                        @else
+                            Évaluation refusée sans réclamation. Vous pouvez maintenir le refus ou rouvrir pour correction.
+                        @endif
+                    </p>
+                    @if($evaluation->reclamation)
+                    <div class="mt-3 rounded-xl border border-amber-200 bg-white px-4 py-3">
+                        <p class="text-[10px] font-black uppercase tracking-[0.15em] text-amber-500">Réclamation</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ $evaluation->reclamation }}</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            <div class="flex shrink-0 flex-col gap-2 sm:items-end">
+                <form method="POST" action="{{ route($repondreRoute, $evaluation) }}">
+                    @csrf
+                    <input type="hidden" name="reponse" value="maintenu">
+                    <button type="submit"
+                            onclick="return confirm('Confirmer : maintenir le refus ?')"
+                            class="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-100">
+                        <i class="fas fa-ban text-xs"></i> Maintenir le refus
+                    </button>
+                </form>
+                <form method="POST" action="{{ route($repondreRoute, $evaluation) }}">
+                    @csrf
+                    <input type="hidden" name="reponse" value="rouvert">
+                    <button type="submit"
+                            onclick="return confirm('Confirmer : rouvrir l\'évaluation pour correction ?')"
+                            class="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-2.5 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-100">
+                        <i class="fas fa-rotate-left text-xs"></i> Rouvrir l'évaluation
+                    </button>
+                </form>
+            </div>
+        </div>
+        @endif
+
         {{-- ── Bandeau validation requise (assignataire, statut = soumis) ── --}}
         @if ($_isAssignee && $evaluation->statut === 'soumis' && isset($statutRoute))
         <div class="flex flex-col gap-4 rounded-[24px] border-2 border-amber-200 bg-amber-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -194,6 +241,16 @@
                 <i class="fas fa-triangle-exclamation mr-1"></i> Motif du refus par l'évalué
             </p>
             <p class="mt-2 text-sm text-orange-800">{{ $evaluation->motif_refus }}</p>
+        </div>
+        @endif
+
+        {{-- ── Réclamation de l'évalué (assignateur, statut reclamation) ── --}}
+        @if (!$_isAssignee && $evaluation->statut === 'reclamation' && $evaluation->reclamation)
+        <div class="rounded-xl border border-rose-300 bg-rose-50 px-5 py-4">
+            <p class="text-xs font-black uppercase tracking-[0.15em] text-rose-600">
+                <i class="fas fa-flag mr-1"></i> Réclamation soumise par {{ $cibleLabel }}
+            </p>
+            <p class="mt-2 text-sm text-rose-800 whitespace-pre-line">{{ $evaluation->reclamation }}</p>
         </div>
         @endif
 
@@ -544,7 +601,7 @@
                             </button>
                         </form>
                     @endif
-                    @if (isset($destroyRoute) && in_array($evaluation->statut, \App\Models\Evaluation::EDITABLE_STATUTS))
+                    @if (isset($destroyRoute) && in_array($evaluation->statut, ['brouillon', 'a_reviser']))
                         <form method="POST" action="{{ route($destroyRoute, $evaluation) }}"
                               onsubmit="return confirm('Supprimer définitivement cette évaluation ?')">
                             @csrf @method('DELETE')

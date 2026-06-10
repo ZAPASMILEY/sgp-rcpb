@@ -52,14 +52,28 @@
                         </a>
                     @endforeach
                 </div>
-                @if ($tab === 'evaluations' && $evaluationsEnabled)
-                    <a href="{{ route('directeur.evaluations.create', ['caisse_id' => $caisse->id]) }}" class="ent-btn ent-btn-primary text-xs">
-                        <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
-                    </a>
-                @elseif ($tab === 'objectifs' && $objectifsEnabled)
-                    <a href="{{ route('directeur.subordonnes.caisse.objectifs.create', $caisse) }}" class="ent-btn ent-btn-primary text-xs">
-                        <i class="fas fa-plus mr-1"></i> Assigner des objectifs
-                    </a>
+                @if ($tab === 'evaluations')
+                    @if ($evaluationsEnabled && $ficheAcceptee && !$evaluationEnCours)
+                        <a href="{{ route('directeur.evaluations.create', ['caisse_id' => $caisse->id]) }}" class="ent-btn ent-btn-primary text-xs">
+                            <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
+                        </a>
+                    @else
+                        <span title="{{ $evaluationEnCours ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$ficheAcceptee ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}"
+                              class="ent-btn-disabled-light text-xs">
+                            <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
+                        </span>
+                    @endif
+                @elseif ($tab === 'objectifs')
+                    @if ($objectifsEnabled && !$ficheBlocksNew)
+                        <a href="{{ route('directeur.subordonnes.caisse.objectifs.create', $caisse) }}" class="ent-btn ent-btn-primary text-xs">
+                            <i class="fas fa-plus mr-1"></i> Assigner des objectifs
+                        </a>
+                    @else
+                        <span title="{{ $ficheBlocksNew ? 'Une fiche d\'objectifs est déjà assignée à ce directeur.' : ($objectifsDisabledMessage ?: 'Objectifs désactivés.') }}"
+                              class="ent-btn-disabled-light text-xs">
+                            <i class="fas fa-plus mr-1"></i> Assigner des objectifs
+                        </span>
+                    @endif
                 @endif
             </div>
 
@@ -189,7 +203,7 @@
                                             <div class="inline-flex items-center gap-1">
                                                 <a href="{{ route('directeur.evaluations.show', $eval) }}"
                                                    class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-blue-100 hover:text-blue-600"
-                                                   title="Voir"><i class="fas fa-eye"></i></a>
+                                                   title="{{ $eval->statut === 'brouillon' ? 'Modifier' : 'Voir' }}"><i class="fas fa-{{ $eval->statut === 'brouillon' ? 'pen' : 'eye' }}"></i></a>
                                                 @if ($eval->statut !== 'brouillon')
                                                     <a href="{{ route('directeur.evaluations.pdf', $eval) }}"
                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600"
@@ -202,10 +216,12 @@
                                                             <i class="fas fa-paper-plane text-xs"></i>
                                                         </button>
                                                     </form>
+                                                @endif
+                                                @if (in_array($eval->statut, ['brouillon', 'a_reviser']))
                                                     <form method="POST" action="{{ route('directeur.evaluations.destroy', $eval) }}"
-                                                          onsubmit="return confirm('Supprimer cette évaluation ?')">
+                                                          onsubmit="return confirm('Supprimer définitivement cette évaluation ?')">
                                                         @csrf @method('DELETE')
-                                                        <button type="submit" class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600" title="Supprimer">
+                                                        <button type="submit" class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-white text-rose-400 shadow-sm transition hover:bg-rose-50 hover:text-rose-600" title="Supprimer">
                                                             <i class="fas fa-trash text-xs"></i>
                                                         </button>
                                                     </form>
@@ -347,6 +363,11 @@
                                         </td>
                                         <td class="px-4 py-4">
                                             <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $ficheStatusClass }}">{{ $ficheStatusLabel }}</span>
+                                            @if ($ficheStatut === 'refusee' && $fiche->motif_refus)
+                                                <p class="mt-1 max-w-[200px] truncate text-[10px] italic text-rose-600" title="{{ $fiche->motif_refus }}">
+                                                    « {{ $fiche->motif_refus }} »
+                                                </p>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-4 text-center">
                                             <a href="{{ route('directeur.subordonnes.caisse.objectifs.show', $fiche) }}"

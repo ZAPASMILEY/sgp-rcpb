@@ -51,58 +51,180 @@
         </div>
 
         {{-- Table --}}
-        <div class="rounded-2xl bg-white p-5 shadow-sm">
-            <div class="mb-6">
-                <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recherche</label>
-                <input id="guichet-search" type="text" placeholder="Rechercher un guichet, un chef ou une agence..." class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+        <div class="rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 overflow-hidden">
+            {{-- Filtres --}}
+            <div class="mb-0 flex flex-col gap-3 p-5 border-b border-slate-100 sm:flex-row sm:items-end">
+                {{-- Filtre Caisse --}}
+                <form method="GET" action="{{ route('admin.guichets.index') }}" class="flex items-end gap-2">
+                    <div class="flex-1 sm:w-64">
+                        <label for="caisse-filter" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Filtrer par caisse</label>
+                        <select
+                            id="caisse-filter"
+                            name="caisse_id"
+                            onchange="this.form.submit()"
+                            class="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400"
+                        >
+                            <option value="">Toutes les caisses</option>
+                            @foreach ($caisses as $caisse)
+                                <option value="{{ $caisse->id }}" @selected($caisseId == $caisse->id)>{{ $caisse->nom }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @if ($caisseId)
+                        <a href="{{ route('admin.guichets.index') }}" class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-500 transition hover:bg-rose-50 hover:text-rose-500" title="Effacer le filtre">
+                            <i class="fas fa-times text-[10px]"></i> Effacer
+                        </a>
+                    @endif
+                </form>
+
+                {{-- Recherche texte --}}
+                <div class="flex-1">
+                    <label for="guichet-search" class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recherche</label>
+                    <div class="relative mt-1.5">
+                        <input
+                            id="guichet-search"
+                            type="text"
+                            placeholder="Rechercher un guichet, un chef, une agence ou une caisse..."
+                            class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400"
+                            autocomplete="off"
+                        >
+                        <div id="guichet-suggestions" class="absolute left-0 right-0 top-full z-20 mt-1 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"></div>
+                    </div>
+                </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-slate-700">
-                    <thead>
-                        <tr class="border-b border-slate-100">
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase text-slate-400">Guichet</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase text-slate-400">Chef de guichet</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase text-slate-400">Agence</th>
-                            <th class="px-3 py-3 text-right text-[11px] font-bold uppercase text-slate-400">Actions</th>
+            @if ($caisseId)
+                <div class="mx-5 mb-4 flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2.5">
+                    <i class="fas fa-filter text-xs text-emerald-500"></i>
+                    <span class="text-sm text-emerald-700">Filtre actif : <strong>{{ $caisses->firstWhere('id', $caisseId)?->nom }}</strong></span>
+                    <span class="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">{{ $guichets->count() }} guichet(s)</span>
+                </div>
+            @endif
+
+            @if($guichets->isEmpty())
+            <div class="px-8 py-16 text-center">
+                <i class="fas fa-window-maximize text-slate-200 text-5xl mb-4 block"></i>
+                <p class="text-sm font-semibold text-slate-400">Aucun guichet enregistré.</p>
+            </div>
+            @else
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 z-10">
+                        <tr class="border-b border-slate-100 bg-slate-50">
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">#</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Guichet</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Chef de guichet</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Agence</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Caisse</th>
+                            <th class="px-4 py-3 text-right text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse ($guichets as $guichet)
-                            <tr class="border-b border-slate-50 hover:bg-slate-50 transition" 
-                                data-search-content="{{ strtolower($guichet->nom . ' ' . $guichet->chef?->nom . ' ' . $guichet->agence?->nom) }}">
-                                <td class="px-3 py-3 font-semibold text-slate-800">{{ $guichet->nom }}</td>
-                                <td class="px-3 py-3">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold text-slate-700">
-                                            {{ $guichet->chef ? $guichet->chef->prenom.' '.$guichet->chef->nom : 'Non assigné' }}
-                                        </span>
-                                        <span class="text-xs text-slate-400">{{ $guichet->chef?->numero_telephone ?? '' }}</span>
-                                    </div>
+                    <tbody class="divide-y divide-slate-50">
+                        @foreach ($guichets as $guichet)
+                            <tr class="hover:bg-slate-50/60 transition-colors"
+                                data-search-content="{{ strtolower($guichet->nom.' '.($guichet->chef?->prenom ?? '').' '.($guichet->chef?->nom ?? '').' '.($guichet->agence?->nom ?? '').' '.($guichet->agence?->caisse?->nom ?? '')) }}">
+                                <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{{ $loop->iteration }}</td>
+                                <td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">{{ $guichet->nom }}</td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @if($guichet->chef)
+                                        <p class="text-sm font-semibold text-slate-700">{{ $guichet->chef->prenom }} {{ $guichet->chef->nom }}</p>
+                                        <p class="mt-0.5 text-xs text-slate-400">{{ $guichet->chef->numero_telephone }}</p>
+                                    @else
+                                        <span class="text-slate-300 text-xs">Non assigné</span>
+                                    @endif
                                 </td>
-                                <td class="px-3 py-3">
-                                    <p class="font-semibold">{{ $guichet->agence?->nom ?? '-' }}</p>
-                                    <p class="text-xs text-slate-400">{{ $guichet->agence?->delegationTechnique?->region }}</p>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <p class="text-sm text-slate-700">{{ $guichet->agence?->nom ?? '—' }}</p>
+                                    <p class="mt-0.5 text-xs text-slate-400">{{ $guichet->agence?->delegationTechnique?->region }}</p>
                                 </td>
-                                <td class="px-3 py-3 text-right">
-                                    <div class="flex justify-end gap-2">
-                                        <a href="{{ route('admin.guichets.agents.index', $guichet) }}" class="text-emerald-600 hover:text-emerald-800" title="Gérer les agents"><i class="fas fa-users"></i></a>
-                                        <a href="{{ route('admin.guichets.edit', $guichet) }}" class="text-blue-500 hover:text-blue-700" title="Modifier"><i class="fas fa-pen"></i></a>
-                                        <form action="{{ route('admin.guichets.destroy', $guichet) }}" method="POST" onsubmit="return confirm('Supprimer ?')">
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @if($guichet->agence?->caisse)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">{{ $guichet->agence->caisse->nom }}</span>
+                                    @else
+                                        <span class="text-slate-300 text-xs">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <div class="flex justify-end gap-1">
+                                        <a href="{{ route('admin.guichets.agents.index', $guichet) }}" class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-600">
+                                            <i class="fas fa-users text-[10px]"></i> Agents
+                                        </a>
+                                        <a href="{{ route('admin.guichets.edit', $guichet) }}" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-50 hover:text-blue-500" title="Modifier"><i class="fas fa-pen text-xs"></i></a>
+                                        <form action="{{ route('admin.guichets.destroy', $guichet) }}" method="POST" onsubmit="return confirm('Supprimer ce guichet ?')" class="inline-flex">
                                             @csrf @method('DELETE')
-                                            <button type="submit" class="text-rose-500 hover:text-rose-700" title="Supprimer"><i class="fas fa-trash"></i></button>
+                                            <button type="submit" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer"><i class="fas fa-trash text-xs"></i></button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr><td colspan="4" class="py-10 text-center text-slate-400">Aucun guichet.</td></tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4">{{ $guichets->links() }}</div>
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">
+                <span id="guichets-count">{{ $guichets->count() }}</span>
+                guichet{{ $guichets->count() > 1 ? 's' : '' }} affiché{{ $guichets->count() > 1 ? 's' : '' }}
+            </div>
+            @endif
         </div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var searchInput = document.getElementById('guichet-search');
+            var suggestionsBox = document.getElementById('guichet-suggestions');
+            if (!searchInput || !suggestionsBox) return;
+
+            var rows = Array.from(document.querySelectorAll('tr[data-search-content]'));
+            var pool = new Set();
+            rows.forEach(function (row) {
+                var cells = row.querySelectorAll('td');
+                if (cells.length < 4) return;
+                [cells[0], cells[1], cells[2], cells[3]].forEach(function (cell) {
+                    var txt = (cell.innerText || '').replace(/\s+/g, ' ').trim();
+                    if (txt.length >= 2 && txt !== '-') pool.add(txt);
+                });
+            });
+            var suggestions = Array.from(pool);
+
+            function hide() { suggestionsBox.innerHTML = ''; suggestionsBox.classList.add('hidden'); }
+
+            function render(query) {
+                var q = query.trim().toLowerCase();
+                if (q.length < 1) { hide(); return; }
+                var matched = suggestions.filter(function (s) { return s.toLowerCase().includes(q); }).slice(0, 6);
+                if (!matched.length) { hide(); return; }
+                suggestionsBox.innerHTML = matched.map(function (s) {
+                    return '<button type="button" class="block w-full border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">' + s + '</button>';
+                }).join('');
+                suggestionsBox.classList.remove('hidden');
+                suggestionsBox.querySelectorAll('button').forEach(function (btn) {
+                    btn.addEventListener('click', function () { searchInput.value = btn.textContent; filter(); hide(); });
+                });
+            }
+
+            function filter() {
+                var q = searchInput.value.trim().toLowerCase();
+                var visible = 0;
+                rows.forEach(function (row, i) {
+                    var show = q === '' || (row.getAttribute('data-search-content') || '').includes(q);
+                    row.style.display = show ? '' : 'none';
+                    if (show) {
+                        visible++;
+                        var numEl = row.querySelector('td:first-child');
+                        if (numEl) numEl.textContent = visible;
+                    }
+                });
+                var counter = document.getElementById('guichets-count');
+                if (counter) counter.textContent = visible;
+            }
+
+            searchInput.addEventListener('input', function () { render(searchInput.value); filter(); });
+            searchInput.addEventListener('blur', function () { setTimeout(hide, 120); });
+            searchInput.addEventListener('focus', function () { if (searchInput.value.trim()) render(searchInput.value); });
+        });
+    </script>
+@endpush

@@ -195,19 +195,24 @@
                         </div>
 
                     @elseif ($isContested && $contested)
-                        <div class="py-2">
+                        <div class="contested-row py-2">
                             <div class="mb-1.5 flex items-center gap-2">
                                 <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-[11px] font-black text-orange-600">
                                     {{ $index + 1 }}
                                 </div>
                                 <span class="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-0.5 text-[10px] font-black text-orange-600">
-                                    <i class="fas fa-flag text-[8px]"></i> Contesté — à corriger
+                                    <i class="fas fa-flag text-[8px]"></i> Contesté — à corriger ou supprimer
                                 </span>
                             </div>
-                            <input type="text" name="objectifs[]" required
-                                   value="{{ old('objectifs.'.$loop->index, $objectif->description) }}"
-                                   placeholder="Corrigez cet objectif…"
-                                   class="w-full rounded-2xl border-2 border-orange-300 bg-orange-50/50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-orange-300 focus:border-orange-400 focus:ring-4 focus:ring-orange-100">
+                            <div class="flex items-center gap-2">
+                                <input type="text" name="objectifs[]" required
+                                       value="{{ old('objectifs.'.$loop->index, $objectif->description) }}"
+                                       placeholder="Corrigez cet objectif…"
+                                       class="flex-1 rounded-2xl border-2 border-orange-300 bg-orange-50/50 px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-orange-300 focus:border-orange-400 focus:ring-4 focus:ring-orange-100">
+                                <button type="button" class="remove-objectif-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-400 transition hover:bg-rose-100 hover:text-rose-600" title="Supprimer cet objectif">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
                         </div>
 
                     @else
@@ -313,6 +318,18 @@ document.addEventListener('DOMContentLoaded', function () {
     container.querySelectorAll('.remove-objectif-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             btn.closest('.objectif-row').remove(); updateRemoveButtons();
+        });
+    });
+});
+</script>
+@else
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var container = document.getElementById('objectifs-container');
+    if (!container) return;
+    container.querySelectorAll('.remove-objectif-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btn.closest('.objectif-row, .contested-row').remove();
         });
     });
 });

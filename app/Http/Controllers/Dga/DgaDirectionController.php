@@ -8,6 +8,7 @@ use App\Models\Direction;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\Service;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,14 +21,11 @@ class DgaDirectionController extends Controller
         $dgaAgentId = Auth::user()->agent_id;
 
         $direction = Direction::where('directeur_agent_id', $dgaAgentId)
+            ->orWhere('nom', 'Direction Générale Adjointe')
             ->with(['secretaire', 'services.chef', 'services.agents'])
             ->first();
 
-        if (! $direction) {
-            $direction = Direction::with(['secretaire', 'services.chef', 'services.agents'])->find(5);
-        }
-
-        abort_if(! $direction, 404, 'Direction DGA introuvable.');
+        abort_if(! $direction, 404, 'Direction DGA introuvable. Contactez l\'administrateur.');
 
         return $direction;
     }
@@ -78,13 +76,22 @@ class DgaDirectionController extends Controller
                 : 0;
 
             return [
-                'service'     => $service,
-                'chef'        => $chef,
-                'chefUser'    => $chefUser,
-                'nbAgents'    => $nbAgents,
-                'nbEvals'     => $nbEvals,
-                'noteAvg'     => $noteAvg !== null ? round((float) $noteAvg, 2) : null,
-                'nbObjectifs' => $nbObjectifs,
+                'service'        => $service,
+                'chef'           => $chef,
+                'chefUser'       => $chefUser,
+                'nbAgents'       => $nbAgents,
+                'nbEvals'        => $nbEvals,
+                'noteAvg'        => $noteAvg !== null ? round((float) $noteAvg, 2) : null,
+                'nbObjectifs'    => $nbObjectifs,
+                'ficheBlocksNew'    => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->whereNotIn('statut', ['refusee'])->exists()
+                    : false,
+                'ficheAcceptee'     => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->where('statut', 'acceptee')->exists()
+                    : false,
+                'evaluationEnCours' => $chefUser
+                    ? Evaluation::where('evaluable_type', User::class)->where('evaluable_id', $chefUser->id)->whereIn('statut', ['soumis', 'brouillon'])->exists()
+                    : false,
             ];
         });
 
@@ -151,10 +158,14 @@ class DgaDirectionController extends Controller
 
         $filters = compact('search', 'statut');
 
+        $evaluationsEnabled = Setting::featureEnabled('evaluations') && Auth::user()->can('evaluations.creer');
+        $objectifsEnabled   = Setting::featureEnabled('objectifs')   && Auth::user()->can('objectifs.assigner');
+
         return view('dga.direction.index', compact(
             'tab', 'direction', 'services', 'agentsDirects',
             'totalAgents', 'totalEvals', 'totalObjs', 'noteMoyenne',
-            'evaluations', 'objectifs', 'filters'
+            'evaluations', 'objectifs', 'filters',
+            'evaluationsEnabled', 'objectifsEnabled'
         ));
     }
 }

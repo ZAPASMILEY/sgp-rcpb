@@ -30,7 +30,7 @@
                         @endif
                     </p>
                 </div>
-                <a href="{{ route('admin.users.index') }}" class="ent-btn ent-btn-soft">Retour</a>
+                <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour</a>
             </div>
 
             @if ($errors->any())

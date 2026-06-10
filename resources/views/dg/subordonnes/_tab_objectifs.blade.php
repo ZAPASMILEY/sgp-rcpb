@@ -27,6 +27,9 @@ $ficheCards = [
 <form method="GET" action="{{ request()->url() }}"
       class="mb-5 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
     <input type="hidden" name="tab" value="objectifs">
+    @if(!empty($filters['conseillerId']))
+        <input type="hidden" name="conseiller_id" value="{{ $filters['conseillerId'] }}">
+    @endif
     <i class="fas fa-filter text-xs text-slate-400 mr-1"></i>
     <div class="relative flex-1 min-w-44">
         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -134,6 +137,11 @@ $ficheCards = [
                                 <span class="h-1.5 w-1.5 rounded-full {{ $dotCls }}"></span>
                                 {{ $statusLabel }}
                             </span>
+                            @if ($statut === 'refusee' && $fiche->motif_refus)
+                                <p class="mt-1 max-w-[220px] truncate text-[10px] italic text-rose-600" title="{{ $fiche->motif_refus }}">
+                                    « {{ $fiche->motif_refus }} »
+                                </p>
+                            @endif
                         </td>
                         {{-- Actions --}}
                         <td class="px-5 py-3.5 text-center">

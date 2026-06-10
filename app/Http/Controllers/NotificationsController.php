@@ -59,7 +59,7 @@ class NotificationsController extends Controller
         $notifications = $user->alertes()
             ->withPivot('lu', 'lu_at')
             ->orderByDesc('alertes.created_at')
-            ->paginate(20);
+            ->get();
 
         $totalNonLues = $user->alertesNonLues()->count();
 

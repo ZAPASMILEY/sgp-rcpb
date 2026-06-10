@@ -34,13 +34,20 @@ class ServiceController extends Controller
      */
     public function faitiereServices(): View
     {
-        $services = Service::whereNotNull('direction_id')
+        $entite = \App\Models\Entite::latest()->first();
+
+        $directionIds = $entite
+            ? Direction::where('entite_id', $entite->id)->pluck('id')
+            : collect();
+
+        $services = Service::whereIn('direction_id', $directionIds)
             ->whereNull('delegation_technique_id')
             ->whereNull('caisse_id')
-            ->with('direction')
+            ->with(['direction', 'chef'])
             ->latest()
             ->get();
-        return view('admin.services.faitiere', compact('services'));
+
+        return view('admin.services.faitiere', compact('services', 'entite'));
     }
     public function index(Request $request): View
     {
@@ -87,7 +94,7 @@ class ServiceController extends Controller
             ->latest();
 
         return view('admin.services.index', [
-            'services' => $servicesQuery->paginate(10)->withQueryString(),
+            'services' => $servicesQuery->get(),
             'filters' => [
                 'search' => $search,
                 'direction_id' => $directionId,
@@ -100,14 +107,9 @@ class ServiceController extends Controller
             'stats' => [
                 'total' => Service::count(),
                 'par_delegation' => DelegationTechnique::query()
+                    ->withCount(['directServices as services_count'])
                     ->orderBy('region')
-                    ->get()
-                    ->map(function ($d) {
-                        $d->services_count = Service::query()
-                            ->where('delegation_technique_id', $d->id)
-                            ->count();
-                        return $d;
-                    }),
+                    ->get(),
             ],
         ]);
     }

@@ -30,6 +30,7 @@ class EvaluationIdentification extends Model
         'anciennete',
         'sexe',
         'date_affectation',
+        'date_prise_fonction',
         'formations',
         'experiences',
     ];
@@ -41,6 +42,7 @@ class EvaluationIdentification extends Model
         'date_naissance' => 'date',
         'date_confirmation' => 'date',
         'date_affectation' => 'date',
+        'date_prise_fonction' => 'date',
         'formations' => 'array',
         'experiences' => 'array',
     ];

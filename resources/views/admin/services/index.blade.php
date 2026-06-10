@@ -86,8 +86,8 @@
         </div>
 
         {{-- Filters + Table --}}
-        <div class="rounded-2xl bg-white p-5 shadow-sm">
-            <form id="service-filters-form" method="GET" action="{{ route('admin.services.index') }}" class="mb-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr_auto] lg:items-end">
+        <div class="rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 overflow-hidden">
+            <form id="service-filters-form" method="GET" action="{{ route('admin.services.index') }}" class="mb-0 grid gap-3 p-5 lg:grid-cols-[1.2fr_0.8fr_auto] lg:items-end border-b border-slate-100">
                 @if(($filters['source'] ?? '') === 'faitiere')
                     <input type="hidden" name="source" value="faitiere">
                 @endif
@@ -122,100 +122,93 @@
                 </button>
             </form>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-slate-700">
-                    <thead>
-                        <tr class="border-b border-slate-100">
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">#</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Service</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Structure</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Type d'entité</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Chef de service</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Email</th>
-                            <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Téléphone</th>
-                            <th class="px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
+            @if($services->isEmpty())
+            <div class="px-8 py-16 text-center">
+                <i class="fas fa-briefcase text-slate-200 text-5xl mb-4 block"></i>
+                <p class="text-sm font-semibold text-slate-400">Aucun service enregistré.</p>
+            </div>
+            @else
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
+                <table class="w-full text-sm">
+                    <thead class="sticky top-0 z-10">
+                        <tr class="border-b border-slate-100 bg-slate-50">
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">#</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Nom</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Structure</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Type d'entité</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Chef de service</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Email</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Téléphone</th>
+                            <th class="px-4 py-3 text-right text-[11px] font-black uppercase tracking-wide text-slate-500 whitespace-nowrap">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse ($services as $service)
+                    <tbody class="divide-y divide-slate-50">
+                        @foreach ($services as $service)
                             @php
-                                // Détermination dynamique du nom de la structure et du type pour le moteur de recherche JS
                                 $structureNom = $service->direction?->nom ?? ($service->delegationTechnique?->region ?? $service->caisse?->nom ?? '');
-                                $typeEntite = $service->direction ? 'Direction Faîtière' : ($service->delegationTechnique ? 'Délégation' : ($service->caisse ? 'Caisse' : ''));
+                                $typeEntite   = $service->direction ? 'Direction Faîtière' : ($service->delegationTechnique ? 'Délégation' : ($service->caisse ? 'Caisse' : ''));
                             @endphp
-                            <tr class="border-b border-slate-50 transition hover:bg-slate-50" data-search-content="{{ strtolower(trim($service->nom.' '.$structureNom.' '.$typeEntite.' '.$service->chef?->prenom.' '.$service->chef?->nom.' '.$service->chef?->email.' '.$service->chef?->numero_telephone)) }}">
-                                <td class="whitespace-nowrap px-3 py-3">{{ ($services->firstItem() ?? 1) + $loop->index }}</td>
-                                <td class="px-3 py-3 font-semibold text-slate-800">{{ $service->nom }}</td>
-                                
-                                {{-- Structure parente --}}
-                                <td class="px-3 py-3 font-medium text-slate-700">
+                            <tr class="hover:bg-slate-50/60 transition-colors" data-search-content="{{ strtolower(trim($service->nom.' '.$structureNom.' '.$typeEntite.' '.$service->chef?->prenom.' '.$service->chef?->nom.' '.$service->chef?->email.' '.$service->chef?->numero_telephone)) }}">
+                                <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{{ $loop->iteration }}</td>
+                                <td class="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">{{ $service->nom }}</td>
+                                <td class="px-4 py-3 text-xs text-slate-600 whitespace-nowrap max-w-[200px] truncate" title="{{ $structureNom }}">
                                     @if($service->direction)
                                         {{ $service->direction->nom }}
                                     @elseif($service->delegationTechnique)
-                                        {{ $service->delegationTechnique->region }} @if($service->delegationTechnique->ville) — {{ $service->delegationTechnique->ville }} @endif
+                                        {{ $service->delegationTechnique->region }}@if($service->delegationTechnique->ville) – {{ $service->delegationTechnique->ville }}@endif
                                     @elseif($service->caisse)
                                         {{ $service->caisse->nom }}
                                     @else
-                                        <span class="text-slate-400 italic text-xs">Aucun rattachement</span>
+                                        <span class="text-slate-300">—</span>
                                     @endif
                                 </td>
-
-                                {{-- Type d'Entité (Badge) --}}
-                                <td class="px-3 py-3">
+                                <td class="px-4 py-3 whitespace-nowrap">
                                     @if($service->direction)
-                                        <span class="inline-flex items-center rounded-xl bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-600 ring-1 ring-inset ring-blue-600/20">
-                                            <i class="fas fa-building mr-1 text-[10px]"></i> Direction Faîtière
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700">
+                                            <i class="fas fa-building text-[9px]"></i> Direction Faîtière
                                         </span>
                                     @elseif($service->delegationTechnique)
-                                        <span class="inline-flex items-center rounded-xl bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-600 ring-1 ring-inset ring-purple-600/20">
-                                            <i class="fas fa-map-marker-alt mr-1 text-[10px]"></i> Délégation
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-0.5 text-[11px] font-bold text-purple-700">
+                                            <i class="fas fa-map-marker-alt text-[9px]"></i> Délégation
                                         </span>
                                     @elseif($service->caisse)
-                                        <span class="inline-flex items-center rounded-xl bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-600 ring-1 ring-inset ring-amber-600/20">
-                                            <i class="fas fa-wallet mr-1 text-[10px]"></i> Caisse
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">
+                                            <i class="fas fa-wallet text-[9px]"></i> Caisse
                                         </span>
                                     @else
-                                        <span class="text-slate-300 italic text-xs">—</span>
+                                        <span class="text-slate-300 text-xs">—</span>
                                     @endif
                                 </td>
-
-                                <td class="px-3 py-3 font-semibold text-slate-700">
+                                <td class="px-4 py-3 text-xs text-slate-700 whitespace-nowrap">
                                     @if($service->chef)
                                         {{ $service->chef->prenom }} {{ $service->chef->nom }}
                                     @else
-                                        <span class="text-slate-300 italic text-xs">—</span>
+                                        <span class="text-slate-300">—</span>
                                     @endif
                                 </td>
-                                <td class="px-3 py-3 text-slate-500">{{ $service->chef?->email ?? '—' }}</td>
-                                <td class="px-3 py-3">{{ $service->chef?->numero_telephone ?? '—' }}</td>
-                                <td class="whitespace-nowrap px-3 py-3 text-right">
+                                <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{{ $service->chef?->email ?? '—' }}</td>
+                                <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{{ $service->chef?->numero_telephone ?? '—' }}</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
                                     <div class="flex items-center justify-end gap-1">
-                                        <a href="{{ route('admin.services.show', $service) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Voir"><i class="fas fa-eye text-xs"></i></a>
-                                        <a href="{{ route('admin.services.edit', $service) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-50 hover:text-blue-500" title="Modifier"><i class="fas fa-pen text-xs"></i></a>
+                                        <a href="{{ route('admin.services.show', $service) }}" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-500" title="Voir"><i class="fas fa-eye text-xs"></i></a>
+                                        <a href="{{ route('admin.services.edit', $service) }}" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-50 hover:text-blue-500" title="Modifier"><i class="fas fa-pen text-xs"></i></a>
                                         <form method="POST" action="{{ route('admin.services.destroy', $service) }}" onsubmit="return confirm('Supprimer ce service ?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer"><i class="fas fa-trash text-xs"></i></button>
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" title="Supprimer"><i class="fas fa-trash text-xs"></i></button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="py-10 text-center text-sm text-slate-400">
-                                    Aucun service enregistré.
-                                </td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
-
-            @if ($services->hasPages())
-                <div class="mt-6 border-t border-slate-100 pt-4">
-                    {{ $services->links() }}
-                </div>
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">
+                <span id="services-count">{{ $services->count() }}</span>
+                service{{ $services->count() > 1 ? 's' : '' }} affiché{{ $services->count() > 1 ? 's' : '' }}
+            </div>
             @endif
+
         </div>
     </div>
 </div>
@@ -223,103 +216,75 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            var searchInput = document.getElementById('search');
-            var directionSelect = document.getElementById('direction_id');
-            var filtersForm = document.getElementById('service-filters-form');
-            var suggestionsBox = document.getElementById('service-search-suggestions');
+    document.addEventListener('DOMContentLoaded', function () {
+        var searchInput     = document.getElementById('search');
+        var directionSelect = document.getElementById('direction_id');
+        var filtersForm     = document.getElementById('service-filters-form');
+        var suggestionsBox  = document.getElementById('service-search-suggestions');
+        var rows            = Array.from(document.querySelectorAll('tr[data-search-content]'));
+        var suggestionPool  = new Set();
 
-            if (!searchInput || !suggestionsBox) {
-                return;
-            }
-
-            var rows = Array.from(document.querySelectorAll('tr[data-search-content]'));
-            var suggestionPool = new Set();
-
-            rows.forEach(function (row) {
-                var cells = row.querySelectorAll('td');
-                if (cells.length < 7) {
-                    return;
-                }
-
-                [cells[1].innerText, cells[2].innerText, cells[3].innerText, cells[4].innerText, cells[5].innerText, cells[6].innerText].forEach(function (value) {
-                    var cleaned = value.replace(/\s+/g, ' ').trim();
-                    if (cleaned.length >= 2) {
-                        suggestionPool.add(cleaned);
-                    }
-                });
+        rows.forEach(function (row) {
+            var cells = row.querySelectorAll('td');
+            [1,2,3,4,5,6].forEach(function(i){
+                if (!cells[i]) return;
+                var v = (cells[i].innerText || '').replace(/\s+/g,' ').trim();
+                if (v.length >= 2) suggestionPool.add(v);
             });
-
-            var suggestions = Array.from(suggestionPool);
-
-            function hideSuggestions() {
-                suggestionsBox.innerHTML = '';
-                suggestionsBox.classList.add('hidden');
-            }
-
-            function renderSuggestions(query) {
-                var q = query.trim().toLowerCase();
-
-                if (q.length < 1) {
-                    hideSuggestions();
-                    return;
-                }
-
-                var matched = suggestions.filter(function (item) {
-                    return item.toLowerCase().includes(q);
-                }).slice(0, 6);
-
-                if (matched.length === 0) {
-                    hideSuggestions();
-                    return;
-                }
-
-                suggestionsBox.innerHTML = matched.map(function (item) {
-                    return '<button type="button" class="block w-full border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">' + item + '</button>';
-                }).join('');
-
-                suggestionsBox.classList.remove('hidden');
-
-                suggestionsBox.querySelectorAll('button').forEach(function (button) {
-                    button.addEventListener('click', function () {
-                        searchInput.value = button.textContent || '';
-                        applyFilter();
-                        hideSuggestions();
-                    });
-                });
-            }
-
-            function applyFilter() {
-                var query = searchInput.value.trim().toLowerCase();
-
-                rows.forEach(function (row) {
-                    var content = row.getAttribute('data-search-content') || '';
-                    row.style.display = query === '' || content.includes(query) ? '' : 'none';
-                });
-            }
-
-            searchInput.addEventListener('input', function () {
-                renderSuggestions(searchInput.value);
-                applyFilter();
-            });
-
-            searchInput.addEventListener('blur', function () {
-                window.setTimeout(hideSuggestions, 120);
-            });
-
-            searchInput.addEventListener('focus', function () {
-                if (searchInput.value.trim() !== '') {
-                    renderSuggestions(searchInput.value);
-                }
-            });
-
-            if (directionSelect && filtersForm) {
-                directionSelect.addEventListener('change', function () {
-                    filtersForm.submit();
-                });
-            }
-
-            applyFilter();
         });
+
+        function hideSuggestions() {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.classList.add('hidden');
+        }
+
+        function renderSuggestions(query) {
+            var q = query.trim().toLowerCase();
+            if (q.length < 1) { hideSuggestions(); return; }
+            var matched = Array.from(suggestionPool).filter(function(item){
+                return item.toLowerCase().includes(q);
+            }).slice(0, 6);
+            if (!matched.length) { hideSuggestions(); return; }
+            suggestionsBox.innerHTML = matched.map(function(item){
+                return '<button type="button" class="block w-full border-b border-slate-100 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">' + item + '</button>';
+            }).join('');
+            suggestionsBox.classList.remove('hidden');
+            suggestionsBox.querySelectorAll('button').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    searchInput.value = btn.textContent || '';
+                    applyFilter(); hideSuggestions();
+                });
+            });
+        }
+
+        function applyFilter() {
+            var q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            var visible = 0;
+            rows.forEach(function(row, i){
+                var c = row.getAttribute('data-search-content') || '';
+                var show = q === '' || c.includes(q);
+                row.style.display = show ? '' : 'none';
+                if (show) {
+                    visible++;
+                    var td = row.querySelector('td');
+                    if (td) td.textContent = visible;
+                }
+            });
+            var counter = document.getElementById('services-count');
+            if (counter) counter.textContent = visible;
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function(){ renderSuggestions(searchInput.value); applyFilter(); });
+            searchInput.addEventListener('blur',  function(){ window.setTimeout(hideSuggestions, 120); });
+            searchInput.addEventListener('focus', function(){ if (searchInput.value.trim()) renderSuggestions(searchInput.value); });
+        }
+
+        if (directionSelect && filtersForm) {
+            directionSelect.addEventListener('change', function(){ filtersForm.submit(); });
+        }
+
+        applyFilter();
+    });
     </script>
 @endpush

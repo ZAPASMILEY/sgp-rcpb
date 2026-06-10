@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="mb-4">
-        <a href="{{ route('admin.agents.index') }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
+        <a href="{{ $redirectTo ?: route('admin.agents.index') }}" class="inline-flex items-center gap-2 text-cyan-600 hover:text-cyan-800 font-semibold text-sm">
             <i class="fas fa-arrow-left"></i>
             <span>Retour</span>
         </a>
@@ -24,7 +24,7 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Nouvel agent</h1>
                         <p class="mt-2 text-sm text-slate-600">Renseignez les informations personnelles et professionnelles de l'agent. Le rattachement se gère depuis la fiche de la structure concernée.</p>
                     </div>
-                    <a href="{{ route('admin.agents.index') }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <a href="{{ $redirectTo ?: route('admin.agents.index') }}" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
 
                 @if ($errors->any())
@@ -35,6 +35,9 @@
 
                 <form method="POST" action="{{ route('admin.agents.store') }}" enctype="multipart/form-data" class="mt-8 grid gap-5">
                     @csrf
+                    @if($redirectTo)
+                        <input type="hidden" name="redirect_to" value="{{ $redirectTo }}">
+                    @endif
 
                     {{-- ── Identité ── --}}
                     <div class="ent-form-grid">

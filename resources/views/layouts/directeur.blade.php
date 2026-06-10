@@ -1,25 +1,32 @@
 @php
     $user = auth()->user();
     $isDt = $user?->role === 'Directeur_Technique';
-
     $isDc = $user?->role === 'Directeur_Caisse';
+
+    // ── Badges sidebar ──────────────────────────────────────────────────────
+    $_dossierBadge      = $user ? $user->alertesNonLues()->where('lien', 'like', '%mon-espace%')->count() : 0;
+    $_reclamationsBadge = $user ? \App\Models\Evaluation::where('evaluateur_id', $user->id)
+        ->where('statut', 'reclamation')
+        ->where(fn ($q) => $q->whereNull('statut_reclamation')
+            ->orWhere('statut_reclamation', '!=', 'maintenu'))
+        ->count() : 0;
 
     $subordonnesItems = [];
     if ($isDt) {
-        $subordonnesItems[] = ['route' => 'directeur.subordonnes.directeurs', 'icon' => 'fas fa-landmark',        'label' => 'Mes Directeurs de Caisse'];
+        $subordonnesItems[] = ['route' => 'directeur.subordonnes.directeurs',      'icon' => 'fas fa-landmark',   'label' => 'Mes Directeurs de Caisse', 'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'];
     }
-    $subordonnesItems[] = ['route' => 'directeur.subordonnes.chefs',      'icon' => 'fas fa-sitemap',           'label' => 'Mes Chefs de Service'];
+    $subordonnesItems[] = ['route' => 'directeur.subordonnes.chefs',               'icon' => 'fas fa-sitemap',    'label' => 'Mes Chefs de Service',      'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'];
     if ($isDc) {
-        $subordonnesItems[] = ['route' => 'directeur.subordonnes.agences.chefs', 'icon' => 'fas fa-building', 'label' => "Mes Chefs d'Agence"];
+        $subordonnesItems[] = ['route' => 'directeur.subordonnes.agences.chefs',   'icon' => 'fas fa-building',   'label' => "Mes Chefs d'Agence",        'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'];
     }
-    $subordonnesItems[] = ['route' => 'directeur.subordonnes.secretaire', 'icon' => 'fas fa-user-pen',          'label' => 'Secrétaire'];
+    $subordonnesItems[] = ['route' => 'directeur.subordonnes.secretaire',          'icon' => 'fas fa-user-pen',   'label' => 'Secrétaire'];
 
     $menuSections = [
         [
             'title' => 'Mon espace',
             'items' => [
                 ['route' => 'directeur.dashboard',  'icon' => 'fas fa-house',        'label' => 'Tableau de bord'],
-                ['route' => 'directeur.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon espace'],
+                ['route' => 'directeur.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon espace', 'badge' => $_dossierBadge, 'badgeTip' => 'Notification(s) non lue(s)'],
             ],
         ],
         [
@@ -188,15 +195,29 @@
                         }
                     @endphp
                     @if($isDisabled)
+                        @php
+                            $feat    = $item['feature'] ?? null;
+                            $tipMsg  = $feat === 'evaluations'
+                                ? ($evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.')
+                                : ($feat === 'objectifs'
+                                    ? ($objectifsDisabledMessage ?: 'Assignation d\'objectifs désactivée par l\'administrateur.')
+                                    : 'Fonctionnalité désactivée par l\'administrateur.');
+                        @endphp
                         <span class="nav-link opacity-70 cursor-not-allowed select-none"
-                              title="Fonctionnalité désactivée par l'administrateur">
+                              title="{{ $tipMsg }}">
                             <i class="{{ $item['icon'] }}"></i>
                             <span>{{ $item['label'] }}</span>
                         </span>
                     @else
                         <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                             <i class="{{ $item['icon'] }}"></i>
-                            <span>{{ $item['label'] }}</span>
+                            <span class="flex-1">{{ $item['label'] }}</span>
+                            @if(($item['badge'] ?? 0) > 0)
+                                <span class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                                      title="{{ $item['badgeTip'] ?? ($item['badge'] . ' en attente') }}">
+                                    {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                                </span>
+                            @endif
                         </a>
                     @endif
                 @endforeach
@@ -274,7 +295,7 @@
     @stack('scripts')
     <script>
     (function(){
-        var tsOpts={searchField:['text'],maxOptions:300,render:{
+        var tsOpts={searchField:['text'],maxOptions:300,dropdownParent:'body',render:{
             no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
         function initSelects(){

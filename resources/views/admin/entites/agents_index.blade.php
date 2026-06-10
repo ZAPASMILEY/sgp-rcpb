@@ -43,31 +43,31 @@
                     </div>
                 </div>
                 <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">
-                    {{ $agents->total() }} agent(s)
+                    {{ $agents->count() }} agent(s)
                 </div>
             </div>
 
-            <div class="ent-table-wrap overflow-x-auto">
-                <table class="ent-table text-left text-sm text-slate-700">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Agent</th>
-                            <th>Rôle</th>
-                            <th>Service</th>
-                            <th>Direction</th>
-                            <th>Actions</th>
+            <div class="overflow-x-auto overflow-y-auto rounded-2xl border border-slate-100" style="max-height:480px">
+                <table class="w-full text-left text-sm text-slate-700">
+                    <thead class="sticky top-0 z-10 bg-slate-50">
+                        <tr class="border-b border-slate-200 text-left">
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">#</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Agent</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Rôle</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Service</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Direction</th>
+                            <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-slate-100">
                         @forelse ($agents as $agent)
-                            <tr data-search-content="{{ strtolower(trim($agent->prenom.' '.$agent->nom.' '.($agent->role ?? '').' '.($agent->service?->nom ?? '').' '.($agent->service?->direction?->nom ?? ''))) }}">
-                                <td>{{ ($agents->firstItem() ?? 1) + $loop->index }}</td>
-                                <td>{{ $agent->prenom }} {{ $agent->nom }}</td>
-                                <td>{{ $agent->role ?? '-' }}</td>
-                                <td>{{ $agent->service?->nom ?? '-' }}</td>
-                                <td>{{ $agent->service?->direction?->nom ?? '-' }}</td>
-                                <td class="whitespace-nowrap">
+                            <tr class="hover:bg-slate-50 transition-colors" data-search-content="{{ strtolower(trim($agent->prenom.' '.$agent->nom.' '.($agent->role ?? '').' '.($agent->service?->nom ?? '').' '.($agent->service?->direction?->nom ?? ''))) }}">
+                                <td class="px-4 py-3 text-slate-400 text-xs">{{ $loop->iteration }}</td>
+                                <td class="px-4 py-3 font-semibold text-slate-800">{{ $agent->prenom }} {{ $agent->nom }}</td>
+                                <td class="px-4 py-3 text-slate-600">{{ $agent->role ?? '-' }}</td>
+                                <td class="px-4 py-3 text-slate-600">{{ $agent->service?->nom ?? '-' }}</td>
+                                <td class="px-4 py-3 text-slate-600">{{ $agent->service?->direction?->nom ?? '-' }}</td>
+                                <td class="px-4 py-3 whitespace-nowrap">
                                     <div class="flex items-center gap-2">
                                         <a href="{{ route('admin.agents.show', $agent) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:text-sky-600" title="Voir">
                                             <i class="fas fa-eye text-xs"></i>
@@ -94,9 +94,7 @@
                 </table>
             </div>
 
-            @if ($agents->hasPages())
-                <div class="mt-6">{{ $agents->links() }}</div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $agents->count() }} résultat(s)</div>
         </section>
     </div>
 </div>

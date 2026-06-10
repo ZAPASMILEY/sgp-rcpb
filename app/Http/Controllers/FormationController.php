@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Chef\ChefEntity;
 use App\Http\Controllers\Concerns\HasFormations;
-use App\Http\Controllers\Directeur\DirecteurEntity;
-use App\Models\Agent;
-use App\Models\Entite;
+use App\Models\Alerte;
+use App\Models\Annee;
 use App\Models\Formation;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 
 /**
  * Contrôleur unifié "Mes formations" — remplace les 7 contrôleurs par rôle.
@@ -21,6 +22,9 @@ use Illuminate\Support\Facades\Auth;
  *
  * Le dispatch s'effectue via Auth::user()->role dans les trois méthodes
  * du trait HasFormations.
+ *
+ * create() / store() permettent à n'importe quel agent de soumettre
+ * sa propre formation pour validation RH.
  */
 class FormationController extends Controller
 {
@@ -32,25 +36,11 @@ class FormationController extends Controller
 
     protected function getAgentIds(Request $request): array
     {
-        $user = Auth::user();
-        $role = $user?->role;
+        // "Mes formations" = uniquement les formations de l'utilisateur connecté,
+        // quel que soit son rôle. Les formations de l'équipe passent par le module RH.
+        $agentId = Auth::user()?->agent_id;
 
-        return match (true) {
-            in_array($role, ['PCA', 'DG', 'Assistante_Dg', 'Conseillers_Dg'], true)
-                => $user->agent_id ? [$user->agent_id] : [],
-
-            $role === 'DGA'
-                => $this->agentIdsDga($user),
-
-            in_array($role, ['Directeur_Direction', 'Directeur_Caisse', 'Directeur_Technique'], true)
-                => $this->agentIdsDirecteur($user),
-
-            in_array($role, ['Chef_Service', 'Chef_Agence', 'Chef_Guichet'], true)
-                => $this->agentIdsChef($user),
-
-            default
-                => $user->agent_id ? [$user->agent_id] : [],
-        };
+        return $agentId ? [$agentId] : [];
     }
 
     protected function getLayoutName(): string
@@ -80,7 +70,7 @@ class FormationController extends Controller
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // Points d'entrée publics
+    // Points d'entrée publics — lecture
     // ══════════════════════════════════════════════════════════════════════════
 
     public function __invoke(Request $request)
@@ -93,69 +83,128 @@ class FormationController extends Controller
         return $this->formationPdf($request, $formation);
     }
 
+    /**
+     * Supprime une formation en attente soumise par l'agent lui-même.
+     * Interdit si la formation est déjà validée ou refusée.
+     */
+    public function destroy(Formation $formation): RedirectResponse
+    {
+        $agent = Auth::user()?->agent;
+
+        if (! $agent || $formation->agent_id !== $agent->id) {
+            abort(403, 'Vous ne pouvez supprimer que vos propres formations.');
+        }
+
+        if ($formation->statut !== 'en_attente') {
+            return back()->with('error', 'Seules les formations en attente peuvent être supprimées.');
+        }
+
+        // Supprimer l'attestation associée
+        if ($formation->attestation_path) {
+            Storage::disk('public')->delete($formation->attestation_path);
+        }
+
+        $formation->delete();
+
+        $indexRoute = $this->getPdfRoutePrefix() . '.formations.index';
+        return redirect()->route($indexRoute)
+            ->with('status', 'Formation supprimée.');
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
-    // Résolution des IDs agents par rôle (privé)
+    // Soumission d'une formation par l'agent lui-même
     // ══════════════════════════════════════════════════════════════════════════
 
-    /** DGA : soi + Directeurs Techniques + secrétaire DGA. */
-    private function agentIdsDga(User $user): array
+    /**
+     * Formulaire de soumission d'une formation par l'agent connecté.
+     * Accessible à tous les rôles (route 'formation.soumettre').
+     */
+    public function create(Request $request): View
     {
-        $ids = $user->agent_id ? [$user->agent_id] : [];
+        $agent        = Auth::user()?->agent;
+        $anneeEnCours = Annee::currentOpen();
+        $layout       = $this->getLayoutName();
+        $domaines     = Formation::DOMAINES;
+        $types        = Formation::TYPES;
+        $themesExistants = Formation::distinct()->orderBy('theme')->pluck('theme');
 
-        $dtIds = User::where('role', 'Directeur_Technique')
-            ->whereNotNull('agent_id')
-            ->pluck('agent_id')
-            ->all();
-
-        $entite = Entite::where('dga_agent_id', $user->agent_id)->first()
-            ?? Entite::latest()->first();
-
-        if ($entite?->dga_secretaire_agent_id) {
-            $ids[] = $entite->dga_secretaire_agent_id;
-        }
-
-        return array_unique(array_merge($ids, $dtIds));
+        return view('formations.soumettre', compact(
+            'agent', 'anneeEnCours', 'layout', 'domaines', 'types', 'themesExistants'
+        ));
     }
 
-    /** Directeurs (Direction / Caisse / Technique) : soi + personnel de la structure. */
-    private function agentIdsDirecteur(User $user): array
+    /**
+     * Enregistre la formation soumise par l'agent.
+     * Statut : en_attente — le RH doit valider avant qu'elle apparaisse.
+     */
+    public function store(Request $request): RedirectResponse
     {
-        $ctx = DirecteurEntity::resolve($user);
+        $user  = Auth::user();
+        $agent = $user?->agent;
 
-        if (! $ctx) {
-            return [];
+        if (! $agent) {
+            return back()->with('error', 'Aucun agent lié à votre compte.');
         }
 
-        $ids = $ctx->agent ? [$ctx->agent->id] : [];
+        $anneeEnCours = Annee::currentOpen();
+        $annee        = $anneeEnCours?->annee ?? now()->year;
 
-        if ($ctx->hasCaisses()) {
-            $subordinateIds = Agent::where('delegation_technique_id', $ctx->entity->id)
-                ->pluck('id')
-                ->all();
-        } else {
-            $subordinateIds = Agent::whereIn('service_id', $ctx->getServiceIds())
-                ->pluck('id')
-                ->all();
+        $validated = $request->validate([
+            'theme'        => ['required', 'string', 'max:255'],
+            'type'         => ['required', 'string', 'in:' . implode(',', array_keys(Formation::TYPES))],
+            'domaine'      => ['required', 'string', 'in:' . implode(',', array_keys(Formation::DOMAINES))],
+            'date_debut'   => ['required', 'date', 'before_or_equal:today', function ($_, $value, $fail) use ($annee) {
+                if ((int) date('Y', strtotime($value)) !== $annee) {
+                    $fail("La date de début doit appartenir à l'année {$annee}.");
+                }
+            }],
+            'date_fin'     => ['required', 'date', 'after_or_equal:date_debut', 'before_or_equal:today', function ($_, $value, $fail) use ($annee) {
+                if ((int) date('Y', strtotime($value)) !== $annee) {
+                    $fail("La date de fin doit appartenir à l'année {$annee}.");
+                }
+            }],
+            'duree_heures' => ['required', 'integer', 'min:1', 'max:9999'],
+            'attestation'  => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:5120'],
+        ], [
+            'date_debut.before_or_equal' => 'La date de début ne peut pas être dans le futur.',
+            'date_fin.before_or_equal'   => 'La date de fin ne peut pas être dans le futur.',
+            'date_fin.after_or_equal'    => 'La date de fin doit être égale ou postérieure à la date de début.',
+            'attestation.required'       => 'L\'attestation est obligatoire.',
+            'attestation.mimes'          => 'L\'attestation doit être un PDF ou une image (JPG, PNG, WEBP).',
+            'attestation.max'            => 'L\'attestation ne doit pas dépasser 5 Mo.',
+        ]);
+
+        $path = $request->file('attestation')->store('attestations', 'public');
+
+        Formation::create([
+            'agent_id'         => $agent->id,
+            'theme'            => $validated['theme'],
+            'type'             => $validated['type'],
+            'domaine'          => $validated['domaine'],
+            'date_debut'       => $validated['date_debut'],
+            'date_fin'         => $validated['date_fin'],
+            'duree_heures'     => $validated['duree_heures'],
+            'attestation_path' => $path,
+            'statut'           => 'en_attente',
+            'created_by'       => $user->id,
+        ]);
+
+        // Notifier les RH
+        $rhUsers = User::where('role', 'RH')->get();
+        foreach ($rhUsers as $rh) {
+            Alerte::notifier(
+                $rh->id,
+                'Nouvelle formation à valider',
+                trim($agent->prenom . ' ' . $agent->nom) . ' a soumis une formation « ' . $validated['theme'] . ' » en attente de validation.',
+                'moyenne',
+                route('rh.formations.index')
+            );
         }
 
-        return array_unique(array_merge($ids, $subordinateIds));
+        $indexRoute = $this->getPdfRoutePrefix() . '.formations.index';
+        return redirect()->route($indexRoute)
+            ->with('status', 'Formation soumise avec succès. En attente de validation RH.');
     }
 
-    /** Chefs (Service / Agence / Guichet) : soi + agents subordonnés. */
-    private function agentIdsChef(User $user): array
-    {
-        $ctx = ChefEntity::resolve($user);
-
-        if (! $ctx) {
-            return [];
-        }
-
-        $ids = $ctx->getAgentIds();
-
-        if ($ctx->agent) {
-            $ids[] = $ctx->agent->id;
-        }
-
-        return array_unique($ids);
-    }
 }
+

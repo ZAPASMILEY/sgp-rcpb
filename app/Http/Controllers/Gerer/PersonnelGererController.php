@@ -44,8 +44,7 @@ class PersonnelGererController extends Controller
             ))
             ->when($caisseId, fn ($q) => $q->where('caisse_id', $caisseId))
             ->orderBy('nom')->orderBy('prenom')
-            ->paginate(50)
-            ->withQueryString();
+            ->get();
 
         $delegations = DelegationTechnique::orderBy('region')->orderBy('ville')->get();
         $caisses     = Caisse::orderBy('nom')->get();

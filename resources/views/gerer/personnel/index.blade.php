@@ -15,7 +15,7 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-[0.2em] text-sky-200">Gestion · RCPB</p>
                 <h1 class="mt-0.5 text-2xl font-black text-white">Personnel</h1>
-                <p class="mt-0.5 text-sm text-sky-100/75">{{ $agents->total() }} agent(s) — réseau complet RCPB</p>
+                <p class="mt-0.5 text-sm text-sky-100/75">{{ $agents->count() }} agent(s) — réseau complet RCPB</p>
             </div>
         </div>
     </div>
@@ -83,9 +83,9 @@
                     <p class="text-sm font-semibold text-slate-400">Aucun agent trouvé.</p>
                 </div>
             @else
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                 <table class="w-full text-sm">
-                    <thead>
+                    <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-100 bg-slate-50/70">
                             <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Matricule</th>
                             <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Nom et Prénom</th>
@@ -124,10 +124,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="border-t border-slate-100 px-5 py-3 flex items-center justify-between">
-                <span class="text-xs text-slate-400">{{ $agents->total() }} agent{{ $agents->total() > 1 ? 's' : '' }}</span>
-                {{ $agents->links() }}
-            </div>
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $agents->count() }} résultat(s)</div>
             @endif
         </div>
     </div>

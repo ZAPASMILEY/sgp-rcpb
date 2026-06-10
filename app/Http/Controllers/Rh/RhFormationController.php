@@ -3,136 +3,95 @@
 namespace App\Http\Controllers\Rh;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\HasFormationCrud;
 use App\Models\Agent;
+use App\Models\Alerte;
 use App\Models\Formation;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
 
+/**
+ * Contrôleur formations RH.
+ * Toute la logique CRUD est mutualisée dans HasFormationCrud.
+ *
+ * valider() gère le workflow d'approbation / refus des formations
+ * soumises par les agents eux-mêmes (statut en_attente → validee / refusee).
+ */
 class RhFormationController extends Controller
 {
-    // ── Liste ─────────────────────────────────────────────────────────────────
+    use HasFormationCrud;
 
-    public function index(Request $request): View
+    protected function routePrefix(): string
     {
-        $query = Formation::with(['agent', 'createdBy']);
-
-        // Filtres
-        if ($search = trim((string) $request->get('search'))) {
-            $query->where(function ($q) use ($search) {
-                $q->where('theme', 'like', "%{$search}%")
-                  ->orWhereHas('agent', fn ($a) =>
-                      $a->where('nom', 'like', "%{$search}%")
-                        ->orWhere('prenom', 'like', "%{$search}%")
-                  );
-            });
-        }
-
-        if ($domaine = $request->get('domaine')) {
-            $query->where('domaine', $domaine);
-        }
-
-        if ($annee = $request->get('annee')) {
-            $query->whereYear('date_debut', $annee);
-        }
-
-        if ($agentId = $request->get('agent_id')) {
-            $query->where('agent_id', $agentId);
-        }
-
-        $formations = $query->orderByDesc('date_debut')->paginate(15)->withQueryString();
-
-        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
-        $annees      = range(now()->year + 1, now()->year - 4);
-        $domaines    = Formation::DOMAINES;
-        $routePrefix = 'rh';
-
-        return view('rh.formations.index', compact('formations', 'agents', 'annees', 'domaines', 'routePrefix'));
+        return 'rh';
     }
 
-    // ── Créer ─────────────────────────────────────────────────────────────────
+    // ── Validation RH des formations soumises par les agents ──────────────────
 
-    public function create(Request $request): View
+    public function valider(Request $request, Formation $formation): RedirectResponse
     {
-        $agents              = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
-        $domaines            = Formation::DOMAINES;
-        $preselectedAgentId  = (int) $request->get('agent_id', 0);
-        $themesExistants     = Formation::distinct()->orderBy('theme')->pluck('theme');
-        $routePrefix         = 'rh';
-
-        return view('rh.formations.create', compact('agents', 'domaines', 'preselectedAgentId', 'themesExistants', 'routePrefix'));
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'agent_id'     => ['required', 'integer', 'exists:agents,id'],
-            'theme'        => ['required', 'string', 'max:255'],
-            'domaine'      => ['required', 'string', 'in:' . implode(',', array_keys(Formation::DOMAINES))],
-            'date_debut'   => ['required', 'date'],
-            'date_fin'     => ['required', 'date', 'after_or_equal:date_debut'],
-            'duree_heures' => ['required', 'integer', 'min:1', 'max:9999'],
+        $request->validate([
+            'decision'    => ['required', 'in:validee,refusee'],
+            'motif_refus' => ['required_if:decision,refusee', 'nullable', 'string', 'max:1000'],
+        ], [
+            'motif_refus.required_if' => 'Le motif du refus est obligatoire.',
         ]);
 
-        $formation = Formation::create([
-            ...$validated,
-            'created_by' => Auth::id(),
-        ]);
+        $decision = $request->input('decision');
+        $formation->statut      = $decision;
+        $formation->motif_refus = $decision === 'refusee' ? $request->input('motif_refus') : null;
+        $formation->save();
 
-        return redirect()
-            ->route('rh.formations.index')
-            ->with('status', 'Formation « ' . $formation->theme . ' » enregistrée.');
+        // Notifier l'agent
+        $agentUser = $formation->agent
+            ? User::where('agent_id', $formation->agent->id)->first()
+            : null;
+
+        if ($agentUser) {
+            $routeName = match ($agentUser->role) {
+                'PCA'                                                                => 'pca.formations.index',
+                'DG'                                                                 => 'dg.formations.index',
+                'DGA'                                                                => 'dga.formations.index',
+                'Directeur_Technique', 'Directeur_Direction', 'Directeur_Caisse'    => 'directeur.formations.index',
+                'Chef_Service', 'Chef_Agence', 'Chef_Guichet'                       => 'chef.formations.index',
+                'Assistante_Dg', 'Conseillers_Dg', 'Secretaire_Assistante'          => 'subordonne.formations.index',
+                default                                                              => 'personnel.formations.index',
+            };
+
+            if ($decision === 'validee') {
+                Alerte::notifier(
+                    $agentUser->id,
+                    'Formation validée',
+                    'Votre formation « ' . $formation->theme . ' » a été validée par le RH.',
+                    'moyenne',
+                    route($routeName)
+                );
+            } else {
+                Alerte::notifier(
+                    $agentUser->id,
+                    'Formation refusée',
+                    'Votre formation « ' . $formation->theme . ' » a été refusée. Motif : ' . $formation->motif_refus,
+                    'haute',
+                    route($routeName)
+                );
+            }
+        }
+
+        $msg = $decision === 'validee'
+            ? 'Formation validée et ajoutée au dossier de l\'agent.'
+            : 'Formation refusée. L\'agent a été notifié.';
+
+        return redirect()->route('rh.formations.index')->with('status', $msg);
     }
 
-    // ── Modifier ──────────────────────────────────────────────────────────────
-
-    public function edit(Formation $formation): View
-    {
-        $agents      = Agent::orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']);
-        $domaines    = Formation::DOMAINES;
-        $routePrefix = 'rh';
-
-        return view('rh.formations.edit', compact('formation', 'agents', 'domaines', 'routePrefix'));
-    }
-
-    public function update(Request $request, Formation $formation): RedirectResponse
-    {
-        $validated = $request->validate([
-            'agent_id'     => ['required', 'integer', 'exists:agents,id'],
-            'theme'        => ['required', 'string', 'max:255'],
-            'domaine'      => ['required', 'string', 'in:' . implode(',', array_keys(Formation::DOMAINES))],
-            'date_debut'   => ['required', 'date'],
-            'date_fin'     => ['required', 'date', 'after_or_equal:date_debut'],
-            'duree_heures' => ['required', 'integer', 'min:1', 'max:9999'],
-        ]);
-
-        $formation->update($validated);
-
-        return redirect()
-            ->route('rh.formations.index')
-            ->with('status', 'Formation « ' . $formation->theme . ' » mise à jour.');
-    }
-
-    // ── Supprimer ─────────────────────────────────────────────────────────────
-
-    public function destroy(Formation $formation): RedirectResponse
-    {
-        $theme = $formation->theme;
-        $formation->delete();
-
-        return redirect()
-            ->route('rh.formations.index')
-            ->with('status', 'Formation « ' . $theme . ' » supprimée.');
-    }
-
-    // ── API JSON — formations d'un agent (utilisé par les formulaires d'évaluation) ──
+    // ── API JSON — formations validées d'un agent (formulaires d'évaluation) ──
 
     public function pourAgent(Agent $agent): JsonResponse
     {
         $formations = Formation::where('agent_id', $agent->id)
+            ->where('statut', 'validee')
             ->orderBy('date_debut', 'desc')
             ->get()
             ->map(fn ($f) => [
@@ -144,19 +103,5 @@ class RhFormationController extends Controller
             ]);
 
         return response()->json($formations);
-    }
-
-    // ── PDF ───────────────────────────────────────────────────────────────────
-
-    public function pdf(Formation $formation): \Illuminate\Http\Response
-    {
-        $formation->load('agent.service', 'createdBy');
-
-        $pdf = Pdf::loadView('formations.pdf', compact('formation'))
-            ->setPaper('a4', 'portrait');
-
-        $filename = 'formation_' . $formation->id . '_' . str_replace(' ', '_', $formation->theme) . '.pdf';
-
-        return $pdf->download($filename);
     }
 }

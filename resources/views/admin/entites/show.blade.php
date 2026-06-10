@@ -19,7 +19,7 @@
                             <p class="mt-2 text-sm text-slate-600">Ville: {{ $entite->ville }} | Region: {{ $entite->region }}</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <a href="{{ route('admin.entites.index') }}" class="ent-btn ent-btn-soft">Retour</a>
+                            <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour</a>
                             <a href="{{ route('admin.entites.edit', $entite) }}" class="ent-btn ent-btn-primary">Modifier</a>
                             <form method="POST" action="{{ route('admin.entites.destroy', $entite) }}"
                                   onsubmit="return confirm('Supprimer cette faitière ? Cette action est irréversible.')">

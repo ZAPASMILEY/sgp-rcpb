@@ -3,23 +3,36 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Mail\AlerteMail;
-use App\Mail\AlerteVipMail;
+use App\Jobs\DiffuserAlerteJob;
 use App\Models\Alerte;
-use App\Models\Entite;
 use App\Models\LoginFailure;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\View\View;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AlerteController extends Controller
 {
+    /** Rôles disponibles pour le ciblage des alertes. */
+    public const ROLES_DISPONIBLES = [
+        'tous'                => 'Tous les utilisateurs',
+        'PCA'                 => 'PCA',
+        'DG'                  => 'Directeur Général',
+        'DGA'                 => 'Directeur Général Adjoint',
+        'Assistante_Dg'       => 'Assistante DG',
+        'Conseillers_Dg'      => 'Conseillers DG',
+        'Directeur_Technique' => 'Directeurs Techniques / Directions',
+        'Directeur_Caisse'    => 'Directeurs de Caisse',
+        'Chef_Service'        => 'Chefs de Service',
+        'Chef_Agence'         => "Chefs d'Agence",
+        'Chef_Guichet'        => 'Chefs de Guichet',
+        'Agent'               => 'Agents',
+    ];
+
     public function index(Request $request): View
     {
         $tab = $request->query('tab', 'toutes');
@@ -80,16 +93,7 @@ class AlerteController extends Controller
             default          => $combined,
         };
 
-        // --- Pagination manuelle sur la collection ---
-        $perPage     = 20;
-        $currentPage = (int) $request->query('page', 1);
-        $items = new LengthAwarePaginator(
-            $filtered->forPage($currentPage, $perPage)->values(),
-            $filtered->count(),
-            $perPage,
-            $currentPage,
-            ['path' => $request->url(), 'query' => $request->query()]
-        );
+        $items = $filtered;
 
         $counts = [
             'toutes'         => $combined->count(),
@@ -109,6 +113,8 @@ class AlerteController extends Controller
             $chartPersonnalisees[] = Alerte::whereDate('created_at', $day->toDateString())->count();
         }
 
+        $rolesDisponibles = self::ROLES_DISPONIBLES;
+
         return view('admin.alertes.index', compact(
             'items',
             'tab',
@@ -122,19 +128,25 @@ class AlerteController extends Controller
             'chartCategories',
             'chartSecurite',
             'chartPersonnalisees',
+            'rolesDisponibles',
         ));
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $rolesValides = array_keys(self::ROLES_DISPONIBLES);
+
         $validated = $request->validate([
-            'titre'    => ['required', 'string', 'max:255'],
-            'message'  => ['nullable', 'string', 'max:2000'],
-            'type'     => ['required', 'in:personnalisee,securite'],
-            'priorite' => ['required', 'in:basse,moyenne,haute,critique'],
+            'titre'          => ['required', 'string', 'max:255'],
+            'message'        => ['nullable', 'string', 'max:2000'],
+            'type'           => ['required', 'in:personnalisee,securite'],
+            'priorite'       => ['required', 'in:basse,moyenne,haute,critique'],
             'diffuser_email' => ['nullable', 'in:1'],
+            'roles_cibles'   => ['nullable', 'array'],
+            'roles_cibles.*' => ['string', Rule::in($rolesValides)],
         ]);
 
+        $rolesCibles   = $validated['roles_cibles'] ?? ['tous'];
         $diffuserEmail = $request->boolean('diffuser_email');
 
         $alerte = Alerte::create([
@@ -147,62 +159,17 @@ class AlerteController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        // Diffuser l'alerte à tous les utilisateurs (notifications in-app)
-        $alerte->diffuserATous();
+        // Diffusion en arrière-plan (notifications in-app + emails éventuels)
+        DiffuserAlerteJob::dispatch($alerte->id, $rolesCibles, $diffuserEmail);
 
-        // Diffuser par email si demandé
+        $envoyerATous = in_array('tous', $rolesCibles, true);
+        $labelsRoles  = $envoyerATous
+            ? 'tous les utilisateurs'
+            : implode(', ', array_map(fn ($r) => self::ROLES_DISPONIBLES[$r] ?? $r, $rolesCibles));
+
+        $message = "Alerte créée. Diffusion en cours pour : {$labelsRoles}.";
         if ($diffuserEmail) {
-            $alerte->load('createur');
-
-            // Identifier les 3 dirigeants (PCA, DG, DGA) via l'entité faîtière
-            $entite = Entite::first();
-            $vipEmails = [];
-            $vipRecipients = [];
-
-            if ($entite) {
-                if ($entite->pca_email) {
-                    $vipEmails[] = strtolower($entite->pca_email);
-                    $vipRecipients[] = [
-                        'email' => $entite->pca_email,
-                        'name'  => trim($entite->pca_prenom . ' ' . $entite->pca_nom),
-                        'role'  => 'Président du Conseil d\'Administration',
-                    ];
-                }
-                if ($entite->directrice_generale_email) {
-                    $vipEmails[] = strtolower($entite->directrice_generale_email);
-                    $vipRecipients[] = [
-                        'email' => $entite->directrice_generale_email,
-                        'name'  => trim($entite->directrice_generale_prenom . ' ' . $entite->directrice_generale_nom),
-                        'role'  => 'Directeur(trice) Général(e)',
-                    ];
-                }
-                if ($entite->dga_email) {
-                    $vipEmails[] = strtolower($entite->dga_email);
-                    $vipRecipients[] = [
-                        'email' => $entite->dga_email,
-                        'name'  => trim($entite->dga_prenom . ' ' . $entite->dga_nom),
-                        'role'  => 'Directeur(trice) Général(e) Adjoint(e)',
-                    ];
-                }
-            }
-
-            // Envoyer le template VIP aux 3 dirigeants
-            foreach ($vipRecipients as $vip) {
-                Mail::to($vip['email'])->queue(new AlerteVipMail($alerte, $vip['name'], $vip['role']));
-            }
-
-            // Envoyer le template standard aux autres utilisateurs
-            $users = User::whereNotNull('email')->get();
-            foreach ($users as $user) {
-                if (!in_array(strtolower($user->email), $vipEmails)) {
-                    Mail::to($user->email)->queue(new AlerteMail($alerte, $user->name));
-                }
-            }
-        }
-
-        $message = 'Alerte créée avec succès.';
-        if ($diffuserEmail) {
-            $message .= ' Email envoyé à tous les utilisateurs.';
+            $message .= ' Les emails sont en cours d\'envoi.';
         }
 
         return redirect()->route('admin.alertes.index', ['tab' => 'personnalisees'])
@@ -268,5 +235,15 @@ class AlerteController extends Controller
         }
 
         return back()->with('status', 'Toutes les notifications ont été marquées comme lues.');
+    }
+
+    public function lireUne(Request $request, Alerte $alerte): JsonResponse
+    {
+        DB::table('alerte_user')
+            ->where('user_id', $request->user()->id)
+            ->where('alerte_id', $alerte->id)
+            ->update(['lu' => true, 'lu_at' => now()]);
+
+        return response()->json(['ok' => true]);
     }
 }

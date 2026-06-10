@@ -79,14 +79,11 @@
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-3">
-                        <form action="{{ route($statusRoute, $fiche) }}" method="POST">
-                            @csrf @method('PATCH')
-                            <input type="hidden" name="action" value="refuser">
-                            <button type="submit" onclick="return confirm('Refuser et demander une correction ?')"
-                                    class="inline-flex items-center gap-2 rounded-xl border-2 border-rose-200 bg-white px-5 py-2.5 text-sm font-black text-rose-600 transition hover:bg-rose-50">
-                                <i class="fas fa-times text-xs"></i> Refuser
-                            </button>
-                        </form>
+                        <button type="button"
+                                onclick="sgpOpenMotifModal('refus', '{{ route($statusRoute, $fiche) }}', null)"
+                                class="inline-flex items-center gap-2 rounded-xl border-2 border-rose-200 bg-white px-5 py-2.5 text-sm font-black text-rose-600 transition hover:bg-rose-50">
+                            <i class="fas fa-times text-xs"></i> Refuser
+                        </button>
                         <form action="{{ route($statusRoute, $fiche) }}" method="POST">
                             @csrf @method('PATCH')
                             <input type="hidden" name="action" value="accepter">
@@ -162,6 +159,9 @@
 
                                 @if ($contested)
                                     <p class="mt-1 text-[10px] font-bold text-rose-500"><i class="fas fa-flag mr-1"></i>Contesté</p>
+                                    @if ($objectif->motif)
+                                        <p class="mt-0.5 text-[11px] text-rose-600 italic">« {{ $objectif->motif }} »</p>
+                                    @endif
                                 @else
                                     <div class="mt-2 flex items-center gap-2">
                                         <div class="flex-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -185,20 +185,31 @@
                                 @endif
                             </div>
 
-                            {{-- Bouton de contestation ligne par ligne --}}
-                            @if ($statut !== 'acceptee' && !$contested && $isOwnFiche && isset($contesterRoute))
-                                <form method="POST" action="{{ route($contesterRoute, [$fiche, $objectif]) }}" class="shrink-0 pt-1">
-                                    @csrf @method('PATCH')
-                                    <button type="submit" onclick="return confirm('Contester cet objectif ?')"
-                                            class="inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-600 transition hover:bg-orange-100">
-                                        <i class="fas fa-flag text-[10px]"></i> Contester
-                                    </button>
-                                </form>
+                            {{-- Bouton de contestation ligne par ligne (exclusif avec le refus global) --}}
+                            @if (in_array($statut, ['en_attente', 'soumis', 'contesté', null]) && !$contested && $isOwnFiche && isset($contesterRoute))
+                                <button type="button"
+                                        onclick="sgpOpenMotifModal('contestation', '{{ route($contesterRoute, [$fiche, $objectif]) }}', {{ $index + 1 }})"
+                                        class="shrink-0 mt-1 inline-flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-black text-orange-600 transition hover:bg-orange-100">
+                                    <i class="fas fa-flag text-[10px]"></i> Contester
+                                </button>
                             @endif
                         </div>
                     @endforeach
                 </div>
             </div>
+
+            {{-- Bannière motif de refus (visible par l'assignateur) --}}
+            @if ($statut === 'refusee' && $fiche->motif_refus)
+                <div class="flex items-start gap-4 rounded-[24px] border-2 border-rose-200 bg-rose-50 px-6 py-4">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
+                        <i class="fas fa-comment-slash text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="font-black text-rose-900">Motif du refus</p>
+                        <p class="mt-0.5 text-sm text-rose-700 italic">« {{ $fiche->motif_refus }} »</p>
+                    </div>
+                </div>
+            @endif
 
             {{-- Footer Actions --}}
             <div class="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-white px-6 py-4 shadow-sm ring-1 ring-slate-100">
@@ -245,4 +256,110 @@
         </div>
     </div>
 </div>
+
+{{-- ── Modale motif refus / contestation ─────────────────────────────────── --}}
+<div id="sgp-motif-modal"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+     onclick="if(event.target===this)sgpCloseMotifModal()">
+    <div class="w-full max-w-md rounded-[24px] bg-white shadow-2xl overflow-hidden">
+        <div id="sgp-modal-header" class="px-6 py-5 border-b border-slate-100">
+            <p id="sgp-modal-title" class="text-lg font-black text-slate-900"></p>
+            <p id="sgp-modal-subtitle" class="mt-0.5 text-sm text-slate-500"></p>
+        </div>
+        <div class="px-6 py-5">
+            <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-2">
+                Motif <span class="text-red-500">*</span>
+            </label>
+            <textarea id="sgp-motif-input" rows="4" maxlength="1000"
+                      placeholder="Expliquez votre décision..."
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none resize-none focus:border-indigo-400 focus:bg-white transition"></textarea>
+            <p id="sgp-motif-error" class="mt-1 hidden text-xs font-bold text-rose-500">Ce champ est obligatoire.</p>
+        </div>
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50">
+            <button type="button" onclick="sgpCloseMotifModal()"
+                    class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-black text-slate-600 transition hover:bg-slate-50">
+                Annuler
+            </button>
+            <button type="button" id="sgp-modal-confirm"
+                    class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-black text-white shadow-sm transition">
+                <i id="sgp-modal-icon" class="text-xs"></i>
+                <span id="sgp-modal-btn-label"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<form id="sgp-motif-form" method="POST" class="hidden">
+    @csrf @method('PATCH')
+    <input type="hidden" id="sgp-form-action" name="action">
+    <input type="hidden" id="sgp-form-motif-refus" name="motif_refus">
+    <input type="hidden" id="sgp-form-motif" name="motif">
+</form>
+
 @endsection
+
+@push('scripts')
+<script>
+    let _sgpModalMode = null;
+
+    function sgpOpenMotifModal(mode, action, ligneNum) {
+        _sgpModalMode = mode;
+        const modal    = document.getElementById('sgp-motif-modal');
+        const title    = document.getElementById('sgp-modal-title');
+        const subtitle = document.getElementById('sgp-modal-subtitle');
+        const btn      = document.getElementById('sgp-modal-confirm');
+        const icon     = document.getElementById('sgp-modal-icon');
+        const label    = document.getElementById('sgp-modal-btn-label');
+
+        document.getElementById('sgp-motif-input').value = '';
+        document.getElementById('sgp-motif-error').classList.add('hidden');
+        document.getElementById('sgp-motif-form').action = action;
+
+        if (mode === 'refus') {
+            title.textContent    = 'Refuser la fiche';
+            subtitle.textContent = 'Indiquez le motif du refus pour que l\'assignateur puisse réviser la fiche.';
+            btn.className        = 'inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-rose-700';
+            icon.className       = 'fas fa-times text-xs';
+            label.textContent    = 'Confirmer le refus';
+        } else {
+            title.textContent    = 'Contester l\'objectif #' + ligneNum;
+            subtitle.textContent = 'Expliquez pourquoi vous contestez cet objectif.';
+            btn.className        = 'inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-orange-600';
+            icon.className       = 'fas fa-flag text-xs';
+            label.textContent    = 'Contester';
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.getElementById('sgp-motif-input').focus();
+    }
+
+    function sgpCloseMotifModal() {
+        const modal = document.getElementById('sgp-motif-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    document.getElementById('sgp-modal-confirm').addEventListener('click', function () {
+        const motif = document.getElementById('sgp-motif-input').value.trim();
+        if (!motif) {
+            document.getElementById('sgp-motif-error').classList.remove('hidden');
+            return;
+        }
+        if (_sgpModalMode === 'refus') {
+            document.getElementById('sgp-form-action').value      = 'refuser';
+            document.getElementById('sgp-form-motif-refus').value = motif;
+            document.getElementById('sgp-form-motif').value       = '';
+        } else {
+            document.getElementById('sgp-form-action').value      = '';
+            document.getElementById('sgp-form-motif').value       = motif;
+            document.getElementById('sgp-form-motif-refus').value = '';
+        }
+        document.getElementById('sgp-motif-form').submit();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') sgpCloseMotifModal();
+    });
+</script>
+@endpush

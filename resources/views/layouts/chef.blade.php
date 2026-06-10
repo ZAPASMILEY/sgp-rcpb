@@ -25,6 +25,66 @@
     $structureNom  = $chefCtx?->getNom() ?? 'Mon Équipe';
     $structureType = $chefCtx?->getTypeLabel() ?? 'Chef';
 
+    // ── Badges sidebar ──────────────────────────────────────────────────────
+    // Deux sources d'indicateurs :
+    //   1. Réclamations actives sur les évaluations des agents (attention requise)
+    //   2. Notifications non lues pour Mon Dossier / Formations
+    $navBadges    = ['chef.mon-espace' => 0, 'chef.equipe' => 0, 'chef.guichets' => 0, 'chef.formations.index' => 0];
+    $navBadgeTips = [];
+
+    if ($user) {
+        // — Mon Dossier : notifications non lues concernant l'espace personnel uniquement
+        $unreadCount = $user->alertesNonLues()->where('lien', 'like', '%mon-espace%')->count();
+        $navBadges['chef.mon-espace'] = $unreadCount;
+        if ($unreadCount > 0) {
+            $firstNotif = $user->alertesNonLues()->where('lien', 'like', '%mon-espace%')->first();
+            $navBadgeTips['chef.mon-espace'] = $firstNotif?->titre;
+        }
+
+        // — Mes Agents : réclamations actives sur les évaluations créées par ce chef
+        if ($chefCtx) {
+            $agentIds = $chefCtx->getAgents()->pluck('id');
+
+            if ($agentIds->isNotEmpty()) {
+                $agentsEnReclamation = \App\Models\Evaluation::whereIn('evaluable_id', $agentIds)
+                    ->where('evaluable_type', \App\Models\Agent::class)
+                    ->where('evaluateur_id', $user->id)
+                    ->where('statut', 'reclamation')
+                    ->where(fn ($q) => $q->whereNull('statut_reclamation')
+                        ->orWhere('statut_reclamation', '!=', 'maintenu'))
+                    ->distinct('evaluable_id')
+                    ->count('evaluable_id');
+
+                $navBadges['chef.equipe'] = $agentsEnReclamation;
+                if ($agentsEnReclamation > 0) {
+                    $navBadgeTips['chef.equipe'] = $agentsEnReclamation . ' agent(s) avec réclamation active';
+                }
+            }
+
+            // — Mes Chefs de Guichet (Chef_Agence) : réclamations actives sur évals guichet
+            if ($chefCtx->type === 'agence') {
+                $guichetIds = \App\Models\Guichet::where('agence_id', $chefCtx->entity->id)
+                    ->pluck('id');
+
+                if ($guichetIds->isNotEmpty()) {
+                    $guichetsEnReclamation = \App\Models\Evaluation::whereIn('evaluable_id', $guichetIds)
+                        ->where('evaluable_type', \App\Models\Guichet::class)
+                        ->where('evaluateur_id', $user->id)
+                        ->where('statut', 'reclamation')
+                        ->where(fn ($q) => $q->whereNull('statut_reclamation')
+                            ->orWhere('statut_reclamation', '!=', 'maintenu'))
+                        ->distinct('evaluable_id')
+                        ->count('evaluable_id');
+
+                    $navBadges['chef.guichets'] = $guichetsEnReclamation;
+                    if ($guichetsEnReclamation > 0) {
+                        $navBadgeTips['chef.guichets'] = $guichetsEnReclamation . ' guichet(s) avec réclamation active';
+                    }
+                }
+            }
+        }
+    }
+
     // Menu de la sidebar — identique au pattern layouts/personnel.blade.php
     // mais avec une section supplémentaire "Mon équipe"
     $menuSections = [
@@ -45,6 +105,8 @@
                     'route' => 'chef.mon-espace',
                     'icon'  => 'fas fa-folder-open',
                     'label' => 'Mon dossier',
+                    'badge' => $navBadges['chef.mon-espace'] ?? 0,
+                    'badgeTip' => $navBadgeTips['chef.mon-espace'] ?? null,
                 ],
             ],
         ],
@@ -56,6 +118,8 @@
                     'icon'     => 'fas fa-users',
                     'label'    => 'Mes agents',
                     'disabled' => false,
+                    'badge'    => $navBadges['chef.equipe'] ?? 0,
+                    'badgeTip' => $navBadgeTips['chef.equipe'] ?? null,
                 ],
                 // Guichets : affiché uniquement pour le Chef_Agence
                 $chefCtx?->type === 'agence' ? [
@@ -63,6 +127,8 @@
                     'icon'     => 'fas fa-store',
                     'label'    => 'Mes Chefs de Guichet',
                     'disabled' => false,
+                    'badge'    => $navBadges['chef.guichets'] ?? 0,
+                    'badgeTip' => $navBadgeTips['chef.guichets'] ?? null,
                 ] : null,
 
             ])),
@@ -75,6 +141,8 @@
                     'icon'     => 'fas fa-graduation-cap',
                     'label'    => 'Mes formations',
                     'disabled' => false,
+                    'badge'    => $navBadges['chef.formations.index'] ?? 0,
+                    'badgeTip' => $navBadgeTips['chef.formations.index'] ?? null,
                 ],
             ],
         ],
@@ -244,16 +312,34 @@
                             ? route($item['route']) . ($query ? '?' . $query : '')
                             : null;
                     @endphp
+                    @php
+                        $badge    = $item['badge'] ?? 0;
+                        $badgeTip = $item['badgeTip'] ?? null;
+                    @endphp
                     @if($isDisabled)
+                        @php
+                            $feat    = $item['feature'] ?? null;
+                            $tipMsg  = $feat === 'evaluations'
+                                ? ($evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.')
+                                : ($feat === 'objectifs'
+                                    ? ($objectifsDisabledMessage ?: 'Assignation d\'objectifs désactivée par l\'administrateur.')
+                                    : 'Fonctionnalité désactivée par l\'administrateur.');
+                        @endphp
                         <span class="nav-link opacity-70 cursor-not-allowed select-none"
-                              title="Fonctionnalité désactivée par l'administrateur">
+                              title="{{ $tipMsg }}">
                             <i class="{{ $item['icon'] }}"></i>
                             <span>{{ $item['label'] }}</span>
                         </span>
                     @else
                         <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                             <i class="{{ $item['icon'] }}"></i>
-                            <span>{{ $item['label'] }}</span>
+                            <span class="flex-1">{{ $item['label'] }}</span>
+                            @if($badge > 0)
+                                <span class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                                      title="{{ $badgeTip ?? $badge . ' notification(s) non lue(s)' }}">
+                                    {{ $badge > 99 ? '99+' : $badge }}
+                                </span>
+                            @endif
                         </a>
                     @endif
                 @endforeach
@@ -355,7 +441,7 @@
     @stack('scripts')
     <script>
     (function(){
-        var tsOpts={searchField:['text'],maxOptions:300,render:{
+        var tsOpts={searchField:['text'],maxOptions:300,dropdownParent:'body',render:{
             no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
         function initSelects(){

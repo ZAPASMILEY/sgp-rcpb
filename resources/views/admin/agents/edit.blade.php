@@ -18,7 +18,7 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $agent->prenom }} {{ $agent->nom }}</h1>
                         <p class="mt-1 text-sm text-slate-500">{{ $agent->role }}</p>
                     </div>
-                    <a href="{{ route('admin.agents.show', $agent) }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
 
                 @if ($errors->any())

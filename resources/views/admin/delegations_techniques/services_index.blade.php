@@ -19,7 +19,7 @@
                             <input type="search" name="search" value="{{ $search }}" class="ent-input min-w-[260px]" placeholder="Rechercher un service, chef, region...">
                             <button type="submit" class="ent-btn ent-btn-soft">Rechercher</button>
                         </form>
-                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $services->total() }} service(s)</div>
+                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $services->count() }} service(s)</div>
                         <a href="{{ route('admin.services.create') }}" data-open-create-modal data-modal-title="Ajouter un service" class="ent-btn ent-btn-primary">Ajouter</a>
                     </div>
                 </div>
@@ -45,9 +45,9 @@
                     </div>
                 @endif
 
-                <div class="mt-6 overflow-x-auto">
+                <div class="mt-6 overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="ent-table text-left text-sm text-slate-700">
-                        <thead>
+                        <thead class="sticky top-0 z-10">
                             <tr>
                                 <th>#</th>
                                 <th>Service</th>
@@ -59,7 +59,7 @@
                         <tbody>
                             @forelse ($services as $service)
                                 <tr>
-                                    <td>{{ ($services->firstItem() ?? 1) + $loop->index }}</td>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $service->nom }}</td>
                                     <td>{{ $service->direction?->delegationTechnique?->region }} / {{ $service->direction?->delegationTechnique?->ville }}</td>
                                     <td>{{ $service->chef_prenom }} {{ $service->chef_nom }}</td>
@@ -72,9 +72,7 @@
                     </table>
                 </div>
 
-                @if ($services->hasPages())
-                    <div class="mt-4">{{ $services->links() }}</div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $services->count() }} résultat(s)</div>
             </section>
         </div>
     </div>

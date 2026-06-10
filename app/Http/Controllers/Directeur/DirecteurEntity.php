@@ -50,7 +50,9 @@ class DirecteurEntity
         return match ($user->role) {
             'Directeur_Direction' => static::fromDirection($user->id),
             'Directeur_Caisse'    => static::fromCaisse($user->id),
-            'Directeur_Technique' => static::fromDelegation($user->id),
+            // Certains directeurs de direction sont créés avec role=Directeur_Technique
+            // via AgentAccountService — on tente la délégation puis la direction en fallback
+            'Directeur_Technique' => static::fromDelegation($user->id) ?? static::fromDirection($user->id),
             default               => null,
         };
     }

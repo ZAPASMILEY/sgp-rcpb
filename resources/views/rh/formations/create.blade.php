@@ -5,24 +5,48 @@
 @push('head')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
 <style>
-    /* ── Tom Select custom theme ── */
-    .ts-wrapper.single .ts-control {
+    /* ── Tom Select custom theme (multi) ── */
+    .ts-wrapper .ts-control {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 0.75rem;
-        padding: 0.625rem 1rem;
+        padding: 0.5rem 0.75rem;
         font-size: 0.875rem;
         color: #1e293b;
         box-shadow: none;
         cursor: pointer;
+        min-height: 2.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        align-items: center;
     }
-    .ts-wrapper.single.focus .ts-control,
-    .ts-wrapper.single .ts-control:focus {
+    .ts-wrapper.focus .ts-control {
         border-color: #34d399;
         background: #fff;
         box-shadow: 0 0 0 3px rgba(52,211,153,0.15);
     }
-    .ts-wrapper .ts-control input { color: #1e293b; font-size: 0.875rem; }
+    .ts-wrapper .ts-control input { color: #1e293b; font-size: 0.875rem; min-width: 120px; }
+    /* Tags agents sélectionnés */
+    .ts-wrapper .ts-control .item {
+        background: #d1fae5;
+        color: #065f46;
+        border-radius: 0.5rem;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .ts-wrapper .ts-control .item .remove {
+        color: #065f46;
+        opacity: 0.6;
+        font-size: 0.9rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .ts-wrapper .ts-control .item .remove:hover { opacity: 1; }
     .ts-dropdown { border: 1px solid #e2e8f0; border-radius: 0.75rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; font-size: 0.875rem; }
     .ts-dropdown .option { padding: 0.55rem 1rem; color: #334155; }
     .ts-dropdown .option:hover, .ts-dropdown .option.active { background: #f0fdf4; color: #065f46; }
@@ -74,26 +98,28 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route(($routePrefix ?? 'rh').'.formations.store') }}" class="admin-panel px-6 py-6 flex flex-col gap-5">
+    <form method="POST" action="{{ route(($routePrefix ?? 'rh').'.formations.store') }}" enctype="multipart/form-data" class="admin-panel px-6 py-6 flex flex-col gap-5">
         @csrf
 
-        {{-- Agent (searchable) --}}
+        {{-- Agents (multi-select) --}}
         <div>
             <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">
-                Agent *
+                Agents participants *
+                <span class="ml-1 font-normal normal-case tracking-normal text-slate-400">(plusieurs sélections possibles)</span>
             </label>
-            <select id="select-agent" name="agent_id" required
-                    class="@error('agent_id') border-rose-400 @enderror">
-                <option value="">— Sélectionner un agent —</option>
+            <select id="select-agent" name="agent_ids[]" multiple required
+                    class="@error('agent_ids') border-rose-400 @enderror">
                 @foreach($agents as $ag)
                     <option value="{{ $ag->id }}"
-                            data-search="{{ strtolower($ag->prenom . ' ' . $ag->nom . ' ' . $ag->poste) }}"
-                            @selected(old('agent_id', $preselectedAgentId) == $ag->id)>
-                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->poste ?: $ag->role }}
+                            @selected(in_array($ag->id, old('agent_ids', $preselectedAgentId ? [$preselectedAgentId] : [])))>
+                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->poste ?: '—' }}
                     </option>
                 @endforeach
             </select>
-            @error('agent_id')
+            @error('agent_ids')
+                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+            @enderror
+            @error('agent_ids.*')
                 <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
             @enderror
         </div>
@@ -115,29 +141,97 @@
             @enderror
         </div>
 
-        {{-- Domaine --}}
-        <div>
-            <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Domaine *</label>
-            <select name="domaine" required
-                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('domaine') border-rose-400 @enderror">
-                <option value="">— Choisir un domaine —</option>
-                @foreach($domaines as $key => $label)
-                    <option value="{{ $key }}" @selected(old('domaine') === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
+        {{-- Type + Domaine --}}
+        <div class="grid grid-cols-2 gap-4">
+            {{-- Type --}}
+            <div>
+                <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Type *</label>
+                <div class="flex gap-3">
+                    @foreach($types as $key => $label)
+                        <label class="flex flex-1 cursor-pointer items-center gap-2.5 rounded-xl border-2 px-4 py-3 transition
+                            {{ old('type', 'interne') === $key ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300' }}">
+                            <input type="radio" name="type" value="{{ $key }}"
+                                   {{ old('type', 'interne') === $key ? 'checked' : '' }}
+                                   class="accent-emerald-600">
+                            <span class="text-sm font-bold text-slate-700">{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                @error('type')
+                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                @enderror
+            </div>
+            {{-- Domaine --}}
+            <div>
+                <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Domaine *</label>
+                <select name="domaine" required
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('domaine') border-rose-400 @enderror">
+                    <option value="">— Choisir un domaine —</option>
+                    @foreach($domaines as $key => $label)
+                        <option value="{{ $key }}" @selected(old('domaine') === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
 
-        {{-- Dates --}}
+        {{-- Dates : année fixée par le semestre ouvert, seuls le jour et le mois sont modifiables --}}
+        @php
+            $annee = $anneeEnCours?->annee ?? now()->year;
+            $moisLabels = ['01'=>'Janvier','02'=>'Février','03'=>'Mars','04'=>'Avril','05'=>'Mai','06'=>'Juin',
+                           '07'=>'Juillet','08'=>'Août','09'=>'Septembre','10'=>'Octobre','11'=>'Novembre','12'=>'Décembre'];
+            $oldDebut = old('date_debut');
+            $oldFin   = old('date_fin');
+            $debutJour  = $oldDebut ? substr($oldDebut, 8, 2) : '';
+            $debutMois  = $oldDebut ? substr($oldDebut, 5, 2) : '';
+            $finJour    = $oldFin   ? substr($oldFin,   8, 2) : '';
+            $finMois    = $oldFin   ? substr($oldFin,   5, 2) : '';
+        @endphp
         <div class="grid grid-cols-2 gap-4">
+            {{-- Date de début --}}
             <div>
                 <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Date de début *</label>
-                <input type="date" name="date_debut" value="{{ old('date_debut') }}" required
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('date_debut') border-rose-400 @enderror">
+                <input type="hidden" name="date_debut" id="date_debut_hidden"
+                       value="{{ $oldDebut ?: '' }}">
+                <div class="flex items-stretch gap-1.5">
+                    <input type="number" id="date_debut_day" min="1" max="31"
+                           value="{{ $debutJour !== '' ? (int)$debutJour : '' }}"
+                           placeholder="Jour" required
+                           class="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-center outline-none focus:border-emerald-400 focus:bg-white @error('date_debut') border-rose-400 @enderror">
+                    <select id="date_debut_month"
+                            class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('date_debut') border-rose-400 @enderror">
+                        <option value="">Mois</option>
+                        @foreach($moisLabels as $num => $nom)
+                            <option value="{{ $num }}" @selected($debutMois === $num)>{{ $nom }}</option>
+                        @endforeach
+                    </select>
+                    <span class="flex items-center rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-black text-slate-500 select-none">
+                        {{ $annee }}
+                    </span>
+                </div>
+                @error('date_debut')<p class="mt-1 text-xs text-rose-500">{{ $message }}</p>@enderror
             </div>
+            {{-- Date de fin --}}
             <div>
                 <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Date de fin *</label>
-                <input type="date" name="date_fin" value="{{ old('date_fin') }}" required
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('date_fin') border-rose-400 @enderror">
+                <input type="hidden" name="date_fin" id="date_fin_hidden"
+                       value="{{ $oldFin ?: '' }}">
+                <div class="flex items-stretch gap-1.5">
+                    <input type="number" id="date_fin_day" min="1" max="31"
+                           value="{{ $finJour !== '' ? (int)$finJour : '' }}"
+                           placeholder="Jour" required
+                           class="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-center outline-none focus:border-emerald-400 focus:bg-white @error('date_fin') border-rose-400 @enderror">
+                    <select id="date_fin_month"
+                            class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('date_fin') border-rose-400 @enderror">
+                        <option value="">Mois</option>
+                        @foreach($moisLabels as $num => $nom)
+                            <option value="{{ $num }}" @selected($finMois === $num)>{{ $nom }}</option>
+                        @endforeach
+                    </select>
+                    <span class="flex items-center rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-black text-slate-500 select-none">
+                        {{ $annee }}
+                    </span>
+                </div>
+                @error('date_fin')<p class="mt-1 text-xs text-rose-500">{{ $message }}</p>@enderror
             </div>
         </div>
 
@@ -150,6 +244,50 @@
                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-14 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('duree_heures') border-rose-400 @enderror">
                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">heures</span>
             </div>
+        </div>
+
+        {{-- Formateur (optionnel — agent de la Faitière) --}}
+        <div>
+            <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">
+                Formateur
+                <span class="ml-1 font-normal normal-case tracking-normal text-slate-400">(optionnel — agent de la Faitière)</span>
+            </label>
+            <select name="formateur_id"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('formateur_id') border-rose-400 @enderror">
+                <option value="">— Aucun formateur —</option>
+                @foreach($formateurs as $fm)
+                    <option value="{{ $fm->id }}" @selected(old('formateur_id') == $fm->id)>
+                        {{ trim($fm->prenom . ' ' . $fm->nom) }}{{ $fm->poste ? ' — ' . $fm->poste : '' }}
+                    </option>
+                @endforeach
+            </select>
+            @error('formateur_id')
+                <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- Attestation (optionnelle — jointe par le RH pour les participants) --}}
+        <div>
+            <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">
+                Attestation
+                <span class="ml-1 font-normal normal-case tracking-normal text-slate-400">(optionnelle — PDF ou image, 5 Mo max)</span>
+            </label>
+            <label id="drop-zone-rh"
+                   class="flex cursor-pointer items-center gap-4 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 py-4 transition hover:border-emerald-400 hover:bg-emerald-50 @error('attestation') border-rose-300 bg-rose-50 @enderror">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
+                    <i class="fas fa-paperclip text-lg text-emerald-500"></i>
+                </div>
+                <div class="min-w-0">
+                    <p id="rh-file-name" class="truncate text-sm font-semibold text-slate-600">Cliquer pour joindre un fichier…</p>
+                    <p class="text-xs text-slate-400">Sera téléchargeable par les participants après validation</p>
+                </div>
+                <input id="rh-attestation-input" type="file" name="attestation"
+                       accept=".pdf,.jpg,.jpeg,.png,.webp"
+                       class="hidden">
+            </label>
+            @error('attestation')
+                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
+            @enderror
         </div>
 
         {{-- Actions --}}
@@ -172,21 +310,18 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
-    // ── Tom Select pour le champ Agent ──────────────────────────────────────
-   new TomSelect('#select-agent', {
-    placeholder: '— Rechercher un agent —',
-    searchField: ['text'],
-    maxOptions: 1000, // Augmenté à 1000 (ou supprime carrément la ligne pour n'avoir aucune limite)
-    render: {
-        // ... les fonctions render restent inchangées
-    }
-});
+    // ── Tom Select pour le champ Agents (multi-select) ──────────────────────
+    new TomSelect('#select-agent', {
+        plugins: ['remove_button'],
+        placeholder: '— Rechercher et sélectionner des agents —',
+        searchField: ['text'],
+        maxOptions: 1000,
         render: {
             option: function(data, escape) {
                 return `<div>${escape(data.text)}</div>`;
             },
             item: function(data, escape) {
-                return `<div>${escape(data.text)}</div>`;
+                return `<div class="flex items-center gap-1.5 text-xs font-semibold">${escape(data.text)}</div>`;
             },
             no_results: function() {
                 return '<div class="no-results" style="padding:0.6rem 1rem;color:#94a3b8;font-size:0.8rem">Aucun agent trouvé</div>';
@@ -232,6 +367,61 @@
 
     input.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') list.style.display = 'none';
+    });
+
+    // ── Combinaison jour + mois + année (fixe) → champs hidden ──────────────
+    const ANNEE = {{ $anneeEnCours?->annee ?? now()->year }};
+
+    function buildDate(dayInput, monthSelect) {
+        const day   = String(dayInput.value).padStart(2, '0');
+        const month = monthSelect.value;
+        if (!dayInput.value || !month) return '';
+        return `${ANNEE}-${month}-${day}`;
+    }
+
+    function syncDebut() {
+        document.getElementById('date_debut_hidden').value =
+            buildDate(document.getElementById('date_debut_day'),
+                      document.getElementById('date_debut_month'));
+    }
+
+    function syncFin() {
+        document.getElementById('date_fin_hidden').value =
+            buildDate(document.getElementById('date_fin_day'),
+                      document.getElementById('date_fin_month'));
+    }
+
+    function clampDay(input) {
+        const v = parseInt(input.value, 10);
+        if (!isNaN(v)) input.value = Math.min(31, Math.max(1, v));
+    }
+
+    document.getElementById('date_debut_day').addEventListener('input', function() { clampDay(this); syncDebut(); });
+    document.getElementById('date_debut_month').addEventListener('change', syncDebut);
+    document.getElementById('date_fin_day').addEventListener('input', function() { clampDay(this); syncFin(); });
+    document.getElementById('date_fin_month').addEventListener('change', syncFin);
+
+    // Initialisation au chargement (cas retour sur validation)
+    syncDebut();
+    syncFin();
+
+    // Sync de sécurité juste avant la soumission
+    document.querySelector('form').addEventListener('submit', function () {
+        syncDebut();
+        syncFin();
+    });
+
+    // ── Attestation optionnelle ──────────────────────────────────────────────
+    const rhInput  = document.getElementById('rh-attestation-input');
+    const rhLabel  = document.getElementById('drop-zone-rh');
+    const rhNameEl = document.getElementById('rh-file-name');
+
+    rhInput.addEventListener('change', () => {
+        if (rhInput.files.length) {
+            rhNameEl.textContent = rhInput.files[0].name;
+            rhLabel.classList.add('border-emerald-500', 'bg-emerald-50');
+            rhLabel.classList.remove('border-dashed', 'border-slate-200');
+        }
     });
 </script>
 @endpush

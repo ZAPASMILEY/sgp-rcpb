@@ -70,8 +70,7 @@ class EvaluationGererController extends Controller
                 )
             ))
             ->latest()
-            ->paginate(50) // Remis à 50 comme initialement prévu pour la gestion réseau
-            ->withQueryString();
+            ->get();
 
         // Chargement des données pour les filtres de la vue
         $delegations = DelegationTechnique::orderBy('region')->orderBy('ville')->get();

@@ -27,6 +27,8 @@
         </div>
     </div>
 
+    @include('layouts._features_notice')
+
     <div class="mx-auto max-w-screen-xl px-4 pt-6 lg:px-8 space-y-5">
 
         @if(session('status'))
@@ -169,14 +171,28 @@
                 {{-- Actions --}}
                 @if($chefUser)
                 <div class="mt-auto flex gap-2 border-t border-slate-100 px-4 py-3">
-                    <a href="{{ route('dga.sub-evaluations.create', ['subordonne_id' => $chefUser->id]) }}"
-                       class="flex-1 rounded-xl bg-violet-600 py-2 text-center text-xs font-bold text-white hover:bg-violet-700 transition">
-                        <i class="fas fa-pen-to-square mr-1"></i>Évaluer
-                    </a>
-                    <a href="{{ route('dga.sub-objectifs.create', ['user' => $chefUser->id]) }}"
-                       class="flex-1 rounded-xl border border-slate-200 py-2 text-center text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
-                        <i class="fas fa-bullseye mr-1"></i>Objectifs
-                    </a>
+                    @if($evaluationsEnabled && $s['ficheAcceptee'] && !$s['evaluationEnCours'])
+                        <a href="{{ route('dga.sub-evaluations.create', ['subordonne_id' => $chefUser->id]) }}"
+                           class="flex-1 rounded-xl bg-violet-600 py-2 text-center text-xs font-bold text-white hover:bg-violet-700 transition">
+                            <i class="fas fa-pen-to-square mr-1"></i>Évaluer
+                        </a>
+                    @else
+                        <span title="{{ $s['evaluationEnCours'] ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$s['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée pour ce chef.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}"
+                              class="flex-1 rounded-xl bg-slate-100 py-2 text-center text-xs font-bold text-slate-400 cursor-not-allowed select-none">
+                            <i class="fas fa-pen-to-square mr-1"></i>Évaluer
+                        </span>
+                    @endif
+                    @if($objectifsEnabled && !$s['ficheBlocksNew'])
+                        <a href="{{ route('dga.sub-objectifs.create', ['user' => $chefUser->id]) }}"
+                           class="flex-1 rounded-xl border border-slate-200 py-2 text-center text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                            <i class="fas fa-bullseye mr-1"></i>Objectifs
+                        </a>
+                    @else
+                        <span title="{{ $s['ficheBlocksNew'] ? 'Une fiche d\'objectifs est déjà assignée à ce chef.' : ($objectifsDisabledMessage ?: 'Assignation désactivée.') }}"
+                              class="flex-1 rounded-xl border border-slate-100 py-2 text-center text-xs font-bold text-slate-300 cursor-not-allowed select-none">
+                            <i class="fas fa-bullseye mr-1"></i>Objectifs
+                        </span>
+                    @endif
                 </div>
                 @else
                 <div class="mt-auto border-t border-slate-100 px-4 py-3">
@@ -218,10 +234,17 @@
                         </div>
                     </div>
                     @if($agentUser)
-                        <a href="{{ route('dga.sub-evaluations.create', ['subordonne_id' => $agentUser->id]) }}"
-                           class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50 transition">
-                            <i class="fas fa-pen-to-square mr-1"></i>Évaluer
-                        </a>
+                        @if($evaluationsEnabled)
+                            <a href="{{ route('dga.sub-evaluations.create', ['subordonne_id' => $agentUser->id]) }}"
+                               class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50 transition">
+                                <i class="fas fa-pen-to-square mr-1"></i>Évaluer
+                            </a>
+                        @else
+                            <span title="{{ $evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.' }}"
+                                  class="rounded-xl border border-slate-100 px-3 py-1.5 text-xs font-bold text-slate-300 cursor-not-allowed select-none">
+                                <i class="fas fa-pen-to-square mr-1"></i>Évaluer
+                            </span>
+                        @endif
                     @endif
                 </div>
                 @endforeach

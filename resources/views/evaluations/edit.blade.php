@@ -50,6 +50,11 @@
                 {{ $errors->first() }}
             </div>
         @endif
+        @if (session('error'))
+            <div class="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <i class="fas fa-triangle-exclamation mr-2"></i>{{ session('error') }}
+            </div>
+        @endif
 
         <form method="POST" action="{{ $formAction }}"
               class="flex flex-col gap-5 lg:grid lg:grid-cols-[1fr_300px] lg:items-start lg:gap-6">
@@ -141,6 +146,12 @@
                                 <input id="identification_direction_service" name="identification[direction_service]" type="text"
                                        value="{{ old('identification.direction_service', $ident?->direction_service ?? '') }}"
                                        class="ent-input">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="identification_date_prise_fonction" class="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Date de prise de fonction <span class="text-red-500">*</span></label>
+                                <input id="identification_date_prise_fonction" name="identification[date_prise_fonction]" type="text"
+                                       value="{{ old('identification.date_prise_fonction', $ident?->date_prise_fonction?->format('d/m/Y') ?? '') }}"
+                                       class="ent-input" placeholder="JJ/MM/YYYY" required>
                             </div>
                         </div>
 
@@ -393,11 +404,26 @@
                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-center text-sm font-bold text-slate-600 transition hover:bg-slate-100">
                         Annuler
                     </a>
+                    @if (isset($destroyRoute) && $evaluation->statut === 'brouillon')
+                    <button type="button"
+                            onclick="if(confirm('Supprimer définitivement ce brouillon ?')) document.getElementById('eval-destroy-form').submit()"
+                            class="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-100">
+                        <i class="fas fa-trash mr-1.5 text-[11px]"></i> Supprimer le brouillon
+                    </button>
+                    @endif
                 </div>
 
             </div>{{-- /RIGHT --}}
 
         </form>
+
+        {{-- Form suppression séparée — hors de la form principale pour éviter le conflit _method --}}
+        @if (isset($destroyRoute) && $evaluation->statut === 'brouillon')
+        <form id="eval-destroy-form" method="POST" action="{{ route($destroyRoute, $evaluation) }}" class="hidden">
+            @csrf @method('DELETE')
+        </form>
+        @endif
+
     </div>
 </div>
 @endsection

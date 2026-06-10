@@ -17,6 +17,8 @@
             </div>
         </div>
 
+        @include('layouts._features_notice')
+
         <div class="px-4 lg:px-8 flex flex-col gap-6">
 
         @if (session('status'))
@@ -99,24 +101,24 @@
 
                             {{-- Actions --}}
                             <div class="flex shrink-0 items-center gap-2">
-                                @if($evaluationsEnabled)
+                                @if($evaluationsEnabled && $item['ficheAcceptee'] && !$item['evaluationEnCours'])
                                     <a href="{{ route('directeur.evaluations.create', ['caisse_id' => $css->id]) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée"
+                                    <span title="{{ $item['evaluationEnCours'] ? 'Une évaluation est déjà en cours.' : (!$item['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.')) }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
-                                @if($objectifsEnabled)
+                                @if($objectifsEnabled && !$item['ficheBlocksNew'])
                                     <a href="{{ route('directeur.subordonnes.caisse.objectifs.create', $css) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée"
+                                    <span title="{{ $item['ficheBlocksNew'] ? 'Une fiche d\'objectifs est déjà assignée à ce directeur.' : ($objectifsDisabledMessage ?: 'Assignation d\'objectifs désactivée par l\'administrateur.') }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
@@ -206,24 +208,24 @@
 
                             {{-- Actions --}}
                             <div class="flex shrink-0 items-center gap-2">
-                                @if($evaluationsEnabled)
+                                @if($evaluationsEnabled && $item['ficheAcceptee'] && !$item['evaluationEnCours'])
                                     <a href="{{ route('directeur.evaluations.create', ['agence_id' => $agc->id]) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée"
+                                    <span title="{{ $item['evaluationEnCours'] ? 'Une évaluation est déjà en cours.' : (!$item['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.')) }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
-                                @if($objectifsEnabled)
+                                @if($objectifsEnabled && !$item['ficheBlocksNew'])
                                     <a href="{{ route('directeur.subordonnes.agence.objectifs.create', $agc) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-700">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée"
+                                    <span title="{{ $item['ficheBlocksNew'] ? 'Une fiche d\'objectifs est déjà assignée à ce chef.' : ($objectifsDisabledMessage ?: 'Assignation d\'objectifs désactivée par l\'administrateur.') }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
@@ -308,24 +310,24 @@
 
                             {{-- Actions --}}
                             <div class="flex shrink-0 items-center gap-2">
-                                @if($evaluationsEnabled)
+                                @if($evaluationsEnabled && $item['ficheAcceptee'] && !$item['evaluationEnCours'])
                                     <a href="{{ route('directeur.evaluations.create', ['service_id' => $svc->id]) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée"
+                                    <span title="{{ $item['evaluationEnCours'] ? 'Une évaluation est déjà en cours.' : (!$item['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.')) }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
-                                @if($objectifsEnabled)
+                                @if($objectifsEnabled && !$item['ficheBlocksNew'])
                                     <a href="{{ route('directeur.subordonnes.service.objectifs.create', $svc) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée"
+                                    <span title="{{ $item['ficheBlocksNew'] ? 'Une fiche d\'objectifs est déjà assignée à ce chef.' : ($objectifsDisabledMessage ?: 'Assignation d\'objectifs désactivée par l\'administrateur.') }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>
@@ -380,24 +382,24 @@
 
                     {{-- Actions --}}
                     <div class="flex shrink-0 items-center gap-2">
-                        @if($evaluationsEnabled)
+                        @if($evaluationsEnabled && $secretaireFicheAcceptee)
                             <a href="{{ route('directeur.subordonnes.secretaire.evaluations.create') }}"
                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-rose-300 hover:text-rose-600">
                                 <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                             </a>
                         @else
-                            <span title="Fonctionnalité désactivée"
+                            <span title="{{ !$secretaireFicheAcceptee ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.') }}"
                                   class="ent-btn-disabled-light">
                                 <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                             </span>
                         @endif
-                        @if($objectifsEnabled)
+                        @if($objectifsEnabled && !$secretaireFicheBlocksNew)
                             <a href="{{ route('directeur.subordonnes.secretaire.objectifs.create') }}"
                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-rose-300 hover:text-rose-600">
                                 <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                             </a>
                         @else
-                            <span title="Fonctionnalité désactivée"
+                            <span title="{{ $secretaireFicheBlocksNew ? 'Une fiche d\'objectifs est déjà assignée à la secrétaire.' : ($objectifsDisabledMessage ?: 'Assignation d\'objectifs désactivée par l\'administrateur.') }}"
                                   class="ent-btn-disabled-light">
                                 <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                             </span>

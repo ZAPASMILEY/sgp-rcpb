@@ -1,5 +1,12 @@
 @php
     $user = auth()->user();
+
+    // ── Badges sidebar ──────────────────────────────────────────────────────
+    $_reclamationsBadge = \App\Models\Evaluation::where('statut', 'reclamation')
+        ->where(fn ($q) => $q->whereNull('statut_reclamation')
+            ->orWhere('statut_reclamation', '!=', 'maintenu'))
+        ->count();
+
     $menuSections = [
         [
             'title' => 'Tableau de bord',
@@ -15,7 +22,7 @@
             'items' => [
                 ['route' => 'rh.dashboard',    'query' => 'tab=agents',      'icon' => 'fas fa-users',            'label' => 'Agents'],
                 ['route' => 'rh.dashboard',    'query' => 'tab=evaluations', 'icon' => 'fas fa-star-half-stroke', 'label' => 'Évaluations'],
-                ['route' => 'rh.reclamations.index',                          'icon' => 'fas fa-triangle-exclamation', 'label' => 'Réclamations'],
+                ['route' => 'rh.reclamations.index',                          'icon' => 'fas fa-triangle-exclamation', 'label' => 'Réclamations', 'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'],
                 ['route' => 'rh.dashboard',    'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye',         'label' => 'Objectifs'],
                 ['route' => 'rh.structures',                                  'icon' => 'fas fa-building',         'label' => 'Structures'],
             ],
@@ -159,7 +166,13 @@
                     @endphp
                     <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                         <i class="{{ $item['icon'] }}"></i>
-                        <span>{{ $item['label'] }}</span>
+                        <span class="flex-1">{{ $item['label'] }}</span>
+                        @if(($item['badge'] ?? 0) > 0)
+                            <span class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                                  title="{{ $item['badgeTip'] ?? ($item['badge'] . ' en attente') }}">
+                                {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                            </span>
+                        @endif
                     </a>
                 @endforeach
             @endforeach
@@ -224,7 +237,7 @@
     @stack('scripts')
     <script>
     (function(){
-        var tsOpts={searchField:['text'],maxOptions:300,render:{
+        var tsOpts={searchField:['text'],maxOptions:300,dropdownParent:'body',render:{
             no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
         function initSelects(){

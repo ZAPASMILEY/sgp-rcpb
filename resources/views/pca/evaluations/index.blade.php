@@ -7,7 +7,7 @@
         $summaryCards = [
             [
                 'label' => 'Evaluations total',
-                'value' => $stats['total'] ?? $evaluations->total(),
+                'value' => $stats['total'] ?? $evaluations->count(),
                 'meta' => 'Suivi global de l\'entité et de la direction générale',
                 'tone' => 'border-slate-100 bg-white text-slate-900',
                 'accent' => 'text-slate-500',
@@ -66,7 +66,7 @@
                         </p>
                         <div class="mt-4 flex flex-wrap items-center gap-2">
                             <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                                {{ $stats['total'] ?? $evaluations->total() }} évaluation(s)
+                                {{ $stats['total'] ?? $evaluations->count() }} évaluation(s)
                             </span>
                             @if ($filters['search'] || $filters['statut'])
                                 <span class="inline-flex items-center rounded-full bg-cyan-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-700">
@@ -80,6 +80,16 @@
                         <a href="{{ route('pca.evaluations.index') }}" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-950">
                             <i class="fas fa-rotate-right mr-2 text-xs opacity-80"></i>Réinitialiser
                         </a>
+                        @if ($evaluationsEnabled && $ficheAcceptee && !$evaluationEnCours)
+                            <a href="{{ route('pca.evaluations.create') }}" class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+                                <i class="fas fa-plus mr-2 text-xs"></i>Nouvelle évaluation
+                            </a>
+                        @else
+                            <span title="{{ $evaluationEnCours ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$ficheAcceptee ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}"
+                                  class="inline-flex cursor-not-allowed select-none items-center justify-center rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-400">
+                                <i class="fas fa-plus mr-2 text-xs"></i>Nouvelle évaluation
+                            </span>
+                        @endif
                     </div>
                 </div>
 
@@ -150,9 +160,9 @@
                 </div>
 
                 <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                         <table class="min-w-full text-sm">
-                            <thead>
+                            <thead class="sticky top-0 z-10">
                                 <tr class="border-b border-slate-200 bg-slate-50/80">
                                     <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Cible</th>
                                     <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Période</th>
@@ -252,8 +262,8 @@
                                             <div class="inline-flex items-center gap-1">
                                                 <a href="{{ route('pca.evaluations.show', $evaluation) }}"
                                                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-100 hover:text-blue-600"
-                                                   title="Voir">
-                                                    <i class="fas fa-eye text-xs"></i>
+                                                   title="{{ $evaluation->statut === 'brouillon' ? 'Modifier' : 'Voir' }}">
+                                                    <i class="fas fa-{{ $evaluation->statut === 'brouillon' ? 'pen' : 'eye' }} text-xs"></i>
                                                 </a>
                                                 @if ($evaluation->statut !== 'brouillon')
                                                     <a href="{{ route('pca.evaluations.pdf', $evaluation) }}"
@@ -261,6 +271,17 @@
                                                        title="PDF" target="_blank">
                                                         <i class="fas fa-file-pdf text-xs"></i>
                                                     </a>
+                                                @endif
+                                                @if (in_array($evaluation->statut, ['brouillon', 'a_reviser']))
+                                                    <form method="POST" action="{{ route('pca.evaluations.destroy', $evaluation) }}"
+                                                          onsubmit="return confirm('Supprimer définitivement cette évaluation ?')">
+                                                        @csrf @method('DELETE')
+                                                        <button type="submit"
+                                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-400 shadow-sm transition hover:bg-rose-50 hover:text-rose-600"
+                                                                title="Supprimer">
+                                                            <i class="fas fa-trash text-xs"></i>
+                                                        </button>
+                                                    </form>
                                                 @endif
                                             </div>
                                         </td>
@@ -283,11 +304,7 @@
                     </div>
                 </div>
 
-                @if ($evaluations->hasPages())
-                    <div class="mt-5 border-t border-slate-150 pt-4">
-                        {{ $evaluations->links() }}
-                    </div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $evaluations->count() }} résultat(s)</div>
             </section>
         </div>
     </div>

@@ -163,6 +163,19 @@
             </div>
         </div>
 
+        {{-- Bannière motif de refus --}}
+        @if ($statut === 'refusee' && $fiche->motif_refus)
+        <div class="flex items-start gap-4 rounded-[24px] border-2 border-rose-200 bg-rose-50 px-6 py-4">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
+                <i class="fas fa-comment-slash text-lg"></i>
+            </div>
+            <div>
+                <p class="font-black text-rose-900">Motif du refus</p>
+                <p class="mt-0.5 text-sm text-rose-700 italic">« {{ $fiche->motif_refus }} »</p>
+            </div>
+        </div>
+        @endif
+
         {{-- Actions footer --}}
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-white px-6 py-4 shadow-sm ring-1 ring-slate-100">
             <a href="{{ $backUrl }}"

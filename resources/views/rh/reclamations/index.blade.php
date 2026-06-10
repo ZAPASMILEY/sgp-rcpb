@@ -39,6 +39,42 @@
     </div>
     @endif
 
+    {{-- Barre de recherche + filtre statut --}}
+    <form method="GET" action="{{ route('rh.reclamations.index') }}"
+          class="admin-panel flex flex-wrap items-end gap-3 px-6 py-4">
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-[11px] font-black uppercase tracking-wide text-slate-400 mb-1">Recherche</label>
+            <div class="relative">
+                <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                    <i class="fas fa-search text-xs"></i>
+                </span>
+                <input type="text" name="search" value="{{ $search }}"
+                       placeholder="Nom évalué, évaluateur…"
+                       class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-emerald-400 focus:bg-white">
+            </div>
+        </div>
+        <div class="min-w-[180px]">
+            <label class="block text-[11px] font-black uppercase tracking-wide text-slate-400 mb-1">Statut réclamation</label>
+            <select name="statut" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
+                <option value="">Tous</option>
+                <option value="en_attente"      @selected($statut === 'en_attente')>En attente</option>
+                <option value="maintenu"        @selected($statut === 'maintenu')>Maintenu</option>
+                <option value="rouvert"         @selected($statut === 'rouvert')>Réglé (rouvert)</option>
+                <option value="sans_reclamation" @selected($statut === 'sans_reclamation')>Sans réclamation</option>
+            </select>
+        </div>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-slate-700">
+            <i class="fas fa-filter text-xs"></i> Filtrer
+        </button>
+        @if($search || $statut)
+        <a href="{{ route('rh.reclamations.index') }}"
+           class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+            <i class="fas fa-times text-xs"></i> Effacer
+        </a>
+        @endif
+    </form>
+
     @if($evaluations->isEmpty())
     {{-- État vide --}}
     <div class="admin-panel flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
@@ -130,7 +166,7 @@
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
                                 {{-- Voir l'évaluation --}}
-                                <a href="{{ route('rh.evaluations.show', $evaluation) }}"
+                                <a href="{{ route('rh.reclamations.show', $evaluation) }}"
                                    class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
                                     <i class="fas fa-eye text-[10px]"></i> Voir
                                 </a>

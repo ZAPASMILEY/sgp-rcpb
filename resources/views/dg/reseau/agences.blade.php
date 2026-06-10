@@ -19,7 +19,7 @@
                     </div>
                     <h1 class="mt-4 text-3xl font-black tracking-tight text-white lg:text-4xl">Agences</h1>
                     <p class="mt-2 text-sm font-medium text-slate-400">
-                        Supervision de <span class="text-white font-bold underline decoration-emerald-500 decoration-2 underline-offset-4">{{ $agences->total() }} points de vente</span> actifs.
+                        Supervision de <span class="text-white font-bold underline decoration-emerald-500 decoration-2 underline-offset-4">{{ $agences->count() }} points de vente</span> actifs.
                     </p>
                 </div>
                 <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-emerald-400 shadow-inner backdrop-blur-md">
@@ -72,9 +72,9 @@
                 <span class="rounded-lg bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700">LIVE DATA</span>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                 <table class="min-w-full text-left">
-                    <thead class="bg-white">
+                    <thead class="bg-white sticky top-0 z-10">
                         <tr>
                             <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Agence</th>
                             <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Superviseur</th>
@@ -130,12 +130,7 @@
                     </tbody>
                 </table>
             </div>
-            
-            @if ($agences->hasPages())
-                <div class="bg-slate-50/50 px-8 py-6 border-t border-slate-100">
-                    {{ $agences->withQueryString()->links() }}
-                </div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $agences->count() }} résultat(s)</div>
         </section>
 
     </div>

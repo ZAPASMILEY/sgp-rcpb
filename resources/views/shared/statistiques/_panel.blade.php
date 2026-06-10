@@ -109,10 +109,15 @@
     {{-- ── Cartes stats rapides ─────────────────────────────────────────────── --}}
     @php
         $totalAgents = $agents->count();
-        $avecS1      = $agents->filter(fn ($a) => $a->evaluations->merge($a->evaluationsPersonnel)->contains(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->count();
-        $avecS2      = $agents->filter(fn ($a) => $a->evaluations->merge($a->evaluationsPersonnel)->contains(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->count();
-        $moyS1       = $agents->map(fn ($a) => optional($a->evaluations->merge($a->evaluationsPersonnel)->first(fn ($e) => $e->semestre?->numero === 1 && $e->note_finale !== null))->note_finale)->filter()->avg();
-        $moyS2       = $agents->map(fn ($a) => optional($a->evaluations->merge($a->evaluationsPersonnel)->first(fn ($e) => $e->semestre?->numero === 2 && $e->note_finale !== null))->note_finale)->filter()->avg();
+        $allEvals    = fn($a) => $a->evaluations->merge($a->evaluationsPersonnel)->merge($a->directedDirection?->evaluations ?? collect())->merge($a->directedCaisse?->evaluations ?? collect())->merge($a->directedDelegation?->evaluations ?? collect())->merge($a->ledAgence?->evaluations ?? collect())->merge($a->ledService?->evaluations ?? collect())->merge($a->ledGuichet?->evaluations ?? collect());
+        // On utilise == (pas ===) pour éviter les écarts string/int selon le driver PDO.
+        // On filtre sur statut='valide' plutôt que note_finale !== null : c'est le critère officiel.
+        $evalS1      = fn ($e) => (int)$e->semestre_id === (int)($s1?->id) && $e->statut === 'valide';
+        $evalS2      = fn ($e) => (int)$e->semestre_id === (int)($s2?->id) && $e->statut === 'valide';
+        $avecS1      = $s1 ? $agents->filter(fn ($a) => $allEvals($a)->contains($evalS1))->count() : 0;
+        $avecS2      = $s2 ? $agents->filter(fn ($a) => $allEvals($a)->contains($evalS2))->count() : 0;
+        $moyS1       = $s1 ? $agents->map(fn ($a) => optional($allEvals($a)->first($evalS1))->note_finale)->filter()->avg() : null;
+        $moyS2       = $s2 ? $agents->map(fn ($a) => optional($allEvals($a)->first($evalS2))->note_finale)->filter()->avg() : null;
     @endphp
     <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div class="rounded-2xl bg-white px-5 py-4 shadow-sm ring-1 ring-slate-100">
@@ -175,9 +180,9 @@
                 <tbody class="divide-y divide-slate-50">
                     @foreach($agents as $agent)
                     @php
-                        $evals  = $agent->evaluations->merge($agent->evaluationsPersonnel)->keyBy(fn ($e) => $e->semestre?->numero);
-                        $evalS1 = $s1 ? $evals->get(1) : null;
-                        $evalS2 = $s2 ? $evals->get(2) : null;
+                        $evals  = $agent->evaluations->merge($agent->evaluationsPersonnel)->merge($agent->directedDirection?->evaluations ?? collect())->merge($agent->directedCaisse?->evaluations ?? collect())->merge($agent->directedDelegation?->evaluations ?? collect())->merge($agent->ledAgence?->evaluations ?? collect())->merge($agent->ledService?->evaluations ?? collect())->merge($agent->ledGuichet?->evaluations ?? collect());
+                        $evalS1 = $s1 ? $evals->firstWhere('semestre_id', $s1->id) : null;
+                        $evalS2 = $s2 ? $evals->firstWhere('semestre_id', $s2->id) : null;
                         $grade  = $evalS1?->identification?->grade ?? $evalS2?->identification?->grade ?? null;
                         $noteS1 = ($evalS1 && $evalS1->note_finale !== null) ? (float)$evalS1->note_finale : null;
                         $noteS2 = ($evalS2 && $evalS2->note_finale !== null) ? (float)$evalS2->note_finale : null;

@@ -119,10 +119,10 @@
                                         <input type="text" name="objectifs[]" value="{{ old('objectifs.'.$idx, $objectif->description) }}" required {{ !$isEditable ? 'readonly' : '' }}
                                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 {{ !$isEditable ? 'bg-slate-50 cursor-not-allowed opacity-75' : '' }}">
                                         @if ($isContested && $isLineContested)
-                                            <p class="mt-1 text-[10px] font-bold text-rose-500 pl-1"><i class="fas fa-flag mr-1"></i>Modifiez cet objectif contesté.</p>
+                                            <p class="mt-1 text-[10px] font-bold text-rose-500 pl-1"><i class="fas fa-flag mr-1"></i>Modifiez ou supprimez cet objectif contesté.</p>
                                         @endif
                                     </div>
-                                    @if (!$isContested)
+                                    @if (!$isContested || $isLineContested)
                                         <button type="button" class="remove-objectif-btn mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-400 transition hover:bg-rose-100 hover:text-rose-600"><i class="fas fa-trash text-xs"></i></button>
                                     @endif
                                 </div>

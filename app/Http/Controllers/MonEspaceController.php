@@ -275,6 +275,7 @@ class MonEspaceController extends Controller
             ['label' => 'Total',    'value' => $evaluationsStats['total'],  'icon' => 'fas fa-clipboard-list', 'tone' => 'border-slate-100 bg-white text-slate-900',            'iw' => 'bg-slate-100 text-slate-600'],
             ['label' => 'Soumises', 'value' => $evaluationsStats['soumis'], 'icon' => 'fas fa-paper-plane',   'tone' => 'border-amber-100 bg-amber-50/80 text-amber-900',      'iw' => 'bg-white text-amber-600'],
             ['label' => 'Validées', 'value' => $evaluationsStats['valide'], 'icon' => 'fas fa-circle-check',  'tone' => 'border-emerald-100 bg-emerald-50/80 text-emerald-900', 'iw' => 'bg-white text-emerald-600'],
+            ['label' => 'Refusées', 'value' => $evaluationsStats['refuse'], 'icon' => 'fas fa-circle-xmark',  'tone' => 'border-rose-100 bg-rose-50/80 text-rose-900',         'iw' => 'bg-white text-rose-500'],
         ];
         $ficheInnerCards = [
             ['label' => 'Total',      'value' => $fichesStats['total'],      'icon' => 'fas fa-clipboard-list', 'tone' => 'border-slate-100 bg-white text-slate-900',            'iw' => 'bg-slate-100 text-slate-600'],
@@ -481,29 +482,52 @@ class MonEspaceController extends Controller
         $statut = trim((string) $request->input('statut', ''));
         $search = trim((string) $request->input('search', ''));
 
-        $baseE = fn () => Evaluation::where(function ($q) use ($ctx, $user) {
+        $baseE = fn () => Evaluation::where(function ($q) use ($ctx, $user, $agent) {
+            // Évaluations reçues en tant que manager de la structure (Guichet/Service/Agence)
             $q->where(function ($q2) use ($ctx) {
                 $q2->where('evaluable_type', $ctx->modelClass)
                    ->where('evaluable_id', $ctx->getId())
                    ->where('evaluable_role', 'manager');
-            })->orWhere(function ($q2) use ($user) {
+            });
+            // Évaluations adressées directement au compte User du chef
+            $q->orWhere(function ($q2) use ($user) {
                 $q2->where('evaluable_type', User::class)
                    ->where('evaluable_id', $user->id);
             });
+            // Évaluations adressées via le compte Agent du chef
+            if ($agent) {
+                $q->orWhere(function ($q2) use ($agent) {
+                    $q2->where('evaluable_type', Agent::class)
+                       ->where('evaluable_id', $agent->id);
+                });
+            }
         })->where('statut', '!=', 'brouillon');
 
-        $baseF = fn () => FicheObjectif::where(function ($q) use ($ctx) {
-            $q->where('assignable_type', $ctx->modelClass)
-              ->where('assignable_id', $ctx->getId());
-        })->orWhere(function ($q) use ($user) {
-            $q->where('assignable_type', User::class)
-              ->where('assignable_id', $user->id);
+        $baseF = fn () => FicheObjectif::where(function ($q) use ($ctx, $user, $agent) {
+            // Fiche adressée à la structure gérée (Guichet/Agence/Service)
+            $q->where(function ($q2) use ($ctx) {
+                $q2->where('assignable_type', $ctx->modelClass)
+                   ->where('assignable_id', $ctx->getId());
+            });
+            // Fiche adressée directement au compte User du chef
+            $q->orWhere(function ($q2) use ($user) {
+                $q2->where('assignable_type', User::class)
+                   ->where('assignable_id', $user->id);
+            });
+            // Fiche adressée via l'Agent lié au chef (chemin admin ou gestion)
+            if ($agent) {
+                $q->orWhere(function ($q2) use ($agent) {
+                    $q2->where('assignable_type', Agent::class)
+                       ->where('assignable_id', $agent->id);
+                });
+            }
         });
 
         $evaluationsStats = [
             'total'  => $baseE()->count(),
             'soumis' => $baseE()->where('statut', 'soumis')->count(),
             'valide' => $baseE()->where('statut', 'valide')->count(),
+            'refuse' => $baseE()->whereIn('statut', ['refuse', 'reclamation'])->count(),
         ];
 
         $fichesStats = [
@@ -570,6 +594,7 @@ class MonEspaceController extends Controller
             ['label' => 'Total',    'value' => $evaluationsStats['total'],  'icon' => 'fas fa-clipboard-list', 'tone' => 'border-slate-100 bg-white text-slate-900',            'iw' => 'bg-slate-100 text-slate-600'],
             ['label' => 'Soumises', 'value' => $evaluationsStats['soumis'], 'icon' => 'fas fa-paper-plane',   'tone' => 'border-amber-100 bg-amber-50/80 text-amber-900',      'iw' => 'bg-white text-amber-600'],
             ['label' => 'Validées', 'value' => $evaluationsStats['valide'], 'icon' => 'fas fa-circle-check',  'tone' => 'border-emerald-100 bg-emerald-50/80 text-emerald-900', 'iw' => 'bg-white text-emerald-600'],
+            ['label' => 'Refusées', 'value' => $evaluationsStats['refuse'], 'icon' => 'fas fa-circle-xmark',  'tone' => 'border-rose-100 bg-rose-50/80 text-rose-900',         'iw' => 'bg-white text-rose-500'],
         ];
         $ficheInnerCards = [
             ['label' => 'Total',      'value' => $fichesStats['total'],      'icon' => 'fas fa-clipboard-list', 'tone' => 'border-slate-100 bg-white text-slate-900',            'iw' => 'bg-slate-100 text-slate-600'],

@@ -201,7 +201,7 @@
     @stack('scripts')
     <script>
     (function(){
-        var tsOpts={searchField:['text'],maxOptions:300,render:{
+        var tsOpts={searchField:['text'],maxOptions:300,dropdownParent:'body',render:{
             no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
         function initSelects(){

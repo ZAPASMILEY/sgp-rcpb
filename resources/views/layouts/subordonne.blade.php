@@ -6,11 +6,15 @@
         'Conseillers_Dg' => 'Conseiller du DG',
         default          => $user?->role ?? 'Collaborateur',
     };
+
+    // ── Badges sidebar ──────────────────────────────────────────────────────
+    $_dossierBadge = $user ? $user->alertesNonLues()->where('lien', 'like', '%mon-espace%')->count() : 0;
+
     $menuSections = [
         [
             'title' => 'Mon espace',
             'items' => [
-                ['route' => 'subordonne.mon-espace', 'icon' => 'fas fa-house', 'label' => 'Tableau de bord'],
+                ['route' => 'subordonne.mon-espace', 'icon' => 'fas fa-house', 'label' => 'Tableau de bord', 'badge' => $_dossierBadge, 'badgeTip' => 'Notification(s) non lue(s)'],
             ],
         ],
         [
@@ -20,6 +24,16 @@
             ],
         ],
     ];
+
+    // ── Section Secrétaire (Assistante DG uniquement) ────────────────────────
+    if ($user?->role === 'Assistante_Dg') {
+        $menuSections[] = [
+            'title' => 'Mes Collaborateurs',
+            'items' => [
+                ['route' => 'assistante.secretaire', 'icon' => 'fas fa-user-tie', 'label' => 'Ma Secrétaire'],
+            ],
+        ];
+    }
 
     // ── Sections conditionnelles selon permissions ───────────────────────────
     $menuSections = array_merge($menuSections, \App\Helpers\PermissionMenu::extraSections());
@@ -136,7 +150,13 @@
                     @endphp
                     <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                         <i class="{{ $item['icon'] }}"></i>
-                        <span>{{ $item['label'] }}</span>
+                        <span class="flex-1">{{ $item['label'] }}</span>
+                        @if(($item['badge'] ?? 0) > 0)
+                            <span class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                                  title="{{ $item['badgeTip'] ?? ($item['badge'] . ' en attente') }}">
+                                {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                            </span>
+                        @endif
                     </a>
                 @endforeach
             @endforeach

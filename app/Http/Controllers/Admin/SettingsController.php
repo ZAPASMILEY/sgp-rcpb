@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Traits\GererLayout;
 use App\Models\CustomRole;
 use App\Models\Evaluation;
 use App\Models\EvaluationCritere;
@@ -25,6 +26,7 @@ use Spatie\Permission\Models\Role;       // Remplace l'ancien App\Models\Role
 
 class SettingsController extends Controller
 {
+    use GererLayout;
     /**
      * Affiche la page des paramètres admin.
      * Contient plusieurs onglets : thème, sécurité, rôles, droits individuels, catalogue.
@@ -100,6 +102,7 @@ class SettingsController extends Controller
                 'labels' => [
                     'admin.activites' => 'Consulter les logs d\'activité',
                     'admin.alertes'   => 'Créer et diffuser des alertes',
+                    'admin.archives'  => 'Accéder aux archives (évaluations et objectifs supprimés)',
                 ],
             ],
         ];
@@ -152,7 +155,7 @@ class SettingsController extends Controller
         return view('admin.settings.edit', [
             'theme'             => $request->user()->theme_preference ?? 'reference',
             'maxLoginAttempts'  => (int) Setting::get('security.max_login_attempts', 3),
-            'lockoutTime'       => (int) Setting::get('security.lockout_minutes', 2),
+            'lockoutTime'       => (int) Setting::get('security.lockout_minutes', 15),
             'allRoles'          => $allRoles,
             'permissions'       => $permissions,
             'permissionGroups'  => $permissionGroups,
@@ -166,6 +169,10 @@ class SettingsController extends Controller
             'featuresEnabled'   => [
                 'evaluations' => Setting::featureEnabled('evaluations'),
                 'objectifs'   => Setting::featureEnabled('objectifs'),
+            ],
+            'featuresMessages'  => [
+                'evaluations' => Setting::featureMessage('evaluations'),
+                'objectifs'   => Setting::featureMessage('objectifs'),
             ],
             'rhUsers'           => User::where('role', 'RH')->orderBy('name')->get(),
             'rhSpatiePerms'     => Role::with('permissions')->where('name', 'RH')->first()?->permissions ?? collect(),
@@ -391,6 +398,22 @@ class SettingsController extends Controller
             ->with('status', "{$label} {$state} avec succès.");
     }
 
+    public function updateFeatureMessage(Request $request, string $feature): RedirectResponse
+    {
+        abort_unless(in_array($feature, ['evaluations', 'objectifs'], true), 404);
+
+        $validated = $request->validate([
+            'message' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        Setting::set($feature . '_disabled_message', trim((string) ($validated['message'] ?? '')));
+
+        $label = $feature === 'evaluations' ? 'Évaluations' : 'Objectifs';
+
+        return redirect()->route('admin.settings.edit', ['tab' => 'fonctionnalites'])
+            ->with('status', "Message de désactivation des « {$label} » mis à jour.");
+    }
+
     // ── Purge de données ──────────────────────────────────────────────────────
 
     public function purgeEvaluations(Request $request): RedirectResponse
@@ -433,6 +456,8 @@ class SettingsController extends Controller
 
     public function archivesEvaluations(Request $request): \Illuminate\Contracts\View\View
     {
+        $this->authorize('admin.archives');
+
         $search = trim((string) $request->query('search', ''));
 
         $evaluations = Evaluation::onlyTrashed()
@@ -454,11 +479,14 @@ class SettingsController extends Controller
         return view('admin.archives.evaluations', [
             'evaluations' => $evaluations,
             'search'      => $search,
+            'layout'      => $this->layout(),
         ]);
     }
 
     public function restoreEvaluation(int $id): RedirectResponse
     {
+        $this->authorize('admin.archives');
+
         $evaluation = Evaluation::onlyTrashed()->findOrFail($id);
         $evaluation->restore();
 
@@ -467,6 +495,8 @@ class SettingsController extends Controller
 
     public function forceDeleteEvaluation(int $id): RedirectResponse
     {
+        $this->authorize('admin.archives');
+
         $evaluation = Evaluation::onlyTrashed()->findOrFail($id);
         DB::table('evaluation_sous_criteres')->where('evaluation_id', $evaluation->id)->delete();
         DB::table('evaluation_criteres')->where('evaluation_id', $evaluation->id)->delete();
@@ -478,6 +508,8 @@ class SettingsController extends Controller
 
     public function archivesObjectifs(Request $request): \Illuminate\Contracts\View\View
     {
+        $this->authorize('admin.archives');
+
         $search = trim((string) $request->query('search', ''));
 
         $fiches = FicheObjectif::onlyTrashed()
@@ -492,11 +524,14 @@ class SettingsController extends Controller
         return view('admin.archives.objectifs', [
             'fiches' => $fiches,
             'search' => $search,
+            'layout' => $this->layout(),
         ]);
     }
 
     public function restoreFiche(int $id): RedirectResponse
     {
+        $this->authorize('admin.archives');
+
         $fiche = FicheObjectif::onlyTrashed()->findOrFail($id);
         $fiche->restore();
 
@@ -505,6 +540,8 @@ class SettingsController extends Controller
 
     public function forceDeleteFiche(int $id): RedirectResponse
     {
+        $this->authorize('admin.archives');
+
         $fiche = FicheObjectif::onlyTrashed()->findOrFail($id);
         $fiche->forceDelete();
 
@@ -513,6 +550,8 @@ class SettingsController extends Controller
 
     public function showArchiveEvaluation(int $id): View
     {
+        $this->authorize('admin.archives');
+
         $evaluation = Evaluation::withTrashed()
             ->with(['evaluable', 'evaluateur', 'identification', 'criteres.sousCriteres'])
             ->findOrFail($id);
@@ -574,6 +613,8 @@ class SettingsController extends Controller
 
     public function showArchiveFiche(int $id): View
     {
+        $this->authorize('admin.archives');
+
         $fiche = FicheObjectif::withTrashed()
             ->with(['objectifs', 'annee', 'assignable'])
             ->findOrFail($id);

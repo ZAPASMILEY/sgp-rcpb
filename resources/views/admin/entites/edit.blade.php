@@ -18,7 +18,7 @@
                             <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Modifier la faitiere</h1>
                             <p class="mt-2 text-sm text-slate-600">Mettez a jour la localisation du siege ainsi que les responsables de la faitiere.</p>
                         </div>
-                        <a href="{{ route('admin.entites.show', $entite) }}" class="ent-btn ent-btn-soft">Retour</a>
+                        <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour</a>
                     </div>
 
                     @if ($errors->any())

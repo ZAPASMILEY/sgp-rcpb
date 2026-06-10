@@ -17,8 +17,7 @@ class AlerteGererController extends Controller
     {
         $alertes = Alerte::with('createur')
             ->latest()
-            ->paginate(30)
-            ->withQueryString();
+            ->get();
 
         $layout = $this->layout();
 

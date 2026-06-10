@@ -30,11 +30,32 @@ return new class extends Migration
                   ->default(0)
                   ->comment('Durée totale en heures');
 
+            // Type de formation
+            $table->string('type', 20)->default('interne')
+                  ->comment('interne ou externe');
+
+            // Pièce justificative (attestation uploadée par l'agent)
+            $table->string('attestation_path', 500)->nullable()
+                  ->comment('Chemin vers l\'attestation (PDF/image) soumise par l\'agent');
+
+            // Workflow de validation RH
+            $table->string('statut', 20)->default('validee')
+                  ->comment('en_attente | validee | refusee — defaut validee pour saisies RH directes');
+            $table->text('motif_refus')->nullable()
+                  ->comment('Motif du refus saisi par le RH');
+
+            // Formateur (agent de la Faitière)
+            $table->foreignId('formateur_id')
+                  ->nullable()
+                  ->constrained('agents')
+                  ->nullOnDelete()
+                  ->comment('Agent de la Faitière ayant animé la formation');
+
             // Traçabilité RH
             $table->foreignId('created_by')
                   ->constrained('users')
                   ->cascadeOnDelete()
-                  ->comment('Utilisateur RH ayant saisi la formation');
+                  ->comment('Utilisateur ayant saisi la formation (RH ou agent lui-même)');
 
             $table->timestamps();
         });

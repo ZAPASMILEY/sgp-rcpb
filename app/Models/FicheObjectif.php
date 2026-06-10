@@ -24,6 +24,8 @@ class FicheObjectif extends Model
         'date_validation',
         'avancement_percentage',
         'statut',
+        'motif_refus',
+        'created_by',
     ];
 
     // ── Relations ─────────────────────────────────────────────────────────────
@@ -34,6 +36,14 @@ class FicheObjectif extends Model
     public function objectifs(): HasMany
     {
         return $this->hasMany(LigneFicheObjectif::class);
+    }
+
+    /**
+     * Relation avec le créateur (assignateur) de la fiche.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
 
     /**

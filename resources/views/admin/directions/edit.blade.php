@@ -12,7 +12,7 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Modifier la Direction</h1>
                         <p class="mt-2 text-sm text-slate-600">Mettez à jour les informations de la direction.</p>
                     </div>
-                    <a href="{{ route('admin.directions.show', $direction) }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
 
                 @if ($errors->any())

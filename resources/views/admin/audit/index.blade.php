@@ -14,22 +14,41 @@
 
     {{-- KPIs --}}
     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        @foreach([
-            ['label' => 'Total entrées',      'value' => $stats['total'],         'icon' => 'fa-list-check',      'color' => 'text-slate-600',   'bg' => 'bg-slate-50'],
-            ['label' => 'Aujourd\'hui',        'value' => $stats['today'],         'icon' => 'fa-calendar-day',    'color' => 'text-blue-600',    'bg' => 'bg-blue-50'],
-            ['label' => 'Changements statut',  'value' => $stats['statut_change'], 'icon' => 'fa-arrow-right-arrow-left', 'color' => 'text-violet-600', 'bg' => 'bg-violet-50'],
-            ['label' => 'Suppressions',        'value' => $stats['deleted'],       'icon' => 'fa-trash',           'color' => 'text-rose-600',    'bg' => 'bg-rose-50'],
-        ] as $kpi)
-        <div class="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl {{ $kpi['bg'] }}">
-                <i class="fas {{ $kpi['icon'] }} {{ $kpi['color'] }}"></i>
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 p-5 text-white shadow-lg">
+            <div class="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10"></div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 mb-3">
+                <i class="fas fa-list-check text-sm"></i>
             </div>
-            <div>
-                <p class="text-2xl font-black text-slate-900">{{ number_format($kpi['value']) }}</p>
-                <p class="text-xs font-semibold text-slate-400">{{ $kpi['label'] }}</p>
-            </div>
+            <p class="text-3xl font-black">{{ number_format($stats['total']) }}</p>
+            <p class="mt-0.5 text-xs font-semibold text-slate-300">Total entrées</p>
         </div>
-        @endforeach
+
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 p-5 text-white shadow-lg shadow-blue-200">
+            <div class="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10"></div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 mb-3">
+                <i class="fas fa-calendar-day text-sm"></i>
+            </div>
+            <p class="text-3xl font-black">{{ number_format($stats['today']) }}</p>
+            <p class="mt-0.5 text-xs font-semibold text-blue-100">Aujourd'hui</p>
+        </div>
+
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 p-5 text-white shadow-lg shadow-violet-200">
+            <div class="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10"></div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 mb-3">
+                <i class="fas fa-arrow-right-arrow-left text-sm"></i>
+            </div>
+            <p class="text-3xl font-black">{{ number_format($stats['statut_change']) }}</p>
+            <p class="mt-0.5 text-xs font-semibold text-violet-100">Changements statut</p>
+        </div>
+
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 p-5 text-white shadow-lg shadow-rose-200">
+            <div class="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-white/10"></div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 mb-3">
+                <i class="fas fa-trash text-sm"></i>
+            </div>
+            <p class="text-3xl font-black">{{ number_format($stats['deleted']) }}</p>
+            <p class="mt-0.5 text-xs font-semibold text-rose-100">Suppressions</p>
+        </div>
     </div>
 
     {{-- Filtres --}}
@@ -85,9 +104,9 @@
                 <p class="mt-3 text-sm font-semibold text-slate-400">Aucune entrée d'audit pour ces critères.</p>
             </div>
         @else
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
             <table class="w-full text-sm">
-                <thead class="border-b border-slate-100 bg-slate-50 text-xs font-black uppercase tracking-wider text-slate-400">
+                <thead class="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-xs font-black uppercase tracking-wider text-slate-400">
                     <tr>
                         <th class="px-4 py-3 text-left">Date</th>
                         <th class="px-4 py-3 text-left">Utilisateur</th>
@@ -100,16 +119,53 @@
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                     @foreach($logs as $log)
-                    <tr class="hover:bg-slate-50/60 transition-colors">
-                        <td class="whitespace-nowrap px-4 py-3 text-[11px] text-slate-400">
-                            <span class="block font-semibold text-slate-600">{{ $log->created_at->format('d/m/Y') }}</span>
-                            {{ $log->created_at->format('H:i:s') }}
+                    @php
+                        $rowBg = match($log->action) {
+                            'created'       => 'hover:bg-emerald-50/40',
+                            'deleted'       => 'hover:bg-rose-50/40',
+                            'statut_change' => 'hover:bg-violet-50/40',
+                            default         => 'hover:bg-amber-50/40',
+                        };
+                        $leftBorder = match($log->action) {
+                            'created'       => 'border-l-4 border-l-emerald-400',
+                            'deleted'       => 'border-l-4 border-l-rose-400',
+                            'statut_change' => 'border-l-4 border-l-violet-400',
+                            default         => 'border-l-4 border-l-amber-400',
+                        };
+                        $modelColor = match(true) {
+                            str_ends_with($log->auditable_type, 'Agent')      => ['bg' => 'bg-blue-100',   'text' => 'text-blue-700'],
+                            str_ends_with($log->auditable_type, 'User')       => ['bg' => 'bg-cyan-100',   'text' => 'text-cyan-700'],
+                            str_ends_with($log->auditable_type, 'Evaluation') => ['bg' => 'bg-orange-100', 'text' => 'text-orange-700'],
+                            str_ends_with($log->auditable_type, 'Formation')  => ['bg' => 'bg-green-100',  'text' => 'text-green-700'],
+                            str_ends_with($log->auditable_type, 'Service')    => ['bg' => 'bg-emerald-100','text' => 'text-emerald-700'],
+                            str_ends_with($log->auditable_type, 'Direction')  => ['bg' => 'bg-indigo-100', 'text' => 'text-indigo-700'],
+                            str_ends_with($log->auditable_type, 'Agence')     => ['bg' => 'bg-pink-100',   'text' => 'text-pink-700'],
+                            str_ends_with($log->auditable_type, 'Caisse')     => ['bg' => 'bg-teal-100',   'text' => 'text-teal-700'],
+                            default                                            => ['bg' => 'bg-slate-100',  'text' => 'text-slate-600'],
+                        };
+                        $initiale = strtoupper(substr($log->user_name ?? 'A', 0, 1));
+                        $avatarColor = match($initiale) {
+                            'A' => 'bg-cyan-500', 'B' => 'bg-blue-500', 'C' => 'bg-violet-500',
+                            'D' => 'bg-indigo-500', 'E' => 'bg-emerald-500', 'F' => 'bg-pink-500',
+                            'G' => 'bg-green-500', 'H' => 'bg-amber-500', 'I' => 'bg-rose-500',
+                            default => 'bg-slate-500',
+                        };
+                    @endphp
+                    <tr class="{{ $rowBg }} {{ $leftBorder }} transition-colors">
+                        <td class="whitespace-nowrap px-4 py-3">
+                            <span class="block text-xs font-black text-slate-700">{{ $log->created_at->format('d/m/Y') }}</span>
+                            <span class="text-[11px] text-slate-400 font-mono">{{ $log->created_at->format('H:i:s') }}</span>
                         </td>
                         <td class="px-4 py-3">
-                            <p class="font-semibold text-slate-800">{{ $log->user_name ?? '—' }}</p>
+                            <div class="flex items-center gap-2">
+                                <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full {{ $avatarColor }} text-[10px] font-black text-white">
+                                    {{ $initiale }}
+                                </div>
+                                <span class="font-semibold text-slate-800 text-xs">{{ $log->user_name ?? '—' }}</span>
+                            </div>
                         </td>
                         <td class="whitespace-nowrap px-4 py-3">
-                            <span class="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500">
+                            <span class="rounded-lg {{ $modelColor['bg'] }} {{ $modelColor['text'] }} px-2.5 py-1 text-[11px] font-bold">
                                 {{ $log->auditableLabel() }} #{{ $log->auditable_id }}
                             </span>
                         </td>
@@ -118,35 +174,37 @@
                                 {{ $log->actionLabel() }}
                             </span>
                         </td>
-                        <td class="max-w-xs px-4 py-3 text-slate-600">
+                        <td class="max-w-xs px-4 py-3 text-xs text-slate-600">
                             {{ $log->description }}
                         </td>
                         <td class="px-4 py-3">
                             @if($log->old_values || $log->new_values)
                                 <button type="button"
                                     onclick="toggleDiff({{ $log->id }})"
-                                    class="text-[11px] font-bold text-emerald-600 hover:underline">
-                                    Voir diff
+                                    class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-600 hover:bg-emerald-100 transition">
+                                    <i class="fas fa-code-compare text-[9px]"></i> Voir diff
                                 </button>
                             @else
                                 <span class="text-[11px] text-slate-300">—</span>
                             @endif
                         </td>
-                        <td class="whitespace-nowrap px-4 py-3 text-[11px] font-mono text-slate-300">
-                            {{ $log->ip_address ?? '—' }}
+                        <td class="whitespace-nowrap px-4 py-3">
+                            <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-mono text-slate-400">{{ $log->ip_address ?? '—' }}</span>
                         </td>
                     </tr>
-                    {{-- Ligne diff (masquée par défaut) --}}
+                    {{-- Ligne diff --}}
                     @if($log->old_values || $log->new_values)
-                    <tr id="diff-{{ $log->id }}" class="hidden bg-slate-50">
+                    <tr id="diff-{{ $log->id }}" class="hidden bg-gradient-to-r from-rose-50/60 via-white to-emerald-50/60">
                         <td colspan="7" class="px-6 py-4">
                             <div class="grid gap-4 sm:grid-cols-2">
                                 @if($log->old_values)
                                 <div>
-                                    <p class="mb-2 text-[10px] font-black uppercase tracking-widest text-rose-400">Avant</p>
-                                    <div class="space-y-1">
+                                    <p class="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-rose-400">
+                                        <i class="fas fa-circle-minus"></i> Avant
+                                    </p>
+                                    <div class="space-y-1 rounded-xl border border-rose-100 bg-rose-50/60 p-3">
                                         @foreach($log->old_values as $field => $val)
-                                        <div class="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-1.5">
+                                        <div class="flex items-start gap-2 rounded-lg bg-white/80 px-3 py-1.5 shadow-sm">
                                             <span class="min-w-[120px] text-[11px] font-bold text-rose-500">{{ $field }}</span>
                                             <span class="text-[11px] text-rose-700 break-all">{{ $val ?? 'null' }}</span>
                                         </div>
@@ -156,10 +214,12 @@
                                 @endif
                                 @if($log->new_values)
                                 <div>
-                                    <p class="mb-2 text-[10px] font-black uppercase tracking-widest text-emerald-400">Après</p>
-                                    <div class="space-y-1">
+                                    <p class="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-500">
+                                        <i class="fas fa-circle-plus"></i> Après
+                                    </p>
+                                    <div class="space-y-1 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
                                         @foreach($log->new_values as $field => $val)
-                                        <div class="flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-1.5">
+                                        <div class="flex items-start gap-2 rounded-lg bg-white/80 px-3 py-1.5 shadow-sm">
                                             <span class="min-w-[120px] text-[11px] font-bold text-emerald-600">{{ $field }}</span>
                                             <span class="text-[11px] text-emerald-800 break-all">{{ $val ?? 'null' }}</span>
                                         </div>
@@ -176,8 +236,8 @@
             </table>
         </div>
 
-        <div class="border-t border-slate-100 px-6 py-4">
-            {{ $logs->links() }}
+        <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">
+            {{ $logs->count() }} résultat(s)
         </div>
         @endif
     </div>

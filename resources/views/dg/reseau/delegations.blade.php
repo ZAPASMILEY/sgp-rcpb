@@ -10,7 +10,7 @@
                 <div>
                     <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Espace DG / Réseau RCPB</p>
                     <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950">Délégations Techniques</h1>
-                    <p class="mt-1 text-sm text-slate-500">{{ $delegations->total() }} délégation(s) dans le réseau.</p>
+                    <p class="mt-1 text-sm text-slate-500">{{ $delegations->count() }} délégation(s) dans le réseau.</p>
                 </div>
                 <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-sm">
                     <i class="fas fa-sitemap text-xl"></i>
@@ -43,9 +43,9 @@
                     <p class="mt-3 text-sm font-semibold text-slate-400">Aucune délégation technique enregistrée.</p>
                 </div>
             @else
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="min-w-full text-left text-sm text-slate-700">
-                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400 sticky top-0 z-10">
                             <tr>
                                 <th class="px-4 py-3">Région / Ville</th>
                                 <th class="px-4 py-3">Directeur</th>
@@ -91,9 +91,7 @@
                         </tbody>
                     </table>
                 </div>
-                @if ($delegations->hasPages())
-                    <div class="border-t border-slate-100 px-6 py-4">{{ $delegations->withQueryString()->links() }}</div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $delegations->count() }} résultat(s)</div>
             @endif
         </section>
 

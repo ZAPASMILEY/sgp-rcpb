@@ -18,7 +18,7 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Direction de {{ $caisse->nom }}</h1>
                         <p class="mt-2 text-sm text-slate-600">Direction propre a cette caisse.</p>
                     </div>
-                    <a href="{{ route('admin.caisses.show', $caisse) }}" class="ent-btn ent-btn-soft">Retour a la caisse</a>
+                    <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour a la caisse</a>
                 </div>
             </section>
 

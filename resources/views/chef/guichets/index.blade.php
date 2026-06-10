@@ -138,10 +138,31 @@
                                 @endif
                             </div>
                             @if($chefUser)
-                                <a href="{{ route('chef.agent.show', $chefUser->agent) }}"
-                                   class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
-                                    <i class="fas fa-folder-open text-[10px]"></i> Dossier
-                                </a>
+                                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                                    @if($evaluationsEnabled && $row['ficheAcceptee'] && !$row['evaluationEnCours'])
+                                        <a href="{{ route('chef.subordonnes.guichet.evaluations.create', $guichet->id) }}"
+                                           class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700">
+                                            <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                                        </a>
+                                    @else
+                                        <span title="{{ $row['evaluationEnCours'] ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$row['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée.' : 'Évaluations désactivées par l\'administrateur.') }}"
+                                              class="inline-flex cursor-not-allowed select-none items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-400">
+                                            <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
+                                        </span>
+                                    @endif
+
+                                    @if($objectifsEnabled && !$row['ficheBlocksNew'])
+                                        <a href="{{ route('chef.subordonnes.guichet.objectifs.create', $guichet->id) }}"
+                                           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition hover:border-violet-300 hover:text-violet-700">
+                                            <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                                        </a>
+                                    @else
+                                        <span title="{{ $row['ficheBlocksNew'] ? 'Une fiche d\'objectifs est déjà assignée à ce chef de guichet.' : 'Assignation d\'objectifs désactivée par l\'administrateur.' }}"
+                                              class="inline-flex cursor-not-allowed select-none items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-400">
+                                            <i class="fas fa-bullseye text-[10px]"></i> Objectifs
+                                        </span>
+                                    @endif
+                                </div>
                             @endif
                         </div>
                     @endforeach

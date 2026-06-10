@@ -55,12 +55,21 @@ class DgAnalytiqueController extends Controller
             return $this->emptyStats();
         }
 
-        $totalAgents   = Agent::personnel()->count();
-        $agentsEvalues = Evaluation::where('annee_id', $anneeId)
-            ->where('statut', 'valide')
-            ->where('evaluable_type', Agent::class)
-            ->distinct('evaluable_id')
-            ->count('evaluable_id');
+        $totalAgents = Agent::personnel()->count();
+
+        // Couvre tous les chemins d'évaluation : User, Agent, Direction, Caisse, DelegationTechnique, Agence, Service, Guichet
+        $agentsEvalues = Agent::personnel()
+            ->where(fn ($q) => $q
+                ->whereHas('evaluationsPersonnel', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'))
+                ->orWhereHas('evaluations',        fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'))
+                ->orWhereHas('directedDirection',  fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+                ->orWhereHas('directedCaisse',     fn ($c) => $c->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+                ->orWhereHas('directedDelegation', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+                ->orWhereHas('ledAgence',          fn ($a) => $a->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+                ->orWhereHas('ledService',         fn ($s) => $s->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+                ->orWhereHas('ledGuichet',         fn ($g) => $g->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+            )
+            ->count();
 
         $base    = fn () => Evaluation::where('annee_id', $anneeId)->where('statut', '!=', 'brouillon');
         $valides = fn () => Evaluation::where('annee_id', $anneeId)->where('statut', 'valide');

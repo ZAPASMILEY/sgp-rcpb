@@ -16,8 +16,9 @@ class Evaluation extends Model
 
     /**
      * Statuts qui permettent à l'évaluateur de modifier/re-soumettre l'évaluation.
-     * 'brouillon'  → évaluation en cours de rédaction (jamais soumise)
-     * 'a_reviser'  → évaluation réouverte après refus de l'évalué (motif_refus conservé)
+     * 'brouillon'   → évaluation en cours de rédaction (jamais soumise)
+     * 'a_reviser'   → évaluation réouverte par le RH après réclamation acceptée
+     * Une fiche en statut 'reclamation' ne peut PAS être modifiée : seul le RH peut la rouvrir.
      */
     public const EDITABLE_STATUTS = ['brouillon', 'a_reviser'];
 

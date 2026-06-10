@@ -19,13 +19,18 @@ class AgenceController extends Controller
 {
     public function __construct(private AgentAccountService $accounts) {}
 
-    public function index(): View
+    public function index(Request $request): View
     {
+        $caisseId = $request->integer('caisse_id') ?: null;
+
         return view('admin.agences.index', [
             'agences' => Agence::query()
-                ->with(['delegationTechnique', 'caisse', 'chef'])
+                ->with(['delegationTechnique', 'caisse', 'chef', 'secretaire'])
+                ->when($caisseId, fn ($q) => $q->where('caisse_id', $caisseId))
                 ->latest()
-                ->paginate(12),
+                ->get(),
+            'caisses'  => Caisse::orderBy('nom')->get(['id', 'nom']),
+            'caisseId' => $caisseId,
             'stats' => [
                 'total' => Agence::count(),
                 'par_delegation' => DelegationTechnique::query()
@@ -148,7 +153,7 @@ class AgenceController extends Controller
             'agents' => Agent::query()
                 ->where('agence_id', $agence->id)
                 ->latest()
-                ->paginate(12),
+                ->get(),
         ]);
     }
 

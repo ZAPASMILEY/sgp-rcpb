@@ -79,9 +79,9 @@
 
         {{-- ── Tableau ──────────────────────────────────────────────────────────── --}}
         <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                 <table class="min-w-full text-sm">
-                    <thead>
+                    <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-200 bg-slate-50/80">
                             <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Agent</th>
                             <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Structure</th>
@@ -196,12 +196,7 @@
                     </tbody>
                 </table>
             </div>
-            @if($evaluations->hasPages())
-            <div class="border-t border-slate-100 px-5 py-3 flex items-center justify-between">
-                <span class="text-xs text-slate-400">{{ $evaluations->total() }} évaluation{{ $evaluations->total() > 1 ? 's' : '' }}</span>
-                {{ $evaluations->links() }}
-            </div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $evaluations->count() }} résultat(s)</div>
         </div>
     </div>
 </div>

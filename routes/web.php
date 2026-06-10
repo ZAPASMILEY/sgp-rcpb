@@ -63,6 +63,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
         // Services de la Direction Générale
         Route::post('/admin/direction-generale/services', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'storeService'])->name('admin.direction-generale.services.store');
         Route::delete('/admin/direction-generale/services/{service}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'destroyService'])->name('admin.direction-generale.services.destroy');
+        Route::patch('/admin/direction-generale/services/{service}/chef', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'updateChefService'])->name('admin.direction-generale.services.chef.update');
         Route::post('/admin/direction-generale/services/{service}/agents', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'storeAgent'])->name('admin.direction-generale.services.agents.store');
         Route::delete('/admin/direction-generale/services/{service}/agents/{agent}', [\App\Http\Controllers\Admin\DirectionGeneraleController::class, 'removeAgent'])->name('admin.direction-generale.services.agents.destroy');
 
@@ -231,11 +232,16 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::post('/admin/parametres/roles', [SettingsController::class, 'storeRole'])->name('admin.settings.roles.store');
     Route::delete('/admin/parametres/roles/{customRole}', [SettingsController::class, 'destroyRole'])->name('admin.settings.roles.destroy');
     Route::post('/admin/parametres/fonctionnalites/{feature}/toggle', [SettingsController::class, 'toggleFeature'])->name('admin.settings.feature.toggle');
+    Route::patch('/admin/parametres/fonctionnalites/{feature}/message', [SettingsController::class, 'updateFeatureMessage'])->name('admin.settings.feature.message');
     Route::post('/admin/parametres/comptes/rh', [SettingsController::class, 'storeRhAccount'])->name('admin.settings.rh.store');
     Route::post('/admin/parametres/purger/evaluations', [SettingsController::class, 'purgeEvaluations'])->name('admin.settings.purge.evaluations');
     Route::post('/admin/parametres/purger/objectifs', [SettingsController::class, 'purgeObjectifs'])->name('admin.settings.purge.objectifs');
 
-    // Archives (soft-deleted)
+});
+
+// Archives (soft-deleted) — accessible à tout utilisateur authentifié ayant la permission admin.archives
+// Volontairement HORS du groupe 'admin' pour que DG, RH, etc. puissent y accéder.
+Route::middleware(['auth', 'can:admin.archives'])->group(function () {
     Route::get('/admin/archives/evaluations', [SettingsController::class, 'archivesEvaluations'])->name('admin.archives.evaluations');
     Route::get('/admin/archives/evaluations/{id}', [SettingsController::class, 'showArchiveEvaluation'])->name('admin.archives.evaluations.show');
     Route::post('/admin/archives/evaluations/{id}/restaurer', [SettingsController::class, 'restoreEvaluation'])->name('admin.archives.evaluations.restore');
@@ -280,7 +286,7 @@ Route::middleware(['auth', 'pca'])->prefix('pca')->name('pca.')->group(function 
     Route::get('/evaluations/{evaluation}', [\App\Http\Controllers\EvaluationController::class, 'show'])->name('evaluations.show');
     Route::get('/evaluations/{evaluation}/modifier', [\App\Http\Controllers\EvaluationController::class, 'edit'])->name('evaluations.edit')->middleware(['feature:evaluations']);
     Route::put('/evaluations/{evaluation}', [\App\Http\Controllers\EvaluationController::class, 'update'])->name('evaluations.update')->middleware(['feature:evaluations']);
-    Route::post('/evaluations/{evaluation}/soumettre', [\App\Http\Controllers\EvaluationController::class, 'submit'])->name('evaluations.submit');
+    Route::patch('/evaluations/{evaluation}/soumettre', [\App\Http\Controllers\EvaluationController::class, 'submit'])->name('evaluations.submit');
     Route::post('/evaluations/{evaluation}/valider', [\App\Http\Controllers\EvaluationController::class, 'approve'])->name('evaluations.approve');
     Route::get('/evaluations/{evaluation}/pdf', [\App\Http\Controllers\EvaluationController::class, 'exportPdf'])->name('evaluations.pdf');
     Route::delete('/evaluations/{evaluation}', [\App\Http\Controllers\EvaluationController::class, 'destroy'])->name('evaluations.destroy');
@@ -302,8 +308,8 @@ Route::middleware(['auth', 'personnel'])->group(function (): void {
     Route::get('/personnel/mon-espace', \App\Http\Controllers\MonEspaceController::class)->name('personnel.mon-espace');
 
     // ── Mes formations (Personnel) ────────────────────────────────────────────
-    Route::get('/personnel/formations',               FormationController::class)->name('personnel.formations.index');
-    Route::get('/personnel/formations/{formation}/pdf', [FormationController::class, 'pdf'])->name('personnel.formations.pdf');
+    Route::get('/personnel/formations',                    FormationController::class)->name('personnel.formations.index');
+    Route::get('/personnel/formations/{formation}/pdf',    [FormationController::class, 'pdf'])->name('personnel.formations.pdf');
 
     // ── Fiches d'objectifs reçues par le personnel ────────────────────────────
     // Accessible aux agents, secrétaires, et tout rôle sous le middleware 'personnel'.
@@ -389,10 +395,12 @@ Route::middleware(['auth', 'rh'])->prefix('rh')->name('rh.')->group(function ():
     Route::put('/formations/{formation}',          [\App\Http\Controllers\Rh\RhFormationController::class, 'update'])->name('formations.update');
     Route::delete('/formations/{formation}',       [\App\Http\Controllers\Rh\RhFormationController::class, 'destroy'])->name('formations.destroy');
     Route::get('/formations/{formation}/pdf',      [\App\Http\Controllers\Rh\RhFormationController::class, 'pdf'])->name('formations.pdf');
+    Route::post('/formations/{formation}/valider', [\App\Http\Controllers\Rh\RhFormationController::class, 'valider'])->name('formations.valider');
 
     // Évaluations (lecture seule + réclamations)
     Route::get('/evaluations/{evaluation}', [\App\Http\Controllers\EvaluationController::class, 'show'])->name('evaluations.show');
     Route::get('/reclamations',                                [\App\Http\Controllers\Rh\RhReclamationController::class, 'index'])->name('reclamations.index');
+    Route::get('/reclamations/{evaluation}',                   [\App\Http\Controllers\Rh\RhReclamationController::class, 'show'])->name('reclamations.show');
     Route::post('/reclamations/{evaluation}/repondre',         [\App\Http\Controllers\Rh\RhReclamationController::class, 'repondre'])->name('reclamations.repondre');
 
     // Structures du réseau (vue agrégée)
@@ -415,7 +423,13 @@ Route::middleware(['auth', 'rh'])->prefix('rh')->name('rh.')->group(function ():
 Route::middleware('auth')->group(function () {
     Route::get('/alertes/non-lues',        [AlerteController::class, 'nonLues'])->name('alertes.non-lues');
     Route::post('/alertes/lire-tout',      [AlerteController::class, 'lireTout'])->name('alertes.lire-tout');
+    Route::post('/alertes/{alerte}/lire',  [AlerteController::class, 'lireUne'])->name('alertes.lire-une');
     Route::get('/formations/agent/{agent}', [\App\Http\Controllers\Rh\RhFormationController::class, 'pourAgent'])->name('formations.pour-agent');
+
+    // ── Soumission d'une formation par l'agent lui-même (tous rôles) ─────────
+    Route::get('/soumettre-formation',              [FormationController::class, 'create'])->name('formation.soumettre');
+    Route::post('/soumettre-formation',             [FormationController::class, 'store'])->name('formation.store');
+    Route::delete('/mes-formations/{formation}',    [FormationController::class, 'destroy'])->name('formation.destroy');
 
     // Page de notifications (tous les rôles)
     Route::get('/mes-notifications',                       [\App\Http\Controllers\NotificationsController::class, 'index'])->name('notifications.index');

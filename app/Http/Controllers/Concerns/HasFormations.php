@@ -40,7 +40,7 @@ trait HasFormations
     {
         $agentIds = $this->getAgentIds($request);
 
-        $query = Formation::with('agent')
+        $query = Formation::with(['agent', 'createdBy'])
             ->whereIn('agent_id', $agentIds ?: [0]);
 
         // Filtres
@@ -56,7 +56,7 @@ trait HasFormations
             $query->where('theme', 'like', "%{$search}%");
         }
 
-        $formations = $query->orderByDesc('date_debut')->paginate(15)->withQueryString();
+        $formations = $query->orderByDesc('date_debut')->get();
 
         // Stats
         $stats = [

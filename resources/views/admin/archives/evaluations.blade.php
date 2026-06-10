@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends($layout)
 
 @section('title', 'Archives — Évaluations | '.config('app.name', 'SGP-RCPB'))
 
@@ -19,10 +19,12 @@
                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50">
                 <i class="fas fa-bullseye"></i> Archives Objectifs
             </a>
+            @if(auth()->user()->isAdmin())
             <a href="{{ route('admin.settings.edit', ['tab' => 'danger']) }}"
                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50">
                 <i class="fas fa-arrow-left"></i> Paramètres
             </a>
+            @endif
         </div>
     </div>
 

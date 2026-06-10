@@ -26,14 +26,22 @@
             </div>
             <div class="flex shrink-0 items-center gap-3">
                 <span class="text-[11px] font-black uppercase tracking-widest text-white/70">Année</span>
-                <form method="GET" action="{{ route('pca.dashboard') }}" id="year-form">
-                    <select name="annee" onchange="document.getElementById('year-form').submit()"
-                            class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none transition hover:bg-white/20 focus:ring-2 focus:ring-white/30">
+                <div class="relative" id="dd-anno-hero">
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm cursor-pointer transition hover:bg-white/20 focus:ring-2 focus:ring-white/30"
+                        onclick="heroYearToggle()">
+                        <span>{{ $annee }}</span>
+                        <i class="fas fa-chevron-down text-xs opacity-60"></i>
+                    </button>
+                    <div id="dd-anno-hero-menu" class="hero-year-menu hidden absolute right-0 top-full mt-2 z-50 min-w-[7rem] rounded-xl bg-white shadow-xl ring-1 ring-black/10 overflow-hidden py-1">
                         @foreach ($anneesDisponibles as $yr)
-                            <option value="{{ $yr }}" @selected($yr === $annee) class="text-slate-900 bg-white">{{ $yr }}</option>
+                            <a href="{{ route('pca.dashboard', ['annee' => $yr]) }}"
+                               class="flex items-center px-4 py-2.5 text-sm transition hover:bg-slate-50 {{ $yr === $annee ? 'font-bold text-green-700 bg-green-50/60' : 'text-slate-700' }}">
+                                {{ $yr }}
+                            </a>
                         @endforeach
-                    </select>
-                </form>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -74,14 +82,22 @@
             </div>
             <div class="flex shrink-0 flex-wrap items-center gap-3">
                 <span class="text-[11px] font-black uppercase tracking-widest text-white/70">Année</span>
-                <form method="GET" action="{{ route('dga.dashboard') }}" id="year-form">
-                    <select name="annee" onchange="document.getElementById('year-form').submit()"
-                            class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none transition hover:bg-white/20">
+                <div class="relative" id="dd-anno-hero">
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm cursor-pointer transition hover:bg-white/20"
+                        onclick="heroYearToggle()">
+                        <span>{{ $annee }}</span>
+                        <i class="fas fa-chevron-down text-xs opacity-60"></i>
+                    </button>
+                    <div id="dd-anno-hero-menu" class="hero-year-menu hidden absolute right-0 top-full mt-2 z-50 min-w-[7rem] rounded-xl bg-white shadow-xl ring-1 ring-black/10 overflow-hidden py-1">
                         @foreach ($anneesDisponibles as $yr)
-                            <option value="{{ $yr }}" @selected($yr === $annee) class="text-slate-900 bg-white">{{ $yr }}</option>
+                            <a href="{{ route('dga.dashboard', ['annee' => $yr]) }}"
+                               class="flex items-center px-4 py-2.5 text-sm transition hover:bg-slate-50 {{ $yr === $annee ? 'font-bold text-green-700 bg-green-50/60' : 'text-slate-700' }}">
+                                {{ $yr }}
+                            </a>
                         @endforeach
-                    </select>
-                </form>
+                    </div>
+                </div>
                 <a href="{{ route('dga.mon-espace') }}"
                    class="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm transition hover:bg-white/20">
                     <i class="fas fa-folder-open text-xs"></i> Mon espace
@@ -134,14 +150,22 @@
             </div>
             <div class="flex shrink-0 items-center gap-3">
                 <span class="text-[11px] font-black uppercase tracking-widest text-white/70">Année</span>
-                <form method="GET" action="{{ route('personnel.dashboard') }}" id="year-form">
-                    <select name="annee" onchange="document.getElementById('year-form').submit()"
-                            class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none transition hover:bg-white/20">
+                <div class="relative" id="dd-anno-hero">
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm cursor-pointer transition hover:bg-white/20"
+                        onclick="heroYearToggle()">
+                        <span>{{ $annee }}</span>
+                        <i class="fas fa-chevron-down text-xs opacity-60"></i>
+                    </button>
+                    <div id="dd-anno-hero-menu" class="hero-year-menu hidden absolute right-0 top-full mt-2 z-50 min-w-[7rem] rounded-xl bg-white shadow-xl ring-1 ring-black/10 overflow-hidden py-1">
                         @foreach ($anneesDisponibles as $yr)
-                            <option value="{{ $yr }}" @selected($yr === $annee) class="text-slate-900 bg-white">{{ $yr }}</option>
+                            <a href="{{ route('personnel.dashboard', ['annee' => $yr]) }}"
+                               class="flex items-center px-4 py-2.5 text-sm transition hover:bg-slate-50 {{ $yr === $annee ? 'font-bold text-green-700 bg-green-50/60' : 'text-slate-700' }}">
+                                {{ $yr }}
+                            </a>
                         @endforeach
-                    </select>
-                </form>
+                    </div>
+                </div>
                 <a href="{{ route('personnel.mon-espace') }}"
                    class="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm transition hover:bg-white/20">
                     <i class="fas fa-folder-open text-xs"></i> Mon dossier
@@ -199,14 +223,22 @@
             </div>
             <div class="flex shrink-0 items-center gap-3">
                 <span class="text-[11px] font-black uppercase tracking-widest text-white/70">Année</span>
-                <form method="GET" action="{{ route($role.'.dashboard') }}" id="year-form">
-                    <select name="annee" onchange="document.getElementById('year-form').submit()"
-                            class="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm outline-none transition hover:bg-white/20 focus:ring-2 focus:ring-white/30">
+                <div class="relative" id="dd-anno-hero">
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white backdrop-blur-sm cursor-pointer transition hover:bg-white/20 focus:ring-2 focus:ring-white/30"
+                        onclick="heroYearToggle()">
+                        <span>{{ $annee }}</span>
+                        <i class="fas fa-chevron-down text-xs opacity-60"></i>
+                    </button>
+                    <div id="dd-anno-hero-menu" class="hero-year-menu hidden absolute right-0 top-full mt-2 z-50 min-w-[7rem] rounded-xl bg-white shadow-xl ring-1 ring-black/10 overflow-hidden py-1">
                         @foreach ($anneesDisponibles as $yr)
-                            <option value="{{ $yr }}" @selected($yr === $annee) class="text-slate-900 bg-white">{{ $yr }}</option>
+                            <a href="{{ route($role.'.dashboard', ['annee' => $yr]) }}"
+                               class="flex items-center px-4 py-2.5 text-sm transition hover:bg-slate-50 {{ $yr === $annee ? 'font-bold text-green-700 bg-green-50/60' : 'text-slate-700' }}">
+                                {{ $yr }}
+                            </a>
                         @endforeach
-                    </select>
-                </form>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -238,6 +270,19 @@
     </div>
 
 @endif
+
+<script>
+function heroYearToggle() {
+    const menu = document.getElementById('dd-anno-hero-menu');
+    if (menu) menu.classList.toggle('hidden');
+}
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#dd-anno-hero')) {
+        const m = document.getElementById('dd-anno-hero-menu');
+        if (m) m.classList.add('hidden');
+    }
+});
+</script>
 
 {{-- ══════════════════════════ BODY ══════════════════════════════════════ --}}
 

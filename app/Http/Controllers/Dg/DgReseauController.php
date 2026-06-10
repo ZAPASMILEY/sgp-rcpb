@@ -100,7 +100,7 @@ class DgReseauController extends Controller
             );
         }
 
-        $delegations = $query->paginate(15)->withQueryString();
+        $delegations = $query->get();
 
         return view('dg.reseau.delegations', compact('delegations', 'search'));
     }
@@ -155,7 +155,7 @@ class DgReseauController extends Controller
             $query->where('delegation_technique_id', $delegId);
         }
 
-        $caisses     = $query->paginate(15)->withQueryString();
+        $caisses     = $query->get();
         $delegations = DelegationTechnique::orderBy('region')->get();
 
         return view('dg.reseau.caisses', compact('caisses', 'delegations', 'search', 'delegId'));
@@ -208,7 +208,7 @@ class DgReseauController extends Controller
             $query->where('caisse_id', $caisseId);
         }
 
-        $agences = $query->paginate(15)->withQueryString();
+        $agences = $query->get();
         $caisses = Caisse::orderBy('nom')->get();
 
         return view('dg.reseau.agences', compact('agences', 'caisses', 'search', 'caisseId'));
@@ -259,7 +259,7 @@ class DgReseauController extends Controller
             $query->where('agence_id', $agenceId);
         }
 
-        $guichets = $query->paginate(15)->withQueryString();
+        $guichets = $query->get();
         $agences  = Agence::orderBy('nom')->get();
 
         return view('dg.reseau.guichets', compact('guichets', 'agences', 'search', 'agenceId'));

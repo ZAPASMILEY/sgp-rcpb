@@ -61,6 +61,9 @@ class DirectionGeneraleController extends Controller
 
             $secretaires = User::where('role', 'Secretaire_Assistante')
                 ->whereHas('agent', fn ($q) => $q->where('entite_id', $entite->id))
+                ->when($entite->dga_secretaire_agent_id, fn ($q) =>
+                    $q->where('agent_id', '!=', $entite->dga_secretaire_agent_id)
+                )
                 ->get();
 
             $conseillers = User::where('role', 'Conseillers_Dg')
@@ -68,6 +71,8 @@ class DirectionGeneraleController extends Controller
                 ->with('agent')
                 ->get();
         }
+
+        $chefsDisponibles = collect();
 
         if ($direction) {
             $services = $direction->services->map(function (Service $s): array {
@@ -81,10 +86,25 @@ class DirectionGeneraleController extends Controller
                 ];
             });
 
+            // Exclure le DGA et sa secrétaire — ils appartiennent à la Direction DGA
+            $exclus = array_values(array_filter([
+                $entite?->dga_agent_id,
+                $entite?->dga_secretaire_agent_id,
+            ]));
+
             $agentsDisponibles = Agent::where('direction_id', $direction->id)
                 ->whereNull('service_id')
+                ->when($exclus, fn ($q) => $q->whereNotIn('id', $exclus))
                 ->orderBy('nom')->orderBy('prenom')
                 ->get(['id', 'nom', 'prenom', 'role']);
+
+            // Chefs de service disponibles : rôle Chef de Service, sans service affecté
+            $dejaChefs = Service::whereNotNull('chef_agent_id')->pluck('chef_agent_id');
+            $chefsDisponibles = Agent::where('role', 'Chef de Service')
+                ->whereNull('service_id')
+                ->whereNotIn('id', $dejaChefs)
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'matricule']);
         }
 
         return view('admin.direction-generale.index', [
@@ -95,6 +115,7 @@ class DirectionGeneraleController extends Controller
             'conseillers'       => $conseillers,
             'services'          => $services,
             'agentsDisponibles' => $agentsDisponibles,
+            'chefsDisponibles'  => $chefsDisponibles,
         ]);
     }
 
@@ -104,15 +125,58 @@ class DirectionGeneraleController extends Controller
         abort_if(! $direction, 404, 'Direction Générale introuvable.');
 
         $validated = $request->validate([
-            'nom' => ['required', 'string', 'max:150'],
+            'nom'           => ['required', 'string', 'max:150'],
+            'chef_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ], ['nom.required' => 'Le nom du service est obligatoire.']);
 
-        Service::create([
-            'nom'          => $validated['nom'],
-            'direction_id' => $direction->id,
+        $service = Service::create([
+            'nom'           => $validated['nom'],
+            'direction_id'  => $direction->id,
+            'chef_agent_id' => $validated['chef_agent_id'] ?? null,
         ]);
 
+        if (! empty($validated['chef_agent_id'])) {
+            $chef = Agent::findOrFail($validated['chef_agent_id']);
+            $chef->update([
+                'direction_id' => $direction->id,
+                'service_id'   => $service->id,
+                'poste'        => 'Chef du Service ' . $service->nom,
+            ]);
+            $this->accounts->ensureAccount($chef->fresh());
+        }
+
         return back()->with('status', 'Service « ' . $validated['nom'] . ' » créé avec succès.');
+    }
+
+    public function updateChefService(Request $request, Service $service): RedirectResponse
+    {
+        $direction = $this->getDirection();
+        abort_if(! $direction || $service->direction_id !== $direction->id, 403);
+
+        $validated = $request->validate([
+            'chef_agent_id' => ['required', 'integer', 'exists:agents,id'],
+        ], ['chef_agent_id.required' => 'Veuillez sélectionner un chef de service.']);
+
+        // Libérer l'ancien chef si changement
+        if ($service->chef_agent_id && $service->chef_agent_id !== (int) $validated['chef_agent_id']) {
+            $ancien = Agent::find($service->chef_agent_id);
+            if ($ancien) {
+                $this->accounts->deactivateAccount($ancien);
+                $ancien->update(['service_id' => null, 'direction_id' => null]);
+            }
+        }
+
+        $service->update(['chef_agent_id' => $validated['chef_agent_id']]);
+
+        $chef = Agent::findOrFail($validated['chef_agent_id']);
+        $chef->update([
+            'direction_id' => $direction->id,
+            'service_id'   => $service->id,
+            'poste'        => 'Chef du Service ' . $service->nom,
+        ]);
+        $this->accounts->ensureAccount($chef->fresh());
+
+        return back()->with('status', $chef->prenom . ' ' . $chef->nom . ' affecté(e) comme chef du service « ' . $service->nom . ' ».');
     }
 
     public function destroyService(Service $service): RedirectResponse
@@ -133,6 +197,10 @@ class DirectionGeneraleController extends Controller
         $direction = $this->getDirection();
         abort_if(! $direction || $service->direction_id !== $direction->id, 403);
 
+        if (! $service->chef_agent_id) {
+            return back()->with('error', 'Impossible d\'ajouter un agent : le service « ' . $service->nom . ' » n\'a pas encore de chef.');
+        }
+
         $validated = $request->validate([
             'agent_id' => ['required', 'integer', 'exists:agents,id'],
         ], ['agent_id.required' => 'Sélectionnez un agent.']);
@@ -141,6 +209,13 @@ class DirectionGeneraleController extends Controller
 
         if ((int) $agent->direction_id !== $direction->id) {
             return back()->with('error', 'Cet agent ne fait pas partie de la Direction Générale.');
+        }
+
+        // Empêcher l'ajout du DGA ou de sa secrétaire dans un service de la DG
+        $entite = Entite::latest()->first();
+        $exclus = array_filter([$entite?->dga_agent_id, $entite?->dga_secretaire_agent_id]);
+        if (in_array($agent->id, $exclus, true)) {
+            return back()->with('error', 'Cet agent appartient à la Direction Générale Adjointe et ne peut pas être affecté à un service de la Direction Générale.');
         }
 
         $agent->update(['service_id' => $service->id]);
@@ -253,6 +328,8 @@ class DirectionGeneraleController extends Controller
             abort(403);
         }
 
+        $user->load('agent');
+
         return view('admin.direction-generale.edit-membre', compact('user', 'entite'));
     }
 
@@ -276,49 +353,28 @@ class DirectionGeneraleController extends Controller
         }
 
         $validated = $request->validate([
-            'prenom'              => ['required', 'string', 'max:255'],
-            'nom'                 => ['required', 'string', 'max:255'],
-            'email'               => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
-            'sexe'                => ['required', 'in:Homme,Femme,Autres'],
+            'prenom'              => ['required', 'string', 'max:100'],
+            'nom'                 => ['required', 'string', 'max:100'],
+            'email'               => ['required', 'email', 'max:191', Rule::unique('users', 'email')->ignore($user->id)],
+            'sexe'                => ['required', 'in:homme,femme'],
             'date_prise_fonction' => ['required', 'string', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
         ]);
 
-        // Mise à jour du compte utilisateur
+        // Mise à jour du compte utilisateur (name + email uniquement)
         $user->update([
-            'name'                => $validated['prenom'].' '.$validated['nom'],
-            'email'               => $validated['email'],
-            'sexe'                => $validated['sexe'],
-            'date_prise_fonction' => $validated['date_prise_fonction'],
+            'name'  => $validated['prenom'] . ' ' . $validated['nom'],
+            'email' => $validated['email'],
         ]);
 
-        // Mise à jour des champs miroirs sur l'entite selon le rôle
-        $entiteFields = match ($user->role) {
-            'DG' => [
-                'directrice_generale_prenom'              => $validated['prenom'],
-                'directrice_generale_nom'                 => $validated['nom'],
-                'directrice_generale_email'               => $validated['email'],
-                'directrice_generale_sexe'                => $validated['sexe'],
-                'directrice_generale_date_prise_fonction' => $validated['date_prise_fonction'],
-            ],
-            'DGA' => [
-                'dga_prenom'              => $validated['prenom'],
-                'dga_nom'                 => $validated['nom'],
-                'dga_email'               => $validated['email'],
-                'dga_sexe'                => $validated['sexe'],
-                'dga_date_prise_fonction' => $validated['date_prise_fonction'],
-            ],
-            'Assistante_Dg' => [
-                'assistante_dg_prenom'              => $validated['prenom'],
-                'assistante_dg_nom'                 => $validated['nom'],
-                'assistante_dg_email'               => $validated['email'],
-                'assistante_dg_sexe'                => $validated['sexe'],
-                'assistante_dg_date_prise_fonction'  => $validated['date_prise_fonction'],
-            ],
-            default => [],
-        };
-
-        if ($entiteFields) {
-            $entite->update($entiteFields);
+        // Mise à jour de la fiche agent (données personnelles)
+        if ($user->agent_id) {
+            Agent::where('id', $user->agent_id)->update([
+                'prenom'              => $validated['prenom'],
+                'nom'                 => $validated['nom'],
+                'email'               => $validated['email'],
+                'sexe'                => $validated['sexe'],
+                'date_debut_fonction' => $validated['date_prise_fonction'] . '-01',
+            ]);
         }
 
         return redirect()
@@ -418,7 +474,7 @@ class DirectionGeneraleController extends Controller
 
         // Rattacher à la Direction Générale pour les statistiques
         $dirGen = \App\Models\Direction::where('entite_id', $entite->id)
-            ->whereRaw('LOWER(nom) LIKE ?', ['%direction g%n%rale%'])
+            ->where('nom', 'Direction Générale')
             ->first();
         if ($dirGen) {
             $agent->direction_id = $dirGen->id;

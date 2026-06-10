@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agence;
 use App\Models\Agent;
+use App\Models\Caisse;
 use App\Models\Guichet;
 use App\Models\DelegationTechnique;
 use App\Models\Poste;
@@ -20,25 +21,31 @@ class GuichetController extends Controller
     /**
      * Liste des guichets avec statistiques
      */
-    public function index()
+    public function index(Request $request)
     {
-        $guichets = Guichet::with(['chef', 'agence.delegationTechnique'])
-            ->latest()
-            ->paginate(10);
+        $caisseId = $request->integer('caisse_id') ?: null;
 
-        $delegations = DelegationTechnique::all()->map(function($dt) {
-            $dt->guichets_count = Guichet::whereHas('agence', function($q) use ($dt) {
-                $q->where('delegation_technique_id', $dt->id);
-            })->count();
+        $guichets = Guichet::with(['chef', 'agence.delegationTechnique', 'agence.caisse'])
+            ->when($caisseId, fn ($q) => $q->whereHas('agence', fn ($q2) => $q2->where('caisse_id', $caisseId)))
+            ->latest()
+            ->get();
+
+        $delegations = DelegationTechnique::all()->map(function ($dt) {
+            $dt->guichets_count = Guichet::whereHas('agence', fn ($q) => $q->where('delegation_technique_id', $dt->id))->count();
             return $dt;
         });
 
         $stats = [
-            'total' => Guichet::count(),
-            'par_delegation' => $delegations
+            'total'          => Guichet::count(),
+            'par_delegation' => $delegations,
         ];
 
-        return view('admin.guichets.index', compact('guichets', 'stats'));
+        return view('admin.guichets.index', [
+            'guichets' => $guichets,
+            'caisses'  => Caisse::orderBy('nom')->get(['id', 'nom']),
+            'caisseId' => $caisseId,
+            'stats'    => $stats,
+        ]);
     }
 
     public function create(): View
@@ -129,7 +136,7 @@ class GuichetController extends Controller
             'agents'  => Agent::query()
                 ->where('guichet_id', $guichet->id)
                 ->latest()
-                ->paginate(12),
+                ->get(),
         ]);
     }
 

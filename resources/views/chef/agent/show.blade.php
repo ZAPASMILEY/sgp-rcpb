@@ -85,17 +85,58 @@
                     </a>
                 </div>
                 @if ($tab === 'evaluations' && $evaluationsEnabled)
-                    <a href="{{ route('chef.evaluations.create', ['agent_id' => $agent->id]) }}"
-                       class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition"
-                       style="background:#2563eb" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
-                        <i class="fas fa-plus text-xs"></i> Nouvelle évaluation
-                    </a>
+                    @if ($evaluationReclamationActive)
+                        <span title="Une réclamation est en cours sur l'évaluation existante. Elle doit être traitée par le RH avant de créer une nouvelle évaluation."
+                              class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 bg-slate-100 border border-slate-200 cursor-not-allowed select-none">
+                            <i class="fas fa-lock text-xs"></i> Nouvelle évaluation
+                        </span>
+                    @elseif (!empty($evaluationEnCours))
+                        <span title="Une évaluation est déjà en cours ({{ $evaluationEnCours->statut === 'soumis' ? 'soumise' : 'brouillon' }}). Elle doit être traitée avant d'en créer une nouvelle."
+                              class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 bg-slate-100 border border-slate-200 cursor-not-allowed select-none">
+                            <i class="fas fa-lock text-xs"></i> Nouvelle évaluation
+                        </span>
+                    @elseif ($ficheAvancee)
+                        <a href="{{ route('chef.evaluations.create', ['agent_id' => $agent->id]) }}"
+                           class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition"
+                           style="background:#2563eb" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
+                            <i class="fas fa-plus text-xs"></i> Nouvelle évaluation
+                        </a>
+                    @else
+                        @php
+                            $lockTip = ! $ficheAnneeEnCours
+                                ? "Aucune fiche d'objectifs pour l'année en cours."
+                                : ($ficheAnneeEnCours->statut !== 'acceptee'
+                                    ? "La fiche d'objectifs n'est pas encore acceptée par l'agent."
+                                    : "Les objectifs n'ont pas encore d'avancement enregistré.");
+                        @endphp
+                        <span title="{{ $lockTip }}"
+                              class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 bg-slate-100 border border-slate-200 cursor-not-allowed select-none">
+                            <i class="fas fa-lock text-xs"></i> Nouvelle évaluation
+                        </span>
+                    @endif
                 @elseif ($tab === 'objectifs' && $objectifsEnabled)
-                    <a href="{{ route('chef.objectifs.create', ['agent_id' => $agent->id]) }}"
-                       class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition"
-                       style="background:#7c3aed" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
-                        <i class="fas fa-plus text-xs"></i> Assigner objectifs
-                    </a>
+                    @if ($ficheAnneeEnCours)
+                        @php
+                            $statutFicheObj = match($ficheAnneeEnCours->statut ?? 'en_attente') {
+                                'acceptee'   => 'déjà acceptée',
+                                'en_attente' => 'en attente d\'acceptation',
+                                'brouillon'  => 'en brouillon',
+                                'refusee'    => 'refusée',
+                                'contesté'   => 'contestée',
+                                default      => 'déjà assignée',
+                            };
+                        @endphp
+                        <span title="Une fiche d'objectifs existe déjà pour l'année en cours ({{ $statutFicheObj }})"
+                              class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-400 bg-slate-100 border border-slate-200 cursor-not-allowed select-none">
+                            <i class="fas fa-lock text-xs"></i> Assigner objectifs
+                        </span>
+                    @else
+                        <a href="{{ route('chef.objectifs.create', ['agent_id' => $agent->id]) }}"
+                           class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition"
+                           style="background:#7c3aed" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+                            <i class="fas fa-plus text-xs"></i> Assigner objectifs
+                        </a>
+                    @endif
                 @endif
             </div>
 
@@ -148,9 +189,9 @@
 
                 {{-- Table évaluations --}}
                 <div class="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                         <table class="min-w-full text-left text-sm text-slate-700">
-                            <thead class="bg-slate-50/80">
+                            <thead class="bg-slate-50/80 sticky top-0 z-10">
                                 <tr class="border-b border-slate-200 text-slate-500">
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Période</th>
@@ -215,24 +256,31 @@
                                             <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $statCls }}">{{ $statLbl }}</span>
                                         </td>
                                         <td class="px-4 py-4">
-                                            @if ($eval->statut !== 'brouillon')
                                             <div class="inline-flex items-center gap-1">
                                                 <a href="{{ route('chef.evaluations.show', $eval) }}"
                                                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
-                                                    <i class="fas fa-eye text-[10px]"></i> Voir
+                                                    <i class="fas fa-{{ $eval->statut === 'brouillon' ? 'pen' : 'eye' }} text-[10px]"></i>
+                                                    {{ $eval->statut === 'brouillon' ? 'Modifier' : 'Voir' }}
                                                 </a>
-                                                <a href="{{ route('chef.evaluations.pdf', $eval) }}"
-                                                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-rose-300 hover:text-rose-600"
-                                                   title="PDF" target="_blank">
-                                                    <i class="fas fa-file-pdf text-[10px]"></i>
-                                                </a>
+                                                @if ($eval->statut !== 'brouillon')
+                                                    <a href="{{ route('chef.evaluations.pdf', $eval) }}"
+                                                       class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-rose-300 hover:text-rose-600"
+                                                       title="PDF" target="_blank">
+                                                        <i class="fas fa-file-pdf text-[10px]"></i>
+                                                    </a>
+                                                @endif
+                                                @if (in_array($eval->statut, ['brouillon', 'a_reviser']))
+                                                    <form method="POST" action="{{ route('chef.evaluations.destroy', $eval) }}"
+                                                          onsubmit="return confirm('Supprimer définitivement cette évaluation ?')">
+                                                        @csrf @method('DELETE')
+                                                        <button type="submit"
+                                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-400 shadow-sm transition hover:bg-rose-50 hover:text-rose-600"
+                                                                title="Supprimer">
+                                                            <i class="fas fa-trash text-[10px]"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                             </div>
-                                            @else
-                                            <a href="{{ route('chef.evaluations.show', $eval) }}"
-                                               class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600 shadow-sm transition hover:border-slate-300">
-                                                <i class="fas fa-pen text-[10px]"></i> Modifier
-                                            </a>
-                                            @endif
                                         </td>
                                     </tr>
                                 @empty
@@ -250,9 +298,7 @@
                         </table>
                     </div>
                 </div>
-                @if ($evaluations->hasPages())
-                    <div class="mt-5 border-t border-slate-200 pt-4">{{ $evaluations->links() }}</div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $evaluations->count() }} résultat(s)</div>
 
             {{-- ════ TAB : OBJECTIFS ════ --}}
             @else
@@ -309,9 +355,9 @@
 
                 {{-- Table objectifs --}}
                 <div class="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                         <table class="min-w-full text-left text-sm text-slate-700">
-                            <thead class="bg-slate-50/80">
+                            <thead class="bg-slate-50/80 sticky top-0 z-10">
                                 <tr class="border-b border-slate-200 text-slate-500">
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">#</th>
                                     <th class="px-4 py-4 text-xs font-black uppercase tracking-[0.16em]">Fiche</th>
@@ -367,6 +413,11 @@
                                         </td>
                                         <td class="px-4 py-4">
                                             <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-black {{ $fsCls }}">{{ $fsLbl }}</span>
+                                            @if (($fiche->statut ?? '') === 'refusee' && $fiche->motif_refus)
+                                                <p class="mt-1 max-w-[200px] truncate text-[10px] italic text-rose-600" title="{{ $fiche->motif_refus }}">
+                                                    « {{ $fiche->motif_refus }} »
+                                                </p>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-4">
                                             <a href="{{ route('chef.objectifs.show', $fiche) }}"
@@ -390,9 +441,7 @@
                         </table>
                     </div>
                 </div>
-                @if ($fiches->hasPages())
-                    <div class="mt-5 border-t border-slate-200 pt-4">{{ $fiches->links() }}</div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $fiches->count() }} résultat(s)</div>
 
             @endif
         </div>{{-- fin panel --}}

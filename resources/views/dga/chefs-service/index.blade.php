@@ -85,7 +85,7 @@
                 </span>
                 <h2 class="text-sm font-black uppercase tracking-widest text-slate-700">Liste</h2>
                 <span class="ml-auto rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">
-                    {{ $chefsService->total() }}
+                    {{ $chefsService->count() }}
                 </span>
             </div>
 
@@ -145,13 +145,8 @@
                     @endforeach
                 </div>
 
-                {{-- Pagination --}}
-                @if($chefsService->hasPages())
-                    <div class="border-t border-slate-100 px-6 py-4">
-                        {{ $chefsService->withQueryString()->links() }}
-                    </div>
-                @endif
             @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $chefsService->count() }} résultat(s)</div>
         </div>
 
     </div>

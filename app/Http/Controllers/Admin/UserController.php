@@ -113,7 +113,7 @@ class UserController extends Controller
                 });
             })
             ->orderBy('name')
-            ->paginate(20)->withQueryString();
+            ->get();
 
         return view('admin.users.index', ['users' => $users, 'search' => $search]);
     }

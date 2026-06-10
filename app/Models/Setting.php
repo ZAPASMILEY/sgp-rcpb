@@ -48,4 +48,12 @@ class Setting extends Model
     {
         return static::get($feature . '_enabled', '1') === '1';
     }
+
+    /**
+     * Retourne le message affiché aux utilisateurs quand la fonctionnalité est désactivée.
+     */
+    public static function featureMessage(string $feature): string
+    {
+        return (string) static::get($feature . '_disabled_message', '');
+    }
 }

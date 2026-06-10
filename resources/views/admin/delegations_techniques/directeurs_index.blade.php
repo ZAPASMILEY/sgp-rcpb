@@ -13,7 +13,7 @@
                         <p class="mt-2 text-sm text-slate-600">Chaque delegation dispose de son index via le filtre ci-dessous.</p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $directeurs->total() }} directeur(s)</div>
+                        <div class="px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-black uppercase tracking-widest text-slate-400">{{ $directeurs->count() }} directeur(s)</div>
                         <a href="{{ route('admin.directions.create') }}" data-open-create-modal data-modal-title="Ajouter un Directeur Technique" class="ent-btn ent-btn-primary">Ajouter</a>
                     </div>
                 </div>
@@ -43,9 +43,9 @@
                     </div>
                 @endif
 
-                <div class="mt-6 overflow-x-auto">
+                <div class="mt-6 overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="ent-table text-left text-sm text-slate-700">
-                        <thead>
+                        <thead class="sticky top-0 z-10">
                             <tr>
                                 <th>#</th>
                                 <th>Delegation</th>
@@ -58,7 +58,7 @@
                         <tbody>
                             @forelse ($directeurs as $direction)
                                 <tr>
-                                    <td>{{ ($directeurs->firstItem() ?? 1) + $loop->index }}</td>
+                                    <td>{{ $loop->iteration }}</td>
                                     <td>{{ $direction->delegationTechnique?->region }} / {{ $direction->delegationTechnique?->ville }}</td>
                                     <td>{{ $direction->directeur_prenom }} {{ $direction->directeur_nom }}</td>
                                     <td>{{ $direction->directeur_email }}</td>
@@ -105,9 +105,7 @@
                     </table>
                 </div>
 
-                @if ($directeurs->hasPages())
-                    <div class="mt-4">{{ $directeurs->links() }}</div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $directeurs->count() }} résultat(s)</div>
             </section>
         </div>
     </div>

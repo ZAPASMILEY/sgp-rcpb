@@ -94,7 +94,10 @@ class AppServiceProvider extends ServiceProvider
             }
 
             // L'admin ne peut pas évaluer ni assigner des objectifs (pas dans la hiérarchie).
-            if (str_starts_with($ability, 'evaluations.') || str_starts_with($ability, 'objectifs.')) {
+            // admin.archives est aussi exclu : la permission doit être vérifiée explicitement.
+            if (str_starts_with($ability, 'evaluations.')
+                || str_starts_with($ability, 'objectifs.')
+                || $ability === 'admin.archives') {
                 return null; // → Gate::before #2 → refus si le rôle Admin n'a pas la permission
             }
 
@@ -196,12 +199,19 @@ class AppServiceProvider extends ServiceProvider
             if ($featuresCache === null) {
                 try {
                     $featuresCache = [
-                        'evaluationsEnabled' => Setting::featureEnabled('evaluations'),
-                        'objectifsEnabled'   => Setting::featureEnabled('objectifs'),
+                        'evaluationsEnabled'         => Setting::featureEnabled('evaluations'),
+                        'objectifsEnabled'           => Setting::featureEnabled('objectifs'),
+                        'evaluationsDisabledMessage' => Setting::featureMessage('evaluations'),
+                        'objectifsDisabledMessage'   => Setting::featureMessage('objectifs'),
                     ];
                 } catch (\Throwable) {
                     // Table pas encore créée (ex: première migration)
-                    $featuresCache = ['evaluationsEnabled' => true, 'objectifsEnabled' => true];
+                    $featuresCache = [
+                        'evaluationsEnabled'         => true,
+                        'objectifsEnabled'           => true,
+                        'evaluationsDisabledMessage' => '',
+                        'objectifsDisabledMessage'   => '',
+                    ];
                 }
             }
             $view->with($featuresCache);

@@ -151,12 +151,7 @@
                 @endforeach
             </div>
 
-            {{-- Pagination --}}
-            @if ($notifications->hasPages())
-                <div class="mt-6">
-                    {{ $notifications->links() }}
-                </div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $notifications->count() }} résultat(s)</div>
         @endif
 
     </div>

@@ -194,18 +194,31 @@
                     </div>
                     <form action="{{ route('admin.settings.security.update') }}" method="POST" class="space-y-5">
                         @csrf @method('PUT')
+
+                        @if ($errors->hasAny(['max_login_attempts', 'lockout_time']))
+                            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                @foreach (['max_login_attempts', 'lockout_time'] as $field)
+                                    @error($field)<p>{{ $message }}</p>@enderror
+                                @endforeach
+                            </div>
+                        @endif
+
                         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Tentatives avant blocage</label>
-                                <input type="number" name="max_login_attempts" value="{{ old('max_login_attempts', $maxLoginAttempts ?? 3) }}" min="1" max="10" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                                <input type="number" name="max_login_attempts"
+                                       value="{{ old('max_login_attempts', $maxLoginAttempts ?? 3) }}"
+                                       min="1" max="10"
+                                       class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400
+                                              @error('max_login_attempts') border-rose-400 @enderror">
                             </div>
                             <div>
                                 <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Duree de suspension</label>
                                 <select name="lockout_time" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                                    <option value="15" @selected(old('lockout_time', $lockoutTime ?? 30) == 15)>15 Minutes</option>
-                                    <option value="30" @selected(old('lockout_time', $lockoutTime ?? 30) == 30)>30 Minutes</option>
-                                    <option value="60" @selected(old('lockout_time', $lockoutTime ?? 30) == 60)>1 Heure</option>
-                                    <option value="1440" @selected(old('lockout_time', $lockoutTime ?? 30) == 1440)>24 Heures</option>
+                                    <option value="15" @selected(old('lockout_time', $lockoutTime) == 15)>15 Minutes</option>
+                                    <option value="30" @selected(old('lockout_time', $lockoutTime) == 30)>30 Minutes</option>
+                                    <option value="60" @selected(old('lockout_time', $lockoutTime) == 60)>1 Heure</option>
+                                    <option value="1440" @selected(old('lockout_time', $lockoutTime) == 1440)>24 Heures</option>
                                 </select>
                             </div>
                         </div>
@@ -317,7 +330,10 @@
             <div class="grid gap-4 sm:grid-cols-2">
 
                 {{-- Évaluations --}}
-                @php $evalOn = $featuresEnabled['evaluations'] ?? true; @endphp
+                @php
+                    $evalOn  = $featuresEnabled['evaluations'] ?? true;
+                    $evalMsg = $featuresMessages['evaluations'] ?? '';
+                @endphp
                 <div class="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-slate-100">
                     <div class="flex items-center gap-4 border-b border-slate-100 px-6 py-4">
                         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $evalOn ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400' }}">
@@ -333,7 +349,7 @@
                             {{ $evalOn ? 'Activées' : 'Désactivées' }}
                         </span>
                     </div>
-                    <div class="px-6 py-5">
+                    <div class="px-6 py-5 space-y-4">
                         <p class="text-sm text-slate-600 leading-relaxed">
                             @if($evalOn)
                                 Les utilisateurs peuvent actuellement <strong>créer et soumettre</strong> des évaluations. Désactivez pour bloquer toute nouvelle création.
@@ -341,7 +357,7 @@
                                 La création d'évaluations est <strong>bloquée</strong>. Les fiches existantes restent accessibles en lecture.
                             @endif
                         </p>
-                        <form method="POST" action="{{ route('admin.settings.feature.toggle', 'evaluations') }}" class="mt-4">
+                        <form method="POST" action="{{ route('admin.settings.feature.toggle', 'evaluations') }}">
                             @csrf
                             <button type="submit"
                                     onclick="return confirm('{{ $evalOn ? 'Désactiver les évaluations pour tous les utilisateurs ?' : 'Activer les évaluations ?' }}')"
@@ -353,11 +369,33 @@
                                 {{ $evalOn ? 'Désactiver les évaluations' : 'Activer les évaluations' }}
                             </button>
                         </form>
+                        {{-- Message de désactivation --}}
+                        <form method="POST" action="{{ route('admin.settings.feature.message', 'evaluations') }}" class="space-y-2">
+                            @csrf @method('PATCH')
+                            <label class="block text-[11px] font-black uppercase tracking-wider text-slate-400">
+                                Message affiché aux utilisateurs quand désactivé
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" name="message" value="{{ $evalMsg }}" maxlength="300"
+                                       placeholder="Ex : Campagne d'évaluation fermée jusqu'au 30 juin."
+                                       class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-300 focus:border-indigo-300 focus:outline-none">
+                                <button type="submit"
+                                        class="shrink-0 rounded-xl bg-slate-100 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-200">
+                                    Enregistrer
+                                </button>
+                            </div>
+                            @if($evalMsg)
+                                <p class="text-xs text-slate-400"><i class="fas fa-eye mr-1"></i>Actuellement affiché : « {{ $evalMsg }} »</p>
+                            @endif
+                        </form>
                     </div>
                 </div>
 
                 {{-- Objectifs --}}
-                @php $objOn = $featuresEnabled['objectifs'] ?? true; @endphp
+                @php
+                    $objOn  = $featuresEnabled['objectifs'] ?? true;
+                    $objMsg = $featuresMessages['objectifs'] ?? '';
+                @endphp
                 <div class="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-slate-100">
                     <div class="flex items-center gap-4 border-b border-slate-100 px-6 py-4">
                         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl {{ $objOn ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400' }}">
@@ -373,7 +411,7 @@
                             {{ $objOn ? 'Activées' : 'Désactivées' }}
                         </span>
                     </div>
-                    <div class="px-6 py-5">
+                    <div class="px-6 py-5 space-y-4">
                         <p class="text-sm text-slate-600 leading-relaxed">
                             @if($objOn)
                                 Les responsables peuvent actuellement <strong>assigner des objectifs</strong> à leurs subordonnés. Désactivez pour bloquer toute nouvelle assignation.
@@ -381,7 +419,7 @@
                                 L'assignation d'objectifs est <strong>bloquée</strong>. Les fiches existantes restent accessibles en lecture.
                             @endif
                         </p>
-                        <form method="POST" action="{{ route('admin.settings.feature.toggle', 'objectifs') }}" class="mt-4">
+                        <form method="POST" action="{{ route('admin.settings.feature.toggle', 'objectifs') }}">
                             @csrf
                             <button type="submit"
                                     onclick="return confirm('{{ $objOn ? 'Désactiver l\'assignation d\'objectifs pour tous les utilisateurs ?' : 'Activer l\'assignation d\'objectifs ?' }}')"
@@ -392,6 +430,25 @@
                                 <i class="fas {{ $objOn ? 'fa-toggle-off' : 'fa-toggle-on' }} text-base"></i>
                                 {{ $objOn ? 'Désactiver les objectifs' : 'Activer les objectifs' }}
                             </button>
+                        </form>
+                        {{-- Message de désactivation --}}
+                        <form method="POST" action="{{ route('admin.settings.feature.message', 'objectifs') }}" class="space-y-2">
+                            @csrf @method('PATCH')
+                            <label class="block text-[11px] font-black uppercase tracking-wider text-slate-400">
+                                Message affiché aux utilisateurs quand désactivé
+                            </label>
+                            <div class="flex gap-2">
+                                <input type="text" name="message" value="{{ $objMsg }}" maxlength="300"
+                                       placeholder="Ex : Assignation d'objectifs fermée jusqu'à nouvel ordre."
+                                       class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-300 focus:border-emerald-300 focus:outline-none">
+                                <button type="submit"
+                                        class="shrink-0 rounded-xl bg-slate-100 px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-200">
+                                    Enregistrer
+                                </button>
+                            </div>
+                            @if($objMsg)
+                                <p class="text-xs text-slate-400"><i class="fas fa-eye mr-1"></i>Actuellement affiché : « {{ $objMsg }} »</p>
+                            @endif
                         </form>
                     </div>
                 </div>
@@ -869,62 +926,6 @@
         ══════════════════════════════════════════════════════════════ --}}
         @if($activeTab === 'roles')
 
-        {{-- Bouton création de rôle + liste des rôles custom --}}
-        <div class="grid gap-6 lg:grid-cols-2 mb-6">
-
-            {{-- Créer un rôle — bouton seul --}}
-            <div class="rounded-2xl bg-white p-6 shadow-sm flex flex-col items-center justify-center gap-6 min-h-[200px] border-2 border-dashed border-violet-100">
-                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 text-violet-500">
-                    <i class="fas fa-user-tag text-2xl"></i>
-                </div>
-                <div class="text-center">
-                    <h3 class="text-sm font-black text-slate-800">Nouveau rôle personnalisé</h3>
-                    <p class="mt-1 text-xs text-slate-400">Définissez un slug et un libellé pour étendre les rôles du système.</p>
-                </div>
-                <button type="button" id="open-create-role-modal"
-                        class="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-black uppercase tracking-wider text-white shadow-md shadow-violet-200 transition hover:bg-violet-700 active:scale-95">
-                    <i class="fas fa-plus"></i> Créer un rôle
-                </button>
-            </div>
-
-            {{-- Rôles personnalisés existants --}}
-            <div class="rounded-2xl bg-white p-6 shadow-sm">
-                <div class="mb-4 flex items-center gap-3">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-500">
-                        <i class="fas fa-layer-group text-sm"></i>
-                    </span>
-                    <div>
-                        <h3 class="text-sm font-black uppercase tracking-wider text-slate-800">Rôles personnalisés</h3>
-                        <p class="text-xs text-slate-400">Rôles ajoutés manuellement (supprimables).</p>
-                    </div>
-                </div>
-                @php $customRoles = \App\Models\CustomRole::orderBy('label')->get(); @endphp
-                @if($customRoles->isEmpty())
-                    <p class="py-6 text-center text-sm text-slate-400">Aucun rôle personnalisé pour l'instant.</p>
-                @else
-                    <div class="space-y-2">
-                        @foreach($customRoles as $cr)
-                            <div class="flex items-center justify-between rounded-xl bg-violet-50 px-4 py-3">
-                                <div>
-                                    <p class="text-sm font-bold text-slate-800">{{ $cr->label }}</p>
-                                    <p class="text-[11px] font-mono text-slate-400">{{ $cr->slug }}</p>
-                                </div>
-                                <form method="POST" action="{{ route('admin.settings.roles.destroy', $cr) }}"
-                                      onsubmit="return confirm('Supprimer le rôle « {{ $cr->label }} » ?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-100 text-rose-500 transition hover:bg-rose-200">
-                                        <i class="fas fa-trash text-xs"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-        </div>
-
         <div class="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
 
             {{-- Sélecteur de rôle --}}
@@ -1313,84 +1314,6 @@
     </div>
 </div>
 
-{{-- ── MODALE : CRÉER UN RÔLE PERSONNALISÉ ────────────────────────────── --}}
-<div id="modal-create-role" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="document.getElementById('modal-create-role').classList.add('hidden')"></div>
-    <div class="relative w-full max-w-lg transform overflow-hidden rounded-[28px] bg-white shadow-2xl transition-all">
-
-        {{-- En-tête --}}
-        <div class="flex items-center justify-between border-b border-slate-100 px-7 py-5">
-            <div class="flex items-center gap-4">
-                <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
-                    <i class="fas fa-user-tag text-lg"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-violet-500">Rôles & Permissions</p>
-                    <h3 class="text-lg font-black text-slate-900">Créer un rôle personnalisé</h3>
-                </div>
-            </div>
-            <button type="button" onclick="document.getElementById('modal-create-role').classList.add('hidden')"
-                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        {{-- Corps --}}
-        <form method="POST" action="{{ route('admin.settings.roles.store') }}" class="px-7 py-6 space-y-5">
-            @csrf
-
-            <div class="space-y-1.5">
-                <label class="text-xs font-black uppercase tracking-wider text-slate-500">
-                    Slug <span class="text-rose-500">*</span>
-                </label>
-                <input type="text" name="slug" value="{{ old('slug') }}"
-                       id="create-role-slug"
-                       placeholder="Ex : Auditeur_Interne"
-                       class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/30"
-                       required pattern="[A-Za-z0-9_]+">
-                <p class="text-[11px] text-slate-400">
-                    Lettres, chiffres, underscores uniquement. Valeur stockée dans
-                    <code class="rounded bg-slate-100 px-1 text-[10px]">users.role</code>.
-                </p>
-                @error('slug') <p class="text-xs font-bold text-rose-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p> @enderror
-            </div>
-
-            <div class="space-y-1.5">
-                <label class="text-xs font-black uppercase tracking-wider text-slate-500">
-                    Libellé <span class="text-rose-500">*</span>
-                </label>
-                <input type="text" name="label" value="{{ old('label') }}"
-                       id="create-role-label"
-                       placeholder="Ex : Auditeur Interne"
-                       class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-400/30"
-                       required maxlength="150">
-                <p class="text-[11px] text-slate-400">Nom affiché dans les menus de sélection de rôle.</p>
-                @error('label') <p class="text-xs font-bold text-rose-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ $message }}</p> @enderror
-            </div>
-
-            {{-- Aperçu temps réel --}}
-            <div id="role-preview" class="hidden rounded-2xl border border-violet-100 bg-violet-50/60 px-4 py-3">
-                <p class="text-[10px] font-black uppercase tracking-widest text-violet-400 mb-1">Aperçu</p>
-                <div class="flex items-center justify-between">
-                    <p class="text-sm font-bold text-slate-800" id="preview-label">—</p>
-                    <code class="rounded-lg bg-white px-2 py-0.5 text-[11px] font-mono text-violet-600 shadow-sm" id="preview-slug">—</code>
-                </div>
-            </div>
-
-            <div class="flex gap-3 pt-1">
-                <button type="submit"
-                        class="flex-1 inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-600 py-3 text-sm font-black uppercase tracking-wider text-white shadow-md shadow-violet-200 transition hover:bg-violet-700 active:scale-95">
-                    <i class="fas fa-plus"></i> Créer le rôle
-                </button>
-                <button type="button" onclick="document.getElementById('modal-create-role').classList.add('hidden')"
-                        class="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
-                    Annuler
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
 {{-- ── Modales communes (onglet Général) ──────────────────────────────── --}}
 
 {{-- MODALE : CHANGER MON MOT DE PASSE --}}
@@ -1541,34 +1464,6 @@ document.addEventListener('DOMContentLoaded', function () {
     setupModal('password-modal', 'open-password-modal');
     setupModal('delete-modal', 'open-delete-modal');
     setupModal('manage-pwd-modal', 'open-manage-pwd-modal');
-    setupModal('modal-create-role', 'open-create-role-modal');
-
-    // Auto-ouvrir la modale si des erreurs de validation slug/label existent (après soumission ratée)
-    @if ($errors->has('slug') || $errors->has('label'))
-        document.getElementById('modal-create-role')?.classList.remove('hidden');
-    @endif
-
-    // Aperçu temps réel slug + label
-    const slugInput    = document.getElementById('create-role-slug');
-    const labelInput   = document.getElementById('create-role-label');
-    const preview      = document.getElementById('role-preview');
-    const previewSlug  = document.getElementById('preview-slug');
-    const previewLabel = document.getElementById('preview-label');
-
-    function updatePreview() {
-        const s = slugInput?.value.trim();
-        const l = labelInput?.value.trim();
-        if (s || l) {
-            preview?.classList.remove('hidden');
-            if (previewSlug)  previewSlug.textContent  = s || '—';
-            if (previewLabel) previewLabel.textContent = l || '—';
-        } else {
-            preview?.classList.add('hidden');
-        }
-    }
-    slugInput?.addEventListener('input', updatePreview);
-    labelInput?.addEventListener('input', updatePreview);
-
     // Recherche AJAX dans manage-pwd-modal
     const searchInput = document.getElementById('manage-pwd-search');
     const resultsDiv  = document.getElementById('manage-pwd-results');

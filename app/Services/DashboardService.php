@@ -110,16 +110,21 @@ class DashboardService
      */
     public function agentsCoverage(\Illuminate\Support\Collection $agentIds, Annee $openAnnee): array
     {
-        $total    = $agentIds->count();
-        $sansEval = Agent::whereIn('id', $agentIds)
-            ->whereDoesntHave('evaluations', fn ($q) =>
-                $q->where('statut', 'valide')->where('annee_id', $openAnnee->id)
+        $total   = $agentIds->count();
+        $ef      = fn ($q) => $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
+        $evalues = Agent::whereIn('id', $agentIds)
+            ->where(fn ($q) => $q
+                ->whereHas('evaluations',        $ef)
+                ->orWhereHas('evaluationsPersonnel', $ef)
+                ->orWhereHas('ledAgence',  fn ($a) => $a->whereHas('evaluations', $ef))
+                ->orWhereHas('ledService', fn ($s) => $s->whereHas('evaluations', $ef))
+                ->orWhereHas('ledGuichet', fn ($g) => $g->whereHas('evaluations', $ef))
             )->count();
 
         return [
             'totalAgents'    => $total,
-            'agentsSansEval' => $sansEval,
-            'agentsEvalues'  => $total - $sansEval,
+            'agentsSansEval' => $total - $evalues,
+            'agentsEvalues'  => $evalues,
         ];
     }
 

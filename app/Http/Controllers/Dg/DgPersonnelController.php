@@ -102,7 +102,7 @@ class DgPersonnelController extends Controller
             default       => $query->orderByDesc('note_finale'),
         };
 
-        $evaluations = $query->paginate(25)->withQueryString();
+        $evaluations = $query->get();
 
         // ── Stats rapides ─────────────────────────────────────────────────────
         // Changement ici aussi : Les compteurs KPI se basent uniquement sur le validé

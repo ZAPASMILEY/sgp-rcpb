@@ -26,6 +26,8 @@ return new class extends Migration
             $table->date('date_validation')->nullable();
             $table->unsignedTinyInteger('avancement_percentage')->default(0);
             $table->enum('statut', ['brouillon', 'en_attente', 'acceptee', 'refusee', 'contesté'])->default('brouillon');
+            $table->text('motif_refus')->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
 
             $table->timestamps();
             $table->softDeletes();

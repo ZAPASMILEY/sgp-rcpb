@@ -49,7 +49,7 @@ class AuditLogController extends Controller
             $query->where('created_at', '<=', $dateTo . ' 23:59:59');
         }
 
-        $logs  = $query->latest('created_at')->paginate(30)->withQueryString();
+        $logs  = $query->latest('created_at')->get();
         $users = User::orderBy('name')->get(['id', 'name']);
 
         $stats = [

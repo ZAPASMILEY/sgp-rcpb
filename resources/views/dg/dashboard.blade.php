@@ -24,42 +24,105 @@
             </div>
 
             {{-- Filters in hero --}}
-            <form method="GET" action="{{ route('dg.dashboard') }}" class="flex flex-wrap items-center gap-3">
+            @php
+                $statutLabel = match($filters['statut']) {
+                    'soumis' => 'Soumises', 'valide' => 'Validées', 'refuse' => 'Refusées', default => 'Tous statuts'
+                };
+                $anneeLabel = $annees->firstWhere('id', $filters['anneeId'])?->annee ?? 'Toutes années';
+            @endphp
+            <form method="GET" action="{{ route('dg.dashboard') }}" id="dg-filter-form" class="flex flex-wrap items-center gap-3">
+                {{-- Champ recherche --}}
                 <div class="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 ring-1 ring-white/25 backdrop-blur-sm">
                     <i class="fas fa-search text-white/50 text-xs"></i>
                     <input type="text" name="search" value="{{ $filters['search'] }}"
                         placeholder="Rechercher…"
                         class="w-36 bg-transparent text-sm font-semibold text-white placeholder-white/40 outline-none">
                 </div>
-                <select name="statut" onchange="this.form.submit()"
-                    class="rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 backdrop-blur-sm outline-none cursor-pointer">
-                    <option value="" class="text-slate-900">Tous statuts</option>
-                    <option value="soumis"  class="text-slate-900" {{ $filters['statut'] === 'soumis'  ? 'selected' : '' }}>Soumises</option>
-                    <option value="valide"  class="text-slate-900" {{ $filters['statut'] === 'valide'  ? 'selected' : '' }}>Validées</option>
-                    <option value="refuse"  class="text-slate-900" {{ $filters['statut'] === 'refuse'  ? 'selected' : '' }}>Refusées</option>
-                </select>
+
+                {{-- Hidden inputs soumis au form --}}
+                <input type="hidden" name="statut" id="dg-input-statut" value="{{ $filters['statut'] }}">
+                <input type="hidden" name="annee"  id="dg-input-annee"  value="{{ $filters['anneeId'] }}">
+
+                {{-- Dropdown Statut --}}
+                <div class="relative" id="dg-dd-statut">
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 backdrop-blur-sm cursor-pointer hover:bg-white/25 transition"
+                        onclick="dgDdToggle('dg-dd-statut-menu')">
+                        <span id="dg-label-statut">{{ $statutLabel }}</span>
+                        <i class="fas fa-chevron-down text-xs opacity-60"></i>
+                    </button>
+                    <div id="dg-dd-statut-menu" class="dg-dd-menu hidden absolute right-0 top-full mt-2 z-50 min-w-[11rem] rounded-xl bg-white shadow-xl ring-1 ring-black/10 overflow-hidden py-1">
+                        @foreach (['' => 'Tous statuts', 'soumis' => 'Soumises', 'valide' => 'Validées', 'refuse' => 'Refusées'] as $val => $lbl)
+                            <a href="#"
+                               onclick="dgDdSelect('dg-input-statut','{{ $val }}','dg-label-statut','{{ $lbl }}');return false;"
+                               class="flex items-center px-4 py-2.5 text-sm transition hover:bg-slate-50
+                                      {{ $filters['statut'] === $val ? 'font-bold text-green-700 bg-green-50/60' : 'text-slate-700' }}">
+                                {{ $lbl }}
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Dropdown Année --}}
                 @if ($annees->isNotEmpty())
-                <select name="annee" onchange="this.form.submit()"
-                    class="rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 backdrop-blur-sm outline-none cursor-pointer">
-                    <option value="" class="text-slate-900">Toutes années</option>
-                    @foreach ($annees as $annee)
-                        <option value="{{ $annee->id }}" class="text-slate-900" {{ $filters['anneeId'] == $annee->id ? 'selected' : '' }}>
-                            {{ $annee->annee }}
-                        </option>
-                    @endforeach
-                </select>
+                <div class="relative" id="dg-dd-annee">
+                    <button type="button"
+                        class="flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/25 backdrop-blur-sm cursor-pointer hover:bg-white/25 transition"
+                        onclick="dgDdToggle('dg-dd-annee-menu')">
+                        <span id="dg-label-annee">{{ $anneeLabel }}</span>
+                        <i class="fas fa-chevron-down text-xs opacity-60"></i>
+                    </button>
+                    <div id="dg-dd-annee-menu" class="dg-dd-menu hidden absolute right-0 top-full mt-2 z-50 min-w-[9rem] rounded-xl bg-white shadow-xl ring-1 ring-black/10 overflow-hidden py-1">
+                        <a href="#"
+                           onclick="dgDdSelect('dg-input-annee','','dg-label-annee','Toutes années');return false;"
+                           class="flex items-center px-4 py-2.5 text-sm transition hover:bg-slate-50
+                                  {{ ! $filters['anneeId'] ? 'font-bold text-green-700 bg-green-50/60' : 'text-slate-700' }}">
+                            Toutes années
+                        </a>
+                        @foreach ($annees as $annee)
+                            <a href="#"
+                               onclick="dgDdSelect('dg-input-annee','{{ $annee->id }}','dg-label-annee','{{ $annee->annee }}');return false;"
+                               class="flex items-center px-4 py-2.5 text-sm transition hover:bg-slate-50
+                                      {{ $filters['anneeId'] == $annee->id ? 'font-bold text-green-700 bg-green-50/60' : 'text-slate-700' }}">
+                                {{ $annee->annee }}
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
                 @endif
+
+                {{-- Bouton Filtrer --}}
                 <button type="submit"
-                    class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black text-white shadow-sm transition" style="background:#008751"
+                    class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:opacity-90" style="background:#008751">
                     <i class="fas fa-filter text-xs"></i> Filtrer
                 </button>
+
                 @if ($filters['search'] || $filters['statut'] || $filters['anneeId'])
                     <a href="{{ route('dg.dashboard') }}"
-                       class="inline-flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2.5 text-xs font-bold text-white/70 ring-1 ring-white/25 backdrop-blur-sm transition hover:bg-white/25"
-                        <i class="fas fa-times"></i>
+                       class="inline-flex items-center gap-1 rounded-xl bg-white/15 px-3 py-2.5 text-xs font-bold text-white/70 ring-1 ring-white/25 backdrop-blur-sm transition hover:bg-white/25">
+                        <i class="fas fa-times text-xs"></i>
                     </a>
                 @endif
             </form>
+
+            <script>
+            function dgDdToggle(menuId) {
+                const menu = document.getElementById(menuId);
+                document.querySelectorAll('.dg-dd-menu').forEach(m => { if (m.id !== menuId) m.classList.add('hidden'); });
+                menu.classList.toggle('hidden');
+            }
+            function dgDdSelect(inputId, value, labelId, label) {
+                document.getElementById(inputId).value = value;
+                document.getElementById(labelId).textContent = label;
+                document.querySelectorAll('.dg-dd-menu').forEach(m => m.classList.add('hidden'));
+                document.getElementById('dg-filter-form').submit();
+            }
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('#dg-dd-statut') && !e.target.closest('#dg-dd-annee')) {
+                    document.querySelectorAll('.dg-dd-menu').forEach(m => m.classList.add('hidden'));
+                }
+            });
+            </script>
         </div>
 
         {{-- Meta-stats inside hero --}}

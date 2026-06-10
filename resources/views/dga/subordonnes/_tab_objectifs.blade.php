@@ -134,6 +134,11 @@ $ficheCards = [
                                 <span class="h-1.5 w-1.5 rounded-full {{ $dotCls }}"></span>
                                 {{ $statusLabel }}
                             </span>
+                            @if ($statut === 'refusee' && $fiche->motif_refus)
+                                <p class="mt-1 max-w-[220px] truncate text-[10px] italic text-rose-600" title="{{ $fiche->motif_refus }}">
+                                    « {{ $fiche->motif_refus }} »
+                                </p>
+                            @endif
                         </td>
                         {{-- Actions --}}
                         <td class="px-5 py-3.5 text-center">

@@ -47,32 +47,52 @@ class RhAnalytiqueController extends Controller
             return $this->emptyStats();
         }
 
-        $totalAgents   = Agent::personnel()->count();
-        $agentsEvalues = Evaluation::where('annee_id', $anneeId)
-            ->where('statut', 'valide')
-            ->where('evaluable_type', Agent::class)
-            ->distinct('evaluable_id')
-            ->count('evaluable_id');
+        $totalAgents = Agent::personnel()->count();
+
+        // Couvre tous les chemins d'évaluation : User, Agent, Direction, Caisse, DelegationTechnique, Agence, Service, Guichet
+        $hasEval = fn ($q) => $q
+            ->whereHas('evaluationsPersonnel', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'))
+            ->orWhereHas('evaluations',        fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'))
+            ->orWhereHas('directedDirection',  fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+            ->orWhereHas('directedCaisse',     fn ($c) => $c->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+            ->orWhereHas('directedDelegation', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+            ->orWhereHas('ledAgence',          fn ($a) => $a->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+            ->orWhereHas('ledService',         fn ($s) => $s->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')))
+            ->orWhereHas('ledGuichet',         fn ($g) => $g->whereHas('evaluations', fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide')));
+
+        $agentsSexNotes = Agent::personnel()
+            ->where($hasEval)
+            ->with([
+                'evaluationsPersonnel'           => fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'),
+                'evaluations'                    => fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'),
+                'directedDirection.evaluations'  => fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'),
+                'directedCaisse.evaluations'     => fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'),
+                'directedDelegation.evaluations' => fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'),
+                'ledAgence.evaluations'          => fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'),
+                'ledService.evaluations'         => fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'),
+                'ledGuichet.evaluations'         => fn ($e) => $e->where('annee_id', $anneeId)->where('statut', 'valide'),
+            ])
+            ->get();
+
+        $agentsEvalues = $agentsSexNotes->count();
+
+        $mergeNotes = fn ($a) => $a->evaluations
+            ->merge($a->evaluationsPersonnel)
+            ->merge($a->directedDirection?->evaluations ?? collect())
+            ->merge($a->directedCaisse?->evaluations ?? collect())
+            ->merge($a->directedDelegation?->evaluations ?? collect())
+            ->merge($a->ledAgence?->evaluations ?? collect())
+            ->merge($a->ledService?->evaluations ?? collect())
+            ->merge($a->ledGuichet?->evaluations ?? collect())
+            ->pluck('note_finale')
+            ->filter();
+
+        $moyHom = round($agentsSexNotes->where('sexe', 'homme')->flatMap($mergeNotes)->avg() ?? 0, 2);
+        $moyFem = round($agentsSexNotes->where('sexe', 'femme')->flatMap($mergeNotes)->avg() ?? 0, 2);
 
         $base    = fn () => Evaluation::where('annee_id', $anneeId)->where('statut', '!=', 'brouillon');
         $valides = fn () => Evaluation::where('annee_id', $anneeId)->where('statut', 'valide');
         $fiches  = fn () => FicheObjectif::where('annee_id', $anneeId);
-
-        // Notes moyennes par genre pour cette année
-        $moyHom = round(
-            Evaluation::where('annee_id', $anneeId)->where('statut', 'valide')
-                ->where('evaluable_type', Agent::class)
-                ->whereHas('evaluable', fn ($q) => $q->where('sexe', 'homme'))
-                ->avg('note_finale') ?? 0,
-            2
-        );
-        $moyFem = round(
-            Evaluation::where('annee_id', $anneeId)->where('statut', 'valide')
-                ->where('evaluable_type', Agent::class)
-                ->whereHas('evaluable', fn ($q) => $q->where('sexe', 'femme'))
-                ->avg('note_finale') ?? 0,
-            2
-        );
 
         return [
             // Évaluations

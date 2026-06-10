@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class FeatureGate
 {
-    private const LABELS = [
+    private const FALLBACKS = [
         'evaluations' => 'La création d\'évaluations est actuellement désactivée par l\'administrateur.',
         'objectifs'   => 'L\'assignation d\'objectifs est actuellement désactivée par l\'administrateur.',
     ];
@@ -25,7 +25,8 @@ class FeatureGate
     public function handle(Request $request, Closure $next, string $feature): Response
     {
         if (! Setting::featureEnabled($feature)) {
-            $message = self::LABELS[$feature] ?? "La fonctionnalité « {$feature} » est désactivée.";
+            $custom   = Setting::featureMessage($feature);
+            $message  = $custom ?: (self::FALLBACKS[$feature] ?? "La fonctionnalité « {$feature} » est désactivée.");
 
             if ($request->expectsJson()) {
                 return response()->json(['message' => $message], 403);

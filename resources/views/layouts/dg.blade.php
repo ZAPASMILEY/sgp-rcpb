@@ -1,9 +1,19 @@
 @php
+    $_dgUser = auth()->user();
+
+    // ── Badges sidebar ──────────────────────────────────────────────────────
+    $_dossierBadge      = $_dgUser ? $_dgUser->alertesNonLues()->where('lien', 'like', '%mon-espace%')->count() : 0;
+    $_reclamationsBadge = $_dgUser ? \App\Models\Evaluation::where('evaluateur_id', $_dgUser->id)
+        ->where('statut', 'reclamation')
+        ->where(fn ($q) => $q->whereNull('statut_reclamation')
+            ->orWhere('statut_reclamation', '!=', 'maintenu'))
+        ->count() : 0;
+
     $menuSections = [
         [
             'title' => 'Mon espace',
             'items' => [
-                ['route' => 'dg.mon-espace', 'icon' => 'fas fa-user-circle', 'label' => 'Mon espace'],
+                ['route' => 'dg.mon-espace', 'icon' => 'fas fa-user-circle', 'label' => 'Mon espace', 'badge' => $_dossierBadge, 'badgeTip' => 'Notification(s) non lue(s)'],
             ],
         ],
         [
@@ -12,7 +22,7 @@
                 ['route' => 'dg.dashboard',         'icon' => 'fas fa-gauge-high',   'label' => 'Tableau de bord'],
                 ['route' => 'dg.comparaison.index', 'icon' => 'fas fa-code-compare', 'label' => 'Comparaison inter-période'],
                 ['route' => 'dg.statistiques',      'icon' => 'fas fa-chart-bar',    'label' => 'Statistiques'],
-                auth()->user()?->can('tableaux.voir')
+                $_dgUser?->can('tableaux.voir')
                     ? ['route' => 'dg.tableaux.index', 'icon' => 'fas fa-file-excel', 'label' => 'Tableaux Excel']
                     : null,
             ]),
@@ -20,7 +30,7 @@
         [
             'title' => 'Mes collaborateurs',
             'items' => [
-                ['route' => 'dg.dga',        'icon' => 'fas fa-user-shield', 'label' => 'Mon DGA'],
+                ['route' => 'dg.dga',        'icon' => 'fas fa-user-shield', 'label' => 'Mon DGA',         'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'],
                 ['route' => 'dg.assistante', 'icon' => 'fas fa-user',        'label' => 'Mon Assistante'],
                 ['route' => 'dg.conseillers','icon' => 'fas fa-users',       'label' => 'Mes Conseillers'],
             ],
@@ -28,7 +38,7 @@
         [
             'title' => 'Mes Directeurs',
             'items' => [
-                ['route' => 'dg.directions', 'icon' => 'fas fa-user-tie', 'label' => 'Mes Directeurs'],
+                ['route' => 'dg.directions', 'icon' => 'fas fa-user-tie', 'label' => 'Mes Directeurs', 'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'],
             ],
         ],
         [
@@ -179,7 +189,13 @@
                     @endphp
                     <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                         <i class="{{ $item['icon'] }}"></i>
-                        <span>{{ $item['label'] }}</span>
+                        <span class="flex-1">{{ $item['label'] }}</span>
+                        @if(($item['badge'] ?? 0) > 0)
+                            <span class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                                  title="{{ $item['badgeTip'] ?? ($item['badge'] . ' en attente') }}">
+                                {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                            </span>
+                        @endif
                     </a>
                 @endforeach
             @endforeach
@@ -259,7 +275,7 @@
     @stack('scripts')
     <script>
     (function(){
-        var tsOpts={searchField:['text'],maxOptions:300,render:{
+        var tsOpts={searchField:['text'],maxOptions:300,dropdownParent:'body',render:{
             no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
         function initSelects(){

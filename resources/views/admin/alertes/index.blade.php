@@ -141,9 +141,9 @@
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                 <table class="w-full text-left text-sm text-slate-700">
-                    <thead>
+                    <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-100">
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">#</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Type</th>
@@ -255,70 +255,100 @@
                 </table>
             </div>
 
-            {{-- Pagination --}}
-            @if ($items->hasPages())
-                <div class="flex items-center justify-between border-t border-slate-100 px-4 py-3">
-                    <span class="text-xs text-slate-400">
-                        {{ $items->firstItem() }}–{{ $items->lastItem() }} sur {{ $items->total() }} alerte(s)
-                    </span>
-                    {{ $items->links() }}
-                </div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $items->count() }} résultat(s)</div>
         </div>
     </div>
 </div>
 
 {{-- Modal Créer Alerte --}}
-<div id="modal-create-alerte" class="fixed inset-0 z-50 hidden">
-    <div class="flex min-h-screen items-center justify-center p-4">
+<div id="modal-create-alerte" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
         <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="document.getElementById('modal-create-alerte').classList.add('hidden')"></div>
-        <div class="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-            <div class="mb-5 flex items-center justify-between">
+        <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl flex flex-col" style="max-height:calc(100vh - 2rem)">
+
+            {{-- Header fixe --}}
+            <div class="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
                 <h2 class="text-lg font-black text-slate-900">Nouvelle alerte</h2>
                 <button onclick="document.getElementById('modal-create-alerte').classList.add('hidden')" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <form method="POST" action="{{ route('admin.alertes.store') }}">
-                @csrf
-                <input type="hidden" name="type" value="personnalisee">
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Titre *</label>
-                        <input type="text" name="titre" required class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400" placeholder="Titre de l'alerte">
-                    </div>
-                    <div>
-                        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Message</label>
-                        <textarea name="message" rows="3" class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400" placeholder="Description détaillée (optionnel)"></textarea>
-                    </div>
-                    <div>
-                        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Priorité *</label>
-                        <select name="priorite" required class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                            <option value="basse">Basse</option>
-                            <option value="moyenne" selected>Moyenne</option>
-                            <option value="haute">Haute</option>
-                            <option value="critique">Critique</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-5 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
-                    <label class="flex cursor-pointer items-center gap-3">
-                        <input type="checkbox" name="diffuser_email" value="1" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+
+            {{-- Corps scrollable --}}
+            <div class="overflow-y-auto flex-1 px-6 py-5">
+                <form method="POST" action="{{ route('admin.alertes.store') }}" id="form-create-alerte">
+                    @csrf
+                    <input type="hidden" name="type" value="personnalisee">
+                    <div class="space-y-4">
                         <div>
-                            <span class="text-sm font-bold text-slate-700">Diffuser par email</span>
-                            <p class="text-[11px] text-slate-400">Envoyer cette alerte par mail à tous les utilisateurs (agents, chefs, directeurs...)</p>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Titre *</label>
+                            <input type="text" name="titre" required class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400" placeholder="Titre de l'alerte">
                         </div>
-                    </label>
-                </div>
-                <div class="mt-6 flex items-center justify-end gap-3">
-                    <button type="button" onclick="document.getElementById('modal-create-alerte').classList.add('hidden')" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
-                        Annuler
-                    </button>
-                    <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
-                        <i class="fas fa-plus mr-1 text-xs"></i> Créer
-                    </button>
-                </div>
-            </form>
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Message</label>
+                            <textarea name="message" rows="3" class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400" placeholder="Description détaillée (optionnel)"></textarea>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Priorité *</label>
+                            <select name="priorite" required class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                                <option value="basse">Basse</option>
+                                <option value="moyenne" selected>Moyenne</option>
+                                <option value="haute">Haute</option>
+                                <option value="critique">Critique</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {{-- Destinataires --}}
+                    <div class="mt-5 space-y-2">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Destinataires <span class="text-rose-500">*</span></p>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <label id="label-role-tous" class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-white">
+                                <input type="checkbox" name="roles_cibles[]" value="tous" id="role-tous"
+                                       class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                       checked onchange="toggleRolesTous(this)">
+                                <span class="text-sm font-bold text-slate-700">Tous les utilisateurs</span>
+                            </label>
+                            <div class="my-2 border-t border-slate-200"></div>
+                            <div id="roles-individuels" class="grid grid-cols-2 gap-0.5 opacity-40 pointer-events-none">
+                                @foreach ($rolesDisponibles as $valeur => $libelle)
+                                    @if ($valeur !== 'tous')
+                                        <label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-white">
+                                            <input type="checkbox" name="roles_cibles[]" value="{{ $valeur }}"
+                                                   class="role-individuel h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                   onchange="majEtatTous()">
+                                            <span class="text-xs font-semibold text-slate-600">{{ $libelle }}</span>
+                                        </label>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Email --}}
+                    <div class="mt-3 rounded-xl border border-blue-100 bg-blue-50/50 px-4 py-3">
+                        <label class="flex cursor-pointer items-center gap-3">
+                            <input type="checkbox" name="diffuser_email" value="1" class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                            <div>
+                                <span class="text-sm font-bold text-slate-700">Diffuser également par email</span>
+                                <p class="text-[11px] text-slate-400">Envoie un email aux destinataires sélectionnés ci-dessus.</p>
+                            </div>
+                        </label>
+                    </div>
+                </form>
+            </div>
+
+            {{-- Footer fixe avec boutons --}}
+            <div class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
+                <button type="button" onclick="document.getElementById('modal-create-alerte').classList.add('hidden')"
+                    class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
+                    Annuler
+                </button>
+                <button type="submit" form="form-create-alerte"
+                    class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
+                    <i class="fas fa-paper-plane mr-1 text-xs"></i> Envoyer
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -326,6 +356,28 @@
 
 @push('scripts')
 <script>
+// ── Gestion des cases à cocher "Rôles destinataires" ──────────────────
+function toggleRolesTous(checkbox) {
+    var bloc = document.getElementById('roles-individuels');
+    var cases = document.querySelectorAll('.role-individuel');
+    if (checkbox.checked) {
+        bloc.classList.add('opacity-40', 'pointer-events-none');
+        cases.forEach(function (c) { c.checked = false; });
+    } else {
+        bloc.classList.remove('opacity-40', 'pointer-events-none');
+    }
+}
+
+function majEtatTous() {
+    var casesTous = document.getElementById('role-tous');
+    var cases = document.querySelectorAll('.role-individuel');
+    var auMoinsUnCoche = Array.from(cases).some(function (c) { return c.checked; });
+    if (auMoinsUnCoche) {
+        casesTous.checked = false;
+        document.getElementById('roles-individuels').classList.remove('opacity-40', 'pointer-events-none');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     // --- Chart: Alertes 7 jours ---
     if (document.querySelector('#chart-alertes-7j')) {

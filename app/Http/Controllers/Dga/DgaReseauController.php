@@ -106,7 +106,7 @@ class DgaReseauController extends Controller
             );
         }
 
-        $delegations = $query->paginate(15)->withQueryString();
+        $delegations = $query->get();
 
         // Calcul des notes par délégation (géré par noteStats qui intègre le verrou)
         $delegationNotes = [];
@@ -150,7 +150,7 @@ class DgaReseauController extends Controller
             $query->where('delegation_technique_id', $delegId);
         }
 
-        $caisses     = $query->paginate(15)->withQueryString();
+        $caisses     = $query->get();
         $delegations = DelegationTechnique::orderBy('region')->get();
 
         $caisseNotes = [];
@@ -196,7 +196,7 @@ class DgaReseauController extends Controller
             $query->where('caisse_id', $caisseId);
         }
 
-        $agences = $query->paginate(15)->withQueryString();
+        $agences = $query->get();
         $caisses = Caisse::orderBy('nom')->get();
 
         $agenceNotes = [];
@@ -238,7 +238,7 @@ class DgaReseauController extends Controller
             $query->where('agence_id', $agenceId);
         }
 
-        $guichets = $query->paginate(15)->withQueryString();
+        $guichets = $query->get();
         $agences  = Agence::orderBy('nom')->get();
 
         $guichetNotes = [];

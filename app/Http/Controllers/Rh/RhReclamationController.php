@@ -12,20 +12,48 @@ use Illuminate\Http\Request;
 
 class RhReclamationController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $evaluations = Evaluation::query()
+        $search  = trim((string) $request->query('search', ''));
+        $statut  = trim((string) $request->query('statut', ''));
+
+        $query = Evaluation::query()
             ->where(function ($q) {
                 $q->whereIn('statut', ['refuse', 'reclamation'])
                   ->orWhereNotNull('statut_reclamation');
             })
-            ->with(['evaluable', 'evaluateur', 'identification'])
-            ->latest()
-            ->get();
+            ->with(['evaluable', 'evaluateur', 'identification']);
 
-        $enAttente = $evaluations->where('statut_reclamation', 'en_attente')->count();
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('identification', fn ($i) => $i->where('nom_prenom', 'like', "%{$search}%"))
+                  ->orWhereHas('evaluateur', fn ($e) => $e->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('evaluable', fn ($a) =>
+                      $a->where('nom', 'like', "%{$search}%")->orWhere('prenom', 'like', "%{$search}%")
+                  );
+            });
+        }
 
-        return view('rh.reclamations.index', compact('evaluations', 'enAttente'));
+        if ($statut !== '') {
+            if ($statut === 'sans_reclamation') {
+                $query->whereNull('statut_reclamation');
+            } else {
+                $query->where('statut_reclamation', $statut);
+            }
+        }
+
+        $evaluations = $query->latest()->get();
+        $enAttente   = Evaluation::where(function ($q) {
+            $q->whereIn('statut', ['refuse', 'reclamation'])->orWhereNotNull('statut_reclamation');
+        })->where('statut_reclamation', 'en_attente')->count();
+
+        return view('rh.reclamations.index', compact('evaluations', 'enAttente', 'search', 'statut'));
+    }
+
+    public function show(Evaluation $evaluation): View
+    {
+        $evaluation->load(['evaluable', 'evaluateur', 'identification']);
+        return view('rh.reclamations.show', compact('evaluation'));
     }
 
     public function repondre(Request $request, Evaluation $evaluation): RedirectResponse
@@ -52,7 +80,7 @@ class RhReclamationController extends Controller
                     'DG'                                                           => route('dg.sub-evaluations.show', $evaluation),
                     'DGA'                                                          => route('dga.sub-evaluations.show', $evaluation),
                     'Chef_Service', 'Chef_Agence', 'Chef_Guichet'                 => route('chef.evaluations.show', $evaluation),
-                    'Directeur_Direction', 'Directeur_Technique', 'Directeur_Caisse' => route('chef.evaluations.show', $evaluation),
+                    'Directeur_Direction', 'Directeur_Technique', 'Directeur_Caisse' => route('directeur.evaluations.show', $evaluation),
                     'Assistante_Dg'                                               => route('assistante.secretaire.evaluations.show', $evaluation),
                     default                                                        => null,
                 };

@@ -181,7 +181,7 @@ class DgaNotesReseauController extends Controller
             );
         }
 
-        $evaluations = $query->paginate(20)->withQueryString();
+        $evaluations = $query->get();
 
         $filterDelegations = DelegationTechnique::orderBy('region')->get();
         $filterCaisses     = $delegId

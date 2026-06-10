@@ -11,7 +11,13 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-[0.25em] text-violet-300">Espace DGA · Subordonnés</p>
                 <h1 class="mt-1 text-2xl font-black text-white leading-tight">{{ $user->name }}</h1>
-                <p class="mt-0.5 text-sm text-violet-100/80">{{ str_replace('_', ' ', $user->role) }}</p>
+                <p class="mt-0.5 text-sm text-violet-100/80">
+                    @if($user->role === 'Secretaire_Assistante' && ($entite?->dga_secretaire_agent_id == $user->agent_id))
+                        Secrétaire du DGA
+                    @else
+                        {{ str_replace('_', ' ', $user->role) }}
+                    @endif
+                </p>
             </div>
             <div class="flex shrink-0 flex-wrap items-center gap-2">
                 <a href="{{ route('dga.subordonnes.index') }}"

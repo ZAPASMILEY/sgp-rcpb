@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use App\Models\Direction;
+use App\Models\Entite;
 use App\Models\Service;
 use App\Models\User;
 use App\Services\AgentAccountService;
@@ -32,23 +33,40 @@ class DirectionDgaController extends Controller
     /** Formulaire de configuration du DGA (directeur de la Direction Générale Adjointe). */
     public function configurerDga(): View|RedirectResponse
     {
-        $direction = Direction::where('nom', 'Direction Générale Adjointe')->first();
-        if (! $direction) {
-            return redirect()->route('admin.direction-dga.index')
-                ->with('error', 'La Direction Générale Adjointe n\'existe pas encore. Créez-la d\'abord via le menu Directions.');
+        $entite = Entite::latest()->first();
+        if (! $entite) {
+            return redirect()->route('admin.entites.index')
+                ->with('error', 'Configurez d\'abord la faîtière avant de configurer le DGA.');
         }
 
-        $candidats = Agent::where('role', 'DGA')
+        // Crée automatiquement la direction si elle n'existe pas encore
+        $direction = Direction::firstOrCreate(
+            ['nom' => 'Direction Générale Adjointe', 'entite_id' => $entite->id],
+        );
+
+        $direction->load(['directeur', 'secretaire']);
+
+        $dgaCandidats = Agent::where('role', 'DGA')
             ->orderBy('nom')->orderBy('prenom')
             ->get();
 
-        return view('admin.direction-dga.configurer-dga', compact('direction', 'candidats'));
+        $secCandidats = Agent::where('role', 'Secrétaire de Direction')
+            ->where(function ($q) use ($direction): void {
+                $q->whereNull('direction_id')->orWhere('direction_id', $direction->id);
+            })
+            ->orderBy('nom')->orderBy('prenom')
+            ->get();
+
+        return view('admin.direction-dga.configurer-dga', compact('direction', 'dgaCandidats', 'secCandidats'));
     }
 
     /** Enregistre le DGA comme directeur de la Direction Générale Adjointe. */
     public function stockerDga(Request $request): RedirectResponse
     {
-        $direction = Direction::where('nom', 'Direction Générale Adjointe')->firstOrFail();
+        $entite    = Entite::latest()->firstOrFail();
+        $direction = Direction::where('nom', 'Direction Générale Adjointe')
+            ->where('entite_id', $entite->id)
+            ->firstOrFail();
 
         $validated = $request->validate([
             'dga_agent_id' => ['required', 'integer', 'exists:agents,id'],
@@ -70,6 +88,9 @@ class DirectionDgaController extends Controller
         $agent = Agent::findOrFail($validated['dga_agent_id']);
         $agent->update(['direction_id' => $direction->id, 'poste' => 'Directeur Général Adjoint']);
         $this->accounts->ensureAccount($agent->fresh());
+
+        // Synchronise entites.dga_agent_id pour que le DG voie le DGA dans son espace
+        $entite->update(['dga_agent_id' => $validated['dga_agent_id']]);
 
         return redirect()
             ->route('admin.direction-dga.index')
@@ -114,7 +135,15 @@ class DirectionDgaController extends Controller
                 ->get(['id', 'nom', 'prenom', 'role'])
             : collect();
 
-        return view('admin.direction-dga.index', compact('direction', 'services', 'agentsDirects', 'agentsDisponibles'));
+        // Chefs de service disponibles (sans service) pour la création / affectation
+        $dejaChefs = Service::whereNotNull('chef_agent_id')->pluck('chef_agent_id');
+        $chefsDisponibles = Agent::where('role', 'Chef de Service')
+            ->whereNull('service_id')
+            ->whereNotIn('id', $dejaChefs)
+            ->orderBy('nom')->orderBy('prenom')
+            ->get(['id', 'nom', 'prenom', 'matricule']);
+
+        return view('admin.direction-dga.index', compact('direction', 'services', 'agentsDirects', 'agentsDisponibles', 'chefsDisponibles'));
     }
 
     /** Crée un nouveau service dans la Direction Générale Adjointe. */
@@ -124,13 +153,25 @@ class DirectionDgaController extends Controller
         abort_if(! $direction, 404, 'Direction DGA introuvable.');
 
         $validated = $request->validate([
-            'nom' => ['required', 'string', 'max:150'],
+            'nom'           => ['required', 'string', 'max:150'],
+            'chef_agent_id' => ['nullable', 'integer', 'exists:agents,id'],
         ], ['nom.required' => 'Le nom du service est obligatoire.']);
 
-        Service::create([
-            'nom'          => $validated['nom'],
-            'direction_id' => $direction->id,
+        $service = Service::create([
+            'nom'           => $validated['nom'],
+            'direction_id'  => $direction->id,
+            'chef_agent_id' => $validated['chef_agent_id'] ?? null,
         ]);
+
+        if (! empty($validated['chef_agent_id'])) {
+            $chef = Agent::findOrFail($validated['chef_agent_id']);
+            $chef->update([
+                'direction_id' => $direction->id,
+                'service_id'   => $service->id,
+                'poste'        => 'Chef du Service ' . $service->nom,
+            ]);
+            $this->accounts->ensureAccount($chef->fresh());
+        }
 
         return back()->with('status', 'Service « ' . $validated['nom'] . ' » créé avec succès.');
     }
@@ -156,6 +197,10 @@ class DirectionDgaController extends Controller
     {
         $direction = $this->getDirection();
         abort_if(! $direction || $service->direction_id !== $direction->id, 403);
+
+        if (! $service->chef_agent_id) {
+            return back()->with('error', 'Impossible d\'ajouter un agent : le service « ' . $service->nom . ' » n\'a pas encore de chef.');
+        }
 
         $validated = $request->validate([
             'agent_id' => ['required', 'integer', 'exists:agents,id'],
@@ -275,8 +320,15 @@ class DirectionDgaController extends Controller
         $agent->update(['direction_id' => $direction->id, 'poste' => 'Secrétaire de la Direction ' . $direction->nom]);
         $this->accounts->ensureAccount($agent);
 
+        // Synchronise entites.dga_secretaire_agent_id pour que le DGA voie son secrétaire
+        // dans ses subordonnés (utilisé par ResolvesEntite::getDgaSecretaireUser)
+        $entite = Entite::latest()->first();
+        if ($entite) {
+            $entite->update(['dga_secretaire_agent_id' => $agent->id]);
+        }
+
         return redirect()
-            ->route('admin.direction-dga.index')
+            ->route('admin.direction-dga.configurer')
             ->with('status', $agent->prenom.' '.$agent->nom.' affecté(e) comme secrétaire de la Direction DGA.');
     }
 }

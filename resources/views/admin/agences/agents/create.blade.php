@@ -26,7 +26,7 @@
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Affecter un agent</h1>
                         <p class="mt-2 text-sm text-slate-600">Sélectionnez un agent (Fonction: Agent) à rattacher à cette agence.</p>
                     </div>
-                    <a href="{{ route('admin.agences.agents.index', $agence) }}" class="ent-btn ent-btn-soft">Retour</a>
+                    <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour</a>
                 </div>
 
                 @if ($errors->any())

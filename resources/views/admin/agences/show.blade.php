@@ -18,7 +18,7 @@
                 @endif
                 Agence
             </p>
-            <a href="{{ route('admin.agences.index') }}"
+            <a href="{{ url()->previous() }}"
                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50">
                 <i class="fas fa-arrow-left text-[10px]"></i> Retour
             </a>

@@ -27,8 +27,7 @@ class DirectionController extends Controller
         $directeurs = Direction::query()
             ->with(['directeur', 'entite'])
             ->latest()
-            ->paginate(12)
-            ->withQueryString();
+            ->get();
 
         return view('admin.delegations_techniques.directeurs_index', [
             'directeurs' => $directeurs,
@@ -66,8 +65,7 @@ class DirectionController extends Controller
                 });
             })
             ->latest()
-            ->paginate(12)
-            ->withQueryString();
+            ->get();
 
         return view('admin.delegations_techniques.services_index', [
             'services' => $services,
@@ -89,8 +87,7 @@ class DirectionController extends Controller
             ->with(['entite', 'secretaire'])
             ->whereNotNull('secretaire_agent_id')
             ->latest()
-            ->paginate(12)
-            ->withQueryString();
+            ->get();
 
         return view('admin.delegations_techniques.secretaires_index', [
             'secretaires' => $secretaires,
@@ -113,8 +110,7 @@ class DirectionController extends Controller
                 $query->where('delegation_technique_id', $delegationId);
             })
             ->latest()
-            ->paginate(12)
-            ->withQueryString();
+            ->get();
 
         return view('admin.delegations_techniques.agents_index', [
             'agents' => $agents,
@@ -398,17 +394,26 @@ class DirectionController extends Controller
         // ou à l'un de ses services (service_id → service.direction_id).
         $serviceIds = $services->pluck('id');
 
+        // Exclure le directeur et la secrétaire : ils sont déjà affichés dans les cards en haut
+        $exclus = array_values(array_filter([
+            $direction->directeur_agent_id,
+            $direction->secretaire_agent_id,
+        ]));
+
         $agents = Agent::query()
             ->where(function ($q) use ($direction, $serviceIds) {
                 $q->where('direction_id', $direction->id)
                   ->orWhereIn('service_id', $serviceIds);
             })
+            ->when($exclus, fn ($q) => $q->whereNotIn('id', $exclus))
+            ->whereNotNull('service_id')
             // Filtre additionnel si un service est sélectionné
             ->when($serviceId, fn ($q) => $q->where('service_id', $serviceId))
             ->with('service')           // évite N+1 pour afficher le service de chaque agent
             ->orderBy('nom')
             ->orderBy('prenom')
-            ->get(['id', 'nom', 'prenom', 'role', 'email', 'service_id', 'direction_id']);
+            ->paginate(15, ['id', 'nom', 'prenom', 'poste', 'email', 'service_id', 'direction_id'])
+            ->withQueryString();
 
         return view('admin.directions.show', [
             'direction'       => $direction,

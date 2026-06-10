@@ -180,7 +180,7 @@
             <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
                 <h2 class="text-sm font-black uppercase tracking-widest text-slate-700">Évaluations</h2>
                 <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                    {{ $evaluations->total() }} résultat{{ $evaluations->total() > 1 ? 's' : '' }}
+                    {{ $evaluations->count() }} résultat(s)
                 </span>
             </div>
 
@@ -190,9 +190,9 @@
                     <p class="mt-4 text-sm font-semibold text-slate-400">Aucune évaluation trouvée.</p>
                 </div>
             @else
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="w-full text-sm">
-                        <thead>
+                        <thead class="sticky top-0 z-10">
                             <tr class="border-b border-slate-100 bg-slate-50 text-left">
                                 <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Agent évalué</th>
                                 <th class="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Poste / Structure</th>
@@ -271,11 +271,7 @@
                         </tbody>
                     </table>
                 </div>
-                @if($evaluations->hasPages())
-                    <div class="border-t border-slate-100 px-5 py-4">
-                        {{ $evaluations->links() }}
-                    </div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $evaluations->count() }} résultat(s)</div>
             @endif
         </div>
 

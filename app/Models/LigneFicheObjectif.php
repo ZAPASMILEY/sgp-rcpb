@@ -19,6 +19,7 @@ class LigneFicheObjectif extends Model
         'note_obtenue',
         'avancement_percentage',
         'statut',
+        'motif',
     ];
 
     protected $casts = [

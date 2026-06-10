@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Assistante;
 use App\Http\Controllers\Controller;
 use App\Models\Alerte;
 use App\Models\Annee;
+use App\Models\Entite;
 use App\Models\Evaluation;
 use App\Models\FicheObjectif;
 use App\Models\User;
@@ -46,10 +47,16 @@ class AssistanteController extends Controller
         }
     }
 
-    /** Retourne la secrétaire de l'assistante ou null si non configurée. */
+    /** Retourne la secrétaire de l'assistante ou null si non configurée.
+     *  Exclut la secrétaire du DGA (identifiée via entites.dga_secretaire_agent_id). */
     private function findSecretaire(): ?User
     {
-        return User::where('role', 'Secretaire_Assistante')->first();
+        $entite = Entite::latest()->first();
+        return User::where('role', 'Secretaire_Assistante')
+            ->when($entite?->dga_secretaire_agent_id, fn ($q) =>
+                $q->where('agent_id', '!=', $entite->dga_secretaire_agent_id)
+            )
+            ->first();
     }
 
     /** Retourne la secrétaire ou redirige avec une erreur si absente. */
@@ -119,7 +126,11 @@ class AssistanteController extends Controller
             ->orderByDesc('date')
             ->get();
 
-        return view('subordonne.secretaire', compact('secretaire', 'tab', 'evaluations', 'fiches'));
+        $ficheBlocksNew    = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->whereNotIn('statut', ['refusee'])->exists();
+        $ficheAcceptee     = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->where('statut', 'acceptee')->exists();
+        $evaluationEnCours = Evaluation::where('evaluable_type', User::class)->where('evaluable_id', $secretaire->id)->where('evaluateur_id', Auth::id())->whereIn('statut', ['soumis', 'brouillon'])->exists();
+
+        return view('subordonne.secretaire', compact('secretaire', 'tab', 'evaluations', 'fiches', 'ficheBlocksNew', 'ficheAcceptee', 'evaluationEnCours'));
     }
 
     // ── Évaluations ────────────────────────────────────────────────────────
@@ -480,6 +491,7 @@ class AssistanteController extends Controller
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
             'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
+            'created_by'            => \Illuminate\Support\Facades\Auth::id(),
         ]);
 
         foreach ($validated['objectifs'] as $desc) {
@@ -555,7 +567,7 @@ class AssistanteController extends Controller
             'fiche'        => $fiche,
             'direction'    => (object) ['nom' => 'Direction Générale'],
             'updateRoute'  => 'assistante.secretaire.objectifs.update',
-            'cancelUrl'    => route('assistante.secretaire.objectifs.show', $fiche),
+            'cancelUrl'    => route('assistante.secretaire', ['tab' => 'objectifs']),
             'cibleLabel'   => 'Secrétaire — '.($secretaire?->name ?? '—'),
             'assigneeUser' => $secretaire,
             'layout'       => 'layouts.subordonne',

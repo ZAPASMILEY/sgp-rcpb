@@ -13,6 +13,12 @@
         $isModalMode = request()->header('Sec-Fetch-Dest') === 'iframe' || request()->boolean('modal');
         $showSidebar = !$isModalMode && !request()->routeIs('login');
 
+        // ── Badges sidebar ──────────────────────────────────────────────────
+        $_reclamationsBadge = \App\Models\Evaluation::where('statut', 'reclamation')
+            ->where(fn ($q) => $q->whereNull('statut_reclamation')
+                ->orWhere('statut_reclamation', '!=', 'maintenu'))
+            ->count();
+
         $menuSections = [
             [
                 'title' => '1. Pilotage',
@@ -20,7 +26,7 @@
                     ['route' => 'pca.dashboard',          'icon' => 'fas fa-gauge-high',    'label' => 'Tableau de bord'],
                     ['route' => 'pca.objectifs.index',    'icon' => 'fas fa-bullseye',       'label' => 'Objectifs'],
                     ['route' => 'pca.statistiques.index', 'icon' => 'fas fa-chart-column',   'label' => 'Statistiques'],
-                    ['route' => 'pca.evaluations.index',  'icon' => 'fas fa-clipboard-check','label' => 'Evaluations'],
+                    ['route' => 'pca.evaluations.index',  'icon' => 'fas fa-clipboard-check','label' => 'Evaluations', 'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'],
                     ['route' => 'pca.comparaison.index',  'icon' => 'fas fa-code-compare',   'label' => 'Comparaison inter-période'],
                 ],
             ],
@@ -378,7 +384,13 @@
                         @endphp
                         <a href="{{ route($item['route']) }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                             <i class="{{ $item['icon'] }}"></i>
-                            <span>{{ $item['label'] }}</span>
+                            <span class="flex-1">{{ $item['label'] }}</span>
+                            @if(($item['badge'] ?? 0) > 0)
+                                <span class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                                      title="{{ $item['badgeTip'] ?? ($item['badge'] . ' en attente') }}">
+                                    {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                                </span>
+                            @endif
                         </a>
                     @endforeach
                 @endforeach
@@ -624,7 +636,7 @@
     @stack('scripts')
     <script>
     (function(){
-        var tsOpts={searchField:['text'],maxOptions:300,render:{
+        var tsOpts={searchField:['text'],maxOptions:300,dropdownParent:'body',render:{
             no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
         function initSelects(){

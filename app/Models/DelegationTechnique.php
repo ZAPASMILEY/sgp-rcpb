@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * DelegationTechnique — Bureau régional rattaché à une faîtière (Entite).
@@ -83,5 +84,10 @@ class DelegationTechnique extends Model
     public function agents(): HasMany
     {
         return $this->hasMany(Agent::class);
+    }
+
+    public function evaluations(): MorphMany
+    {
+        return $this->morphMany(Evaluation::class, 'evaluable');
     }
 }

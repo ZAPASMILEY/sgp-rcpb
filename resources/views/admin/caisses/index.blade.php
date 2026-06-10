@@ -83,9 +83,9 @@
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                 <table class="w-full text-left text-sm text-slate-700">
-                    <thead>
+                    <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-100">
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">N</th>
                             <th class="px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Caisse</th>
@@ -103,7 +103,7 @@
             data-search-content="{{ strtolower(trim($caisse->nom.' '.($caisse->directeur?->prenom).' '.($caisse->directeur?->nom).' '.($caisse->directeur?->email).' '.$caisse->secretariat_telephone.' '.($caisse->delegationTechnique?->region ?? '').' '.($caisse->delegationTechnique?->ville ?? ''))) }}">
             
             {{-- Numéro d'index --}}
-            <td class="whitespace-nowrap px-3 py-3">{{ ($caisses->firstItem() ?? 1) + $loop->index }}</td>
+            <td class="whitespace-nowrap px-3 py-3">{{ $loop->iteration }}</td>
             
             {{-- Nom de la Caisse --}}
             <td class="whitespace-nowrap px-3 py-3 font-semibold text-slate-800">{{ $caisse->nom }}</td>
@@ -199,11 +199,7 @@
                 </table>
             </div>
 
-            @if ($caisses->hasPages())
-                <div class="mt-6 border-t border-slate-100 pt-4">
-                    {{ $caisses->links() }}
-                </div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $caisses->count() }} résultat(s)</div>
         </div>
     </div>
 </div>

@@ -26,6 +26,17 @@
                         <i class="fas fa-times text-xs"></i> Réinitialiser
                     </a>
                 @endif
+                @if ($objectifsEnabled && !$ficheBlocksNew)
+                    <a href="{{ route('pca.objectifs.create') }}"
+                       class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-50">
+                        <i class="fas fa-plus text-xs"></i> Nouvel objectif
+                    </a>
+                @else
+                    <span title="{{ !$objectifsEnabled ? ($objectifsDisabledMessage ?: 'Objectifs désactivés.') : 'Une fiche d\'objectifs est déjà en cours ou acceptée.' }}"
+                          class="inline-flex cursor-not-allowed select-none items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-emerald-200/50">
+                        <i class="fas fa-plus text-xs"></i> Nouvel objectif
+                    </span>
+                @endif
             </div>
         </div>
     </div>
@@ -168,7 +179,7 @@
             {{-- Vue rapide --}}
             <div class="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-100">
                 <span class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
-                    {{ $fiches->count() }} fiche(s) · page {{ $fiches->currentPage() }}/{{ $fiches->lastPage() }}
+                    {{ $fiches->count() }} fiche(s)
                 </span>
                 @if ($activeStatut || $filters['search'])
                     <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
@@ -209,7 +220,7 @@
                     </p>
                 </div>
                 <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-500">
-                    {{ $fiches->total() }} fiche(s)
+                    {{ $fiches->count() }} fiche(s)
                 </span>
             </div>
 
@@ -421,12 +432,7 @@
                 </div>
             @endforelse
 
-            {{-- Pagination --}}
-            @if ($fiches->hasPages())
-                <div class="border-t border-slate-100 px-6 py-4">
-                    {{ $fiches->withQueryString()->links() }}
-                </div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $fiches->count() }} résultat(s)</div>
         </div>
 
         </div>

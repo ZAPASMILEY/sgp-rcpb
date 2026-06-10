@@ -27,6 +27,9 @@ $evalCards = [
 <form method="GET" action="{{ request()->url() }}"
       class="mb-5 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
     <input type="hidden" name="tab" value="evaluations">
+    @if(!empty($filters['conseillerId']))
+        <input type="hidden" name="conseiller_id" value="{{ $filters['conseillerId'] }}">
+    @endif
     <i class="fas fa-filter text-xs text-slate-400 mr-1"></i>
     <select name="statut"
             class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-100">
@@ -150,8 +153,8 @@ $evalCards = [
                             <div class="inline-flex items-center gap-1">
                                 <a href="{{ route('dg.sub-evaluations.show', $evaluation) }}"
                                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-100 hover:text-blue-600"
-                                   title="Voir">
-                                    <i class="fas fa-eye text-xs"></i>
+                                   title="{{ $evaluation->statut === 'brouillon' ? 'Modifier' : 'Voir' }}">
+                                    <i class="fas fa-{{ $evaluation->statut === 'brouillon' ? 'pen' : 'eye' }} text-xs"></i>
                                 </a>
                                 @if ($evaluation->statut !== 'brouillon')
                                     <a href="{{ route('dg.sub-evaluations.pdf', $evaluation) }}"
@@ -159,6 +162,17 @@ $evalCards = [
                                        title="PDF" target="_blank">
                                         <i class="fas fa-file-pdf text-xs"></i>
                                     </a>
+                                @endif
+                                @if (in_array($evaluation->statut, ['brouillon', 'a_reviser']))
+                                    <form method="POST" action="{{ route('dg.sub-evaluations.destroy', $evaluation) }}"
+                                          onsubmit="return confirm('Supprimer définitivement cette évaluation ?')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-400 shadow-sm transition hover:bg-rose-50 hover:text-rose-600"
+                                                title="Supprimer">
+                                            <i class="fas fa-trash text-xs"></i>
+                                        </button>
+                                    </form>
                                 @endif
                             </div>
                         </td>

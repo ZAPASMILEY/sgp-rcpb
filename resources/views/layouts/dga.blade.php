@@ -1,5 +1,14 @@
 @php
     $user = auth()->user();
+
+    // ── Badges sidebar ──────────────────────────────────────────────────────
+    $_dossierBadge      = $user ? $user->alertesNonLues()->where('lien', 'like', '%mon-espace%')->count() : 0;
+    $_reclamationsBadge = $user ? \App\Models\Evaluation::where('evaluateur_id', $user->id)
+        ->where('statut', 'reclamation')
+        ->where(fn ($q) => $q->whereNull('statut_reclamation')
+            ->orWhere('statut_reclamation', '!=', 'maintenu'))
+        ->count() : 0;
+
     $menuSections = [
         [
             'title' => 'Mon espace',
@@ -10,7 +19,7 @@
         [
             'title' => 'Mon dossier',
             'items' => [
-                ['route' => 'dga.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon espace'],
+                ['route' => 'dga.mon-espace', 'icon' => 'fas fa-folder-open', 'label' => 'Mon espace', 'badge' => $_dossierBadge, 'badgeTip' => 'Notification(s) non lue(s)'],
             ],
         ],
         [
@@ -22,9 +31,9 @@
         [
             'title' => 'Mes subordonnés',
             'items' => [
-                ['route' => 'dga.subordonnes.index',    'icon' => 'fas fa-users',         'label' => 'Directeurs Techniques'],
+                ['route' => 'dga.subordonnes.index',    'icon' => 'fas fa-users',         'label' => 'Directeurs Techniques', 'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'],
                 ['route' => 'dga.secretaire',           'icon' => 'fas fa-user-tie',      'label' => 'Ma Secrétaire'],
-                ['route' => 'dga.chefs-service.index',  'icon' => 'fas fa-user-shield',   'label' => 'Chefs de Service'],
+                ['route' => 'dga.chefs-service.index',  'icon' => 'fas fa-user-shield',   'label' => 'Chefs de Service',      'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'],
                 ['route' => 'dga.notes-reseau.index',   'icon' => 'fas fa-chart-bar',     'label' => 'Notes du Réseau'],
             ],
         ],
@@ -170,7 +179,13 @@
                     @endphp
                     <a href="{{ $link }}" class="nav-link {{ $isActive ? 'active' : '' }}">
                         <i class="{{ $item['icon'] }}"></i>
-                        <span>{{ $item['label'] }}</span>
+                        <span class="flex-1">{{ $item['label'] }}</span>
+                        @if(($item['badge'] ?? 0) > 0)
+                            <span class="ml-1 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm"
+                                  title="{{ $item['badgeTip'] ?? ($item['badge'] . ' en attente') }}">
+                                {{ $item['badge'] > 99 ? '99+' : $item['badge'] }}
+                            </span>
+                        @endif
                     </a>
                 @endforeach
             @endforeach
@@ -245,7 +260,7 @@
     @stack('scripts')
     <script>
     (function(){
-        var tsOpts={searchField:['text'],maxOptions:300,render:{
+        var tsOpts={searchField:['text'],maxOptions:300,dropdownParent:'body',render:{
             no_results:function(){return'<div style="padding:.6rem 1rem;color:#94a3b8;font-size:.8rem">Aucun résultat</div>';}
         }};
         function initSelects(){

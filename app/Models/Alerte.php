@@ -57,6 +57,15 @@ class Alerte extends Model
      */
     public static function notifier(int $userId, string $titre, string $message = '', string $priorite = 'moyenne', ?string $lien = null): void
     {
+        // Normaliser le lien : toujours stocker un chemin relatif
+        // pour éviter les redirections vers 127.0.0.1 ou un domaine périmé
+        if ($lien !== null) {
+            $parsed = parse_url($lien);
+            $lien   = ($parsed['path'] ?? '/')
+                . (isset($parsed['query'])    ? '?' . $parsed['query']    : '')
+                . (isset($parsed['fragment']) ? '#' . $parsed['fragment'] : '');
+        }
+
         $alerte = static::create([
             'type'       => 'systeme',
             'priorite'   => $priorite,

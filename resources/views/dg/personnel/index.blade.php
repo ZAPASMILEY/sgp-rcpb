@@ -152,7 +152,7 @@
                         <i class="fas fa-xmark mr-1"></i>Réinitialiser
                     </a>
                 @endif
-                <span class="ml-auto text-xs text-slate-400">{{ $evaluations->total() }} résultat(s)</span>
+                <span class="ml-auto text-xs text-slate-400">{{ $evaluations->count() }} résultat(s)</span>
             </div>
         </form>
 
@@ -162,7 +162,7 @@
                 <h2 class="text-sm font-black uppercase tracking-widest text-slate-700">
                     Liste du personnel évalué
                 </h2>
-                <span class="text-xs text-slate-400">Page {{ $evaluations->currentPage() }} / {{ $evaluations->lastPage() }}</span>
+                <span class="text-xs text-slate-400">{{ $evaluations->count() }} résultat(s)</span>
             </div>
 
             @if ($evaluations->isEmpty())
@@ -172,9 +172,9 @@
                     <a href="{{ route('dg.personnel') }}" class="mt-3 inline-block text-sm font-semibold text-emerald-600 hover:underline">Réinitialiser les filtres</a>
                 </div>
             @else
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="min-w-full text-left text-sm text-slate-700">
-                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400 border-b border-slate-100">
+                        <thead class="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-400 border-b border-slate-100 sticky top-0 z-10">
                             <tr>
                                 <th class="px-4 py-3">#</th>
                                 <th class="px-4 py-3">Nom complet</th>
@@ -232,7 +232,7 @@
                                         default => null,
                                     };
 
-                                    $rank = ($evaluations->currentPage() - 1) * $evaluations->perPage() + $i + 1;
+                                    $rank = $i + 1;
                                 @endphp
                                 <tr class="hover:bg-slate-50/70 transition-colors">
                                     {{-- Rang --}}
@@ -309,14 +309,7 @@
                     </table>
                 </div>
 
-                @if ($evaluations->hasPages())
-                    <div class="border-t border-slate-100 px-6 py-4 flex items-center justify-between gap-4">
-                        <p class="text-xs text-slate-400">
-                            {{ $evaluations->firstItem() }}–{{ $evaluations->lastItem() }} sur {{ $evaluations->total() }} résultats
-                        </p>
-                        {{ $evaluations->withQueryString()->links() }}
-                    </div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $evaluations->count() }} résultat(s)</div>
             @endif
         </section>
 

@@ -38,25 +38,27 @@
                 @endif
             </div>
             <div class="flex shrink-0 flex-wrap items-center gap-2 mt-2 sm:mt-0">
-                @if($evaluationsEnabled)
+                @if($evaluationsEnabled && $ficheAcceptee && !$evaluationEnCours)
                     <a href="{{ route('dg.directions.evaluations.create', $direction) }}"
                        class="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-black text-white shadow transition hover:bg-emerald-400">
                         <i class="fas fa-pen-to-square text-xs"></i>Évaluer
                     </a>
                 @else
-                    <span class="ent-btn-disabled-dark"><i class="fas fa-pen-to-square text-xs"></i>Évaluer</span>
+                    <span title="{{ $evaluationEnCours ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$ficheAcceptee ? 'Aucune fiche d\'objectifs acceptée pour ce directeur.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}" class="ent-btn-disabled-dark"><i class="fas fa-pen-to-square text-xs"></i>Évaluer</span>
                 @endif
-                @if($objectifsEnabled)
+                @if($objectifsEnabled && !$ficheBlocksNew)
                     <a href="{{ route('dg.directions.objectifs.create', $direction) }}"
                        class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
                         <i class="fas fa-bullseye text-xs"></i>Objectifs
                     </a>
                 @else
-                    <span class="ent-btn-disabled-dark"><i class="fas fa-bullseye text-xs"></i>Objectifs</span>
+                    <span title="{{ $ficheBlocksNew ? 'Une fiche d\'objectifs est déjà assignée à ce directeur.' : ($objectifsDisabledMessage ?: 'Assignation désactivée.') }}" class="ent-btn-disabled-dark"><i class="fas fa-bullseye text-xs"></i>Objectifs</span>
                 @endif
             </div>
         </div>
     </div>
+
+    @include('layouts._features_notice')
 
     <div class="px-4 pt-6 lg:px-8">
     <div class="w-full flex flex-col gap-5">
@@ -96,12 +98,12 @@
             <section class="px-6 py-6 lg:px-8">
                 <div class="flex items-center justify-between gap-4 mb-4">
                     <h2 class="text-lg font-black text-slate-900">Évaluations créées</h2>
-                    @if($evaluationsEnabled)
+                    @if($evaluationsEnabled && $ficheAcceptee && !$evaluationEnCours)
                         <a href="{{ route('dg.directions.evaluations.create', $direction) }}" class="ent-btn ent-btn-primary">
                             <i class="fas fa-plus mr-2"></i>Nouvelle évaluation
                         </a>
                     @else
-                        <span title="Fonctionnalité désactivée par l'administrateur"
+                        <span title="{{ $evaluationEnCours ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$ficheAcceptee ? 'Aucune fiche d\'objectifs acceptée pour ce directeur.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}"
                               class="ent-btn ent-btn-primary cursor-not-allowed opacity-75 select-none pointer-events-none">
                             <i class="fas fa-plus mr-2"></i>Nouvelle évaluation
                         </span>
@@ -222,12 +224,12 @@
             <section class="px-6 py-6 lg:px-8">
                 <div class="flex items-center justify-between gap-4 mb-4">
                     <h2 class="text-lg font-black text-slate-900">Fiches d'objectifs assignées</h2>
-                    @if($objectifsEnabled)
+                    @if($objectifsEnabled && !$ficheBlocksNew)
                         <a href="{{ route('dg.directions.objectifs.create', $direction) }}" class="ent-btn ent-btn-primary">
                             <i class="fas fa-plus mr-2"></i>Assigner des objectifs
                         </a>
                     @else
-                        <span title="Fonctionnalité désactivée par l'administrateur"
+                        <span title="{{ $ficheBlocksNew ? 'Une fiche d\'objectifs est déjà assignée à ce directeur.' : ($objectifsDisabledMessage ?: 'Assignation désactivée.') }}"
                               class="ent-btn ent-btn-primary cursor-not-allowed opacity-75 select-none pointer-events-none">
                             <i class="fas fa-plus mr-2"></i>Assigner des objectifs
                         </span>

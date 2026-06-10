@@ -38,13 +38,15 @@
                     <div class="space-y-0.5">
                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">DIRECTEUR DE CAISSE</p>
                         <h2 class="text-base font-bold text-slate-950">
-                            {{ $caisse->directeur ? $caisse->directeur->prenom . ' ' . $caisse->directeur->nom : 'Sia Ameh' }}
+                            {{ $caisse->directeur ? trim($caisse->directeur->prenom . ' ' . $caisse->directeur->nom) : '—' }}
                         </h2>
                         <p class="text-xs text-slate-500 font-medium">Directeur de Caisse</p>
+                        @if($caisse->directeur?->email)
                         <div class="flex items-center gap-2 pt-1 text-xs text-cyan-600">
                             <i class="fas fa-envelope text-[10px]"></i>
-                            <span class="hover:underline text-[11px] font-medium">{{ $caisse->directeur?->email ?: 'amehsia@gmail.com' }}</span>
+                            <span class="text-[11px] font-medium">{{ $caisse->directeur->email }}</span>
                         </div>
+                        @endif
                     </div>
                 </div>
 
@@ -56,13 +58,15 @@
                     <div class="space-y-0.5">
                         <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">SECRÉTAIRE DE DIRECTION</p>
                         <h2 class="text-base font-bold text-slate-950">
-                            {{ $caisse->secretaire ? $caisse->secretaire->prenom . ' ' . $caisse->secretaire->nom : 'Rasmata Kaboré' }}
+                            {{ $caisse->secretaire ? trim($caisse->secretaire->prenom . ' ' . $caisse->secretaire->nom) : '—' }}
                         </h2>
                         <p class="text-xs text-slate-500 font-medium">Secrétaire de Caisse</p>
+                        @if($caisse->secretaire?->email)
                         <div class="flex items-center gap-2 pt-1 text-xs text-cyan-600">
                             <i class="fas fa-envelope text-[10px]"></i>
-                            <span class="hover:underline text-[11px] font-medium">{{ $caisse->secretaire?->email ?: 'sec.caisse@rcpb.bf' }}</span>
+                            <span class="text-[11px] font-medium">{{ $caisse->secretaire->email }}</span>
                         </div>
+                        @endif
                     </div>
                 </div>
 

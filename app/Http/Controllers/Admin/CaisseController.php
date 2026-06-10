@@ -31,8 +31,7 @@ class CaisseController extends Controller
                 // ... (Garde ton code de recherche identique ici) ...
             })
             ->latest()
-            ->paginate(12)
-            ->withQueryString(),
+            ->get(),
         'delegations' => DelegationTechnique::query()->orderBy('region')->get(),
         'search' => $search,
         'stats' => [
@@ -52,7 +51,7 @@ class CaisseController extends Controller
 
     public function show(Caisse $caisse): View
     {
-        $caisse->load(['services.chef', 'agences.chef', 'delegationTechnique']);
+        $caisse->load(['services.chef', 'services.agents', 'agences.chef', 'delegationTechnique']);
 
         return view('admin.caisses.show', compact('caisse'));
     }

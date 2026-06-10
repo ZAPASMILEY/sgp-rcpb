@@ -147,13 +147,13 @@ class DirecteurSubordonneController extends Controller
      * non la structure. Pour chaque service, charge le chef (chef_agent_id),
      * son compte User, sa dernière éval et ses compteurs.
      */
-    public function indexChefs(): View
+    public function indexChefs(Request $request): View
     {
-        $ctx      = $this->getContext();
+        $ctx       = $this->getContext();
         $direction = $ctx->entity;
 
         $chefsData = $ctx->getServicesWithAgents()->map(function (Service $service) {
-            $chef     = $service->chef; // Agent|null (via chef_agent_id)
+            $chef     = $service->chef;
             $chefUser = $chef ? User::where('agent_id', $chef->id)->first() : null;
 
             $latestEval = Evaluation::where('evaluable_type', Service::class)
@@ -164,21 +164,123 @@ class DirecteurSubordonneController extends Controller
                 ->first();
 
             return [
-                'service'     => $service,
-                'chef'        => $chef,
-                'chefUser'    => $chefUser,
-                'latestEval'  => $latestEval,
-                'evalCount'   => Evaluation::where('evaluable_type', Service::class)
+                'service'          => $service,
+                'chef'             => $chef,
+                'chefUser'         => $chefUser,
+                'latestEval'       => $latestEval,
+                'evalCount'        => Evaluation::where('evaluable_type', Service::class)
                     ->where('evaluable_id', $service->id)
                     ->where('evaluateur_id', Auth::id())->count(),
-                'ficheCount'  => ($chefUser)
+                'ficheCount'       => $chefUser
                     ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->count()
                     : 0,
-                'agentsCount' => $service->agents->count(),
+                'ficheBlocksNew'   => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->whereNotIn('statut', ['refusee'])->exists()
+                    : false,
+                'ficheAcceptee'    => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->where('statut', 'acceptee')->exists()
+                    : false,
+                'evaluationEnCours' => Evaluation::where('evaluable_type', Service::class)
+                    ->where('evaluable_id', $service->id)
+                    ->where('evaluable_role', 'manager')
+                    ->where('evaluateur_id', Auth::id())
+                    ->whereIn('statut', ['soumis', 'brouillon'])
+                    ->exists(),
+                'agentsCount'      => $service->agents->count(),
             ];
         });
 
-        return view('directeur.subordonnes.chefs', compact('ctx', 'direction', 'chefsData'));
+        // ── Filtres ───────────────────────────────────────────────────────────
+        $tab       = $request->query('tab', 'objectifs');
+        $serviceId = $request->query('service_id') ? (int) $request->query('service_id') : null;
+        $statut    = (string) $request->query('statut', '');
+        $search    = (string) $request->query('search', '');
+
+        $allServiceIds  = $chefsData->pluck('service.id');
+        $allChefUserIds = $chefsData->pluck('chefUser.id')->filter()->values();
+
+        // Résolution du chefUser pour le service sélectionné
+        $selectedItem        = $serviceId ? $chefsData->first(fn ($i) => $i['service']->id === $serviceId) : null;
+        $selectedChefUserId  = $selectedItem ? ($selectedItem['chefUser']?->id) : null;
+        $filteredServiceIds  = $serviceId ? collect([$serviceId]) : $allServiceIds;
+        $filteredChefUserIds = $serviceId
+            ? ($selectedChefUserId ? collect([$selectedChefUserId]) : collect())
+            : $allChefUserIds;
+
+        // ── Objectifs ─────────────────────────────────────────────────────────
+        $fichesBaseQ = fn () => FicheObjectif::where('assignable_type', User::class)
+            ->whereIn('assignable_id', $filteredChefUserIds->isEmpty() ? [0] : $filteredChefUserIds);
+
+        $fichesStats = [
+            'total'      => $fichesBaseQ()->count(),
+            'acceptees'  => $fichesBaseQ()->where('statut', 'acceptee')->count(),
+            'en_attente' => $fichesBaseQ()->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'))->count(),
+            'refusees'   => $fichesBaseQ()->where('statut', 'refusee')->count(),
+        ];
+
+        $fichesQ = FicheObjectif::query()
+            ->withCount('objectifs')
+            ->with('assignable')
+            ->where('assignable_type', User::class)
+            ->whereIn('assignable_id', $filteredChefUserIds->isEmpty() ? [0] : $filteredChefUserIds);
+
+        if ($statut && $tab === 'objectifs') {
+            if ($statut === 'en_attente') {
+                $fichesQ->where(fn ($q) => $q->where('statut', 'en_attente')->orWhereNull('statut'));
+            } else {
+                $fichesQ->where('statut', $statut);
+            }
+        }
+        if ($search && $tab === 'objectifs') {
+            $fichesQ->where('titre', 'like', "%{$search}%");
+        }
+        $fiches = $fichesQ->orderByDesc('date')->paginate(15)->withQueryString();
+
+        // ── Évaluations ───────────────────────────────────────────────────────
+        $evalsBaseQ = fn () => Evaluation::where('evaluable_type', Service::class)
+            ->whereIn('evaluable_id', $filteredServiceIds)
+            ->where('evaluable_role', 'manager')
+            ->where('evaluateur_id', Auth::id());
+
+        $evaluationsStats = [
+            'total'     => $evalsBaseQ()->count(),
+            'brouillon' => $evalsBaseQ()->where('statut', 'brouillon')->count(),
+            'soumis'    => $evalsBaseQ()->where('statut', 'soumis')->count(),
+            'valide'    => $evalsBaseQ()->where('statut', 'valide')->count(),
+        ];
+
+        $evalsQ = $evalsBaseQ()->with(['evaluateur', 'identification', 'evaluable']);
+        if ($statut && $tab === 'evaluations') {
+            $evalsQ->where('statut', $statut);
+        }
+        $evaluations = $evalsQ->orderByDesc('date_debut')->paginate(15)->withQueryString();
+
+        // ── État pour le service sélectionné ──────────────────────────────────
+        $ficheBlocksNewForService = $serviceId && $selectedChefUserId
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $selectedChefUserId)->whereNotIn('statut', ['refusee'])->exists()
+            : false;
+        $ficheAccepteeForService = $serviceId && $selectedChefUserId
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $selectedChefUserId)->where('statut', 'acceptee')->exists()
+            : false;
+        $evaluationEnCoursForService = $serviceId
+            ? Evaluation::where('evaluable_type', Service::class)->where('evaluable_id', $serviceId)->where('evaluable_role', 'manager')->where('evaluateur_id', Auth::id())->whereIn('statut', ['soumis', 'brouillon'])->exists()
+            : false;
+
+        // Map chefUserId → serviceNom (pour affichage dans les tableaux)
+        $serviceByChefUserId = $chefsData
+            ->filter(fn ($i) => $i['chefUser'] !== null)
+            ->mapWithKeys(fn ($i) => [$i['chefUser']->id => $i['service']->nom]);
+
+        $filters = compact('tab', 'serviceId', 'statut', 'search');
+
+        return view('directeur.subordonnes.chefs', compact(
+            'ctx', 'direction', 'chefsData',
+            'tab', 'filters',
+            'fiches', 'fichesStats',
+            'evaluations', 'evaluationsStats',
+            'ficheBlocksNewForService', 'ficheAccepteeForService', 'evaluationEnCoursForService',
+            'serviceByChefUserId'
+        ));
     }
 
     // ── Index — Chefs d'agence (Directeur_Caisse uniquement) ──────────────
@@ -218,6 +320,12 @@ class DirecteurSubordonneController extends Controller
                 'ficheCount'  => $chefUser
                     ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->count()
                     : 0,
+                'ficheBlocksNew' => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->whereNotIn('statut', ['refusee'])->exists()
+                    : false,
+                'ficheAcceptee'  => $chefUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->where('statut', 'acceptee')->exists()
+                    : false,
                 'agentsCount' => $agence->agents->count(),
             ];
         });
@@ -262,6 +370,12 @@ class DirecteurSubordonneController extends Controller
                 'ficheCount'     => ($directeurUser)
                     ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->count()
                     : 0,
+                'ficheBlocksNew' => $directeurUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->whereNotIn('statut', ['refusee'])->exists()
+                    : false,
+                'ficheAcceptee'  => $directeurUser
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->where('statut', 'acceptee')->exists()
+                    : false,
                 'agentsCount'    => $caisse->agents_count,
             ];
         });
@@ -293,28 +407,46 @@ class DirecteurSubordonneController extends Controller
                 ->orderByDesc('date_debut')
                 ->first();
 
+            $chefUserId = $service->chef ? User::where('agent_id', $service->chef->id)->value('id') : null;
+
             return [
-                'service'     => $service,
-                'latestEval'  => $latestEval,
+                'service'        => $service,
+                'latestEval'     => $latestEval,
                 // Évaluations créées par ce directeur pour ce service
-                'evalCount'   => Evaluation::where('evaluable_type', Service::class)
+                'evalCount'      => Evaluation::where('evaluable_type', Service::class)
                     ->where('evaluable_id', $service->id)
                     ->where('evaluateur_id', Auth::id())
                     ->count(),
                 // Fiches d'objectifs assignées au chef de service (personne)
-                'ficheCount'  => ($service->chef && ($cuid = User::where('agent_id', $service->chef->id)->value('id')))
-                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $cuid)->count()
+                'ficheCount'     => $chefUserId
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUserId)->count()
                     : 0,
-                'agentsCount' => $service->agents->count(),
+                'ficheBlocksNew' => $chefUserId
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUserId)->whereNotIn('statut', ['refusee'])->exists()
+                    : false,
+                'ficheAcceptee'  => $chefUserId
+                    ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUserId)->where('statut', 'acceptee')->exists()
+                    : false,
+                'agentsCount'        => $service->agents->count(),
+                'evaluationEnCours'  => Evaluation::where('evaluable_type', Service::class)
+                    ->where('evaluable_id', $service->id)
+                    ->where('evaluable_role', 'manager')
+                    ->where('evaluateur_id', Auth::id())
+                    ->whereIn('statut', ['soumis', 'brouillon'])
+                    ->exists(),
             ];
         });
 
         // Compteurs pour la secrétaire (si elle existe)
-        $secretaireEvalCount    = 0;
+        $secretaireEvalCount     = 0;
         $secretaireObjectifCount = 0;
+        $secretaireFicheBlocksNew = false;
+        $secretaireFicheAcceptee  = false;
         if ($secretaire) {
-            $secretaireEvalCount    = Evaluation::where('evaluable_type', User::class)->where('evaluable_id', $secretaire->id)->where('evaluateur_id', Auth::id())->count();
-            $secretaireObjectifCount = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->count();
+            $secretaireEvalCount      = Evaluation::where('evaluable_type', User::class)->where('evaluable_id', $secretaire->id)->where('evaluateur_id', Auth::id())->count();
+            $secretaireObjectifCount  = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->count();
+            $secretaireFicheBlocksNew = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->whereNotIn('statut', ['refusee'])->exists();
+            $secretaireFicheAcceptee  = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->where('statut', 'acceptee')->exists();
         }
 
         // Agences (Directeur_Caisse uniquement)
@@ -328,18 +460,32 @@ class DirecteurSubordonneController extends Controller
                     ->orderByDesc('date_debut')
                     ->first();
 
+                $chefUserId = $agence->chef_agent_id ? User::where('agent_id', $agence->chef_agent_id)->value('id') : null;
+
                 return [
-                    'agence'        => $agence,
-                    'latestEval'    => $latestEval,
-                    'evalCount'     => Evaluation::where('evaluable_type', Agence::class)
+                    'agence'         => $agence,
+                    'latestEval'     => $latestEval,
+                    'evalCount'      => Evaluation::where('evaluable_type', Agence::class)
                         ->where('evaluable_id', $agence->id)
                         ->where('evaluateur_id', Auth::id())
                         ->count(),
-                    'ficheCount'    => ($agence->chef_agent_id && ($cuid = User::where('agent_id', $agence->chef_agent_id)->value('id')))
-                        ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $cuid)->count()
+                    'ficheCount'     => $chefUserId
+                        ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUserId)->count()
                         : 0,
-                    'agentsCount'   => $agence->agents_count,
-                    'guichetsCount' => $agence->guichets->count(),
+                    'ficheBlocksNew' => $chefUserId
+                        ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUserId)->whereNotIn('statut', ['refusee'])->exists()
+                        : false,
+                    'ficheAcceptee'  => $chefUserId
+                        ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUserId)->where('statut', 'acceptee')->exists()
+                        : false,
+                    'agentsCount'        => $agence->agents_count,
+                    'guichetsCount'      => $agence->guichets->count(),
+                    'evaluationEnCours'  => Evaluation::where('evaluable_type', Agence::class)
+                        ->where('evaluable_id', $agence->id)
+                        ->where('evaluable_role', 'manager')
+                        ->where('evaluateur_id', Auth::id())
+                        ->whereIn('statut', ['soumis', 'brouillon'])
+                        ->exists(),
                 ];
             });
         }
@@ -360,24 +506,37 @@ class DirecteurSubordonneController extends Controller
                     ->first();
 
                 return [
-                    'caisse'        => $caisse,
-                    'directeurUser' => $directeurUser,
-                    'latestEval'    => $latestEval,
-                    'evalCount'     => Evaluation::where('evaluable_type', Caisse::class)
+                    'caisse'         => $caisse,
+                    'directeurUser'  => $directeurUser,
+                    'latestEval'     => $latestEval,
+                    'evalCount'      => Evaluation::where('evaluable_type', Caisse::class)
                         ->where('evaluable_id', $caisse->id)
                         ->where('evaluateur_id', Auth::id())
                         ->count(),
-                    'ficheCount'    => ($directeurUser)
+                    'ficheCount'     => $directeurUser
                         ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->count()
                         : 0,
-                    'agentsCount'   => $caisse->agents_count,
+                    'ficheBlocksNew' => $directeurUser
+                        ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->whereNotIn('statut', ['refusee'])->exists()
+                        : false,
+                    'ficheAcceptee'  => $directeurUser
+                        ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->where('statut', 'acceptee')->exists()
+                        : false,
+                    'agentsCount'        => $caisse->agents_count,
+                    'evaluationEnCours'  => Evaluation::where('evaluable_type', Caisse::class)
+                        ->where('evaluable_id', $caisse->id)
+                        ->where('evaluable_role', 'manager')
+                        ->where('evaluateur_id', Auth::id())
+                        ->whereIn('statut', ['soumis', 'brouillon'])
+                        ->exists(),
                 ];
             });
         }
 
         return view('directeur.subordonnes.index', compact(
             'ctx', 'direction', 'servicesData', 'secretaire',
-            'secretaireEvalCount', 'secretaireObjectifCount', 'agencesData', 'caissesData'
+            'secretaireEvalCount', 'secretaireObjectifCount', 'agencesData', 'caissesData',
+            'secretaireFicheBlocksNew', 'secretaireFicheAcceptee'
         ));
     }
 
@@ -449,11 +608,21 @@ class DirecteurSubordonneController extends Controller
             $fichesStats = ['total' => 0, 'acceptees' => 0, 'en_attente' => 0, 'refusees' => 0];
         }
 
+        $ficheBlocksNew = $chefUser
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->whereNotIn('statut', ['refusee'])->exists()
+            : false;
+        $ficheAcceptee = $chefUser
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefUser->id)->where('statut', 'acceptee')->exists()
+            : false;
+
+        $evaluationEnCours = $baseE()->whereIn('statut', ['soumis', 'brouillon'])->exists();
+
         $filters = compact('tab', 'statut', 'search');
 
         return view('directeur.subordonnes.service', compact(
             'direction', 'service', 'tab', 'evaluations', 'evaluationsStats',
-            'fiches', 'fichesStats', 'filters', 'chefUser'
+            'fiches', 'fichesStats', 'filters', 'chefUser', 'ficheBlocksNew', 'ficheAcceptee',
+            'evaluationEnCours'
         ));
     }
 
@@ -521,11 +690,17 @@ class DirecteurSubordonneController extends Controller
             'refusees'   => $baseF()->where('statut', 'refusee')->count(),
         ];
 
+        $ficheBlocksNew = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->whereNotIn('statut', ['refusee'])->exists();
+        $ficheAcceptee  = FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $secretaire->id)->where('statut', 'acceptee')->exists();
+
+        $evaluationEnCours = $baseE()->whereIn('statut', ['soumis', 'brouillon'])->exists();
+
         $filters = compact('tab', 'statut', 'search');
 
         return view('directeur.subordonnes.secretaire', compact(
             'direction', 'secretaire', 'tab', 'evaluations', 'evaluationsStats',
-            'fiches', 'fichesStats', 'filters'
+            'fiches', 'fichesStats', 'filters', 'ficheBlocksNew', 'ficheAcceptee',
+            'evaluationEnCours'
         ));
     }
 
@@ -922,6 +1097,7 @@ class DirecteurSubordonneController extends Controller
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
             'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
+            'created_by'            => \Illuminate\Support\Facades\Auth::id(),
         ]);
 
         foreach ($objectifs as $desc) {
@@ -984,7 +1160,7 @@ class DirecteurSubordonneController extends Controller
             'fiche'        => $fiche,
             'direction'    => $ctx->entity,
             'updateRoute'  => 'directeur.subordonnes.service.objectifs.update',
-            'cancelUrl'    => route('directeur.subordonnes.service.objectifs.show', $fiche),
+            'cancelUrl'    => route('directeur.subordonnes.service', ['service' => $service->id, 'tab' => 'objectifs']),
             'cibleLabel'   => 'Chef de service — '.$service->nom,
             'assigneeUser' => $chefUser,
         ]);
@@ -1091,6 +1267,7 @@ class DirecteurSubordonneController extends Controller
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
             'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
+            'created_by'            => \Illuminate\Support\Facades\Auth::id(),
         ]);
 
         foreach ($objectifs as $desc) {
@@ -1151,7 +1328,7 @@ class DirecteurSubordonneController extends Controller
             'fiche'        => $fiche,
             'direction'    => $ctx->entity,
             'updateRoute'  => 'directeur.subordonnes.secretaire.objectifs.update',
-            'cancelUrl'    => route('directeur.subordonnes.secretaire.objectifs.show', $fiche),
+            'cancelUrl'    => route('directeur.subordonnes.secretaire', ['tab' => 'objectifs']),
             'cibleLabel'   => 'Secrétaire — '.($secretaire?->name ?? '—'),
             'assigneeUser' => $secretaire,
         ]);
@@ -1275,11 +1452,21 @@ class DirecteurSubordonneController extends Controller
             $fichesStats = ['total' => 0, 'acceptees' => 0, 'en_attente' => 0, 'refusees' => 0];
         }
 
+        $ficheBlocksNew = $chefAgenceUser
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefAgenceUser->id)->whereNotIn('statut', ['refusee'])->exists()
+            : false;
+        $ficheAcceptee = $chefAgenceUser
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $chefAgenceUser->id)->where('statut', 'acceptee')->exists()
+            : false;
+
+        $evaluationEnCours = $baseE()->whereIn('statut', ['soumis', 'brouillon'])->exists();
+
         $filters = compact('tab', 'statut', 'search');
 
         return view('directeur.subordonnes.agence', compact(
             'direction', 'agence', 'tab', 'evaluations', 'evaluationsStats',
-            'fiches', 'fichesStats', 'filters', 'chefAgenceUser'
+            'fiches', 'fichesStats', 'filters', 'chefAgenceUser', 'ficheBlocksNew', 'ficheAcceptee',
+            'evaluationEnCours'
         ));
     }
 
@@ -1354,6 +1541,7 @@ class DirecteurSubordonneController extends Controller
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
             'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
+            'created_by'            => \Illuminate\Support\Facades\Auth::id(),
         ]);
 
         foreach ($objectifs as $desc) {
@@ -1412,7 +1600,7 @@ class DirecteurSubordonneController extends Controller
             'fiche'        => $fiche,
             'direction'    => $ctx->entity,
             'updateRoute'  => 'directeur.subordonnes.agence.objectifs.update',
-            'cancelUrl'    => route('directeur.subordonnes.agence.objectifs.show', $fiche),
+            'cancelUrl'    => route('directeur.subordonnes.agence', ['agence' => $agence->id, 'tab' => 'objectifs']),
             'cibleLabel'   => 'Agence — '.$agence->nom,
             'assigneeUser' => $chefUser,
         ]);
@@ -1532,11 +1720,21 @@ class DirecteurSubordonneController extends Controller
             $fichesStats = ['total' => 0, 'acceptees' => 0, 'en_attente' => 0, 'refusees' => 0];
         }
 
+        $ficheBlocksNew = $directeurUser
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->whereNotIn('statut', ['refusee'])->exists()
+            : false;
+        $ficheAcceptee = $directeurUser
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->where('statut', 'acceptee')->exists()
+            : false;
+
+        $evaluationEnCours = $baseE()->whereIn('statut', ['soumis', 'brouillon'])->exists();
+
         $filters = compact('tab', 'statut', 'search');
 
         return view('directeur.subordonnes.caisse', compact(
             'caisse', 'tab', 'evaluations', 'evaluationsStats',
-            'fiches', 'fichesStats', 'filters', 'directeurUser', 'ctx'
+            'fiches', 'fichesStats', 'filters', 'directeurUser', 'ctx',
+            'ficheBlocksNew', 'ficheAcceptee', 'evaluationEnCours'
         ));
     }
 
@@ -1614,6 +1812,7 @@ class DirecteurSubordonneController extends Controller
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
             'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
+            'created_by'            => \Illuminate\Support\Facades\Auth::id(),
         ]);
 
         foreach ($objectifs as $desc) {
@@ -1672,7 +1871,7 @@ class DirecteurSubordonneController extends Controller
             'fiche'        => $fiche,
             'direction'    => $ctx->entity,
             'updateRoute'  => 'directeur.subordonnes.caisse.objectifs.update',
-            'cancelUrl'    => route('directeur.subordonnes.caisse.objectifs.show', $fiche),
+            'cancelUrl'    => route('directeur.subordonnes.caisse', ['caisse' => $caisse->id, 'tab' => 'objectifs']),
             'cibleLabel'   => 'Caisse — '.$caisse->nom,
             'assigneeUser' => $directeurUser,
         ]);

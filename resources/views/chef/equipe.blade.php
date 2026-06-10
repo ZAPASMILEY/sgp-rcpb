@@ -48,30 +48,105 @@
             @endforeach
         </div>
 
-        {{-- Filtres sexe + fonction --}}
-        <form method="GET" action="{{ route('chef.equipe') }}" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white px-5 py-4 shadow-sm border border-slate-100">
-            <div class="space-y-1">
-                <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Sexe</label>
-                <select name="sexe" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300">
-                    <option value="">Tous</option>
-                    <option value="homme" @selected($sexe === 'homme')>Homme</option>
-                    <option value="femme" @selected($sexe === 'femme')>Femme</option>
-                </select>
+        @include('layouts._features_notice')
+
+        {{-- Filtres --}}
+        <form method="GET" action="{{ route('chef.equipe') }}" id="filtres-form"
+              class="rounded-2xl bg-white px-5 py-4 shadow-sm border border-slate-100 flex flex-col gap-4">
+
+            {{-- Ligne 1 : Recherche --}}
+            <div class="flex flex-wrap items-end gap-3">
+                <div class="flex-1 min-w-[180px] space-y-1">
+                    <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Rechercher</label>
+                    <div class="relative">
+                        <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-300 text-xs">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="search" value="{{ $search }}"
+                               placeholder="Nom ou prénom…"
+                               class="w-full rounded-xl border border-slate-200 pl-8 pr-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300"
+                               autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Sexe</label>
+                    <select name="sexe" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300">
+                        <option value="">Tous</option>
+                        <option value="homme" @selected($sexe === 'homme')>Homme</option>
+                        <option value="femme" @selected($sexe === 'femme')>Femme</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Fonction</label>
+                    <select name="fonction" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300 max-w-xs">
+                        <option value="">Toutes</option>
+                        @foreach ($fonctions as $key => $label)
+                            <option value="{{ $key }}" @selected($fonction === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="flex items-end gap-2 ml-auto">
+                    <button type="submit"
+                            class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-blue-700">
+                        <i class="fas fa-search text-[10px]"></i> Rechercher
+                    </button>
+                    @if ($hasFilters)
+                        <a href="{{ route('chef.equipe') }}"
+                           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50">
+                            <i class="fas fa-times"></i> Réinitialiser
+                        </a>
+                    @endif
+                </div>
             </div>
-            <div class="space-y-1">
-                <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Fonction</label>
-                <select name="fonction" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300 max-w-xs">
-                    <option value="">Toutes</option>
-                    @foreach ($fonctions as $key => $label)
-                        <option value="{{ $key }}" @selected($fonction === $key)>{{ $label }}</option>
-                    @endforeach
-                </select>
+
+            {{-- Ligne 2 : Filtres statut + note --}}
+            <div class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Statut évaluation</label>
+                    <select name="statut_eval" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300">
+                        <option value="">Tous</option>
+                        <option value="non_evalue"  @selected($statutEval === 'non_evalue')>Non évalué</option>
+                        <option value="brouillon"   @selected($statutEval === 'brouillon')>Brouillon</option>
+                        <option value="soumis"      @selected($statutEval === 'soumis')>Soumise</option>
+                        <option value="valide"      @selected($statutEval === 'valide')>Acceptée</option>
+                        <option value="refuse"      @selected($statutEval === 'refuse')>Refusée</option>
+                        <option value="reclamation" @selected($statutEval === 'reclamation')>Réclamation</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Fiche objectifs</label>
+                    <select name="statut_fiche" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300">
+                        <option value="">Toutes</option>
+                        <option value="aucune"     @selected($statutFiche === 'aucune')>Aucune fiche</option>
+                        <option value="en_attente" @selected($statutFiche === 'en_attente')>En attente</option>
+                        <option value="acceptee"   @selected($statutFiche === 'acceptee')>Acceptée</option>
+                        <option value="refusee"    @selected($statutFiche === 'refusee')>Refusée</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Tranche de note</label>
+                    <select name="note" onchange="this.form.submit()" class="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-300">
+                        <option value="">Toutes</option>
+                        <option value="non_note"   @selected($noteRange === 'non_note')>Non noté</option>
+                        <option value="excellent"  @selected($noteRange === 'excellent')>Excellent (≥ 8.5)</option>
+                        <option value="bien"       @selected($noteRange === 'bien')>Bien (7 – 8.4)</option>
+                        <option value="moyen"      @selected($noteRange === 'moyen')>Moyen (5 – 6.9)</option>
+                        <option value="insuffisant"@selected($noteRange === 'insuffisant')>Insuffisant (< 5)</option>
+                    </select>
+                </div>
+
+                @if ($hasFilters)
+                    <p class="text-[11px] text-slate-400 ml-auto self-end pb-2">
+                        <span class="font-black text-blue-600">{{ $agentsOverview->count() }}</span>
+                        / {{ $stats['total_agents'] }} agent{{ $stats['total_agents'] > 1 ? 's' : '' }}
+                    </p>
+                @endif
             </div>
-            @if ($sexe || $fonction)
-                <a href="{{ route('chef.equipe') }}" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50">
-                    <i class="fas fa-times"></i> Réinitialiser
-                </a>
-            @endif
         </form>
 
         {{-- Liste des agents --}}
@@ -99,10 +174,13 @@
                 <div class="divide-y divide-slate-100">
                     @foreach ($agentsOverview as $row)
                         @php
-                            $ag     = $row['agent'];
-                            $eval   = $row['latest_eval'];
-                            $statut = $row['eval_statut'];
-                            $note   = $row['eval_note'];
+                            $ag           = $row['agent'];
+                            $eval         = $row['latest_eval'];
+                            $statut       = $row['eval_statut'];
+                            $note         = $row['eval_note'];
+                            $attention    = $row['attention'] ?? false;
+                            $attReason    = $row['attention_reason'] ?? null;
+                            $hasUnread    = $row['has_unread_notif'] ?? false;
 
                             $evalClass = match ($statut) {
                                 'valide'      => 'bg-emerald-100 text-emerald-700',
@@ -134,11 +212,29 @@
                                 default             => 'bg-rose-400',
                             } : 'bg-slate-200';
                         @endphp
-                        <div class="flex flex-wrap items-center gap-5 px-6 py-5 transition hover:bg-slate-50/70 lg:px-8">
+                        <div class="flex flex-wrap items-center gap-5 px-6 py-5 transition lg:px-8
+                            {{ $attention ? 'bg-rose-50/60 hover:bg-rose-50' : ($hasUnread ? 'bg-blue-50/40 hover:bg-blue-50/60' : 'hover:bg-slate-50/70') }}">
 
-                            {{-- Avatar --}}
-                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 text-base font-black shadow-sm">
-                                {{ strtoupper(substr(trim($ag->prenom . ' ' . $ag->nom), 0, 1)) }}
+                            {{-- Avatar avec indicateurs --}}
+                            <div class="relative shrink-0">
+                                <div @class([
+                                        'flex h-12 w-12 items-center justify-center rounded-2xl text-base font-black shadow-sm',
+                                        'bg-rose-100 text-rose-700' => $attention,
+                                        'bg-blue-100 text-blue-700' => ! $attention,
+                                    ])>
+                                    {{ strtoupper(substr(trim($ag->prenom . ' ' . $ag->nom), 0, 1)) }}
+                                </div>
+                                @if ($attention)
+                                    <span class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center">
+                                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                                        <span class="relative inline-flex h-3 w-3 rounded-full bg-rose-500"></span>
+                                    </span>
+                                @elseif ($hasUnread)
+                                    <span class="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center">
+                                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-60"></span>
+                                        <span class="relative inline-flex h-3 w-3 rounded-full bg-blue-500"></span>
+                                    </span>
+                                @endif
                             </div>
 
                             {{-- Identité --}}
@@ -147,8 +243,20 @@
                                     <p class="font-black text-slate-900 text-base">
                                         {{ trim($ag->prenom . ' ' . $ag->nom) }}
                                     </p>
-                                    @if ($ag->role)
-                                        <span class="text-xs text-slate-400">· {{ $ag->role }}</span>
+                                    @if ($ag->poste ?: $ag->role)
+                                        <span class="text-xs text-slate-400">· {{ $ag->poste ?: $ag->role }}</span>
+                                    @endif
+                                    @if ($attention)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-black text-rose-700"
+                                              title="{{ $attReason }}">
+                                            <i class="fas fa-circle-exclamation text-[9px]"></i>
+                                            {{ $attReason }}
+                                        </span>
+                                    @elseif ($hasUnread)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-black text-blue-700">
+                                            <i class="fas fa-bell text-[9px]"></i>
+                                            Nouvelle notification
+                                        </span>
                                     @endif
                                 </div>
                                 <div class="mt-1 flex flex-wrap items-center gap-2">
@@ -188,24 +296,24 @@
                                    class="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-black text-white shadow-sm transition hover:bg-violet-700">
                                     <i class="fas fa-folder-open text-[10px]"></i> Dossier
                                 </a>
-                                @if($evaluationsEnabled)
+                                @if($evaluationsEnabled && $row['ficheAcceptee'] && !$row['evaluationEnCours'])
                                     <a href="{{ route('chef.evaluations.create', ['agent_id' => $ag->id]) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée"
+                                    <span title="{{ $row['evaluationEnCours'] ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$row['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées par l\'administrateur.')) }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
                                 @endif
-                                @if($objectifsEnabled)
+                                @if($objectifsEnabled && !$row['ficheBlocksNew'])
                                     <a href="{{ route('chef.objectifs.create', ['agent_id' => $ag->id]) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-blue-300 hover:text-blue-700">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </a>
                                 @else
-                                    <span title="Fonctionnalité désactivée"
+                                    <span title="{{ $row['ficheBlocksNew'] ? 'Une fiche d\'objectifs est déjà assignée à cet agent.' : ($objectifsDisabledMessage ?: 'Assignation d\'objectifs désactivée par l\'administrateur.') }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-bullseye text-[10px]"></i> Objectifs
                                     </span>

@@ -23,11 +23,12 @@ class AgentController extends Controller
    public function index(Request $request): View
 {
     // 1. Récupération des filtres depuis la requête
-    $role = $request->input('role'); 
-    $search = $request->input('search');
+    $role        = $request->input('role');
+    $search      = $request->input('search');
     $affectation = $request->input('affectation');
+    $sansDate    = $request->boolean('sans_date');
 
-    // 2. Construction de la requête pour récupérer les agents (La variable manquante !)
+    // 2. Construction de la requête pour récupérer les agents
     $query = Agent::query()->orderBy('nom', 'asc')->orderBy('prenom', 'asc');
 
     // Filtrage par rôle si sélectionné
@@ -43,8 +44,13 @@ class AgentController extends Controller
         });
     }
 
+    // Filtrage agents sans date de prise de fonction
+    if ($sansDate) {
+        $query->whereNull('date_debut_fonction');
+    }
+
     // Exécution de la requête pour alimenter la variable $agents
-    $agents = $query->paginate(25)->withQueryString();
+    $agents = $query->get();
 
     // 3. Calcul des statistiques pour les badges et filtres
     $countsByRole = Agent::query()
@@ -53,7 +59,6 @@ class AgentController extends Controller
         ->pluck('total', 'role');
 
     // Liste des colonnes de clés étrangères pour les affectations directes
-    // Dans AgentController@index :
 $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id', 'agence_id', 'guichet_id', 'service_id'];
     // Liste des relations inverses (si tu as défini des relations dans ton modèle Agent)
     $inverseRelations = ['pcaEntite', 'assistanteEntite', 'directeurDirection', 'secretaireDirection', 'directeurDelegation'];
@@ -69,21 +74,33 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
         }
     })->count();
 
-    // 4. Envoi complet à la vue (Tout est défini !)
+    $sansDatCount = Agent::whereNull('date_debut_fonction')->count();
+    $totalReseau  = Agent::reseau()->count();
+    $sansCompte   = $totalReseau - Agent::reseau()->has('user')->count();
+
+    // 4. Envoi complet à la vue
     return view('admin.agents.index', [
         'agents'        => $agents,
-        'roleActive'    => $role, 
+        'roleActive'    => $role,
         'affectation'   => $affectation,
+        'sansDate'      => $sansDate,
         'search'        => $search,
         'roles'         => Agent::ROLES,
         'countsByRole'  => $countsByRole,
-        'totalAgents'   => Agent::reseau()->count(),
+        'totalAgents'   => $totalReseau,
         'totalAffectes' => $totalAffectes,
+        'sansDatCount'  => $sansDatCount,
+        'sansCompte'    => $sansCompte,
     ]);
 }
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('admin.agents.create', $this->formData());
+        $redirectTo = (string) $request->query('redirect_to', '');
+
+        return view('admin.agents.create', array_merge(
+            $this->formData(),
+            ['redirectTo' => $redirectTo]
+        ));
     }
 
     public function show(Agent $agent): View
@@ -121,6 +138,13 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
             $agent = Agent::query()->create($validated);
             $this->accounts->ensureAccount($agent);
         });
+
+        $redirectTo = (string) $request->input('redirect_to', '');
+        if ($redirectTo !== '' && str_starts_with($redirectTo, url('/'))) {
+            return redirect()
+                ->to($redirectTo)
+                ->with('status', 'Agent créé avec succès. Compte de connexion généré (mot de passe : 11111111).');
+        }
 
         return redirect()
             ->route('admin.agents.index')

@@ -59,4 +59,9 @@ class Direction extends Model
     {
         return $this->morphMany(Objectif::class, 'assignable');
     }
+
+    public function evaluations(): MorphMany
+    {
+        return $this->morphMany(Evaluation::class, 'evaluable');
+    }
 }

@@ -227,7 +227,17 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!selected) return;
             const checked = Array.from(objectiveChoiceContainer?.querySelectorAll('input[type="checkbox"]:checked:not(:disabled)') || []);
             if (!checked.length) return;
+
+            // IDs déjà présents dans le formulaire — évite les doublons
+            const alreadyAdded = new Set(
+                Array.from(objectiveContainer.querySelectorAll('input[name$="[source_fiche_objectif_objectif_id]"]'))
+                    .map(i => String(i.value)).filter(Boolean)
+            );
+
             checked.forEach(input => {
+                const objId = String(input.value);
+                if (alreadyAdded.has(objId)) return;
+                alreadyAdded.add(objId);
                 objectiveContainer.appendChild(renderCriterion('objective_criteres', {
                     titre: input.dataset.objectiveTitle || '',
                     source_fiche_objectif_id: selected.id,
@@ -350,6 +360,8 @@ document.addEventListener('DOMContentLoaded', function () {
             objectiveContainer.appendChild(renderCriterion('objective_criteres', c, i, { titleReadonly: true, allowRemoveCriterion: true }));
             objectiveIndexCounter++;
         });
+        // Re-render les choix de la fiche pour marquer comme disabled les objectifs déjà ajoutés
+        if (typeof renderObjectiveChoices === 'function') renderObjectiveChoices();
     }
     updateScoreSummary();
 });
@@ -374,6 +386,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (fieldDirectionSvc) fieldDirectionSvc.value = data.direction_service ?? '';
             const fm = document.getElementById('identification_matricule');
             if (fm) fm.value = data.matricule ?? '';
+            const fd = document.getElementById('identification_date_prise_fonction');
+            if (fd) fd.value = data.date_prise_fonction ?? '';
             if (fieldSignature && (!fieldSignature.value || fieldSignature.dataset.autoFilled)) {
                 fieldSignature.value = data.nom_prenom ?? '';
                 fieldSignature.dataset.autoFilled = '1';
@@ -420,11 +434,12 @@ document.addEventListener('DOMContentLoaded', function () {
         function fillServiceIdent(data) {
             if (!data) return;
             const f = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
-            f('identification_nom_prenom',        data.nom_prenom);
-            f('identification_emploi',            data.emploi);
-            f('identification_direction',         data.entite_nom);
-            f('identification_direction_service', data.direction_service);
-            f('identification_matricule',         data.matricule);
+            f('identification_nom_prenom',             data.nom_prenom);
+            f('identification_emploi',                 data.emploi);
+            f('identification_direction',              data.entite_nom);
+            f('identification_direction_service',      data.direction_service);
+            f('identification_matricule',              data.matricule);
+            f('identification_date_prise_fonction',    data.date_prise_fonction);
             const sig = document.getElementById('signature_evalue_nom');
             if (sig && (!sig.value || sig.dataset.autoFilled)) {
                 sig.value = data.nom_prenom ?? '';

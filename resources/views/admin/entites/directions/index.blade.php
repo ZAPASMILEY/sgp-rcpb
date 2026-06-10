@@ -33,7 +33,7 @@
             <div class="flex shrink-0 items-center gap-3">
                 <div class="rounded-2xl bg-white/10 px-5 py-3 text-center ring-1 ring-white/10">
                     <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Directions</p>
-                    <p class="mt-0.5 text-3xl font-black text-white">{{ $directions->total() }}</p>
+                    <p class="mt-0.5 text-3xl font-black text-white">{{ $directions->count() }}</p>
                 </div>
                 <a href="{{ route('admin.entites.directions.create') }}"
                    class="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-400">
@@ -64,7 +64,7 @@
             <div class="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
                 <h2 class="text-sm font-black uppercase tracking-widest text-slate-700">Liste des directions</h2>
                 <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">
-                    {{ $directions->total() }} entrée{{ $directions->total() > 1 ? 's' : '' }}
+                    {{ $directions->count() }} entrée{{ $directions->count() > 1 ? 's' : '' }}
                 </span>
             </div>
 
@@ -80,9 +80,9 @@
                     </a>
                 </div>
             @else
-                <div class="overflow-x-auto">
+                <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                     <table class="w-full text-sm">
-                        <thead>
+                        <thead class="sticky top-0 z-10">
                             <tr class="border-b border-slate-100 bg-slate-50 text-left">
                                 <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 w-12">#</th>
                                 <th class="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Direction</th>
@@ -114,7 +114,7 @@
                                 {{-- # --}}
                                 <td class="px-5 py-4">
                                     <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg {{ $c['bg'] }} {{ $c['text'] }} text-xs font-black">
-                                        {{ $loop->iteration + ($directions->currentPage() - 1) * $directions->perPage() }}
+                                        {{ $loop->iteration }}
                                     </span>
                                 </td>
 
@@ -192,11 +192,7 @@
                     </table>
                 </div>
 
-                @if($directions->hasPages())
-                    <div class="border-t border-slate-100 px-6 py-4">
-                        {{ $directions->links() }}
-                    </div>
-                @endif
+                <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $directions->count() }} résultat(s)</div>
             @endif
         </div>
 

@@ -59,6 +59,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // ── Administration ─────────────────────────────────────────────────
         'admin.activites', // Consulter les logs d'activité
         'admin.alertes',   // Créer et diffuser des alertes
+        'admin.archives',  // Accéder aux archives (évaluations et objectifs supprimés)
     ];
 
     // ── Matrice rôle → permissions ─────────────────────────────────────────
@@ -74,7 +75,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'agents.voir',
             'structures.voir',
             'evaluations.exporter-pdf',
-            'admin.activites', 'admin.alertes',
+            'admin.activites', 'admin.alertes', 'admin.archives',
         ],
 
         // ── PCA — évalue le DG, lui assigne des objectifs ─────────────────
@@ -267,13 +268,25 @@ class RolesAndPermissionsSeeder extends Seeder
         $this->command->info('  → '.count(self::PERMISSIONS).' permissions OK');
 
         // ── 3. Créer les rôles et assigner leurs permissions ──────────────
+        //
+        // On utilise givePermissionTo() au lieu de syncPermissions() afin de
+        // ne jamais révoquer une permission accordée manuellement par l'admin.
+        // Le seeder garantit uniquement que les permissions de base sont présentes ;
+        // toute suppression doit être faite manuellement via l'interface.
         $this->command->info('Création des rôles et assignation des permissions...');
         foreach (self::ROLE_PERMISSIONS as $roleName => $permissionNames) {
             // Recherche sensible à la casse pour éviter les collisions MySQL ci
             $role = Role::whereRaw('BINARY name = ?', [$roleName])->where('guard_name', 'web')->first()
                 ?? Role::create(['name' => $roleName, 'guard_name' => 'web']);
-            $role->syncPermissions($permissionNames);
-            $this->command->line("  → {$roleName} : ".count($permissionNames).' permissions');
+
+            // N'ajouter que les permissions manquantes — ne jamais en retirer
+            $existing = $role->permissions->pluck('name')->all();
+            $toAdd    = array_diff($permissionNames, $existing);
+            if (! empty($toAdd)) {
+                $role->givePermissionTo($toAdd);
+            }
+
+            $this->command->line("  → {$roleName} : ".count($permissionNames).' permissions (base) + '.count($existing).' existantes');
         }
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();

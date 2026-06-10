@@ -39,8 +39,8 @@
             </span>
         </div>
         <button type="button" id="notif-lire-tout-btn-{{ $bellId }}"
-                class="text-[11px] font-bold text-emerald-600 hover:underline {{ ($alertesNonLuesCount ?? 0) > 0 ? '' : 'hidden' }}">
-            Tout marquer lu
+                class="text-[11px] font-bold text-emerald-600 hover:underline {{ ($alertesNonLuesCount ?? 0) > 0 ? '' : 'invisible' }}">
+            Fermer tout
         </button>
     </div>
 
@@ -55,15 +55,16 @@
                     default    => 'bg-slate-100 text-slate-400',
                 };
                 $icon = in_array($notif->priorite, ['critique','haute']) ? 'fa-circle-exclamation' : 'fa-bell';
-                $tag  = $notif->lien ? 'a' : 'div';
-                $href = $notif->lien ? 'href="' . e($notif->lien) . '"' : '';
             @endphp
-            <{{ $tag }} {{ $href }} class="flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50 {{ $notif->lien ? 'cursor-pointer' : '' }}">
-                <div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {{ $iconBg }}">
+            <div class="notif-item group relative flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50" data-id="{{ $notif->id }}">
+                @if ($notif->lien)
+                    <a href="{{ $notif->lien }}" class="absolute inset-0"></a>
+                @endif
+                <div class="relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg {{ $iconBg }}">
                     <i class="fas {{ $icon }} text-xs"></i>
                 </div>
-                <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-bold text-slate-800">{{ $notif->titre }}</p>
+                <div class="relative min-w-0 flex-1">
+                    <p class="truncate pr-5 text-sm font-bold text-slate-800">{{ $notif->titre }}</p>
                     @if ($notif->message)
                         <p class="mt-0.5 text-[11px] text-slate-500 line-clamp-2">{{ Str::limit($notif->message, 70) }}</p>
                     @endif
@@ -74,7 +75,13 @@
                         @endif
                     </div>
                 </div>
-            </{{ $tag }}>
+                <button type="button"
+                        class="notif-close-btn relative z-10 ml-auto shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-slate-200 hover:text-slate-500"
+                        data-id="{{ $notif->id }}"
+                        title="Fermer">
+                    <i class="fas fa-times text-[9px]"></i>
+                </button>
+            </div>
         @empty
             <div class="px-4 py-10 text-center">
                 <i class="fas fa-check-circle text-2xl text-emerald-300"></i>
@@ -173,23 +180,57 @@
             return;
         }
         list.innerHTML = items.map(function (n) {
-            var tag   = n.lien ? 'a' : 'div';
-            var attrs = n.lien ? ' href="' + escHtml(n.lien) + '"' : '';
+            var link    = n.lien ? '<a href="' + escHtml(n.lien) + '" class="absolute inset-0"></a>' : '';
             var consulter = n.lien
                 ? '<span class="text-[10px] font-bold text-blue-400"><i class="fas fa-arrow-right text-[8px]"></i> Consulter</span>'
                 : '';
-            return '<' + tag + attrs + ' class="flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50' + (n.lien ? ' cursor-pointer' : '') + '">'
-                + '<div class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ' + iconBgClass(n.priorite) + '">'
+            return '<div class="notif-item group relative flex items-start gap-3 px-4 py-3 transition hover:bg-slate-50" data-id="' + n.id + '">'
+                + link
+                + '<div class="relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ' + iconBgClass(n.priorite) + '">'
                 + '<i class="fas ' + iconName(n.priorite) + ' text-xs"></i></div>'
-                + '<div class="min-w-0 flex-1">'
-                + '<p class="truncate text-sm font-bold text-slate-800">' + escHtml(n.titre) + '</p>'
+                + '<div class="relative min-w-0 flex-1">'
+                + '<p class="truncate pr-5 text-sm font-bold text-slate-800">' + escHtml(n.titre) + '</p>'
                 + (n.message ? '<p class="mt-0.5 text-[11px] text-slate-500 line-clamp-2">' + escHtml(n.message) + '</p>' : '')
                 + '<div class="mt-1 flex items-center gap-2">'
                 + '<p class="text-[10px] font-semibold text-slate-300">' + escHtml(n.age) + '</p>'
                 + consulter
                 + '</div>'
-                + '</div></' + tag + '>';
+                + '</div>'
+                + '<button type="button" class="notif-close-btn relative z-10 ml-auto shrink-0 flex h-5 w-5 items-center justify-center rounded-full text-slate-300 opacity-0 transition group-hover:opacity-100 hover:bg-slate-200 hover:text-slate-500" data-id="' + n.id + '" title="Fermer">'
+                + '<i class="fas fa-times text-[9px]"></i></button>'
+                + '</div>';
         }).join('');
+        bindCloseButtons();
+    }
+
+    function bindCloseButtons() {
+        list.querySelectorAll('.notif-close-btn').forEach(function (closeBtn) {
+            closeBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var id   = closeBtn.getAttribute('data-id');
+                var item = closeBtn.closest('.notif-item');
+                fetch('/alertes/' + id + '/lire', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN':     csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept':           'application/json',
+                    },
+                    credentials: 'same-origin',
+                })
+                .then(function () {
+                    if (item) {
+                        item.style.transition = 'opacity 0.2s';
+                        item.style.opacity    = '0';
+                        setTimeout(function () { refresh(); }, 200);
+                    } else {
+                        refresh();
+                    }
+                })
+                .catch(function () {});
+            });
+        });
     }
 
     function updateBadge(count) {
@@ -199,11 +240,11 @@
         if (count > 0) {
             badge.classList.remove('hidden');
             countLbl.classList.remove('hidden');
-            lireToutBtn.classList.remove('hidden');
+            lireToutBtn.classList.remove('invisible');
         } else {
             badge.classList.add('hidden');
             countLbl.classList.add('hidden');
-            lireToutBtn.classList.add('hidden');
+            lireToutBtn.classList.add('invisible');
         }
     }
 
@@ -228,9 +269,23 @@
     // ── Polling toutes les 30 secondes ───────────────────────────────────────
     setInterval(refresh, 60000);
 
-    // ── Tout marquer lu via AJAX ─────────────────────────────────────────────
+    // ── Tout fermer via AJAX ─────────────────────────────────────────────────
     if (lireToutBtn) {
-        lireToutBtn.addEventListener('click', function () {
+        lireToutBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+
+            // Feedback optimiste immédiat
+            updateBadge(0);
+            list.innerHTML =
+                '<div class="px-4 py-10 text-center">'
+                + '<i class="fas fa-check-circle text-2xl text-emerald-300"></i>'
+                + '<p class="mt-2 text-sm font-semibold text-slate-400">Aucune nouvelle notification</p>'
+                + '</div>';
+
+            // Fermer le dropdown
+            setTimeout(function () { dropdown.classList.add('hidden'); }, 300);
+
+            // Persister côté serveur
             fetch('/alertes/lire-tout', {
                 method: 'POST',
                 headers: {
@@ -240,9 +295,12 @@
                 },
                 credentials: 'same-origin',
             })
-            .then(function () { refresh(); })
-            .catch(function () {});
+            .then(function (r) { if (!r.ok) refresh(); }) // rollback si erreur
+            .catch(function () { refresh(); });
         });
     }
+
+    // Bind close buttons sur les items rendus côté Blade (premier chargement)
+    bindCloseButtons();
 })();
 </script>

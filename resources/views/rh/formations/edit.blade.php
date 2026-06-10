@@ -40,7 +40,24 @@
                     class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
                 @foreach($agents as $ag)
                     <option value="{{ $ag->id }}" @selected(old('agent_id', $formation->agent_id) == $ag->id)>
-                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->role }}
+                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->poste ?: '—' }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- Formateur --}}
+        <div>
+            <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">
+                Formateur
+                <span class="ml-1 font-normal normal-case tracking-normal text-slate-400">(optionnel — agent de la Faitière)</span>
+            </label>
+            <select name="formateur_id"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
+                <option value="">— Aucun formateur —</option>
+                @foreach($formateurs as $fm)
+                    <option value="{{ $fm->id }}" @selected(old('formateur_id', $formation->formateur_id) == $fm->id)>
+                        {{ trim($fm->prenom . ' ' . $fm->nom) }}{{ $fm->poste ? ' — ' . $fm->poste : '' }}
                     </option>
                 @endforeach
             </select>
@@ -53,30 +70,94 @@
                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
         </div>
 
-        {{-- Domaine --}}
-        <div>
-            <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Domaine *</label>
-            <select name="domaine" required
-                    class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
-                @foreach($domaines as $key => $label)
-                    <option value="{{ $key }}" @selected(old('domaine', $formation->domaine) === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
+        {{-- Type + Domaine --}}
+        <div class="grid grid-cols-2 gap-4">
+            {{-- Type --}}
+            <div>
+                <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Type *</label>
+                <div class="flex gap-3">
+                    @foreach($types as $key => $label)
+                        <label class="flex flex-1 cursor-pointer items-center gap-2.5 rounded-xl border-2 px-4 py-3 transition
+                            {{ old('type', $formation->type ?? 'interne') === $key ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300' }}">
+                            <input type="radio" name="type" value="{{ $key }}"
+                                   {{ old('type', $formation->type ?? 'interne') === $key ? 'checked' : '' }}
+                                   class="accent-emerald-600">
+                            <span class="text-sm font-bold text-slate-700">{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                @error('type')
+                    <p class="mt-1 text-xs text-rose-500">{{ $message }}</p>
+                @enderror
+            </div>
+            {{-- Domaine --}}
+            <div>
+                <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Domaine *</label>
+                <select name="domaine" required
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
+                    @foreach($domaines as $key => $label)
+                        <option value="{{ $key }}" @selected(old('domaine', $formation->domaine) === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
 
-        {{-- Dates --}}
+        {{-- Dates : année fixée, seuls le jour et le mois sont modifiables --}}
+        @php
+            $annee = $anneeEnCours?->annee ?? $formation->date_debut->year;
+            $moisLabels = ['01'=>'Janvier','02'=>'Février','03'=>'Mars','04'=>'Avril','05'=>'Mai','06'=>'Juin',
+                           '07'=>'Juillet','08'=>'Août','09'=>'Septembre','10'=>'Octobre','11'=>'Novembre','12'=>'Décembre'];
+            $existingDebut = old('date_debut', $formation->date_debut->format('Y-m-d'));
+            $existingFin   = old('date_fin',   $formation->date_fin->format('Y-m-d'));
+            $debutJour = (int) substr($existingDebut, 8, 2);
+            $debutMois = substr($existingDebut, 5, 2);
+            $finJour   = (int) substr($existingFin,   8, 2);
+            $finMois   = substr($existingFin,   5, 2);
+        @endphp
         <div class="grid grid-cols-2 gap-4">
+            {{-- Date de début --}}
             <div>
                 <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Date de début *</label>
-                <input type="date" name="date_debut"
-                       value="{{ old('date_debut', $formation->date_debut->format('Y-m-d')) }}" required
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
+                <input type="hidden" name="date_debut" id="date_debut_hidden"
+                       value="{{ $annee }}-{{ $debutMois }}-{{ str_pad($debutJour, 2, '0', STR_PAD_LEFT) }}">
+                <div class="flex items-stretch gap-1.5">
+                    <input type="number" id="date_debut_day" min="1" max="31"
+                           value="{{ $debutJour }}"
+                           placeholder="Jour" required
+                           class="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-center outline-none focus:border-emerald-400 focus:bg-white">
+                    <select id="date_debut_month"
+                            class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
+                        <option value="">Mois</option>
+                        @foreach($moisLabels as $num => $nom)
+                            <option value="{{ $num }}" @selected($debutMois === $num)>{{ $nom }}</option>
+                        @endforeach
+                    </select>
+                    <span class="flex items-center rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-black text-slate-500 select-none">
+                        {{ $annee }}
+                    </span>
+                </div>
             </div>
+            {{-- Date de fin --}}
             <div>
                 <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Date de fin *</label>
-                <input type="date" name="date_fin"
-                       value="{{ old('date_fin', $formation->date_fin->format('Y-m-d')) }}" required
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
+                <input type="hidden" name="date_fin" id="date_fin_hidden"
+                       value="{{ $annee }}-{{ $finMois }}-{{ str_pad($finJour, 2, '0', STR_PAD_LEFT) }}">
+                <div class="flex items-stretch gap-1.5">
+                    <input type="number" id="date_fin_day" min="1" max="31"
+                           value="{{ $finJour }}"
+                           placeholder="Jour" required
+                           class="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-center outline-none focus:border-emerald-400 focus:bg-white">
+                    <select id="date_fin_month"
+                            class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white">
+                        <option value="">Mois</option>
+                        @foreach($moisLabels as $num => $nom)
+                            <option value="{{ $num }}" @selected($finMois === $num)>{{ $nom }}</option>
+                        @endforeach
+                    </select>
+                    <span class="flex items-center rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-black text-slate-500 select-none">
+                        {{ $annee }}
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -106,3 +187,49 @@
 </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    // ── Combinaison jour + mois + année (fixe) → champs hidden ──────────────
+    const ANNEE = {{ $annee }};
+
+    function buildDate(dayInput, monthSelect) {
+        const day   = String(dayInput.value).padStart(2, '0');
+        const month = monthSelect.value;
+        if (!dayInput.value || !month) return '';
+        return `${ANNEE}-${month}-${day}`;
+    }
+
+    function syncDebut() {
+        document.getElementById('date_debut_hidden').value =
+            buildDate(document.getElementById('date_debut_day'),
+                      document.getElementById('date_debut_month'));
+    }
+
+    function syncFin() {
+        document.getElementById('date_fin_hidden').value =
+            buildDate(document.getElementById('date_fin_day'),
+                      document.getElementById('date_fin_month'));
+    }
+
+    function clampDay(input) {
+        const v = parseInt(input.value, 10);
+        if (!isNaN(v)) input.value = Math.min(31, Math.max(1, v));
+    }
+
+    document.getElementById('date_debut_day').addEventListener('input', function() { clampDay(this); syncDebut(); });
+    document.getElementById('date_debut_month').addEventListener('change', syncDebut);
+    document.getElementById('date_fin_day').addEventListener('input', function() { clampDay(this); syncFin(); });
+    document.getElementById('date_fin_month').addEventListener('change', syncFin);
+
+    // Initialisation au chargement (pré-remplissage des valeurs existantes)
+    syncDebut();
+    syncFin();
+
+    // Sync de sécurité juste avant la soumission
+    document.querySelector('form').addEventListener('submit', function () {
+        syncDebut();
+        syncFin();
+    });
+</script>
+@endpush

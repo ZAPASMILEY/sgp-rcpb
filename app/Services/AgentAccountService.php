@@ -28,6 +28,7 @@ class AgentAccountService
         'Assistante DG'                             => 'Assistante_Dg',
         'Conseiller DG'                             => 'Conseillers_Dg',
         'Secrétaire Assistante'                     => 'Secretaire_Assistante',
+        'Secrétaire DGA'                            => 'Secretaire_Assistante',
         'Secrétaire de Direction'                   => 'Secretaire_Assistante',
         'Directeur de Direction'                    => 'Directeur_Technique',
         'Directeur Technique'                       => 'Directeur_Technique',

@@ -1,4 +1,5 @@
 @extends($layout)
+@use('Illuminate\Support\Facades\Storage')
 
 @section('title', 'Mes formations | SGP-RCPB')
 
@@ -14,6 +15,10 @@
                 <h1 class="text-xl font-black tracking-tight text-slate-950">Mes formations</h1>
                 <p class="mt-0.5 text-sm text-slate-500">Historique de vos formations et attestations</p>
             </div>
+            <a href="{{ route('formation.soumettre') }}"
+               class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
+                <i class="fas fa-plus text-xs"></i> Soumettre une formation
+            </a>
         </div>
     </header>
 
@@ -112,15 +117,16 @@
                 @endif
             </div>
         @else
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                 <table class="w-full text-sm">
-                    <thead>
+                    <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-100 bg-slate-50">
                             <th class="px-5 py-3 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-400">Agent</th>
                             <th class="px-5 py-3 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-400">Formation</th>
                             <th class="px-5 py-3 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-400">Domaine</th>
                             <th class="px-5 py-3 text-left text-xs font-black uppercase tracking-[0.12em] text-slate-400">Période</th>
                             <th class="px-4 py-3 text-center text-xs font-black uppercase tracking-[0.12em] text-slate-400">Durée</th>
+                            <th class="px-5 py-3 text-center text-xs font-black uppercase tracking-[0.12em] text-slate-400">Statut</th>
                             <th class="px-5 py-3 text-right text-xs font-black uppercase tracking-[0.12em] text-slate-400">Action</th>
                         </tr>
                     </thead>
@@ -171,28 +177,61 @@
                                     </span>
                                 </td>
 
-                                {{-- PDF --}}
+                                {{-- Statut --}}
+                                <td class="px-5 py-3.5 text-center">
+                                    @php
+                                        $statut = $formation->statut ?? 'validee';
+                                        $statutCls = match($statut) {
+                                            'en_attente' => 'bg-amber-100 text-amber-700',
+                                            'validee'    => 'bg-emerald-100 text-emerald-700',
+                                            'refusee'    => 'bg-rose-100 text-rose-700',
+                                            default      => 'bg-slate-100 text-slate-500',
+                                        };
+                                        $statutLabel = match($statut) {
+                                            'en_attente' => 'En attente',
+                                            'validee'    => 'Validée',
+                                            'refusee'    => 'Refusée',
+                                            default      => ucfirst($statut),
+                                        };
+                                    @endphp
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold {{ $statutCls }}">
+                                        {{ $statutLabel }}
+                                    </span>
+                                    @if($statut === 'refusee' && $formation->motif_refus)
+                                        <p class="mt-1 text-[10px] text-rose-500 italic line-clamp-2">{{ $formation->motif_refus }}</p>
+                                    @endif
+                                </td>
+
+                                {{-- Action --}}
                                 <td class="px-5 py-3.5 text-right">
-                                    <a href="{{ route($pdfRoutePrefix . '.formations.pdf', $formation) }}"
-                                       target="_blank"
-                                       class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-600 transition hover:bg-rose-100"
-                                       title="Télécharger l'attestation PDF">
-                                        <i class="fas fa-file-pdf"></i>
-                                        <span>Attestation</span>
-                                    </a>
+                                    @if($statut === 'validee' && $formation->attestation_path)
+                                        <a href="{{ Storage::url($formation->attestation_path) }}"
+                                           target="_blank"
+                                           class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-600 transition hover:bg-rose-100"
+                                           title="Télécharger l'attestation">
+                                            <i class="fas fa-file-pdf"></i>
+                                            <span>Attestation</span>
+                                        </a>
+                                    @elseif($statut === 'en_attente')
+                                        <form method="POST" action="{{ route('formation.destroy', $formation) }}"
+                                              onsubmit="return confirm('Supprimer cette formation ? Elle sera retirée définitivement.')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-600 transition hover:bg-rose-100">
+                                                <i class="fas fa-trash text-[10px]"></i>
+                                                <span>Retirer</span>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <span class="text-xs text-slate-300">—</span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
             </div>
-
-            {{-- Pagination --}}
-            @if($formations->hasPages())
-                <div class="border-t border-slate-100 px-5 py-3">
-                    {{ $formations->links() }}
-                </div>
-            @endif
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $formations->count() }} résultat(s)</div>
         @endif
     </div>
 

@@ -150,8 +150,8 @@ $evalCards = [
                             <div class="inline-flex items-center gap-1">
                                 <a href="{{ route('dga.sub-evaluations.show', $evaluation) }}"
                                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-100 hover:text-blue-600"
-                                   title="Voir">
-                                    <i class="fas fa-eye text-xs"></i>
+                                   title="{{ $evaluation->statut === 'brouillon' ? 'Modifier' : 'Voir' }}">
+                                    <i class="fas fa-{{ $evaluation->statut === 'brouillon' ? 'pen' : 'eye' }} text-xs"></i>
                                 </a>
                                 @if ($evaluation->statut !== 'brouillon')
                                     <a href="{{ route('dga.sub-evaluations.pdf', $evaluation) }}"
@@ -159,6 +159,17 @@ $evalCards = [
                                        title="PDF" target="_blank">
                                         <i class="fas fa-file-pdf text-xs"></i>
                                     </a>
+                                @endif
+                                @if (in_array($evaluation->statut, ['brouillon', 'a_reviser']))
+                                    <form method="POST" action="{{ route('dga.sub-evaluations.destroy', $evaluation) }}"
+                                          onsubmit="return confirm('Supprimer définitivement cette évaluation ?')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-400 shadow-sm transition hover:bg-rose-50 hover:text-rose-600"
+                                                title="Supprimer">
+                                            <i class="fas fa-trash text-xs"></i>
+                                        </button>
+                                    </form>
                                 @endif
                             </div>
                         </td>

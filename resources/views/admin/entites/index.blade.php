@@ -123,7 +123,7 @@
             </div>
 
             {{-- Two-column: Tabs + Structure --}}
-            <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <div class="grid gap-6 lg:grid-cols-[2fr_1fr]">
                 {{-- Left: Tabs --}}
                 <div class="rounded-2xl bg-white shadow-sm">
                     <div class="flex items-center gap-1 border-b border-slate-100 px-5 pt-4 pb-0">
@@ -137,7 +137,7 @@
 
                     <div class="p-5">
                         {{-- Directions panel --}}
-                        <div data-entite-tab-panel="directions">
+                        <div data-entite-tab-panel="directions" class="overflow-y-auto" style="max-height:420px">
                             @forelse ($directions as $direction)
                                 <a href="{{ route('admin.entites.directions.index') }}" class="flex items-center justify-between border-b border-slate-50 py-3 transition hover:bg-slate-50 -mx-2 px-2 rounded-lg">
                                     <div class="flex items-center gap-3">
@@ -161,7 +161,7 @@
                         </div>
 
                         {{-- Services panel --}}
-                        <div data-entite-tab-panel="services" class="hidden">
+                        <div data-entite-tab-panel="services" class="hidden overflow-y-auto" style="max-height:420px">
                             @forelse ($services as $service)
                                 <a href="{{ route('admin.services.show', $service) }}" class="flex items-center justify-between border-b border-slate-50 py-3 transition hover:bg-slate-50 -mx-2 px-2 rounded-lg">
                                     <div class="flex items-center gap-3">
@@ -184,7 +184,21 @@
                             </div>
                         </div>
 {{-- Secrétaires panel --}}
-<div data-entite-tab-panel="secretaires" class="hidden">
+<div data-entite-tab-panel="secretaires" class="hidden overflow-y-auto" style="max-height:420px">
+
+    {{-- Secrétaires Assistante DG --}}
+    @foreach ($secsAssistante as $sec)
+        <a href="{{ route('admin.agents.show', $sec) }}" class="flex items-center justify-between border-b border-slate-50 py-3 transition hover:bg-slate-50 -mx-2 px-2 rounded-lg">
+            <div class="flex items-center gap-3">
+                <span class="h-2 w-2 rounded-full bg-fuchsia-500"></span>
+                <span class="text-sm font-semibold text-slate-700">{{ trim($sec->prenom . ' ' . $sec->nom) }}</span>
+                <span class="inline-flex items-center rounded-full bg-fuchsia-50 px-2 py-0.5 text-[10px] font-bold text-fuchsia-600">{{ $sec->role }}</span>
+            </div>
+            <i class="fas fa-arrow-right text-xs text-slate-300"></i>
+        </a>
+    @endforeach
+
+    {{-- Secrétaires de Direction --}}
     @forelse ($secretaires as $direction)
         <a href="{{ route('admin.secretaires.show', $direction->id) }}" class="flex items-center justify-between border-b border-slate-50 py-3 transition hover:bg-slate-50 -mx-2 px-2 rounded-lg">
             <div class="flex items-center gap-3">
@@ -217,7 +231,7 @@
                         </div>
 
                         {{-- Agents panel --}}
-                        <div data-entite-tab-panel="agents" class="hidden">
+                        <div data-entite-tab-panel="agents" class="hidden overflow-y-auto" style="max-height:420px">
                             @forelse ($agents as $agent)
                                 <a href="{{ route('admin.agents.show', $agent) }}" class="flex items-center justify-between border-b border-slate-50 py-3 transition hover:bg-slate-50 -mx-2 px-2 rounded-lg">
                                     <div class="flex items-center gap-3">

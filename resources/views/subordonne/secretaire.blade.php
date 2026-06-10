@@ -47,14 +47,27 @@
                         </a>
                     @endforeach
                 </div>
-                @if ($tab === 'evaluations' && $evaluationsEnabled)
-                    <a href="{{ route('assistante.secretaire.evaluations.create') }}" class="ent-btn ent-btn-primary text-xs">
-                        <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
-                    </a>
-                @elseif ($tab === 'objectifs' && $objectifsEnabled)
-                    <a href="{{ route('assistante.secretaire.objectifs.create') }}" class="ent-btn ent-btn-primary text-xs">
-                        <i class="fas fa-plus mr-1"></i> Assigner des objectifs
-                    </a>
+                @if ($tab === 'evaluations')
+                    @if ($evaluationsEnabled && $ficheAcceptee && !$evaluationEnCours)
+                        <a href="{{ route('assistante.secretaire.evaluations.create') }}" class="ent-btn ent-btn-primary text-xs">
+                            <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
+                        </a>
+                    @elseif ($evaluationsEnabled)
+                        <span title="{{ $evaluationEnCours ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : 'Aucune fiche d\'objectifs acceptée pour la secrétaire.' }}"
+                              class="ent-btn ent-btn-primary text-xs cursor-not-allowed opacity-75 select-none pointer-events-none">
+                            <i class="fas fa-lock mr-1"></i> Nouvelle évaluation
+                        </span>
+                    @endif
+                @elseif ($tab === 'objectifs')
+                    @if ($objectifsEnabled && !$ficheBlocksNew)
+                        <a href="{{ route('assistante.secretaire.objectifs.create') }}" class="ent-btn ent-btn-primary text-xs">
+                            <i class="fas fa-plus mr-1"></i> Assigner des objectifs
+                        </a>
+                    @elseif ($objectifsEnabled)
+                        <span title="Une fiche d'objectifs est déjà assignée à la secrétaire." class="ent-btn ent-btn-primary text-xs cursor-not-allowed opacity-75 select-none pointer-events-none">
+                            <i class="fas fa-lock mr-1"></i> Assigner des objectifs
+                        </span>
+                    @endif
                 @endif
             </div>
 

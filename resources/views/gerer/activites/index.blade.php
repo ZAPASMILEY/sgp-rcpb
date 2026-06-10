@@ -59,9 +59,9 @@
                     <p class="text-sm font-semibold text-slate-400">Aucune activité trouvée.</p>
                 </div>
             @else
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto overflow-y-auto" style="max-height:480px">
                 <table class="w-full text-sm">
-                    <thead>
+                    <thead class="sticky top-0 z-10">
                         <tr class="border-b border-slate-100 bg-slate-50/70">
                             <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Date</th>
                             <th class="px-4 py-3 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Utilisateur</th>
@@ -100,10 +100,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="border-t border-slate-100 px-5 py-3 flex items-center justify-between">
-                <span class="text-xs text-slate-400">{{ $activites->total() }} entrée{{ $activites->total() > 1 ? 's' : '' }}</span>
-                {{ $activites->links() }}
-            </div>
+            <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">{{ $activites->count() }} résultat(s)</div>
             @endif
         </div>
     </div>

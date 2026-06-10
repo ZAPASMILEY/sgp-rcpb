@@ -54,8 +54,7 @@ class ChefsServiceController extends Controller
         }
 
         $chefsService = $query->orderBy('nom')->orderBy('prenom')
-            ->paginate(25)
-            ->withQueryString();
+            ->get();
 
         $stats = [
             'total'       => Agent::whereIn('id', $chefAgentIds)->count(),

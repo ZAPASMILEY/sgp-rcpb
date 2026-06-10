@@ -76,6 +76,14 @@ class PermissionMenu
             ];
         }
 
+        if ($user?->can('admin.archives')) {
+            $suiviItems[] = [
+                'route' => 'admin.archives.evaluations',
+                'icon'  => 'fas fa-archive',
+                'label' => 'Archives',
+            ];
+        }
+
         if (! empty($suiviItems)) {
             $sections[] = ['title' => 'Suivi', 'items' => $suiviItems];
         }

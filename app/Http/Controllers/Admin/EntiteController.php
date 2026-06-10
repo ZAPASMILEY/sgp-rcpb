@@ -101,15 +101,18 @@ class EntiteController extends Controller
             'stats' => [
                 'directions' => $directionsQuery->count(),
                 'services' => $servicesQuery->count(),
-                'secretaires' => $secretairesQuery->count(),
+                'secretaires' => $secretairesQuery->count() + Agent::where('entite_id', $entite->id)->whereIn('role', ['Secrétaire Assistante', 'Secrétaire DGA'])->count(),
                 'agents' => $agentsQuery->count(),
             ],
             'directions' => (clone $directionsQuery)->withCount('services')->latest()->get(),
             'allDirections' => (clone $directionsQuery)->get(),
-            'services' => (clone $servicesQuery)->with('direction')->latest()->take(6)->get(),
+            'services' => (clone $servicesQuery)->with('direction')->orderBy('nom')->get(),
             'allServices' => (clone $servicesQuery)->with('direction')->orderBy('nom')->get(),
-            'secretaires' => (clone $secretairesQuery)->latest()->take(8)->get(),
-            'agents' => (clone $agentsQuery)->with('service')->latest()->take(8)->get(),
+            'secretaires' => (clone $secretairesQuery)->orderBy('nom')->get(),
+            'secsAssistante' => Agent::where('entite_id', $entite->id)
+                ->whereIn('role', ['Secrétaire Assistante', 'Secrétaire DGA'])
+                ->orderBy('nom')->orderBy('prenom')->get(),
+            'agents' => (clone $agentsQuery)->with('service')->orderBy('nom')->orderBy('prenom')->get(),
             'bestNow' => [
                 'directions' => $this->getBestEval(Direction::class, $dirIds),
                 'services' => $this->getBestEval(Service::class, $serIds, 'nom'),
@@ -343,8 +346,7 @@ class EntiteController extends Controller
         }
 
         $directions = $directionsBuilder
-            ->paginate(15)
-            ->withQueryString();
+            ->get();
 
         $notes = Evaluation::query()
             ->where('evaluable_type', Direction::class)
@@ -387,8 +389,7 @@ class EntiteController extends Controller
                 });
             })
             ->latest()
-            ->paginate(12)
-            ->withQueryString();
+            ->get();
 
         return view('admin.entites.agents_index', [
             'entite' => $entite,
@@ -436,7 +437,7 @@ class EntiteController extends Controller
             $q->orderBy('nom')->orderBy('prenom');
         }
 
-        $secretaires = $q->paginate(20)->withQueryString();
+        $secretaires = $q->get();
 
         return view('admin.entites.secretaires.index', [
             'secretaires'         => $secretaires,

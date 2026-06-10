@@ -43,7 +43,7 @@
                             <i class="fas fa-trash text-xs"></i> Supprimer
                         </button>
                     </form>
-                    <a href="{{ route('admin.agents.index') }}"
+                    <a href="{{ url()->previous() }}"
                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-500 transition hover:bg-slate-50">
                         Retour
                     </a>

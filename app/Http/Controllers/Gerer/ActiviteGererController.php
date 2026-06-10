@@ -25,8 +25,7 @@ class ActiviteGererController extends Controller
             ))
             ->when($date, fn ($q) => $q->whereDate('created_at', $date))
             ->orderByDesc('created_at')
-            ->paginate(50)
-            ->withQueryString();
+            ->get();
 
         $layout = $this->layout();
 

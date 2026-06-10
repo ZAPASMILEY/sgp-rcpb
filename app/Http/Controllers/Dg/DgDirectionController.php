@@ -140,7 +140,18 @@ class DgDirectionController extends Controller
                 ->get()
             : collect();
 
-        return view('dg.directions.show', compact('direction', 'tab', 'evaluations', 'fiches'));
+        $ficheBlocksNew    = $directeurUser
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->whereNotIn('statut', ['refusee'])->exists()
+            : false;
+        $ficheAcceptee     = $directeurUser
+            ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->where('statut', 'acceptee')->exists()
+            : false;
+        $evaluationEnCours = Evaluation::where('evaluable_type', Direction::class)
+            ->where('evaluable_id', $direction->id)
+            ->whereIn('statut', ['soumis', 'brouillon'])
+            ->exists();
+
+        return view('dg.directions.show', compact('direction', 'tab', 'evaluations', 'fiches', 'ficheBlocksNew', 'ficheAcceptee', 'evaluationEnCours'));
     }
 
     // ── Objectifs ──────────────────────────────────────────────────────────
@@ -207,6 +218,7 @@ class DgDirectionController extends Controller
             'date_echeance'         => $validated['date_echeance'],
             'avancement_percentage' => 0,
             'statut'                => $isBrouillon ? 'brouillon' : 'en_attente',
+            'created_by'            => \Illuminate\Support\Facades\Auth::id(),
         ]);
 
         foreach ($validated['objectifs'] as $desc) {

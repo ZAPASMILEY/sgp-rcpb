@@ -32,7 +32,6 @@
 <body>
     <div class="header">
         <h1>Fiche d'objectifs</h1>
-        <div class="subtitle">{{ config('app.name', 'SGP-RCPB') }}</div>
     </div>
 
     <table class="meta-grid">
@@ -82,7 +81,18 @@
     <h2>Objectifs</h2>
     <ul class="obj-list">
         @foreach($fiche->objectifs as $objectif)
-            <li class="obj-item">{{ $objectif->description }}</li>
+            @php $objPct = (int)($objectif->avancement_percentage ?? 0); @endphp
+            <li class="obj-item">
+                <span>{{ $objectif->description }}</span>
+                <span style="float:right; white-space:nowrap;">
+                    <span style="font-size:9px; color:#6b7280;">Avancement : </span>
+                    <strong style="font-size:9px;">{{ $objPct }}%</strong>
+                    <span class="progress-bar-wrap" style="width:80px; margin-left:4px;">
+                        <span class="progress-bar-fill" style="width:{{ $objPct }}%; display:block;"></span>
+                    </span>
+                </span>
+                <div style="clear:both;"></div>
+            </li>
         @endforeach
     </ul>
 
