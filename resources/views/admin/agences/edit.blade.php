@@ -47,10 +47,17 @@
                 <div>
                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Chef d'agence</label>
                     @if($chefs->isEmpty())
-                        <div class="mb-1 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                            <span>Aucun agent avec la fonction <strong>Chef d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                        </div>
+                        @if(($totalChefs ?? 0) === 0)
+                            <div class="mb-1 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec le rôle <strong>Chef d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                            </div>
+                        @else
+                            <div class="mb-1 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                                <span>Tous les agents <strong>Chef d'Agence</strong> ({{ $totalChefs }}) sont déjà affectés à une agence. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                            </div>
+                        @endif
                     @endif
                     <select name="chef_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                         <option value="">— Aucun chef pour l'instant —</option>
@@ -65,10 +72,17 @@
                 <div>
                     <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Secretaire d'agence</label>
                     @if($secretaires->isEmpty())
-                        <div class="mb-1 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                            <span>Aucun agent avec la fonction <strong>Secrétaire d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                        </div>
+                        @if(($totalSecretaires ?? 0) === 0)
+                            <div class="mb-1 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                <span>Aucun agent avec le rôle <strong>Secrétaire d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                            </div>
+                        @else
+                            <div class="mb-1 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                                <span>Toutes les agents <strong>Secrétaire d'Agence</strong> ({{ $totalSecretaires }}) sont déjà affectées à une agence. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                            </div>
+                        @endif
                     @endif
                     <select name="secretaire_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                         <option value="">— Aucune secretaire pour l'instant —</option>

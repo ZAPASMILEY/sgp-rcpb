@@ -51,6 +51,7 @@ class ServiceController extends Controller
     }
     public function index(Request $request): View
     {
+
         $search = trim((string) $request->query('search', ''));
         $directionId = (string) $request->query('direction_id', '');
         $source = (string) $request->query('source', '');
@@ -119,30 +120,41 @@ class ServiceController extends Controller
         return view('admin.services.create', $this->formData());
     }
 
-    public function show(Service $service): View
+    public function show(Service $service)
     {
-        return view('admin.services.show', [
+        $postes = Poste::where('fonction', 'Agent')->orderBy('libelle')->pluck('libelle');
+        return view('admin.services.show', compact('postes'),[
             'service' => $service->load(['direction.entite', 'chef', 'agents']),
-            'postes'  => Poste::where('fonction', 'Agent')->orderBy('libelle')->pluck('libelle'),
         ]);
+
     }
 
     public function edit(Service $service): View
     {
         return view('admin.services.edit', array_merge(
-            $this->formData(),
+            $this->formData($service),
             ['service' => $service->load('chef')]
         ));
     }
 
-    private function formData(): array
+    private function formData(?Service $service = null): array
     {
+        $chefsQuery = Agent::query()
+            ->where('role', 'Chef de Service')
+            ->where(function ($q) use ($service): void {
+                $q->whereDoesntHave('ledService');
+                if ($service?->chef_agent_id) {
+                    $q->orWhere('id', $service->chef_agent_id);
+                }
+            });
+
         return [
             'faitiereDirections' => Direction::query()->where('nom', '!=', 'Direction Générale')->orderBy('nom')->get(['id', 'nom']),
             'delegations'        => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
             'caisses'            => Caisse::query()->with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
             'directions'         => Direction::query()->where('nom', '!=', 'Direction Générale')->with('entite')->orderBy('nom')->get(['id', 'nom', 'entite_id']),
-            'chefs'              => Agent::query()->where('role', 'Chef de Service')->orderBy('nom')->orderBy('prenom')->get(),
+            'chefs'              => $chefsQuery->orderBy('nom')->orderBy('prenom')->get(),
+            'totalChefs'         => Agent::where('role', 'Chef de Service')->count(),
         ];
     }
 
@@ -173,6 +185,23 @@ class ServiceController extends Controller
             ->route('admin.services.show', $service)
             ->with('status', 'Service mis a jour avec succes.');
     }
+    public function createAttachAgent(Service $service): \Illuminate\Contracts\View\View
+    {
+        $agentsLibres = Agent::query()
+            ->where('role', 'Agent')
+            ->whereNull('service_id')
+            ->whereNull('direction_id')
+            ->whereNull('caisse_id')
+            ->whereNull('agence_id')
+            ->whereNull('delegation_technique_id')
+            ->whereNull('guichet_id')
+            ->whereNull('entite_id')
+            ->orderBy('nom')
+            ->get(['id', 'nom', 'prenom', 'matricule', 'poste']);
+
+        return view('admin.services.attach_agent', compact('service', 'agentsLibres'));
+    }
+
     public function attachAgent(Request $request, Service $service): RedirectResponse
     {
         $request->validate([
@@ -197,9 +226,32 @@ class ServiceController extends Controller
         ]);
         $this->accounts->ensureAccount($agent->fresh());
 
-        return redirect()->back()->with('status', "L'agent {$agent->nom} a été affecté avec succès.");
+        if ($service->caisse_id) {
+            return redirect()
+                ->route('admin.caisses.show', $service->caisse_id)
+                ->with('status', "L'agent {$agent->nom} a été affecté avec succès.");
+        }
+
+        return redirect()
+            ->route('admin.services.show', $service)
+            ->with('status', "L'agent {$agent->nom} a été affecté avec succès.");
     }
-public function affecterCaisse(Request $request)
+    public function detachAgent(Service $service, Agent $agent): RedirectResponse
+    {
+        $agent->update([
+            'service_id'              => null,
+            'direction_id'            => null,
+            'caisse_id'               => null,
+            'delegation_technique_id' => null,
+            'poste'                   => null,
+        ]);
+
+        return redirect()
+            ->route('admin.services.show', $service)
+            ->with('status', "L'agent {$agent->nom} a été retiré du service.");
+    }
+
+    public function affecterCaisse(Request $request)
 {
     $request->validate([
         'service_id' => 'required|exists:services,id',

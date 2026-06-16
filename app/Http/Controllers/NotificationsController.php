@@ -99,4 +99,16 @@ class NotificationsController extends Controller
 
         return back()->with('status', 'Toutes les notifications ont été marquées comme lues.');
     }
+
+    /**
+     * Supprimer toutes les notifications de l'utilisateur connecté.
+     */
+    public function supprimerTout(Request $request): RedirectResponse
+    {
+        DB::table('alerte_user')
+            ->where('user_id', $request->user()->id)
+            ->delete();
+
+        return back()->with('status', 'Toutes les notifications ont été supprimées.');
+    }
 }

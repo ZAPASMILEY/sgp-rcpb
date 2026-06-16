@@ -49,28 +49,22 @@ class AgenceController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'nom' => [
-                'required', 'string', 'max:255',
-                Rule::unique('agences', 'nom')->where(function (Builder $query) use ($request): void {
-                    $query->where('delegation_technique_id', $request->integer('delegation_technique_id'));
-                }),
-            ],
-            'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
-            'caisse_id' => [
-                'required', 'integer',
-                Rule::exists('caisses', 'id')->where('delegation_technique_id', $request->integer('delegation_technique_id')),
-            ],
+            'nom'                 => ['required', 'string', 'max:255', Rule::unique('agences', 'nom')],
+            'caisse_id'           => ['required', 'integer', 'exists:caisses,id'],
             'chef_agent_id'       => ['required', 'integer', 'exists:agents,id'],
             'secretaire_agent_id' => ['required', 'integer', 'exists:agents,id'],
             'telephone_accueil'   => ['required', 'string', 'max:30'],
         ], [
-            'nom.unique'                   => 'Cette agence existe déjà pour la délégation technique sélectionnée.',
+            'nom.unique'                   => 'Une agence avec ce nom existe déjà.',
             'chef_agent_id.required'       => "Le chef d'agence est obligatoire.",
             'secretaire_agent_id.required' => 'Le secrétaire est obligatoire.',
-            'caisse_id.required'           => 'Veuillez choisir une caisse superviseur.',
-            'caisse_id.exists'             => "La caisse choisie n'appartient pas à la délégation technique sélectionnée.",
+            'caisse_id.required'           => 'Veuillez choisir une caisse.',
             'telephone_accueil.required'   => "Le numéro de téléphone d'accueil est obligatoire.",
         ]);
+
+        // Dériver la délégation depuis la caisse choisie
+        $caisse = Caisse::findOrFail($validated['caisse_id']);
+        $validated['delegation_technique_id'] = $caisse->delegation_technique_id;
 
         $agence = Agence::query()->create($validated);
 
@@ -217,10 +211,12 @@ class AgenceController extends Controller
             });
 
         return [
-            'delegations' => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
-            'caisses'     => Caisse::query()->with('agences')->orderBy('nom')->get(),
-            'chefs'       => $chefsQuery->orderBy('nom')->orderBy('prenom')->get(),
-            'secretaires' => $secretairesQuery->orderBy('nom')->orderBy('prenom')->get(),
+            'delegations'    => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
+            'caisses'        => Caisse::query()->with(['directeur', 'delegationTechnique'])->orderBy('nom')->get(),
+            'chefs'          => $chefsQuery->orderBy('nom')->orderBy('prenom')->get(),
+            'secretaires'    => $secretairesQuery->orderBy('nom')->orderBy('prenom')->get(),
+            'totalChefs'     => Agent::where('role', "Chef d'Agence")->count(),
+            'totalSecretaires' => Agent::where('role', "Secrétaire d'Agence")->count(),
         ];
     }
 }

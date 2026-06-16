@@ -346,9 +346,9 @@
 
 {{-- Secrétaire creation modal --}}
 @if ($entite)
-<div id="modal-secretaire" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('modal-secretaire').classList.add('hidden')"></div>
-    <div class="relative w-full max-w-2xl rounded-[28px] bg-white p-6 shadow-2xl lg:p-8">
+<div id="modal-secretaire" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('modal-secretaire').classList.add('hidden')">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+    <div class="relative z-10 w-full max-w-2xl rounded-[28px] bg-white p-6 shadow-2xl lg:p-8">
         <button type="button" onclick="document.getElementById('modal-secretaire').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
             <i class="fas fa-times"></i>
         </button>
@@ -404,9 +404,9 @@
 
 {{-- Agent faitière affectation modal --}}
 @if ($entite)
-<div id="faitiere-agent-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('faitiere-agent-form').classList.add('hidden')"></div>
-    <div class="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+<div id="faitiere-agent-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('faitiere-agent-form').classList.add('hidden')">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+    <div class="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
         <button type="button" onclick="document.getElementById('faitiere-agent-form').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
             <i class="fas fa-times"></i>
         </button>

@@ -38,6 +38,10 @@
                     </button>
                 </form>
             @endif
+            <a href="{{ route('admin.agents.import') }}"
+               class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition">
+                <i class="fas fa-file-csv text-[10px]"></i> Import CSV
+            </a>
             <a href="{{ route('admin.agents.create') }}"
                class="ent-btn ent-btn-primary text-xs py-1.5 px-4">
                 <i class="fas fa-plus mr-1.5"></i> Ajouter un agent
@@ -63,15 +67,6 @@
             <div>
                 <p class="text-2xl font-black text-emerald-600">{{ $totalAffectes }}</p>
                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Affectés</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-4 rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow shadow-amber-100">
-                <i class="fas fa-user-slash text-sm"></i>
-            </div>
-            <div>
-                <p class="text-2xl font-black text-amber-600">{{ $sansCompte }}</p>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sans compte</p>
             </div>
         </div>
     </div>

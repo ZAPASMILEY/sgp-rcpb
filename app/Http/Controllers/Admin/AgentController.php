@@ -60,23 +60,27 @@ class AgentController extends Controller
 
     // Liste des colonnes de clés étrangères pour les affectations directes
 $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id', 'agence_id', 'guichet_id', 'service_id'];
-    // Liste des relations inverses (si tu as défini des relations dans ton modèle Agent)
-    $inverseRelations = ['pcaEntite', 'assistanteEntite', 'directeurDirection', 'secretaireDirection', 'directeurDelegation'];
+    // Liste des relations inverses (noms exacts définis sur Agent)
+    $inverseRelations = [
+        'pcaedEntite', 'assistantedEntite',
+        'directedDirection', 'secretariedDirection',
+        'directedDelegation', 'secretariedDelegation',
+        'directedCaisse', 'secretariedCaisse',
+        'ledAgence', 'ledGuichet', 'ledService',
+    ];
 
     $totalAffectes = Agent::query()->where(function ($q) use ($directFks, $inverseRelations): void {
         foreach ($directFks as $col) {
             $q->orWhereNotNull($col);
         }
         foreach ($inverseRelations as $rel) {
-            if (method_exists(Agent::class, $rel)) {
-                $q->orWhereHas($rel);
-            }
+            $q->orWhereHas($rel);
         }
     })->count();
 
     $sansDatCount = Agent::whereNull('date_debut_fonction')->count();
-    $totalReseau  = Agent::reseau()->count();
-    $sansCompte   = $totalReseau - Agent::reseau()->has('user')->count();
+    $totalReseau  = Agent::count();
+    $sansCompte   = Agent::doesntHave('user')->count();
 
     // 4. Envoi complet à la vue
     return view('admin.agents.index', [
@@ -107,17 +111,18 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
 {
     return view('admin.agents.show', [
         'agent' => $agent->load([
-            'entite', 
-            'direction', 
-            'service.direction.entite', 
-            'service.delegationTechnique', 
-            'service.caisse', 
-            'delegationTechnique', 
-            'caisse', 
-            'agence', 
-            'guichet', 
-            'user'
+            'entite',
+            'direction',
+            'service.direction.entite',
+            'service.delegationTechnique',
+            'service.caisse',
+            'delegationTechnique',
+            'caisse',
+            'agence',
+            'guichet',
+            'user',
         ]),
+        'postes' => Poste::orderBy('libelle')->pluck('libelle'),
     ]);
 }
 
@@ -177,6 +182,7 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
     public function destroy(Request $request, Agent $agent): RedirectResponse
     {
         $this->deletePhoto($agent->photo_path);
+        $agent->user?->delete();
         $agent->delete();
 
         $redirectTo = (string) $request->input('redirect_to', '');
@@ -192,6 +198,24 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
     }
 
     /**
+     * Met à jour uniquement la fonction (poste) d'un agent depuis son profil.
+     */
+    public function updatePoste(Request $request, Agent $agent): RedirectResponse
+    {
+        $validated = $request->validate([
+            'poste' => ['required', 'string', 'max:150'],
+        ], [
+            'poste.required' => 'La fonction est obligatoire.',
+        ]);
+
+        $agent->update(['poste' => $validated['poste']]);
+
+        return redirect()
+            ->route('admin.agents.show', $agent)
+            ->with('status', 'Fonction de '.$agent->prenom.' '.$agent->nom.' mise à jour.');
+    }
+
+    /**
      * Crée (ou réactive) le compte de connexion d'un agent existant.
      * Mot de passe par défaut : 11111111.
      */
@@ -202,6 +226,29 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
         return redirect()
             ->back()
             ->with('status', "Compte de {$agent->prenom} {$agent->nom} activé (mot de passe : 11111111).");
+    }
+
+    /**
+     * Accorde ou révoque la permission 'formations.valider' directement sur l'utilisateur.
+     * Permet de déléguer la validation des formations à un agent non-RH.
+     */
+    public function toggleFormationValider(Agent $agent): RedirectResponse
+    {
+        $user = $agent->user;
+
+        if (! $user) {
+            return redirect()->back()->with('error', "Cet agent n'a pas de compte utilisateur.");
+        }
+
+        if ($user->hasDirectPermission('formations.valider')) {
+            $user->revokePermissionTo('formations.valider');
+            $msg = "Permission de validation des formations retirée à {$agent->prenom} {$agent->nom}.";
+        } else {
+            $user->givePermissionTo('formations.valider');
+            $msg = "{$agent->prenom} {$agent->nom} peut maintenant valider les formations.";
+        }
+
+        return redirect()->back()->with('status', $msg);
     }
 
     /**
@@ -258,6 +305,188 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
         return redirect()
             ->route('admin.agents.index')
             ->with('status', $message);
+    }
+
+    // ── Import CSV ────────────────────────────────────────────────────────────
+
+    public function importForm(): View
+    {
+        return view('admin.agents.import', ['roles' => Agent::ROLES]);
+    }
+
+    public function downloadTemplate(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $headers = ['Content-Type' => 'text/csv; charset=UTF-8', 'Content-Disposition' => 'attachment; filename="modele_import_agents.csv"'];
+        $columns = ['nom', 'prenom', 'sexe', 'email', 'numero_telephone', 'matricule', 'role', 'poste', 'date_debut_fonction'];
+        $example = ['SAWADOGO', 'Fatima', 'femme', 'f.sawadogo@rcpb.bf', '+22670000000', 'MAT-001', 'Agent', 'Agent de crédit', '2022-01-15'];
+
+        return response()->streamDownload(function () use ($columns, $example): void {
+            $f = fopen('php://output', 'w');
+            // BOM UTF-8 pour Excel
+            fwrite($f, "\xEF\xBB\xBF");
+            fputcsv($f, $columns, ';');
+            fputcsv($f, $example, ';');
+            fclose($f);
+        }, 'modele_import_agents.csv', $headers);
+    }
+
+    public function import(Request $request): \Illuminate\Http\RedirectResponse|\Illuminate\Contracts\View\View
+    {
+        $request->validate([
+            'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
+        ], [
+            'csv_file.required' => 'Veuillez sélectionner un fichier CSV.',
+            'csv_file.mimes'    => 'Le fichier doit être au format CSV.',
+            'csv_file.max'      => 'Le fichier ne doit pas dépasser 10 Mo.',
+        ]);
+
+        $path    = $request->file('csv_file')->getRealPath();
+        $content = file_get_contents($path);
+
+        // Supprimer BOM UTF-8 si présent
+        $content = ltrim($content, "\xEF\xBB\xBF");
+
+        $lines = preg_split('/\r\n|\n|\r/', trim($content));
+        if (count($lines) < 2) {
+            return redirect()->back()->with('error', 'Le fichier CSV est vide ou ne contient que l\'en-tête.');
+        }
+
+        // Détecter le délimiteur (;  ou ,)
+        $delimiter = substr_count($lines[0], ';') >= substr_count($lines[0], ',') ? ';' : ',';
+
+        // Lire l'en-tête
+        $header = array_map('trim', str_getcsv($lines[0], $delimiter));
+        $header = array_map('strtolower', $header);
+
+        $required = ['nom', 'prenom', 'sexe', 'matricule', 'role'];
+        $missing  = array_diff($required, $header);
+        if (!empty($missing)) {
+            return redirect()->back()->with('error', 'Colonnes manquantes dans le CSV : ' . implode(', ', $missing));
+        }
+
+        $validRoles  = array_keys(Agent::ROLES);
+        $imported    = 0;
+        $errors      = [];
+        $existingEmails      = Agent::whereNotNull('email')->pluck('email')->flip();
+        $existingMatricules  = Agent::whereNotNull('matricule')->pluck('matricule')->flip();
+        $existingPhones      = Agent::whereNotNull('numero_telephone')->pluck('numero_telephone')->flip();
+
+        DB::beginTransaction();
+        try {
+            for ($i = 1; $i < count($lines); $i++) {
+                $line = trim($lines[$i]);
+                if ($line === '') {
+                    continue;
+                }
+
+                $row    = array_map('trim', str_getcsv($line, $delimiter));
+                $data   = [];
+                foreach ($header as $idx => $col) {
+                    $data[$col] = $row[$idx] ?? '';
+                }
+
+                $lineNum = $i + 1;
+                $rowErrors = [];
+
+                // Champs obligatoires
+                if (empty($data['nom']))       $rowErrors[] = 'nom manquant';
+                if (empty($data['prenom']))     $rowErrors[] = 'prénom manquant';
+                if (empty($data['matricule']))  $rowErrors[] = 'matricule manquant';
+                if (empty($data['role']))       $rowErrors[] = 'rôle manquant';
+
+                // Poste obligatoire pour les rôles Agent et Conseiller DG
+                $rolesRequiringPoste = ['Agent', 'Conseiller DG'];
+                if (in_array($data['role'] ?? '', $rolesRequiringPoste, true) && empty($data['poste'])) {
+                    $rowErrors[] = "poste obligatoire pour le rôle « {$data['role']} »";
+                }
+
+                // Sexe
+                $sexe = strtolower($data['sexe'] ?? '');
+                if (in_array($sexe, ['h', 'm', 'masculin', 'homme'], true)) {
+                    $sexe = 'homme';
+                } elseif (in_array($sexe, ['f', 'féminin', 'feminin', 'femme'], true)) {
+                    $sexe = 'femme';
+                } else {
+                    $rowErrors[] = 'sexe invalide (attendu : homme/femme ou H/F)';
+                }
+
+                // Rôle
+                $role = $data['role'] ?? '';
+                if (!in_array($role, $validRoles, true)) {
+                    $rowErrors[] = "rôle « {$role} » invalide";
+                }
+
+                // Email unique
+                $email = $data['email'] ?? '';
+                if ($email !== '' && isset($existingEmails[$email])) {
+                    $rowErrors[] = "email « {$email} » déjà utilisé";
+                }
+
+                // Matricule unique
+                if (!empty($data['matricule']) && isset($existingMatricules[$data['matricule']])) {
+                    $rowErrors[] = "matricule « {$data['matricule']} » déjà utilisé";
+                }
+
+                // Téléphone unique
+                $tel = $data['numero_telephone'] ?? '';
+                if ($tel !== '' && isset($existingPhones[$tel])) {
+                    $rowErrors[] = "téléphone « {$tel} » déjà utilisé";
+                }
+
+                // Date
+                $date = null;
+                if (!empty($data['date_debut_fonction'])) {
+                    foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y'] as $fmt) {
+                        $d = \DateTime::createFromFormat($fmt, $data['date_debut_fonction']);
+                        if ($d && $d->format($fmt) === $data['date_debut_fonction']) {
+                            $date = $d->format('Y-m-d');
+                            break;
+                        }
+                    }
+                    if ($date === null) {
+                        $rowErrors[] = 'date_debut_fonction invalide (format attendu : AAAA-MM-JJ)';
+                    }
+                }
+
+                if (!empty($rowErrors)) {
+                    $errors[] = "Ligne {$lineNum} (" . ($data['nom'] ?? '?') . ' ' . ($data['prenom'] ?? '') . ") : " . implode(', ', $rowErrors);
+                    continue;
+                }
+
+                $agent = Agent::create([
+                    'nom'                 => $data['nom'],
+                    'prenom'              => $data['prenom'],
+                    'sexe'                => $sexe,
+                    'email'               => $email ?: null,
+                    'numero_telephone'    => $tel ?: null,
+                    'matricule'           => $data['matricule'],
+                    'role'                => $role,
+                    'poste'               => $data['poste'] ?? null ?: null,
+                    'date_debut_fonction' => $date,
+                ]);
+
+                $this->accounts->ensureAccount($agent);
+
+                // Mise à jour des ensembles pour détecter les doublons dans le même fichier
+                if ($email)            $existingEmails[$email]              = true;
+                if ($data['matricule']) $existingMatricules[$data['matricule']] = true;
+                if ($tel)              $existingPhones[$tel]                = true;
+
+                $imported++;
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Erreur lors de l\'import : ' . $e->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.agents.import')
+            ->with('import_result', [
+                'imported' => $imported,
+                'errors'   => $errors,
+            ]);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

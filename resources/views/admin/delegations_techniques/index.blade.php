@@ -115,10 +115,17 @@
                             Directeur Régional
                         </h3>
                         @if($directeurs->isEmpty())
-                            <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                                <span>Aucun agent avec la fonction <strong>Directeur Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                            </div>
+                            @if(($totalDirecteurs ?? 0) === 0)
+                                <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                    <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                    <span>Aucun agent avec le rôle <strong>Directeur Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                                </div>
+                            @else
+                                <div class="mb-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                    <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                                    <span>Tous les agents <strong>Directeur Technique</strong> ({{ $totalDirecteurs }}) sont déjà affectés à une délégation. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                                </div>
+                            @endif
                         @endif
                         <select name="directeur_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
                             <option value="">— Aucun directeur pour l'instant —</option>
@@ -137,10 +144,17 @@
                             Secrétaire de la Direction Régionale
                         </h3>
                         @if($secretaires->isEmpty())
-                            <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                                <span>Aucun agent avec la fonction <strong>Secrétaire Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                            </div>
+                            @if(($totalSecretaires ?? 0) === 0)
+                                <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                    <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                    <span>Aucun agent avec le rôle <strong>Secrétaire Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                                </div>
+                            @else
+                                <div class="mb-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                    <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                                    <span>Toutes les agents <strong>Secrétaire Technique</strong> ({{ $totalSecretaires }}) sont déjà affectées à une délégation. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                                </div>
+                            @endif
                         @endif
                         <select name="secretaire_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
                             <option value="">— Aucune secrétaire pour l'instant —</option>
@@ -165,9 +179,9 @@
         @endif
 
         {{-- Caisse creation modal --}}
-        <div id="caisse-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('caisse-form').classList.add('hidden')"></div>
-            <div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+        <div id="caisse-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('caisse-form').classList.add('hidden')">
+            <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+            <div class="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
                 <button type="button" onclick="document.getElementById('caisse-form').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
                     <i class="fas fa-times"></i>
                 </button>
@@ -231,10 +245,17 @@
                             Directeur de Caisse
                         </h3>
                         @if($directeurs_caisse->isEmpty())
-                            <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                                <span>Aucun agent avec la fonction <strong>Directeur de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                            </div>
+                            @if(($totalDirecteursCaisse ?? 0) === 0)
+                                <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                    <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                    <span>Aucun agent avec le rôle <strong>Directeur de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                                </div>
+                            @else
+                                <div class="mb-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                    <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                                    <span>Tous les agents <strong>Directeur de Caisse</strong> ({{ $totalDirecteursCaisse }}) sont déjà affectés à une caisse. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                                </div>
+                            @endif
                         @endif
                         <select name="directeur_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                             <option value="">— Aucun directeur pour l'instant —</option>
@@ -252,10 +273,17 @@
                             Secrétaire du Directeur
                         </h3>
                         @if($secretaires_caisse->isEmpty())
-                            <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                                <span>Aucun agent avec la fonction <strong>Secrétaire de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                            </div>
+                            @if(($totalSecretairesCaisse ?? 0) === 0)
+                                <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                    <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                    <span>Aucun agent avec le rôle <strong>Secrétaire de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                                </div>
+                            @else
+                                <div class="mb-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                    <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                                    <span>Toutes les agents <strong>Secrétaire de Caisse</strong> ({{ $totalSecretairesCaisse }}) sont déjà affectées à une caisse. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                                </div>
+                            @endif
                         @endif
                         <select name="secretaire_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                             <option value="">— Aucune secrétaire pour l'instant —</option>
@@ -281,9 +309,9 @@
         </div>
 
         {{-- Agent creation modal --}}
-        <div id="agent-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('agent-form').classList.add('hidden')"></div>
-            <div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+        <div id="agent-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('agent-form').classList.add('hidden')">
+            <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+            <div class="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
                 <button type="button" onclick="document.getElementById('agent-form').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
                     <i class="fas fa-times"></i>
                 </button>
@@ -363,9 +391,9 @@
         </div>
 
         {{-- Service creation modal --}}
-        <div id="service-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('service-form').classList.add('hidden')"></div>
-            <div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+        <div id="service-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('service-form').classList.add('hidden')">
+            <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+            <div class="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
                 <button type="button" onclick="document.getElementById('service-form').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
                     <i class="fas fa-times"></i>
                 </button>
@@ -457,6 +485,11 @@
                                 <div class="flex items-center gap-2">
                                     <a href="{{ route('admin.delegations-techniques.show', $delegation) }}" class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600" title="Voir">
                                         <i class="fas fa-eye text-xs"></i>
+                                    </a>
+                                    <a href="{{ route('admin.delegations-techniques.villes.edit', $delegation) }}"
+                                       class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-400 transition hover:bg-violet-100 hover:text-violet-600"
+                                       title="Configurer les villes ({{ $delegation->villes_count ?? 0 }})">
+                                        <i class="fas fa-city text-xs"></i>
                                     </a>
                                     <a href="{{ route('admin.delegations-techniques.edit', $delegation) }}" class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition hover:bg-cyan-50 hover:text-cyan-600" title="Modifier">
                                         <i class="fas fa-pen text-xs"></i>

@@ -8,7 +8,6 @@ use App\Models\Agent;
 use App\Models\Caisse;
 use App\Models\Guichet;
 use App\Models\DelegationTechnique;
-use App\Models\Poste;
 use App\Services\AgentAccountService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -51,7 +50,10 @@ class GuichetController extends Controller
     public function create(): View
     {
         return view('admin.guichets.create', [
-            'chefs'   => Agent::where('role', 'Chef de Guichet')->orderBy('nom')->get(['id', 'nom', 'prenom']),
+            'chefs'   => Agent::query()
+                ->whereIn('role', ['Chef de Guichet', 'Agent'])
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'role', 'agence_id']),
             'agences' => Agence::with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
         ]);
     }
@@ -67,11 +69,23 @@ class GuichetController extends Controller
             'telephone_accueil.required' => "Le numéro de téléphone d'accueil est obligatoire.",
         ]);
 
+        // Valider que le chef appartient bien à l'agence choisie (si agent simple)
+        if ($validated['chef_agent_id']) {
+            $chef = Agent::findOrFail($validated['chef_agent_id']);
+            if ($chef->role === 'Agent' && $chef->agence_id && $chef->agence_id !== (int) $validated['agence_id']) {
+                return back()->withErrors(['chef_agent_id' => "Cet agent n'appartient pas à l'agence sélectionnée."])->withInput();
+            }
+        }
+
         $guichet = Guichet::create($validated);
 
         if ($validated['chef_agent_id']) {
             $chef = Agent::findOrFail($validated['chef_agent_id']);
-            $chef->update(['poste' => 'Chef de Guichet de ' . $guichet->nom]);
+            $chef->update([
+                'poste'     => 'Chef de Guichet de ' . $guichet->nom,
+                'agence_id' => $guichet->agence_id,
+                'guichet_id'=> $guichet->id,
+            ]);
             $this->accounts->ensureAccount($chef->fresh());
         }
 
@@ -84,7 +98,10 @@ class GuichetController extends Controller
     {
         return view('admin.guichets.edit', [
             'guichet' => $guichet,
-            'chefs'   => Agent::where('role', 'Chef de Guichet')->orderBy('nom')->get(['id', 'nom', 'prenom']),
+            'chefs'   => Agent::query()
+                ->whereIn('role', ['Chef de Guichet', 'Agent'])
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'role', 'agence_id']),
             'agences' => Agence::with('delegationTechnique')->orderBy('nom')->get(['id', 'nom', 'delegation_technique_id']),
         ]);
     }
@@ -98,6 +115,14 @@ class GuichetController extends Controller
             'telephone_accueil' => ['required', 'string', 'max:30'],
         ]);
 
+        // Valider que le chef appartient bien à l'agence choisie (si agent simple)
+        if ($validated['chef_agent_id']) {
+            $chef = Agent::findOrFail($validated['chef_agent_id']);
+            if ($chef->role === 'Agent' && $chef->agence_id && $chef->agence_id !== (int) $validated['agence_id']) {
+                return back()->withErrors(['chef_agent_id' => "Cet agent n'appartient pas à l'agence sélectionnée."])->withInput();
+            }
+        }
+
         // Si le chef change, désactiver le compte de l'ancien chef
         if ($guichet->chef_agent_id && $guichet->chef_agent_id !== (int) $validated['chef_agent_id']) {
             $this->accounts->deactivateAccount(Agent::findOrFail($guichet->chef_agent_id));
@@ -107,7 +132,11 @@ class GuichetController extends Controller
 
         if ($validated['chef_agent_id']) {
             $chef = Agent::findOrFail($validated['chef_agent_id']);
-            $chef->update(['poste' => 'Chef de Guichet de ' . $guichet->nom]);
+            $chef->update([
+                'poste'      => 'Chef de Guichet de ' . $guichet->nom,
+                'agence_id'  => $guichet->agence_id,
+                'guichet_id' => $guichet->id,
+            ]);
             $this->accounts->ensureAccount($chef->fresh());
         }
 
@@ -150,12 +179,12 @@ class GuichetController extends Controller
             'agents'  => Agent::query()
                 ->where('agence_id', $guichet->agence_id)
                 ->whereNull('guichet_id')
-                ->where('id', '!=', $guichet->chef_agent_id)
-                // SECURITÉ : On filtre les rôles interdits (Direction/Admin Agence)
+                // Exclure le chef de guichet actuel uniquement s'il existe
+                ->when($guichet->chef_agent_id, fn ($q) => $q->where('id', '!=', $guichet->chef_agent_id))
+                // SÉCURITÉ : On filtre les rôles interdits (Direction/Admin Agence)
                 ->whereNotIn('role', ["Chef d'Agence", "Secrétaire d'Agence"])
                 ->orderBy('nom')->orderBy('prenom')
-                ->get(['id', 'nom', 'prenom', 'role', 'matricule', 'poste']),
-            'postes'  => Poste::where('fonction', 'Agent')->orderBy('libelle')->pluck('libelle'),
+                ->get(['id', 'nom', 'prenom', 'role', 'matricule']),
         ]);
     }
 
@@ -166,10 +195,8 @@ class GuichetController extends Controller
     {
         $validated = $request->validate([
             'agent_id' => ['required', 'integer', 'exists:agents,id'],
-            'poste'    => ['required', 'string', 'max:150'],
         ], [
             'agent_id.required' => 'Veuillez sélectionner un agent.',
-            'poste.required'    => 'La fonction occupée est obligatoire.',
         ]);
 
         $agent = Agent::findOrFail($validated['agent_id']);
@@ -179,6 +206,13 @@ class GuichetController extends Controller
         if (in_array($agent->role, $fonctionsInterdites)) {
             return back()->withErrors([
                 'agent_id' => "Action impossible : le rôle de « {$agent->role} » est rattaché au siège de l'agence."
+            ]);
+        }
+
+        // SÉCURITÉ : L'agent doit appartenir à l'agence du guichet
+        if ($agent->agence_id !== $guichet->agence_id) {
+            return back()->withErrors([
+                'agent_id' => "Cet agent n'appartient pas à l'agence de ce guichet."
             ]);
         }
 
@@ -193,7 +227,14 @@ class GuichetController extends Controller
             }
         }
 
-        $agent->update(['guichet_id' => $guichet->id, 'poste' => $validated['poste'] ?? null]);
+        // Le poste est automatiquement défini selon le guichet
+        $posteAuto = 'Agent de ' . $guichet->nom;
+
+        $agent->update([
+            'guichet_id' => $guichet->id,
+            'agence_id'  => $guichet->agence_id,
+            'poste'      => $posteAuto,
+        ]);
         $this->accounts->ensureAccount($agent->fresh());
 
         return redirect()

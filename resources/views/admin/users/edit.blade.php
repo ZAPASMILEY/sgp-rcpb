@@ -85,16 +85,46 @@
 
                 {{-- Manager N+1 --}}
                 <div class="space-y-2">
-                    <label for="manager_id" class="text-sm font-semibold text-slate-700">Supérieur direct (N+1)</label>
+                    <label for="manager_id" class="text-sm font-semibold text-slate-700">
+                        Supérieur direct (N+1)
+                        @if($user->role === 'Agent')
+                            <span class="ml-1 text-xs font-normal text-slate-400">— Chef de Service / Agence / Guichet</span>
+                        @endif
+                    </label>
+                    @if($managers->isEmpty())
+                        <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun responsable disponible pour ce rôle.</span>
+                        </div>
+                    @endif
                     <select id="manager_id" name="manager_id" class="ent-select">
-                        <option value="">-- Aucun --</option>
+                        <option value="" data-structure="">-- Aucun --</option>
                         @foreach ($managers as $manager)
-                            <option value="{{ $manager->id }}" @selected((string) old('manager_id', $user->manager_id) === (string) $manager->id)>
+                            @php
+                                $a = $manager->agent;
+                                $parts = array_filter([
+                                    $a?->entite?->nom,
+                                    $a?->direction?->nom,
+                                    $a?->delegationTechnique ? $a->delegationTechnique->region.' / '.$a->delegationTechnique->ville : null,
+                                    $a?->caisse?->nom,
+                                    $a?->agence?->nom,
+                                    $a?->service?->nom,
+                                ]);
+                                $structure = implode(' › ', $parts);
+                            @endphp
+                            <option value="{{ $manager->id }}"
+                                    data-structure="{{ $structure }}"
+                                    @selected((string) old('manager_id', $user->manager_id) === (string) $manager->id)>
                                 {{ $manager->name }}
                                 ({{ \App\Http\Controllers\Admin\UserController::ROLES[$manager->role] ?? $manager->role }})
+                                @if($structure) — {{ $structure }} @endif
                             </option>
                         @endforeach
                     </select>
+                    <div id="manager-affectation-preview" class="hidden items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-700 mt-1">
+                        <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                        <span>Si l'agent n'est pas encore affecté, il sera automatiquement rattaché à : <strong id="manager-structure-label"></strong></span>
+                    </div>
                 </div>
 
                 {{-- Nouveau mot de passe (optionnel) --}}
@@ -154,6 +184,28 @@
     }
     roleSelect.addEventListener('change', togglePcaBlock);
     togglePcaBlock();
+
+    // Prévisualisation affectation via supérieur
+    const managerSel   = document.getElementById('manager_id');
+    const preview      = document.getElementById('manager-affectation-preview');
+    const previewLabel = document.getElementById('manager-structure-label');
+
+    function updateManagerPreview() {
+        const opt = managerSel.options[managerSel.selectedIndex];
+        const structure = opt ? opt.dataset.structure : '';
+        if (structure) {
+            previewLabel.textContent = structure;
+            preview.classList.remove('hidden');
+            preview.classList.add('flex');
+        } else {
+            preview.classList.add('hidden');
+            preview.classList.remove('flex');
+        }
+    }
+    if (managerSel) {
+        managerSel.addEventListener('change', updateManagerPreview);
+        updateManagerPreview();
+    }
 
     function generatePassword() {
         const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';

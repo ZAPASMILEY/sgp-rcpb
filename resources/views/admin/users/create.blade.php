@@ -176,17 +176,42 @@
 
                 {{-- ── Manager N+1 ── --}}
                 <div class="space-y-2">
-                    <label for="manager_id" class="text-sm font-semibold text-slate-700">Supérieur direct (N+1)</label>
+                    <label for="manager_id" class="text-sm font-semibold text-slate-700">
+                        Supérieur direct (N+1)
+                        <span id="manager-role-hint" class="ml-1 text-xs font-normal text-slate-400"></span>
+                    </label>
                     <select id="manager_id" name="manager_id" class="ent-select">
-                        <option value="">-- Aucun --</option>
+                        <option value="" data-role="" data-structure="">-- Aucun --</option>
                         @foreach ($managers as $manager)
-                            <option value="{{ $manager->id }}" @selected((string) old('manager_id') === (string) $manager->id)>
+                            @php
+                                $a = $manager->agent;
+                                $parts = array_filter([
+                                    $a?->entite?->nom,
+                                    $a?->direction?->nom,
+                                    $a?->delegationTechnique ? $a->delegationTechnique->region.' / '.$a->delegationTechnique->ville : null,
+                                    $a?->caisse?->nom,
+                                    $a?->agence?->nom,
+                                    $a?->service?->nom,
+                                ]);
+                                $structure = implode(' › ', $parts);
+                            @endphp
+                            <option value="{{ $manager->id }}"
+                                    data-role="{{ $manager->role }}"
+                                    data-structure="{{ $structure }}"
+                                    @selected((string) old('manager_id') === (string) $manager->id)>
                                 {{ $manager->name }}
                                 ({{ \App\Http\Controllers\Admin\UserController::ROLES[$manager->role] ?? $manager->role }})
+                                @if($structure) — {{ $structure }} @endif
                             </option>
                         @endforeach
                     </select>
-                    <p class="text-xs text-slate-500">Définit la chaîne de validation des évaluations et objectifs.</p>
+                    <div id="manager-affectation-preview" class="hidden items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs text-blue-700 mt-1">
+                        <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
+                        <span>Si l'agent n'est pas encore affecté, il sera automatiquement rattaché à : <strong id="manager-structure-label"></strong></span>
+                    </div>
+                    <p id="manager-no-match" class="hidden text-xs text-amber-600 font-semibold">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Aucun responsable disponible pour ce rôle.
+                    </p>
                 </div>
 
                 {{-- ── Mot de passe ── --}}
@@ -297,6 +322,70 @@
         if (agentSelect.value) agentSelect.dispatchEvent(new Event('change'));
     }
     @endif
+
+    // ── Filtrage managers selon le rôle sélectionné ──────────────────────
+    const managerRolesMap = @json($managerRolesMap ?? []);
+    const managerHints = {
+        'Agent':               '— Chef de Service / Agence / Guichet',
+        'Chef_Service':        '— Directeur de Caisse / Technique / Direction',
+        'Chef_Agence':         '— Directeur de Caisse / Technique',
+        'Chef_Guichet':        '— Chef d\'Agence / Directeur de Caisse',
+        'Directeur_Caisse':    '— Directeur Technique',
+        'Directeur_Technique': '— DGA / DG',
+        'Directeur_Direction': '— DGA / DG',
+        'DGA':                 '— Directeur Général',
+    };
+
+    const roleSelect    = document.getElementById('role');
+    const managerSel    = document.getElementById('manager_id');
+    const managerHint   = document.getElementById('manager-role-hint');
+    const noMatch       = document.getElementById('manager-no-match');
+    const previewBox    = document.getElementById('manager-affectation-preview');
+    const previewLabel  = document.getElementById('manager-structure-label');
+    const allManagerOpts = managerSel
+        ? Array.from(managerSel.querySelectorAll('option[data-role]'))
+        : [];
+
+    function filterManagers() {
+        if (!managerSel) return;
+        const role = roleSelect ? roleSelect.value : '';
+        const allowed = managerRolesMap[role] || [];
+        managerHint.textContent = managerHints[role] || '';
+
+        let visibleCount = 0;
+        allManagerOpts.forEach(opt => {
+            const show = allowed.length === 0 || allowed.includes(opt.dataset.role);
+            opt.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        // Reset si le supérieur actuel n'est plus dans la liste filtrée
+        const selected = managerSel.options[managerSel.selectedIndex];
+        if (selected && selected.dataset.role && allowed.length > 0 && !allowed.includes(selected.dataset.role)) {
+            managerSel.value = '';
+        }
+
+        noMatch.classList.toggle('hidden', visibleCount > 0 || allowed.length === 0);
+        updateManagerPreview();
+    }
+
+    function updateManagerPreview() {
+        if (!managerSel) return;
+        const opt = managerSel.options[managerSel.selectedIndex];
+        const structure = opt ? opt.dataset.structure : '';
+        if (structure) {
+            previewLabel.textContent = structure;
+            previewBox.classList.remove('hidden');
+            previewBox.classList.add('flex');
+        } else {
+            previewBox.classList.add('hidden');
+            previewBox.classList.remove('flex');
+        }
+    }
+
+    if (roleSelect) roleSelect.addEventListener('change', filterManagers);
+    if (managerSel) managerSel.addEventListener('change', updateManagerPreview);
+    filterManagers();
 
     function generatePassword() {
         const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';

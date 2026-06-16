@@ -357,8 +357,12 @@ class ChefEntity
      *
      * La FK utilisée dépend du type de chef :
      *   Chef_Service  → agents.service_id = entity.id
-     *   Chef_Agence   → agents.agence_id  = entity.id
+     *   Chef_Agence   → agents.agence_id  = entity.id  (hors agents déjà dans un guichet)
      *   Chef_Guichet  → agents.guichet_id = entity.id
+     *
+     * Pour Chef_Agence : un agent affecté à un guichet de cette agence passe
+     * sous la responsabilité du chef de guichet — il ne doit plus apparaître
+     * dans la liste directe du chef d'agence.
      *
      * On exclut le chef lui-même (l'utilisateur connecté) pour éviter
      * qu'il apparaisse dans sa propre liste de subordonnés.
@@ -371,6 +375,9 @@ class ChefEntity
                 // Exclure l'agent-chef de la liste des subordonnés
                 fn ($q) => $q->where('id', '!=', $this->agent->id)
             )
+            // Pour le Chef_Agence : les agents déjà dans un guichet
+            // relèvent du chef de guichet, pas du chef d'agence directement.
+            ->when($this->type === 'agence', fn ($q) => $q->whereNull('guichet_id'))
             ->orderBy('nom')
             ->orderBy('prenom')
             ->get();
@@ -394,6 +401,9 @@ class ChefEntity
     /**
      * Retourne uniquement les IDs des agents subordonnés (sans le chef).
      * Utilisé pour les vérifications d'appartenance et les requêtes "in".
+     *
+     * Même règle que getAgents() : pour le Chef_Agence, on exclut les agents
+     * qui ont un guichet_id (ils relèvent du chef de guichet).
      */
     public function getAgentIds(): array
     {
@@ -402,6 +412,7 @@ class ChefEntity
                 $this->agent,
                 fn ($q) => $q->where('id', '!=', $this->agent->id)
             )
+            ->when($this->type === 'agence', fn ($q) => $q->whereNull('guichet_id'))
             ->pluck('id')
             ->all();
     }
@@ -413,9 +424,13 @@ class ChefEntity
      * Interdit aussi l'évaluation du chef par lui-même (l'agent ne doit pas
      * être l'agent-chef lui-même).
      *
+     * Pour Chef_Agence : un agent dans un guichet (guichet_id non null)
+     * relève du chef de guichet — il n'est plus "owned by" le chef d'agence.
+     *
      * Retourne true seulement si :
      *   1. La FK agentField de l'agent pointe vers cette structure
      *   2. L'agent n'est pas le chef lui-même
+     *   3. (Chef_Agence uniquement) l'agent n'est pas dans un guichet
      */
     public function agentOwnedBy(Agent $agent): bool
     {
@@ -425,6 +440,10 @@ class ChefEntity
         // Le chef ne peut pas s'évaluer lui-même
         $notSelf = $this->agent ? $agent->id !== $this->agent->id : true;
 
-        return $inStructure && $notSelf;
+        // Pour le Chef_Agence : un agent affecté à un guichet n'est plus
+        // sous la responsabilité directe du chef d'agence
+        $notInGuichet = $this->type === 'agence' ? is_null($agent->guichet_id) : true;
+
+        return $inStructure && $notSelf && $notInGuichet;
     }
 }

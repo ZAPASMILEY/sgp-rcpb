@@ -262,9 +262,9 @@
 
 {{-- Modal Créer Alerte --}}
 <div id="modal-create-alerte" class="fixed inset-0 z-50 hidden overflow-y-auto">
-    <div class="flex min-h-full items-center justify-center p-4">
-        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="document.getElementById('modal-create-alerte').classList.add('hidden')"></div>
-        <div class="relative w-full max-w-lg rounded-2xl bg-white shadow-2xl flex flex-col" style="max-height:calc(100vh - 2rem)">
+    <div class="flex min-h-full items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('modal-create-alerte').classList.add('hidden')">
+        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm pointer-events-none"></div>
+        <div class="relative z-10 w-full max-w-lg rounded-2xl bg-white shadow-2xl flex flex-col" style="max-height:calc(100vh - 2rem)">
 
             {{-- Header fixe --}}
             <div class="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">

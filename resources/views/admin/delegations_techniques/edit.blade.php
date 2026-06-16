@@ -64,10 +64,17 @@
                     Directeur Régional
                 </h2>
                 @if($directeurs->isEmpty())
-                    <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                        <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                        <span>Aucun agent avec la fonction <strong>Directeur Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                    </div>
+                    @if(($totalDirecteurs ?? 0) === 0)
+                        <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun agent avec le rôle <strong>Directeur Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                        </div>
+                    @else
+                        <div class="mb-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                            <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                            <span>Tous les agents <strong>Directeur Technique</strong> ({{ $totalDirecteurs }}) sont déjà affectés à une autre délégation. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                        </div>
+                    @endif
                 @endif
                 <select name="directeur_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
                     <option value="">— Aucun directeur pour l'instant —</option>
@@ -86,10 +93,17 @@
                     Secrétaire
                 </h2>
                 @if($secretaires->isEmpty())
-                    <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                        <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                        <span>Aucun agent avec la fonction <strong>Secrétaire Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                    </div>
+                    @if(($totalSecretaires ?? 0) === 0)
+                        <div class="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun agent avec le rôle <strong>Secrétaire Technique</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                        </div>
+                    @else
+                        <div class="mb-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                            <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                            <span>Toutes les agents <strong>Secrétaire Technique</strong> ({{ $totalSecretaires }}) sont déjà affectées à une autre délégation. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                        </div>
+                    @endif
                 @endif
                 <select name="secretaire_agent_id" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-400 focus:ring-cyan-400">
                     <option value="">— Aucune secrétaire pour l'instant —</option>

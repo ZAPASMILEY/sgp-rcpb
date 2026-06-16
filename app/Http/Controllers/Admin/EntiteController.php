@@ -466,6 +466,13 @@ class EntiteController extends Controller
             return redirect()->route('admin.entites.index')->with('error', 'Configurez la Faitiere.');
         }
 
+        // La Direction Générale Adjointe a son propre formulaire dédié
+        if (strtolower(trim($request->input('nom', ''))) === 'direction générale adjointe') {
+            return redirect()
+                ->route('admin.direction-dga.configurer')
+                ->with('status', 'Utilisez ce formulaire dédié pour configurer la Direction Générale Adjointe.');
+        }
+
         $validated = $request->validate([
             'nom'                 => ['required', 'string', 'max:255', Rule::unique('directions')->where('entite_id', $entite->id)],
             'directeur_agent_id'  => ['nullable', 'integer', 'exists:agents,id'],
@@ -653,11 +660,19 @@ class EntiteController extends Controller
             return redirect()->route('admin.entites.index')->with('error', 'Configurez la Faitiere.');
         }
 
+        $prisDirecteurIds  = \App\Models\Direction::whereNotNull('directeur_agent_id')->pluck('directeur_agent_id');
+        $prisSecretaireIds = \App\Models\Direction::whereNotNull('secretaire_agent_id')->pluck('secretaire_agent_id');
+
+        $totalDirecteurs  = Agent::where('role', 'Directeur de Direction')->count();
+        $totalSecretaires = Agent::where('role', 'Secrétaire de Direction')->count();
+
         return view('admin.directions.create', [
-            'entite'     => $entite,
-            'faitiere'   => true,
-            'directeurs' => Agent::query()->where('role', 'Directeur de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
-            'secretaires'=> Agent::query()->where('role', 'Secrétaire de Direction')->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
+            'entite'          => $entite,
+            'faitiere'        => true,
+            'directeurs'      => Agent::query()->where('role', 'Directeur de Direction')->whereNotIn('id', $prisDirecteurIds)->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
+            'secretaires'     => Agent::query()->where('role', 'Secrétaire de Direction')->whereNotIn('id', $prisSecretaireIds)->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom']),
+            'totalDirecteurs'  => $totalDirecteurs,
+            'totalSecretaires' => $totalSecretaires,
         ]);
     }
 

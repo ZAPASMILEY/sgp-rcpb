@@ -98,10 +98,11 @@
                     <tbody class="divide-y divide-slate-50">
                         @foreach($agents as $agent)
                         @php
+                            $dgRoles = ['Directeur Général', 'Assistante DG', 'DG', 'PCA'];
                             $structure = $agent->caisse?->nom
                                 ?? $agent->direction?->nom
-                                ?? $agent->delegationTechnique?->region.' – '.$agent->delegationTechnique?->ville
-                                ?? '—';
+                                ?? ($agent->delegationTechnique ? $agent->delegationTechnique->region.' – '.$agent->delegationTechnique->ville : null)
+                                ?? (in_array($agent->role, $dgRoles) ? 'Direction Générale' : '—');
                         @endphp
                         <tr class="hover:bg-slate-50/60 transition-colors">
                             <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ $agent->matricule ?? '—' }}</td>

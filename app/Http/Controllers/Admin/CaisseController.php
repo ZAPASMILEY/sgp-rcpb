@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
-use App\Models\Service;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Models\Direction;
+use App\Models\Ville;
 use App\Services\AgentAccountService;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Contracts\View\View;
@@ -27,13 +27,20 @@ class CaisseController extends Controller
         'caisses' => Caisse::query()
             // On charge la délégation, le directeur, le secrétaire ET les services avec leurs agents
             ->with(['delegationTechnique', 'directeur', 'secretaire', 'services.agents']) 
-            ->when($search !== '', function (EloquentBuilder $query) use ($search): void {
-                // ... (Garde ton code de recherche identique ici) ...
+            ->when($search !== '', function (EloquentBuilder $q) use ($search): void {
+                $q->where('nom', 'like', "%{$search}%");
             })
             ->latest()
             ->get(),
         'delegations' => DelegationTechnique::query()->orderBy('region')->get(),
-        'search' => $search,
+        'villes'      => Ville::query()->orderBy('nom')->get(),
+        'search'      => $search,
+        'directeurs'  => Agent::where('role', 'Directeur de Caisse')
+                              ->whereDoesntHave('directedCaisse')
+                              ->orderBy('nom')->orderBy('prenom')->get(),
+        'secretaires' => Agent::where('role', 'Secrétaire de Caisse')
+                              ->whereDoesntHave('secretariedCaisse')
+                              ->orderBy('nom')->orderBy('prenom')->get(),
         'stats' => [
             'total' => Caisse::count(),
             'par_delegation' => DelegationTechnique::query()
@@ -73,7 +80,9 @@ class CaisseController extends Controller
         ->orderBy('prenom', 'asc')
         ->get();
 
-    return view('admin.caisses.services', compact('caisse', 'chefs'));
+    $totalChefs = \App\Models\Agent::where('role', 'Chef de Service')->count();
+
+    return view('admin.caisses.services', compact('caisse', 'chefs', 'totalChefs'));
 }
 
     public function affecterAgence(Caisse $caisse): View
@@ -90,7 +99,10 @@ class CaisseController extends Controller
             ->orderBy('nom')->orderBy('prenom')
             ->get();
 
-        return view('admin.caisses.agences', compact('caisse', 'chefs', 'secretaires'));
+        $totalChefs       = Agent::where('role', "Chef d'Agence")->count();
+        $totalSecretaires = Agent::where('role', "Secrétaire d'Agence")->count();
+
+        return view('admin.caisses.agences', compact('caisse', 'chefs', 'secretaires', 'totalChefs', 'totalSecretaires'));
     }
 
     public function servicesIndex(Caisse $caisse): View
@@ -115,12 +127,22 @@ class CaisseController extends Controller
 
         $caisse = Caisse::query()->create($validated);
 
-        Agent::findOrFail($validated['directeur_agent_id'])->update(['poste' => 'Directeur de ' . $caisse->nom]);
-        Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => 'Secrétaire de ' . $caisse->nom]);
+        $directeur = Agent::findOrFail($validated['directeur_agent_id']);
+        $directeur->update([
+            'caisse_id'               => $caisse->id,
+            'delegation_technique_id' => $validated['delegation_technique_id'],
+            'poste'                   => 'Directeur de ' . $caisse->nom,
+        ]);
 
-        // Créer automatiquement les comptes des responsables
-        $this->accounts->ensureAccount(Agent::findOrFail($validated['directeur_agent_id']));
-        $this->accounts->ensureAccount(Agent::findOrFail($validated['secretaire_agent_id']));
+        $secretaire = Agent::findOrFail($validated['secretaire_agent_id']);
+        $secretaire->update([
+            'caisse_id'               => $caisse->id,
+            'delegation_technique_id' => $validated['delegation_technique_id'],
+            'poste'                   => 'Secrétaire de ' . $caisse->nom,
+        ]);
+
+        $this->accounts->ensureAccount($directeur->fresh());
+        $this->accounts->ensureAccount($secretaire->fresh());
 
         return redirect()
             ->route('admin.caisses.index')
@@ -153,7 +175,7 @@ class CaisseController extends Controller
             ->with('status', 'Caisse mise à jour avec succès.');
     }
 
-    public function destroy(Request $request, Caisse $caisse): RedirectResponse
+    public function destroy(Caisse $caisse): RedirectResponse
     {
         $caisse->delete();
 
@@ -184,10 +206,13 @@ class CaisseController extends Controller
             });
 
         return [
-            'delegations' => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
-            'directions'  => Direction::query()->with('directeur')->orderBy('nom')->get(),
-            'directeurs'  => $directeurQuery->orderBy('nom')->orderBy('prenom')->get(),
-            'secretaires' => $secretaireQuery->orderBy('nom')->orderBy('prenom')->get(),
+            'delegations'      => DelegationTechnique::query()->with('directeur')->orderBy('region')->orderBy('ville')->get(),
+            'villes'           => Ville::query()->orderBy('nom')->get(),
+            'directions'       => Direction::query()->with('directeur')->orderBy('nom')->get(),
+            'directeurs'       => $directeurQuery->orderBy('nom')->orderBy('prenom')->get(),
+            'secretaires'      => $secretaireQuery->orderBy('nom')->orderBy('prenom')->get(),
+            'totalDirecteurs'  => Agent::where('role', 'Directeur de Caisse')->count(),
+            'totalSecretaires' => Agent::where('role', 'Secrétaire de Caisse')->count(),
         ];
     }
 
@@ -195,6 +220,7 @@ class CaisseController extends Controller
     {
         return $request->validate([
             'delegation_technique_id' => ['required', 'integer', 'exists:delegation_techniques,id'],
+            'ville_id'                => ['required', 'integer', 'exists:villes,id'],
             'nom'                     => [
                 'required',
                 'string',

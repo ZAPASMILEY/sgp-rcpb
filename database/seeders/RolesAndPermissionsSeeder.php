@@ -51,6 +51,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Formations ────────────────────────────────────────────────────
         'formations.assigner', // Créer, modifier et supprimer des formations
+        'formations.valider',  // Accepter ou refuser les formations soumises par les agents
 
         // ── Rapports & Statistiques ────────────────────────────────────────
         'statistiques.voir', // Consulter la page statistiques du personnel (notes)
@@ -229,7 +230,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'structures.voir',
             'evaluations.voir-equipe', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
-            'formations.assigner',
+            'formations.assigner', 'formations.valider',
         ],
 
         // ── Agent de base ──────────────────────────────────────────────────

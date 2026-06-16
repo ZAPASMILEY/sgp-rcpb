@@ -78,10 +78,17 @@
                     <div class="space-y-2">
                         <label for="directeur_agent_id" class="text-sm font-semibold text-slate-700">Directeur de caisse</label>
                         @if($directeurs->isEmpty())
-                            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                                <span>Aucun agent avec la fonction <strong>Directeur de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                            </div>
+                            @if(($totalDirecteurs ?? 0) === 0)
+                                <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                    <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                    <span>Aucun agent avec le rôle <strong>Directeur de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                                </div>
+                            @else
+                                <div class="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                    <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                                    <span>Tous les agents <strong>Directeur de Caisse</strong> ({{ $totalDirecteurs }}) sont déjà affectés à une caisse. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                                </div>
+                            @endif
                         @endif
                         <select id="directeur_agent_id" name="directeur_agent_id" class="ent-select">
                             <option value="">— Aucun directeur pour l'instant —</option>
@@ -96,10 +103,17 @@
                     <div class="space-y-2">
                         <label for="secretaire_agent_id" class="text-sm font-semibold text-slate-700">Secrétaire de caisse</label>
                         @if($secretaires->isEmpty())
-                            <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                                <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                                <span>Aucun agent avec la fonction <strong>Secrétaire de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                            </div>
+                            @if(($totalSecretaires ?? 0) === 0)
+                                <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                                    <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                                    <span>Aucun agent avec le rôle <strong>Secrétaire de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                                </div>
+                            @else
+                                <div class="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                                    <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                                    <span>Toutes les agents <strong>Secrétaire de Caisse</strong> ({{ $totalSecretaires }}) sont déjà affectées à une caisse. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                                </div>
+                            @endif
                         @endif
                         <select id="secretaire_agent_id" name="secretaire_agent_id" class="ent-select">
                             <option value="">— Aucune secrétaire pour l'instant —</option>

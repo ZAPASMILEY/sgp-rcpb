@@ -17,17 +17,29 @@
         </div>
         <form method="POST" action="{{ route('admin.caisses.store') }}" class="p-8 lg:p-12 space-y-8">
             @csrf
-            <div class="space-y-4">
-                <label for="delegation_technique_id" class="text-xs font-bold text-slate-400 ml-1">Délégation Technique</label>
-                <select id="delegation_technique_id" name="delegation_technique_id" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
-                    <option value="">Sélectionner une délégation</option>
-                    @foreach ($delegations as $delegation)
-                        <option value="{{ $delegation->id }}" @selected((string) old('delegation_technique_id') === (string) $delegation->id)>
-                            {{ $delegation->region }} / {{ $delegation->ville }}
-                        </option>
-                    @endforeach
-                </select>
-                <p class="text-xs text-slate-500">Le superviseur sera filtré selon cette délégation.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-4">
+                    <label for="delegation_technique_id" class="text-xs font-bold text-slate-400 ml-1">Délégation Technique <span class="text-rose-500">*</span></label>
+                    <select id="delegation_technique_id" name="delegation_technique_id" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
+                        <option value="">Sélectionner une délégation</option>
+                        @foreach ($delegations as $delegation)
+                            <option value="{{ $delegation->id }}" @selected((string) old('delegation_technique_id') === (string) $delegation->id)>
+                                {{ $delegation->region }} / {{ $delegation->ville }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="space-y-4">
+                    <label for="ville_id" class="text-xs font-bold text-slate-400 ml-1">Ville <span class="text-rose-500">*</span></label>
+                    <select id="ville_id" name="ville_id" required class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
+                        <option value="">— Choisir d'abord la délégation —</option>
+                        @foreach ($villes as $ville)
+                            <option value="{{ $ville->id }}" data-delegation="{{ $ville->delegation_technique_id }}" @selected((string) old('ville_id') === (string) $ville->id)>
+                                {{ $ville->nom }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
             <div class="space-y-4">
                 <label for="nom" class="text-xs font-bold text-slate-400 ml-1">Nom de la caisse</label>
@@ -50,10 +62,17 @@
             <div class="space-y-2">
                 <label for="directeur_agent_id" class="text-xs font-bold text-slate-400 ml-1">Directeur de caisse</label>
                 @if($directeurs->isEmpty())
-                    <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                        <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                        <span>Aucun agent avec la fonction <strong>Directeur de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                    </div>
+                    @if(($totalDirecteurs ?? 0) === 0)
+                        <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun agent avec le rôle <strong>Directeur de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                        </div>
+                    @else
+                        <div class="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                            <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                            <span>Tous les agents <strong>Directeur de Caisse</strong> ({{ $totalDirecteurs }}) sont déjà affectés à une caisse. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                        </div>
+                    @endif
                 @endif
                 <select id="directeur_agent_id" name="directeur_agent_id" class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
                     <option value="">— Aucun directeur pour l'instant —</option>
@@ -67,10 +86,17 @@
             <div class="space-y-2">
                 <label for="secretaire_agent_id" class="text-xs font-bold text-slate-400 ml-1">Secrétaire de caisse</label>
                 @if($secretaires->isEmpty())
-                    <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                        <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                        <span>Aucun agent avec la fonction <strong>Secrétaire de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                    </div>
+                    @if(($totalSecretaires ?? 0) === 0)
+                        <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun agent avec le rôle <strong>Secrétaire de Caisse</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                        </div>
+                    @else
+                        <div class="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                            <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                            <span>Toutes les agents <strong>Secrétaire de Caisse</strong> ({{ $totalSecretaires }}) sont déjà affectées à une caisse. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                        </div>
+                    @endif
                 @endif
                 <select id="secretaire_agent_id" name="secretaire_agent_id" class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
                     <option value="">— Aucune secrétaire pour l'instant —</option>
@@ -82,15 +108,10 @@
                 </select>
             </div>
             <div class="space-y-2">
-                <label for="direction_id" class="text-xs font-bold text-slate-400 ml-1">Direction superviseur</label>
-                <select id="direction_id" name="direction_id" class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
-                    <option value="">— Aucune direction superviseur —</option>
-                    @foreach ($directions as $direction)
-                        <option value="{{ $direction->id }}" @selected((string) old('direction_id') === (string) $direction->id)>
-                            {{ $direction->nom }}{{ $direction->directeur ? ' — '.$direction->directeur->nom.' '.$direction->directeur->prenom : '' }}
-                        </option>
-                    @endforeach
-                </select>
+                <label for="directeur_superieur_display" class="text-xs font-bold text-slate-400 ml-1">Directeur supérieur</label>
+                <input id="directeur_superieur_display" type="text" readonly
+                    class="w-full bg-slate-200 border-none rounded-[20px] p-4 text-slate-500 font-bold cursor-not-allowed"
+                    placeholder="— Sélectionner d'abord une délégation —">
             </div>
             <div class="flex flex-col sm:flex-row items-center gap-4 pt-6">
                 <button type="submit" @disabled($delegations->isEmpty()) class="w-full sm:flex-[2] py-5 bg-gradient-to-r from-[#22d3ee] to-[#3b82f6] text-white rounded-full text-sm font-black uppercase tracking-widest shadow-xl shadow-cyan-200 hover:scale-[1.02] transition-all disabled:cursor-not-allowed disabled:opacity-60">
@@ -138,6 +159,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Tom Select pour les responsables
             ['directeur_agent_id', 'secretaire_agent_id'].forEach(function (id) {
                 var el = document.getElementById(id);
                 if (el) {
@@ -145,9 +167,51 @@
                         placeholder: 'Rechercher un agent...',
                         allowEmptyOption: true,
                         maxOptions: 50,
+                        dropdownParent: 'body',
                     });
                 }
             });
+
+            // Mapping délégation → directeur technique
+            var dtMap = {
+                @foreach ($delegations as $d)
+                    {{ $d->id }}: "{{ $d->directeur ? $d->directeur->prenom.' '.$d->directeur->nom : '' }}",
+                @endforeach
+            };
+            var delSel   = document.getElementById('delegation_technique_id');
+            var dtDisplay = document.getElementById('directeur_superieur_display');
+            if (delSel && dtDisplay) {
+                function updateDT() {
+                    var nom = dtMap[delSel.value] || '';
+                    dtDisplay.value = nom !== '' ? nom : '';
+                    dtDisplay.placeholder = nom !== '' ? '' : '— Aucun directeur technique pour cette délégation —';
+                }
+                delSel.addEventListener('change', updateDT);
+                updateDT();
+            }
+
+            // Filtrage villes par délégation
+            var villeSel = document.getElementById('ville_id');
+            if (delSel && villeSel) {
+                var allOpts = Array.from(villeSel.querySelectorAll('option[data-delegation]'));
+                function filterVilles() {
+                    var delId = delSel.value;
+                    var hasMatch = false;
+                    allOpts.forEach(function (opt) {
+                        var show = delId !== '' && opt.dataset.delegation === delId;
+                        opt.style.display = show ? '' : 'none';
+                        if (show) hasMatch = true;
+                    });
+                    villeSel.options[0].textContent = delId === ''
+                        ? '— Choisir d\'abord la délégation —'
+                        : (hasMatch ? '— Choisir une ville —' : '— Aucune ville disponible —');
+                    if (villeSel.value !== '' && villeSel.selectedOptions[0] && villeSel.selectedOptions[0].style.display === 'none') {
+                        villeSel.value = '';
+                    }
+                }
+                delSel.addEventListener('change', filterVilles);
+                filterVilles();
+            }
         });
     </script>
 @endpush

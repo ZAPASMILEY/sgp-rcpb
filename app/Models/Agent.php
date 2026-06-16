@@ -279,4 +279,16 @@ class Agent extends Model
             'date_debut_fonction' => 'date',
         ];
     }
+
+    /** Retourne vrai si l'agent est déjà rattaché à au moins une structure. */
+    public function isAffecte(): bool
+    {
+        return $this->entite_id !== null
+            || $this->direction_id !== null
+            || $this->delegation_technique_id !== null
+            || $this->caisse_id !== null
+            || $this->agence_id !== null
+            || $this->guichet_id !== null
+            || $this->service_id !== null;
+    }
 }

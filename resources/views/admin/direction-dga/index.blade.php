@@ -29,10 +29,6 @@
             <p class="font-bold text-slate-600">Direction DGA introuvable.</p>
             <p class="mt-1 text-xs text-slate-400">La direction « Direction Générale Adjointe » n'existe pas encore ou aucun DGA n'y est affecté.</p>
             <div class="mt-6 flex flex-wrap justify-center gap-3">
-                <a href="{{ route('admin.directions.create') }}"
-                   class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50">
-                    <i class="fas fa-plus text-xs text-slate-400"></i> Créer la direction
-                </a>
                 <a href="{{ route('admin.direction-dga.configurer') }}"
                    class="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-200 transition hover:bg-purple-700">
                     <i class="fas fa-user-tie text-xs"></i> Configurer le DGA

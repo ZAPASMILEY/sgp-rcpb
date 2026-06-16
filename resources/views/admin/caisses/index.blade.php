@@ -34,9 +34,9 @@
                     <p class="mt-1 text-sm text-slate-400">Liste des caisses avec les coordonnées du directeur, le numéro du secrétariat et la délégation technique.</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button type="button" onclick="document.getElementById('caisse-form').classList.remove('hidden')" class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700">
+                    <a href="{{ route('admin.caisses.create') }}" class="inline-flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700">
                         <i class="fas fa-plus text-xs text-emerald-300"></i> Ajouter une caisse
-                    </button>
+                    </a>
                 </div>
             </div>
         </div>
@@ -205,9 +205,9 @@
 </div>
 
     {{-- Caisse creation modal --}}
-    <div id="caisse-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('caisse-form').classList.add('hidden')"></div>
-        <div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+    <div id="caisse-form" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('caisse-form').classList.add('hidden')">
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+        <div class="relative z-10 w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
             <button type="button" onclick="document.getElementById('caisse-form').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
                 <i class="fas fa-times"></i>
             </button>
@@ -228,10 +228,19 @@
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div>
                             <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Délégation <span class="text-rose-500">*</span></label>
-                            <select name="delegation_technique_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                            <select id="modal-delegation" name="delegation_technique_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
                                 <option value="">-- Choisir --</option>
                                 @foreach ($delegations as $d)
                                     <option value="{{ $d->id }}" {{ (int) old('delegation_technique_id') === $d->id ? 'selected' : '' }}>{{ $d->region }} — {{ $d->ville }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Ville <span class="text-rose-500">*</span></label>
+                            <select id="modal-ville" name="ville_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                                <option value="">-- Choisir d'abord la délégation --</option>
+                                @foreach ($villes as $v)
+                                    <option value="{{ $v->id }}" data-delegation="{{ $v->delegation_technique_id }}" {{ (int) old('ville_id') === $v->id ? 'selected' : '' }} style="display:none">{{ $v->nom }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -259,35 +268,19 @@
                         <i class="fas fa-user-tie text-sky-500"></i>
                         Directeur de Caisse
                     </h3>
-                    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Prénom <span class="text-rose-500">*</span></label>
-                            <input type="text" name="directeur_prenom" value="{{ old('directeur_prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom <span class="text-rose-500">*</span></label>
-                            <input type="text" name="directeur_nom" value="{{ old('directeur_nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Sexe <span class="text-rose-500">*</span></label>
-                            <select name="directeur_sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                                <option value="">-- Choisir --</option>
-                                <option value="Masculin" {{ old('directeur_sexe') === 'Masculin' ? 'selected' : '' }}>Masculin</option>
-                                <option value="Feminin" {{ old('directeur_sexe') === 'Feminin' ? 'selected' : '' }}>Féminin</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                            <input type="email" name="directeur_email" value="{{ old('directeur_email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone <span class="text-rose-500">*</span></label>
-                            <input type="text" name="directeur_telephone" value="{{ old('directeur_telephone') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Début fonction (mois) <span class="text-rose-500">*</span></label>
-                            <input type="month" name="directeur_date_debut_mois" value="{{ old('directeur_date_debut_mois') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Choisir le directeur <span class="text-rose-500">*</span></label>
+                        <select name="directeur_agent_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                            <option value="">-- Sélectionner un Directeur de Caisse --</option>
+                            @foreach($directeurs as $d)
+                                <option value="{{ $d->id }}" {{ old('directeur_agent_id') == $d->id ? 'selected' : '' }}>
+                                    {{ $d->prenom }} {{ $d->nom }}{{ $d->role ? ' — '.$d->role : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @if($directeurs->isEmpty())
+                            <p class="mt-1 text-[10px] text-amber-600">Aucun Directeur de Caisse disponible. Créez d'abord le personnel correspondant.</p>
+                        @endif
                     </div>
                 </div>
 
@@ -296,35 +289,19 @@
                         <i class="fas fa-user-pen text-fuchsia-500"></i>
                         Secrétaire du Directeur
                     </h3>
-                    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Prénom <span class="text-rose-500">*</span></label>
-                            <input type="text" name="secretaire_prenom" value="{{ old('secretaire_prenom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nom <span class="text-rose-500">*</span></label>
-                            <input type="text" name="secretaire_nom" value="{{ old('secretaire_nom') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Sexe <span class="text-rose-500">*</span></label>
-                            <select name="secretaire_sexe" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                                <option value="">-- Choisir --</option>
-                                <option value="Masculin" {{ old('secretaire_sexe') === 'Masculin' ? 'selected' : '' }}>Masculin</option>
-                                <option value="Feminin" {{ old('secretaire_sexe') === 'Feminin' ? 'selected' : '' }}>Féminin</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Email <span class="text-rose-500">*</span></label>
-                            <input type="email" name="secretaire_email" value="{{ old('secretaire_email') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Téléphone</label>
-                            <input type="text" name="secretaire_telephone" value="{{ old('secretaire_telephone') }}" class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Début fonction (mois) <span class="text-rose-500">*</span></label>
-                            <input type="month" name="secretaire_date_debut_mois" value="{{ old('secretaire_date_debut_mois') }}" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
-                        </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Choisir la/le secrétaire <span class="text-rose-500">*</span></label>
+                        <select name="secretaire_agent_id" required class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm focus:border-emerald-400 focus:ring-emerald-400">
+                            <option value="">-- Sélectionner un(e) Secrétaire de Caisse --</option>
+                            @foreach($secretaires as $s)
+                                <option value="{{ $s->id }}" {{ old('secretaire_agent_id') == $s->id ? 'selected' : '' }}>
+                                    {{ $s->prenom }} {{ $s->nom }}{{ $s->role ? ' — '.$s->role : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @if($secretaires->isEmpty())
+                            <p class="mt-1 text-[10px] text-amber-600">Aucun(e) Secrétaire de Caisse disponible.</p>
+                        @endif
                     </div>
                 </div>
 
@@ -388,5 +365,36 @@
             searchInput.addEventListener('blur', function () { setTimeout(hide, 120); });
             searchInput.addEventListener('focus', function () { if (searchInput.value.trim()) render(searchInput.value); });
         });
+
+        // Filtrage des villes par délégation dans le modal
+        (function () {
+            var delSel  = document.getElementById('modal-delegation');
+            var villeSel = document.getElementById('modal-ville');
+            if (!delSel || !villeSel) return;
+
+            var allOptions = Array.from(villeSel.querySelectorAll('option[data-delegation]'));
+
+            function filterVilles() {
+                var delId = delSel.value;
+                var hasMatch = false;
+                allOptions.forEach(function (opt) {
+                    var show = delId !== '' && opt.dataset.delegation === delId;
+                    opt.style.display = show ? '' : 'none';
+                    if (show) hasMatch = true;
+                });
+                // Reset placeholder
+                villeSel.options[0].textContent = delId === ''
+                    ? '-- Choisir d\'abord la délégation --'
+                    : (hasMatch ? '-- Choisir une ville --' : '-- Aucune ville disponible --');
+                // Reset selected value if current selection no longer visible
+                if (villeSel.value !== '' && villeSel.selectedOptions[0] && villeSel.selectedOptions[0].style.display === 'none') {
+                    villeSel.value = '';
+                }
+            }
+
+            delSel.addEventListener('change', filterVilles);
+            // Appel initial (si old() a présélectionné une délégation)
+            filterVilles();
+        })();
     </script>
 @endpush

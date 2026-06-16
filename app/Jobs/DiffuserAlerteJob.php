@@ -85,14 +85,22 @@ class DiffuserAlerteJob implements ShouldQueue
             // N'envoyer que si ce VIP est dans les destinataires ciblés
             $estCible = $destinataires->contains(fn ($u) => strtolower($u->email) === strtolower($vip['email']));
             if ($estCible) {
-                Mail::to($vip['email'])->queue(new AlerteVipMail($alerte, $vip['nom'], $vip['role']));
+                try {
+                    Mail::to($vip['email'])->send(new AlerteVipMail($alerte, $vip['nom'], $vip['role']));
+                } catch (\Throwable $e) {
+                    \Log::error("AlerteVipMail échec [{$vip['email']}] : " . $e->getMessage());
+                }
             }
         }
 
         // Autres utilisateurs → template standard
         foreach ($destinataires as $user) {
             if (! in_array(strtolower($user->email ?? ''), $vipEmails, true)) {
-                Mail::to($user->email)->queue(new AlerteMail($alerte, $user->name));
+                try {
+                    Mail::to($user->email)->send(new AlerteMail($alerte, $user->name));
+                } catch (\Throwable $e) {
+                    \Log::error("AlerteMail échec [{$user->email}] : " . $e->getMessage());
+                }
             }
         }
     }

@@ -23,15 +23,6 @@ class PersonnelGererController extends Controller
 
         $agents = Agent::personnel()
             ->with(['user', 'delegationTechnique', 'caisse.delegationTechnique', 'direction'])
-            // Uniquement les agents affectés à une structure
-            ->where(fn ($q) => $q
-                ->whereNotNull('caisse_id')
-                ->orWhereNotNull('direction_id')
-                ->orWhereNotNull('delegation_technique_id')
-                ->orWhereNotNull('agence_id')
-                ->orWhereNotNull('guichet_id')
-                ->orWhereNotNull('service_id')
-            )
             ->when($search, fn ($q) => $q->where(fn ($s) => $s
                 ->where('nom',       'like', "%{$search}%")
                 ->orWhere('prenom',  'like', "%{$search}%")
@@ -49,14 +40,6 @@ class PersonnelGererController extends Controller
         $delegations = DelegationTechnique::orderBy('region')->orderBy('ville')->get();
         $caisses     = Caisse::orderBy('nom')->get();
         $roles = Agent::personnel()
-            ->where(fn ($q) => $q
-                ->whereNotNull('caisse_id')
-                ->orWhereNotNull('direction_id')
-                ->orWhereNotNull('delegation_technique_id')
-                ->orWhereNotNull('agence_id')
-                ->orWhereNotNull('guichet_id')
-                ->orWhereNotNull('service_id')
-            )
             ->select('role')->distinct()->orderBy('role')->pluck('role');
         $layout      = $this->layout();
 

@@ -115,9 +115,9 @@
                         <p class="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
                             <i class="fas fa-briefcase mr-1.5 text-amber-400"></i> Profession
                         </p>
-                        <div class="grid gap-3 sm:grid-cols-2">
+                        <div class="grid gap-3 sm:grid-cols-3">
                             <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Fonction</p>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rôle</p>
                                 <p class="mt-1 font-bold text-slate-800">{{ $agent->role }}</p>
                             </div>
                             <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
@@ -125,6 +125,45 @@
                                 <p class="mt-1 font-bold text-slate-800">
                                     {{ optional($agent->date_debut_fonction)->format('d/m/Y') ?: '—' }}
                                 </p>
+                            </div>
+                            {{-- Poste (fonction détaillée) — modifiable inline --}}
+                            <div class="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-amber-600">Fonction occupée</p>
+                                <div id="poste-display" class="mt-1 flex items-center justify-between gap-2">
+                                    <p class="font-bold text-slate-800">{{ $agent->poste ?: '—' }}</p>
+                                    <button type="button" onclick="document.getElementById('poste-display').style.display='none'; document.getElementById('poste-form').style.display='flex';"
+                                            class="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2 py-1 text-[11px] font-bold text-amber-700 transition hover:bg-amber-100">
+                                        <i class="fas fa-pen text-[9px]"></i> Modifier
+                                    </button>
+                                </div>
+                                <form id="poste-form" method="POST"
+                                      action="{{ route('admin.agents.update-poste', $agent) }}"
+                                      style="display:none"
+                                      class="mt-2 flex flex-col gap-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="text" name="poste"
+                                           value="{{ old('poste', $agent->poste) }}"
+                                           list="postes-profil-list"
+                                           required maxlength="150"
+                                           class="ent-input w-full text-sm"
+                                           placeholder="Ex : Caissier, Agent de crédit…">
+                                    <datalist id="postes-profil-list">
+                                        @foreach ($postes as $libelle)
+                                            <option value="{{ $libelle }}">
+                                        @endforeach
+                                    </datalist>
+                                    <div class="flex gap-2">
+                                        <button type="submit"
+                                                class="ent-btn ent-btn-primary flex-1 justify-center py-1.5 text-xs">
+                                            <i class="fas fa-check mr-1"></i> Enregistrer
+                                        </button>
+                                        <button type="button" onclick="document.getElementById('poste-form').style.display='none'; document.getElementById('poste-display').style.display='flex';"
+                                                class="ent-btn ent-btn-soft flex-1 justify-center py-1.5 text-xs">
+                                            Annuler
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -179,9 +218,6 @@
         <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-400">
             <i class="fas fa-link-slash text-xl mb-2 block"></i>
             Agent non affecté à une structure.
-            <a href="{{ route('admin.agents.edit', $agent) }}" class="block mt-1 text-blue-500 hover:underline font-semibold text-xs">
-                Affecter maintenant
-            </a>
         </div>
     @endif
 </div>
@@ -204,6 +240,51 @@
                     </div>
 
                 </div>
+
+                {{-- Permissions déléguées --}}
+                @if ($agent->user)
+                <div class="sm:col-span-2">
+                    <p class="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+                        <i class="fas fa-key mr-1.5 text-amber-400"></i> Permissions déléguées
+                    </p>
+                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                        <div class="flex items-center justify-between gap-4 flex-wrap">
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">Validation des formations</p>
+                                <p class="mt-0.5 text-xs text-slate-500">
+                                    Autoriser cet agent à accepter ou refuser les formations soumises par les agents
+                                    (page <span class="font-mono">/gerer/formations/validation</span>).
+                                </p>
+                                @if ($agent->user->hasDirectPermission('formations.valider'))
+                                    <span class="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+                                        <i class="fas fa-check-circle text-[9px]"></i> Permission accordée
+                                    </span>
+                                @else
+                                    <span class="mt-1.5 inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-[11px] font-bold text-slate-500">
+                                        <i class="fas fa-minus-circle text-[9px]"></i> Non accordée
+                                    </span>
+                                @endif
+                            </div>
+                            <form method="POST"
+                                  action="{{ route('admin.agents.toggle-formation-valider', $agent) }}"
+                                  onsubmit="return confirm('{{ $agent->user->hasDirectPermission('formations.valider') ? 'Retirer cette permission ?' : 'Accorder cette permission ?' }}')">
+                                @csrf
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition
+                                            {{ $agent->user->hasDirectPermission('formations.valider')
+                                                ? 'border border-rose-200 bg-white text-rose-600 hover:bg-rose-50'
+                                                : 'bg-emerald-600 text-white hover:bg-emerald-700' }}">
+                                    @if ($agent->user->hasDirectPermission('formations.valider'))
+                                        <i class="fas fa-ban text-[10px]"></i> Retirer la permission
+                                    @else
+                                        <i class="fas fa-plus text-[10px]"></i> Accorder la permission
+                                    @endif
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                @endif
 
                 {{-- Accès & Sécurité --}}
                 @if ($agent->user)
@@ -285,3 +366,12 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+@if ($errors->has('poste'))
+<script>
+    document.getElementById('poste-display').style.display = 'none';
+    document.getElementById('poste-form').style.display    = 'flex';
+</script>
+@endif
+@endpush

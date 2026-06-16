@@ -1239,9 +1239,9 @@
 </div>
 
 {{-- ── MODALE : PURGE ÉVALUATIONS ──────────────────────────────────────── --}}
-<div id="modal-purge-evaluations" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
-    <div class="relative w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+<div id="modal-purge-evaluations" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm pointer-events-none"></div>
+    <div class="relative z-10 w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
         <div class="mb-5">
             <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 mb-4">
                 <i class="fas fa-exclamation-triangle text-xl"></i>
@@ -1277,9 +1277,9 @@
 </div>
 
 {{-- ── MODALE : PURGE OBJECTIFS ─────────────────────────────────────────── --}}
-<div id="modal-purge-objectifs" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="this.parentElement.classList.add('hidden')"></div>
-    <div class="relative w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+<div id="modal-purge-objectifs" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)this.classList.add('hidden')">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm pointer-events-none"></div>
+    <div class="relative z-10 w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
         <div class="mb-5">
             <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 mb-4">
                 <i class="fas fa-exclamation-triangle text-xl"></i>
@@ -1317,9 +1317,9 @@
 {{-- ── Modales communes (onglet Général) ──────────────────────────────── --}}
 
 {{-- MODALE : CHANGER MON MOT DE PASSE --}}
-<div id="password-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('password-modal').classList.add('hidden')"></div>
-    <div class="relative w-full max-w-md rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+<div id="password-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('password-modal').classList.add('hidden')">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+    <div class="relative z-10 w-full max-w-md rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
         <button type="button" onclick="document.getElementById('password-modal').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
             <i class="fas fa-times"></i>
         </button>
@@ -1356,9 +1356,9 @@
 </div>
 
 {{-- MODALE : SUPPRIMER MON COMPTE --}}
-<div id="delete-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('delete-modal').classList.add('hidden')"></div>
-    <div class="relative w-full max-w-md rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+<div id="delete-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('delete-modal').classList.add('hidden')">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+    <div class="relative z-10 w-full max-w-md rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
         <button type="button" onclick="document.getElementById('delete-modal').classList.add('hidden')" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
             <i class="fas fa-times"></i>
         </button>
@@ -1389,9 +1389,9 @@
 </div>
 
 {{-- MODALE : GERER LES MOTS DE PASSE (accès rapide depuis onglet Général) --}}
-<div id="manage-pwd-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="document.getElementById('manage-pwd-modal').classList.add('hidden'); resetManagePwdModal();"></div>
-    <div class="relative w-full max-w-lg rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
+<div id="manage-pwd-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('manage-pwd-modal').classList.add('hidden');resetManagePwdModal();}">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm pointer-events-none"></div>
+    <div class="relative z-10 w-full max-w-lg rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl lg:p-8">
         <button type="button" onclick="document.getElementById('manage-pwd-modal').classList.add('hidden'); resetManagePwdModal();" class="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition hover:bg-rose-100 hover:text-rose-500">
             <i class="fas fa-times"></i>
         </button>

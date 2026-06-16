@@ -116,11 +116,14 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/delegations-techniques/secretaires', [DirectionController::class, 'secretairesIndex'])->name('admin.delegations-techniques.secretaires.index');
     Route::get('/admin/delegations-techniques/agents', [DirectionController::class, 'agentsIndex'])->name('admin.delegations-techniques.agents.index');
     Route::post('/admin/delegations-techniques', [DirectionController::class, 'storeDelegation'])->name('admin.delegations-techniques.store');
+    Route::get('/admin/delegations-techniques/{delegationTechnique}/caisses/creer', [DirectionController::class, 'createCaisse'])->name('admin.delegations-techniques.caisses.create');
     Route::post('/admin/delegations-techniques/caisses', [DirectionController::class, 'storeCaisse'])->name('admin.delegations-techniques.caisses.store');
     Route::post('/admin/delegations-techniques/agents', [DirectionController::class, 'storeDelegationAgent'])->name('admin.delegations-techniques.agents.store');
     Route::post('/admin/delegations-techniques/services', [DirectionController::class, 'storeDelegationService'])->name('admin.delegations-techniques.services.store');
     Route::get('/admin/delegations-techniques/{delegationTechnique}', [DirectionController::class, 'showDelegation'])->name('admin.delegations-techniques.show');
     Route::get('/admin/delegations-techniques/{delegationTechnique}/modifier', [DirectionController::class, 'editDelegation'])->name('admin.delegations-techniques.edit');
+    Route::get('/admin/delegations-techniques/{delegationTechnique}/villes', [DirectionController::class, 'editVilles'])->name('admin.delegations-techniques.villes.edit');
+    Route::put('/admin/delegations-techniques/{delegationTechnique}/villes', [DirectionController::class, 'updateVilles'])->name('admin.delegations-techniques.villes.update');
     Route::put('/admin/delegations-techniques/{delegationTechnique}', [DirectionController::class, 'updateDelegation'])->name('admin.delegations-techniques.update');
     Route::delete('/admin/delegations-techniques/{delegationTechnique}', [DirectionController::class, 'destroyDelegation'])->name('admin.delegations-techniques.destroy');
     Route::get('/admin/directions/creer', [DirectionController::class, 'create'])->name('admin.directions.create');
@@ -139,8 +142,9 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/services/{service}/modifier', [ServiceController::class, 'edit'])->name('admin.services.edit');
     Route::put('/admin/services/{service}', [ServiceController::class, 'update'])->name('admin.services.update');
     Route::delete('/admin/services/{service}', [ServiceController::class, 'destroy'])->name('admin.services.destroy');
-    Route::post('/admin/services/{service}/attach-agent', [ServiceController::class, 'attachAgent'])
-     ->name('admin.services.attach-agent');
+    Route::get('/admin/services/{service}/affecter-agent', [ServiceController::class, 'createAttachAgent'])->name('admin.services.attach-agent.create');
+    Route::post('/admin/services/{service}/attach-agent', [ServiceController::class, 'attachAgent'])->name('admin.services.attach-agent');
+    Route::delete('/admin/services/{service}/agents/{agent}', [ServiceController::class, 'detachAgent'])->name('admin.services.agents.destroy');
 
     // Gestion des comptes utilisateurs
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
@@ -163,11 +167,16 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/agents/creer', [AgentController::class, 'create'])->name('admin.agents.create');
     Route::post('/admin/agents', [AgentController::class, 'store'])->name('admin.agents.store');
     Route::post('/admin/agents/sync-comptes', [AgentController::class, 'syncAllAccounts'])->name('admin.agents.sync-accounts');
+    Route::get('/admin/agents/import', [AgentController::class, 'importForm'])->name('admin.agents.import');
+    Route::post('/admin/agents/import', [AgentController::class, 'import'])->name('admin.agents.import.store');
+    Route::get('/admin/agents/import/template', [AgentController::class, 'downloadTemplate'])->name('admin.agents.import.template');
     Route::get('/admin/agents/{agent}', [AgentController::class, 'show'])->name('admin.agents.show');
     Route::get('/admin/agents/{agent}/modifier', [AgentController::class, 'edit'])->name('admin.agents.edit');
     Route::put('/admin/agents/{agent}', [AgentController::class, 'update'])->name('admin.agents.update');
     Route::delete('/admin/agents/{agent}', [AgentController::class, 'destroy'])->name('admin.agents.destroy');
     Route::post('/admin/agents/{agent}/activer-compte', [AgentController::class, 'activateAccount'])->name('admin.agents.activate-account');
+    Route::post('/admin/agents/{agent}/toggle-formation-valider', [AgentController::class, 'toggleFormationValider'])->name('admin.agents.toggle-formation-valider');
+    Route::patch('/admin/agents/{agent}/poste', [AgentController::class, 'updatePoste'])->name('admin.agents.update-poste');
 
     Route::get('/admin/caisses', [CaisseController::class, 'index'])->name('admin.caisses.index');
     Route::get('/admin/caisses/{caisse}/affecter-service', [CaisseController::class, 'affecterService'])->name('admin.caisses.affecter-service');
@@ -340,7 +349,7 @@ Route::middleware(['auth', 'personnel'])->group(function (): void {
 // ── Espace Gerer : modules accessibles par permission individuelle ──────────────
 Route::middleware(['auth'])->prefix('gerer')->name('gerer.')->group(function (): void {
 
-    // Formations (formations.assigner)
+    // Formations — CRUD (formations.assigner)
     Route::middleware('can:formations.assigner')->group(function () {
         Route::get('/formations',                    [\App\Http\Controllers\Gerer\FormationGererController::class, 'index'])->name('formations.index');
         Route::get('/formations/creer',              [\App\Http\Controllers\Gerer\FormationGererController::class, 'create'])->name('formations.create');
@@ -349,6 +358,12 @@ Route::middleware(['auth'])->prefix('gerer')->name('gerer.')->group(function ():
         Route::put('/formations/{formation}',        [\App\Http\Controllers\Gerer\FormationGererController::class, 'update'])->name('formations.update');
         Route::delete('/formations/{formation}',     [\App\Http\Controllers\Gerer\FormationGererController::class, 'destroy'])->name('formations.destroy');
         Route::get('/formations/{formation}/pdf',    [\App\Http\Controllers\Gerer\FormationGererController::class, 'pdf'])->name('formations.pdf');
+    });
+
+    // Formations — Validation (formations.valider)
+    Route::middleware('can:formations.valider')->group(function () {
+        Route::get('/formations/validation',              [\App\Http\Controllers\Gerer\FormationGererController::class, 'validationIndex'])->name('formations.validation');
+        Route::post('/formations/{formation}/valider',    [\App\Http\Controllers\Gerer\FormationGererController::class, 'valider'])->name('formations.valider');
     });
 
     // Personnel (agents.voir)
@@ -435,6 +450,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/mes-notifications',                       [\App\Http\Controllers\NotificationsController::class, 'index'])->name('notifications.index');
     Route::post('/mes-notifications/{alerte}/marquer-lu',  [\App\Http\Controllers\NotificationsController::class, 'marquerLu'])->name('notifications.marquer-lu');
     Route::post('/mes-notifications/lire-tout',            [\App\Http\Controllers\NotificationsController::class, 'marquerToutLu'])->name('notifications.lire-tout');
+    Route::delete('/mes-notifications',                    [\App\Http\Controllers\NotificationsController::class, 'supprimerTout'])->name('notifications.supprimer-tout');
 });
 
 // Routes DG

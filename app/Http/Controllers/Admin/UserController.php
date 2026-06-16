@@ -131,12 +131,34 @@ class UserController extends Controller
             ->orderBy('prenom')
             ->get(['id', 'nom', 'prenom', 'email', 'role']);
 
-        $managers = User::query()->orderBy('name')->get(['id', 'name', 'role']);
+        $managers = User::query()
+            ->with(['agent.entite', 'agent.direction', 'agent.delegationTechnique', 'agent.caisse', 'agent.agence', 'agent.service'])
+            ->orderBy('name')
+            ->get(['id', 'name', 'role', 'agent_id']);
+
+        // Map rôle_subordonné → rôles_managers autorisés, pour filtrage JS dans le formulaire create
+        $managerRolesMap = [
+            'Agent'                  => ['Chef_Service', 'Chef_Agence', 'Chef_Guichet'],
+            'Chef_Service'           => ['Directeur_Caisse', 'Directeur_Technique', 'Directeur_Direction'],
+            'Chef_Agence'            => ['Directeur_Caisse', 'Directeur_Technique'],
+            'Chef_Guichet'           => ['Chef_Agence', 'Directeur_Caisse'],
+            'Secretaire_Caisse'      => ['Directeur_Caisse'],
+            'Directeur_Caisse'       => ['Directeur_Technique'],
+            'Secretaire_Technique'   => ['Directeur_Technique'],
+            'Directeur_Technique'    => ['DGA', 'DG'],
+            'Secretaire_Direction'   => ['Directeur_Direction'],
+            'Directeur_Direction'    => ['DGA', 'DG'],
+            'DGA'                    => ['DG'],
+            'Assistante_Dg'          => ['DG'],
+            'Secretaire_Assistante'  => ['DG'],
+            'Conseillers_Dg'         => ['DG'],
+        ];
 
         return view('admin.users.create', [
             'agents'           => $agents,
             'preselectedAgent' => $preselectedAgent,
             'managers'         => $managers,
+            'managerRolesMap'  => $managerRolesMap,
             'roles'            => self::allRoles(),
             'fonctionToRole'   => self::FONCTION_TO_ROLE,
             'entites'          => \App\Models\Entite::query()->orderBy('nom')->get(['id', 'nom']),
@@ -187,12 +209,39 @@ class UserController extends Controller
             ->with('status', 'Compte utilisateur créé avec succès.');
     }
 
+    /**
+     * Rôles éligibles comme supérieur N+1 selon le rôle du subordonné.
+     */
+    private static function managerRolesFor(string $role): array
+    {
+        return match ($role) {
+            'Agent'                  => ['Chef_Service', 'Chef_Agence', 'Chef_Guichet'],
+            'Chef_Service'           => ['Directeur_Caisse', 'Directeur_Technique', 'Directeur_Direction'],
+            'Chef_Agence'            => ['Directeur_Caisse', 'Directeur_Technique'],
+            'Chef_Guichet'           => ['Chef_Agence', 'Directeur_Caisse'],
+            'Secretaire_Caisse',
+            'Directeur_Caisse'       => ['Directeur_Technique'],
+            'Secretaire_Technique',
+            'Directeur_Technique'    => ['DGA', 'DG'],
+            'Secretaire_Direction',
+            'Directeur_Direction'    => ['DGA', 'DG'],
+            'DGA', 'Assistante_Dg',
+            'Secretaire_Assistante',
+            'Conseillers_Dg'         => ['DG'],
+            default                  => [],   // pas de filtre : tous les utilisateurs
+        };
+    }
+
     public function edit(User $user): View
     {
+        $allowedRoles = self::managerRolesFor($user->role);
+
         $managers = User::query()
             ->where('id', '!=', $user->id)
+            ->when($allowedRoles, fn ($q) => $q->whereIn('role', $allowedRoles))
+            ->with(['agent.entite', 'agent.direction', 'agent.delegationTechnique', 'agent.caisse', 'agent.agence', 'agent.service'])
             ->orderBy('name')
-            ->get(['id', 'name', 'role']);
+            ->get(['id', 'name', 'role', 'agent_id']);
 
         // Permissions individuelles actuelles de l'utilisateur (hors rôle)
         $userDirectPermissions = $user->getDirectPermissions()->pluck('name')->toArray();
@@ -256,6 +305,24 @@ class UserController extends Controller
             $agent->save();
 
             $this->syncEntiteAgentField($validated['role'], $user->agent_id);
+
+            // ── Affectation automatique via supérieur ───────────────────────
+            // Si un supérieur est sélectionné et que l'agent n'est pas encore affecté,
+            // on copie l'affectation structurelle du supérieur vers cet agent.
+            if (!empty($validated['manager_id'])) {
+                $managerAgent = User::find($validated['manager_id'])?->agent;
+                if ($managerAgent && ! $agent->fresh()->isAffecte()) {
+                    $agent->update([
+                        'entite_id'               => $managerAgent->entite_id,
+                        'direction_id'            => $managerAgent->direction_id,
+                        'delegation_technique_id' => $managerAgent->delegation_technique_id,
+                        'caisse_id'               => $managerAgent->caisse_id,
+                        'agence_id'               => $managerAgent->agence_id,
+                        'guichet_id'              => $managerAgent->guichet_id,
+                        'service_id'              => $managerAgent->service_id,
+                    ]);
+                }
+            }
         }
 
         return redirect()

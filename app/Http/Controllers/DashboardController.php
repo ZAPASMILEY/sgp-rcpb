@@ -486,7 +486,7 @@ class DashboardController extends Controller
         // Calcul anticipé de l'année ouverte pour scoper les stats par défaut
         $openAnnee    = Annee::currentOpen();
         $openSemestre = null;
-        $totalAgents  = Agent::personnel()->count();
+        $totalAgents  = Agent::count();
         $agentsEvalues = $agentsSansEval = 0;
 
         $evalQuery = Evaluation::query();
@@ -633,7 +633,7 @@ class DashboardController extends Controller
             'delegationsCount'         => DelegationTechnique::count(),
             'directionsCount'          => Direction::count(),
             'servicesCount'            => Service::count(),
-            'agentsCount'              => Agent::reseau()->count(),
+            'agentsCount'              => Agent::count(),
             'secretairesCount'         => $secretairesCount,
             'faitiereDirectionsCount'  => Direction::count(),
             'caissesParDelegation'     => Caisse::whereNotNull('delegation_technique_id')->count(),
@@ -646,7 +646,7 @@ class DashboardController extends Controller
             'recentDirections'         => $recentDirections,
             'recentServices'           => $recentServices,
             'recentAgents'             => $recentAgents,
-            'recentLoginFailures'      => LoginFailure::latest('attempted_at')->take(8)->get(),
+            'recentLoginFailures'      => LoginFailure::latest('attempted_at')->take(3)->get(),
             'reseauChart'              => $reseauChart,
             'delegationsChart'         => $delegationsChart,
             'alertsChart'              => $alertsChart,

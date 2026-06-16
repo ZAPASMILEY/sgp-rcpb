@@ -60,10 +60,17 @@
             <div class="space-y-4">
                 <label for="chef_agent_id" class="text-xs font-bold text-slate-400 ml-1">Chef d'agence</label>
                 @if($chefs->isEmpty())
-                    <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                        <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                        <span>Aucun agent avec la fonction <strong>Chef d'Agence</strong> n'est disponible. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                    </div>
+                    @if(($totalChefs ?? 0) === 0)
+                        <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun agent avec la fonction <strong>Chef d'Agence</strong> n'est enregistré. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                        </div>
+                    @else
+                        <div class="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                            <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                            <span>Tous les agents <strong>Chef d'Agence</strong> ({{ $totalChefs }}) sont déjà affectés à une agence. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                        </div>
+                    @endif
                 @endif
                 <select id="chef_agent_id" name="chef_agent_id" class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
                     <option value="">— Aucun chef pour l'instant —</option>
@@ -79,10 +86,17 @@
             <div class="space-y-4">
                 <label for="secretaire_agent_id" class="text-xs font-bold text-slate-400 ml-1">Secrétaire d'agence</label>
                 @if($secretaires->isEmpty())
-                    <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                        <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
-                        <span>Aucun agent avec la fonction <strong>Secrétaire d'Agence</strong> n'est disponible. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
-                    </div>
+                    @if(($totalSecretaires ?? 0) === 0)
+                        <div class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                            <i class="fas fa-exclamation-triangle mt-0.5 shrink-0 text-amber-500"></i>
+                            <span>Aucun agent avec la fonction <strong>Secrétaire d'Agence</strong> n'est enregistrée. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Créer un agent</a></span>
+                        </div>
+                    @else
+                        <div class="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs text-rose-700">
+                            <i class="fas fa-ban mt-0.5 shrink-0 text-rose-400"></i>
+                            <span>Toutes les agents <strong>Secrétaire d'Agence</strong> ({{ $totalSecretaires }}) sont déjà affectées à une agence. <a href="{{ route('admin.agents.create') }}" class="font-bold underline">Ajouter un nouvel agent</a></span>
+                        </div>
+                    @endif
                 @endif
                 <select id="secretaire_agent_id" name="secretaire_agent_id" class="w-full bg-slate-100 border-none rounded-[20px] p-4 text-slate-700 font-bold focus:ring-2 focus:ring-cyan-500">
                     <option value="">— Aucune secrétaire pour l'instant —</option>

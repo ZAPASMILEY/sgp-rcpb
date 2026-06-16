@@ -49,7 +49,8 @@
         ],
         [
             'label' => 'Agents',
-            'value' => $agentsCount,
+            'value' => $agentsCount,               
+
             'meta' => $agentsWithoutService.' sans service',
             'href' => route('admin.agents.index'),
             'icon' => 'fas fa-users',
@@ -330,48 +331,54 @@
                     </div>
                 </section>
 
-                <section id="security-log" class="rounded-[26px] border border-rose-200 bg-white p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
-                    <div class="mb-3 flex items-center justify-between">
-                        <div>
-                            <h2 class="text-base font-black tracking-tight text-rose-600">Journal de sécurité</h2>
-                            <p class="mt-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">{{ $failedLoginAttemptsCount }} tentative(s) enregistrée(s)</p>
-                        </div>
-                        @if($failedLoginAttemptsCount > 0)
-                            <span class="inline-flex h-7 items-center gap-1.5 rounded-full bg-rose-500 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-white">
-                                <i class="fas fa-triangle-exclamation text-[9px]"></i> Alerte
-                            </span>
-                        @else
-                            <span class="inline-flex h-7 items-center gap-1.5 rounded-full bg-emerald-100 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-700">
-                                <i class="fas fa-check text-[9px]"></i> OK
-                            </span>
-                        @endif
-                    </div>
-
-                    {{-- Liste scrollable limitée en hauteur --}}
-                    <div class="overflow-y-auto rounded-2xl" style="max-height: 260px;">
-                        @forelse ($recentLoginFailures as $failure)
-                            <div class="flex items-center gap-3 border-b border-rose-50 px-3 py-2 last:border-0 hover:bg-rose-50/50 transition">
-                                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500 text-[9px] text-white">
-                                    <i class="fas fa-exclamation"></i>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-xs font-black text-rose-700">{{ $failure->email ?: 'Email non renseigné' }}</p>
-                                    <p class="text-[10px] font-semibold text-slate-400">{{ $failure->ip_address ?: 'IP inconnue' }}</p>
-                                </div>
-                                <span class="shrink-0 text-[10px] font-semibold text-slate-400">
-                                    {{ optional($failure->attempted_at)->format('d/m H:i') }}
-                                </span>
-                            </div>
-                        @empty
-                            <div class="flex flex-col items-center justify-center py-8 text-center">
-                                <i class="fas fa-shield-check text-2xl text-emerald-300 mb-2"></i>
-                                <p class="text-sm font-semibold text-slate-400">Aucune alerte récente</p>
-                            </div>
-                        @endforelse
-                    </div>
-                </section>
             </aside>
         </div>
+
+        {{-- ── Journal de sécurité — pleine largeur ──────────────────────────── --}}
+        <section id="security-log" class="rounded-[26px] border border-rose-200 bg-white p-6 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.35)]">
+            <div class="mb-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-black tracking-tight text-rose-600">Journal de sécurité</h2>
+                    <p class="mt-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">{{ $failedLoginAttemptsCount }} tentative(s) enregistrée(s)</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('admin.alertes.index') }}"
+                       class="inline-flex h-8 items-center gap-1.5 rounded-full bg-rose-600 px-4 text-[10px] font-black uppercase tracking-[0.1em] text-white hover:bg-rose-700 transition">
+                        <i class="fas fa-shield-halved text-[9px]"></i> Voir toutes les alertes
+                    </a>
+                    @if($failedLoginAttemptsCount > 0)
+                        <span class="inline-flex h-7 items-center gap-1.5 rounded-full bg-rose-500 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-white">
+                            <i class="fas fa-triangle-exclamation text-[9px]"></i> Alerte
+                        </span>
+                    @else
+                        <span class="inline-flex h-7 items-center gap-1.5 rounded-full bg-emerald-100 px-3 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-700">
+                            <i class="fas fa-check text-[9px]"></i> OK
+                        </span>
+                    @endif
+                </div>
+            </div>
+
+            @forelse ($recentLoginFailures as $failure)
+                <div class="flex items-center gap-4 border-b border-rose-50 px-4 py-3 last:border-0 hover:bg-rose-50/50 transition rounded-xl">
+                    <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-500 text-[10px] text-white">
+                        <i class="fas fa-exclamation"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-black text-rose-700">{{ $failure->email ?: 'Email non renseigné' }}</p>
+                        <p class="text-[11px] font-semibold text-slate-400">{{ $failure->ip_address ?: 'IP inconnue' }}</p>
+                    </div>
+                    <span class="shrink-0 text-xs font-semibold text-slate-400">
+                        {{ optional($failure->attempted_at)->format('d/m/Y H:i') }}
+                    </span>
+                </div>
+            @empty
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <i class="fas fa-shield-check text-3xl text-emerald-300 mb-3"></i>
+                    <p class="text-sm font-semibold text-slate-400">Aucune alerte récente</p>
+                </div>
+            @endforelse
+        </section>
+
     </div>
 </div>
 

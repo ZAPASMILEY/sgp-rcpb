@@ -24,19 +24,33 @@
                 </div>
             </div>
 
-            @if ($totalNonLues > 0)
-                <form method="POST" action="{{ route('notifications.lire-tout') }}">
-                    @csrf
-                    <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
-                        <i class="fas fa-check-double text-xs"></i>
-                        Tout marquer lu
-                        <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-black">
-                            {{ $totalNonLues }}
-                        </span>
-                    </button>
-                </form>
-            @endif
+            <div class="flex items-center gap-2">
+                @if ($totalNonLues > 0)
+                    <form method="POST" action="{{ route('notifications.lire-tout') }}">
+                        @csrf
+                        <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20">
+                            <i class="fas fa-check-double text-xs"></i>
+                            Tout marquer lu
+                            <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-black">
+                                {{ $totalNonLues }}
+                            </span>
+                        </button>
+                    </form>
+                @endif
+                @if ($notifications->isNotEmpty())
+                    <form method="POST" action="{{ route('notifications.supprimer-tout') }}"
+                          onsubmit="return confirm('Supprimer toutes vos notifications ?')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-xl bg-rose-500/80 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/20 transition hover:bg-rose-600">
+                            <i class="fas fa-trash text-xs"></i>
+                            Tout supprimer
+                        </button>
+                    </form>
+                @endif
+            </div>
         </div>
     </div>
 

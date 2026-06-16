@@ -36,7 +36,7 @@ class StatistiqueController extends Controller
         $caissesCount = Caisse::query()->whereYear('created_at', $selectedYear)->count();
         $agencesCount = Agence::query()->whereYear('created_at', $selectedYear)->count();
         $guichetsCount = Guichet::query()->whereYear('created_at', $selectedYear)->count();
-        $agentsCount = Agent::reseau()->count();
+        $agentsCount = Agent::count();
 
         $maleValues   = ['homme', 'Homme', 'Masculin', 'masculin', 'M'];
         $femaleValues = ['femme', 'Femme', 'Féminin', 'féminin', 'Feminine', 'feminine', 'F'];

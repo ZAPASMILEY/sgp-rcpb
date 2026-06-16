@@ -124,7 +124,7 @@ class DirectionController extends Controller
    public function delegationsIndex(): View
     {
         $delegations = DelegationTechnique::query()
-            ->withCount(['caisses', 'agents'])
+            ->withCount(['caisses', 'agents', 'villes'])
             ->orderBy('region')
             ->get();
 
@@ -136,10 +136,14 @@ class DirectionController extends Controller
         ];
 
         return view('admin.delegations_techniques.index', array_merge(compact('delegations', 'stats'), [
-            'directeurs'         => \App\Models\Agent::where('role', 'Directeur Technique')->orderBy('nom')->get(),
-            'secretaires'        => \App\Models\Agent::where('role', 'Secrétaire Technique')->orderBy('nom')->get(), // <-- AJOUTE CETTE LIGNE !
-            'directeurs_caisse'  => \App\Models\Agent::where('role', 'Directeur de Caisse')->orderBy('nom')->get(),
-            'secretaires_caisse' => \App\Models\Agent::where('role', 'Secrétaire de Caisse')->orderBy('nom')->get(),
+            'directeurs'              => Agent::where('role', 'Directeur Technique')->whereDoesntHave('directedDelegation')->orderBy('nom')->get(),
+            'secretaires'             => Agent::where('role', 'Secrétaire Technique')->whereDoesntHave('secretariedDelegation')->orderBy('nom')->get(),
+            'directeurs_caisse'       => Agent::where('role', 'Directeur de Caisse')->whereDoesntHave('directedCaisse')->orderBy('nom')->get(),
+            'secretaires_caisse'      => Agent::where('role', 'Secrétaire de Caisse')->whereDoesntHave('secretariedCaisse')->orderBy('nom')->get(),
+            'totalDirecteurs'         => Agent::where('role', 'Directeur Technique')->count(),
+            'totalSecretaires'        => Agent::where('role', 'Secrétaire Technique')->count(),
+            'totalDirecteursCaisse'   => Agent::where('role', 'Directeur de Caisse')->count(),
+            'totalSecretairesCaisse'  => Agent::where('role', 'Secrétaire de Caisse')->count(),
         ]));
     }
 
@@ -172,10 +176,17 @@ class DirectionController extends Controller
         $caisses = $delegationTechnique->caisses()->with('ville')->orderBy('nom')->get();
         $agents  = $delegationTechnique->agents()->orderBy('nom')->get();
 
+        $directeurs  = Agent::where('role', 'Directeur de Caisse')->whereDoesntHave('directedCaisse')->orderBy('nom')->orderBy('prenom')->get();
+        $secretaires = Agent::where('role', 'Secrétaire de Caisse')->whereDoesntHave('secretariedCaisse')->orderBy('nom')->orderBy('prenom')->get();
+
         return view('admin.delegations_techniques.show', [
-            'delegation' => $delegationTechnique,
-            'caisses'    => $caisses,
-            'agents'     => $agents,
+            'delegation'       => $delegationTechnique,
+            'caisses'          => $caisses,
+            'agents'           => $agents,
+            'directeurs'       => $directeurs,
+            'secretaires'      => $secretaires,
+            'totalDirecteurs'  => Agent::where('role', 'Directeur de Caisse')->count(),
+            'totalSecretaires' => Agent::where('role', 'Secrétaire de Caisse')->count(),
         ]);
     }
 
@@ -224,15 +235,28 @@ class DirectionController extends Controller
             ->with('status', 'Delegation technique creee avec succes.');
     }
 
+    public function createCaisse(DelegationTechnique $delegationTechnique): View
+    {
+        $delegationTechnique->load(['directeur', 'villes']);
+
+        return view('admin.delegations_techniques.create_caisse', [
+            'delegation'       => $delegationTechnique,
+            'directeurs'       => Agent::where('role', 'Directeur de Caisse')->whereDoesntHave('directedCaisse')->orderBy('nom')->orderBy('prenom')->get(),
+            'secretaires'      => Agent::where('role', 'Secrétaire de Caisse')->whereDoesntHave('secretariedCaisse')->orderBy('nom')->orderBy('prenom')->get(),
+            'totalDirecteurs'  => Agent::where('role', 'Directeur de Caisse')->count(),
+            'totalSecretaires' => Agent::where('role', 'Secrétaire de Caisse')->count(),
+        ]);
+    }
+
     public function storeCaisse(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'delegation_technique_id' => ['required', 'exists:delegation_techniques,id'],
-            'ville_id'                => ['nullable', 'exists:villes,id'],
-            'nom'                     => ['required', 'string', 'max:255'],
+            'ville_id'                => ['required', 'exists:villes,id'],
+            'nom'                     => ['required', 'string', 'max:255', 'unique:caisses,nom'],
             'annee_ouverture'         => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
             'quartier'                => ['nullable', 'string', 'max:255'],
-            'secretariat_telephone'   => ['nullable', 'string', 'max:30'],
+            'secretariat_telephone'   => ['required', 'string', 'max:30'],
             'directeur_agent_id'      => ['required', 'integer', 'exists:agents,id'],
             'secretaire_agent_id'     => ['nullable', 'integer', 'exists:agents,id'],
         ], [
@@ -241,14 +265,23 @@ class DirectionController extends Controller
 
         $caisse = Caisse::query()->create($validated);
 
-        Agent::findOrFail($validated['directeur_agent_id'])->update(['poste' => 'Directeur de ' . $caisse->nom]);
+        Agent::findOrFail($validated['directeur_agent_id'])->update([
+            'caisse_id'               => $caisse->id,
+            'delegation_technique_id' => $validated['delegation_technique_id'],
+            'poste'                   => 'Directeur de ' . $caisse->nom,
+        ]);
+
         if (!empty($validated['secretaire_agent_id'])) {
-            Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => 'Secrétaire de ' . $caisse->nom]);
+            Agent::findOrFail($validated['secretaire_agent_id'])->update([
+                'caisse_id'               => $caisse->id,
+                'delegation_technique_id' => $validated['delegation_technique_id'],
+                'poste'                   => 'Secrétaire de ' . $caisse->nom,
+            ]);
         }
 
         return redirect()
             ->route('admin.delegations-techniques.show', $validated['delegation_technique_id'])
-            ->with('status', 'Caisse creee avec succes.');
+            ->with('status', 'Caisse créée avec succès.');
     }
 
     public function storeDelegationAgent(Request $request): RedirectResponse
@@ -291,14 +324,88 @@ class DirectionController extends Controller
             ->with('status', 'Service cree avec succes.');
     }
 
+    public function editVilles(DelegationTechnique $delegationTechnique): View
+    {
+        $delegationTechnique->load('villes');
+
+        return view('admin.delegations_techniques.edit_villes', [
+            'delegation' => $delegationTechnique,
+        ]);
+    }
+
+    public function updateVilles(Request $request, DelegationTechnique $delegationTechnique): RedirectResponse
+    {
+        $villesData = $request->input('villes', []);
+
+        foreach ($villesData as $villeItem) {
+            if (empty($villeItem['nom'])) continue;
+
+            $existsElsewhere = Ville::where('nom', $villeItem['nom'])
+                ->where('delegation_technique_id', '!=', $delegationTechnique->id)
+                ->when(!empty($villeItem['id']), fn ($q) => $q->where('id', '!=', $villeItem['id']))
+                ->exists();
+
+            if ($existsElsewhere) {
+                return redirect()->back()->withInput()->withErrors([
+                    'villes' => "La ville \"{$villeItem['nom']}\" est déjà couverte par une autre délégation.",
+                ]);
+            }
+        }
+
+        $existingIds = [];
+        foreach ($villesData as $villeItem) {
+            if (empty($villeItem['nom'])) continue;
+
+            if (!empty($villeItem['id'])) {
+                $ville = Ville::find($villeItem['id']);
+                if ($ville && $ville->delegation_technique_id === $delegationTechnique->id) {
+                    $ville->update(['nom' => $villeItem['nom']]);
+                    $existingIds[] = $ville->id;
+                }
+            } else {
+                $new = $delegationTechnique->villes()->create(['nom' => $villeItem['nom']]);
+                $existingIds[] = $new->id;
+            }
+        }
+        $delegationTechnique->villes()->whereNotIn('id', $existingIds)->delete();
+
+        return redirect()
+            ->route('admin.delegations-techniques.villes.edit', $delegationTechnique)
+            ->with('status', 'Villes mises à jour avec succès.');
+    }
+
     public function editDelegation(DelegationTechnique $delegationTechnique): View
     {
         $delegationTechnique->load(['villes', 'directeur', 'secretaire']);
 
+        $prisDirecteurIds  = DelegationTechnique::where('id', '!=', $delegationTechnique->id)
+            ->whereNotNull('directeur_agent_id')->pluck('directeur_agent_id');
+        $prisSecretaireIds = DelegationTechnique::where('id', '!=', $delegationTechnique->id)
+            ->whereNotNull('secretaire_agent_id')->pluck('secretaire_agent_id');
+
+        $totalDirecteurs  = Agent::where('role', 'Directeur Technique')->count();
+        $totalSecretaires = Agent::where('role', 'Secrétaire Technique')->count();
+
         return view('admin.delegations_techniques.edit', [
             'delegationTechnique' => $delegationTechnique,
-            'directeurs'          => Agent::query()->where('role', 'Directeur Technique')->orderBy('nom')->orderBy('prenom')->get(),
-            'secretaires'         => Agent::query()->where('role', 'Secrétaire Technique')->orderBy('nom')->orderBy('prenom')->get(),
+            'totalDirecteurs'     => $totalDirecteurs,
+            'totalSecretaires'    => $totalSecretaires,
+            'directeurs'  => Agent::query()
+                ->where(function ($q) use ($prisDirecteurIds, $delegationTechnique) {
+                    $q->where('role', 'Directeur Technique')->whereNotIn('id', $prisDirecteurIds);
+                    if ($delegationTechnique->directeur_agent_id) {
+                        $q->orWhere('id', $delegationTechnique->directeur_agent_id);
+                    }
+                })
+                ->orderBy('nom')->orderBy('prenom')->get(),
+            'secretaires' => Agent::query()
+                ->where(function ($q) use ($prisSecretaireIds, $delegationTechnique) {
+                    $q->where('role', 'Secrétaire Technique')->whereNotIn('id', $prisSecretaireIds);
+                    if ($delegationTechnique->secretaire_agent_id) {
+                        $q->orWhere('id', $delegationTechnique->secretaire_agent_id);
+                    }
+                })
+                ->orderBy('nom')->orderBy('prenom')->get(),
         ]);
     }
 
@@ -359,25 +466,18 @@ class DirectionController extends Controller
     public function create(): View
     {
         // IDs déjà affectés comme directeur ou secrétaire dans une direction existante
-        $prisDirecteurIds   = Direction::whereNotNull('directeur_agent_id')->pluck('directeur_agent_id');
-        $prisSecretaireIds  = Direction::whereNotNull('secretaire_agent_id')->pluck('secretaire_agent_id');
+        $prisDirecteurIds  = Direction::whereNotNull('directeur_agent_id')->pluck('directeur_agent_id');
+        $prisSecretaireIds = Direction::whereNotNull('secretaire_agent_id')->pluck('secretaire_agent_id');
+
+        $totalDirecteurs  = Agent::where('role', 'Directeur de Direction')->count();
+        $totalSecretaires = Agent::where('role', 'Secrétaire de Direction')->count();
 
         return view('admin.directions.create', [
-            'delegations' => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
-
-            // Seuls les agents "Directeur de Direction" pas encore affectés à une direction
-            'directeurs'  => Agent::query()
-                ->where('role', 'Directeur de Direction')
-                ->whereNotIn('id', $prisDirecteurIds)
-                ->orderBy('nom')->orderBy('prenom')
-                ->get(['id', 'nom', 'prenom', 'role']),
-
-            // Seules les agents "Secrétaire de Direction" pas encore affectées
-            'secretaires' => Agent::query()
-                ->where('role', 'Secrétaire de Direction')
-                ->whereNotIn('id', $prisSecretaireIds)
-                ->orderBy('nom')->orderBy('prenom')
-                ->get(['id', 'nom', 'prenom', 'role']),
+            'delegations'     => DelegationTechnique::query()->orderBy('region')->orderBy('ville')->get(),
+            'directeurs'      => Agent::query()->where('role', 'Directeur de Direction')->whereNotIn('id', $prisDirecteurIds)->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']),
+            'secretaires'     => Agent::query()->where('role', 'Secrétaire de Direction')->whereNotIn('id', $prisSecretaireIds)->orderBy('nom')->orderBy('prenom')->get(['id', 'nom', 'prenom', 'role']),
+            'totalDirecteurs'  => $totalDirecteurs,
+            'totalSecretaires' => $totalSecretaires,
         ]);
     }
 
@@ -473,6 +573,13 @@ class DirectionController extends Controller
             return redirect()
                 ->route('admin.entites.index')
                 ->with('status', 'Configurez d abord la Faitiere avant de creer une Direction.');
+        }
+
+        // La Direction Générale Adjointe a son propre formulaire dédié
+        if (strtolower(trim($request->input('nom', ''))) === 'direction générale adjointe') {
+            return redirect()
+                ->route('admin.direction-dga.configurer')
+                ->with('status', 'Utilisez ce formulaire dédié pour configurer la Direction Générale Adjointe.');
         }
 
         $validated = $request->validate([
