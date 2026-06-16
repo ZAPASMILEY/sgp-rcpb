@@ -237,7 +237,7 @@
                                     <div class="flex items-center gap-3">
                                         <span class="h-2 w-2 rounded-full bg-amber-500"></span>
                                         <span class="text-sm font-semibold text-slate-700">{{ trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) ?: 'Agent' }}</span>
-                                        <span class="text-xs text-slate-400">{{ $agent->role ?? '' }}</span>
+                                        <span class="text-xs text-slate-400">{{ $agent->role_genree ?? '' }}</span>
                                     </div>
                                     <i class="fas fa-arrow-right text-xs text-slate-300"></i>
                                 </a>

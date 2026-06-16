@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', function () {
     let formationIndexCounter  = 0;
     let experienceIndexCounter = 0;
 
+    const IMPREVU_TITRE = "Activités imprévues réalisées";
+    let imprevuCriterionElement = null;
+
     const objectiveSelector        = document.getElementById('objective-fiche-selector');
     const addSelectedObjectivesBtn = document.getElementById('add-selected-objectives');
     const objectiveChoiceContainer = document.getElementById('objective-choice-container');
@@ -160,6 +163,38 @@ document.addEventListener('DOMContentLoaded', function () {
             removeBtn.addEventListener('click', () => { article.remove(); updateScoreSummary(); });
         }
         return article;
+    }
+
+    // ── Activités imprévues réalisées ────────────────────────────────────────
+    const toggleImprevu = document.getElementById('toggle-activites-imprevues');
+
+    function injectImprevuCriterion(criterion) {
+        if (imprevuCriterionElement) return;
+        imprevuCriterionElement = renderCriterion('objective_criteres', {
+            titre:                             IMPREVU_TITRE,
+            note_directe:                      criterion?.note_directe ?? criterion?.note_globale ?? 1,
+            observation:                       criterion?.observation ?? '',
+            source_fiche_objectif_id:          '',
+            source_fiche_objectif_objectif_id: '',
+            subcriteria:                       [],
+        }, objectiveIndexCounter, { titleReadonly: true, allowRemoveCriterion: false });
+        imprevuCriterionElement.dataset.isImprevu = 'true';
+        // Toujours en tête des critères objectifs
+        objectiveContainer.insertBefore(imprevuCriterionElement, objectiveContainer.firstChild);
+        objectiveIndexCounter++;
+        updateScoreSummary();
+    }
+
+    if (toggleImprevu) {
+        toggleImprevu.addEventListener('change', () => {
+            if (toggleImprevu.checked) {
+                injectImprevuCriterion(null);
+            } else if (imprevuCriterionElement) {
+                imprevuCriterionElement.remove();
+                imprevuCriterionElement = null;
+                updateScoreSummary();
+            }
+        });
     }
 
     // ── Sélecteur de fiches d'objectifs ──────────────────────────────────────
@@ -355,9 +390,21 @@ document.addEventListener('DOMContentLoaded', function () {
     })();
     (Array.isArray(oldExperiences) && oldExperiences.length ? oldExperiences : [{}]).forEach(r => addExperienceRow(r));
     renderSubjectiveCriteria(Array.isArray(subjectiveTemplates) ? subjectiveTemplates : []);
-    if (Array.isArray(oldObjectiveCriteria) && oldObjectiveCriteria.length) {
-        oldObjectiveCriteria.forEach((c, i) => {
-            objectiveContainer.appendChild(renderCriterion('objective_criteres', c, i, { titleReadonly: true, allowRemoveCriterion: true }));
+
+    // Séparer le critère imprevu des autres critères objectifs
+    const allOldObjective = Array.isArray(oldObjectiveCriteria) ? oldObjectiveCriteria : [];
+    const imprevuOld      = allOldObjective.find(c => c.titre === IMPREVU_TITRE);
+    const otherObjective  = allOldObjective.filter(c => c.titre !== IMPREVU_TITRE);
+
+    // Si imprevu était déjà là, cocher le toggle et l'injecter
+    if (imprevuOld && toggleImprevu) {
+        toggleImprevu.checked = true;
+        injectImprevuCriterion(imprevuOld);
+    }
+
+    if (otherObjective.length) {
+        otherObjective.forEach(c => {
+            objectiveContainer.appendChild(renderCriterion('objective_criteres', c, objectiveIndexCounter, { titleReadonly: true, allowRemoveCriterion: true }));
             objectiveIndexCounter++;
         });
         // Re-render les choix de la fiche pour marquer comme disabled les objectifs déjà ajoutés

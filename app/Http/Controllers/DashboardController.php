@@ -89,10 +89,11 @@ class DashboardController extends Controller
 
     public function chef(Request $request): View
     {
-        $user  = Auth::user();
-        $ctx   = ChefEntity::resolveOrFail($user);
-        $agent = $ctx->agent;
-        $annee = (int) $request->query('annee', now()->year);
+        $user     = Auth::user();
+        $ctx      = ChefEntity::resolveOrFail($user);
+        $agent    = $ctx->agent;
+        $annee    = (int) $request->query('annee', now()->year);
+        $sansEval = (bool) $request->input('sans_eval', false);
 
         $evalsRecBase = fn () => Evaluation::where(function ($q) use ($ctx, $user, $agent) {
             // Évaluations de la structure gérée (Guichet, Service, Agence)
@@ -150,6 +151,19 @@ class DashboardController extends Controller
             ? $this->ds->agentsCoverage($agentIds, $openAnnee)
             : ['totalAgents' => $agentIds->count(), 'agentsSansEval' => 0, 'agentsEvalues' => 0];
 
+        $listeSansEval = collect();
+        if ($sansEval && $openAnnee) {
+            $ef = fn ($q) => $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
+            $listeSansEval = Agent::whereIn('id', $agentIds)
+                ->whereDoesntHave('evaluations', $ef)
+                ->whereDoesntHave('evaluationsPersonnel', $ef)
+                ->whereDoesntHave('ledAgence',  fn ($a) => $a->whereHas('evaluations', $ef))
+                ->whereDoesntHave('ledService', fn ($s) => $s->whereHas('evaluations', $ef))
+                ->whereDoesntHave('ledGuichet', fn ($g) => $g->whereHas('evaluations', $ef))
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'role', 'matricule', 'numero_telephone']);
+        }
+
         $role   = 'chef';
         $layout = 'layouts.chef';
 
@@ -158,7 +172,7 @@ class DashboardController extends Controller
             'evalsRecStats', 'fichesRecStats', 'tauxAvancement',
             'evalsGivStats', 'noteMoyenneEquipe',
             'evalsDonut', 'fichesDonut', 'fichesRecentes',
-            'agentsOverview', 'openAnnee', 'role', 'layout',
+            'agentsOverview', 'openAnnee', 'role', 'layout', 'listeSansEval',
         ) + $coverage);
     }
 
@@ -168,9 +182,10 @@ class DashboardController extends Controller
 
     public function directeur(Request $request): View
     {
-        $user  = Auth::user();
-        $ctx   = DirecteurEntity::resolveOrFail($user);
-        $annee = (int) $request->query('annee', now()->year);
+        $user     = Auth::user();
+        $ctx      = DirecteurEntity::resolveOrFail($user);
+        $annee    = (int) $request->query('annee', now()->year);
+        $sansEval = (bool) $request->input('sans_eval', false);
 
         $evalsRecBase = fn () => Evaluation::where(function ($q) use ($ctx) {
             $q->where('evaluable_type', $ctx->modelClass)
@@ -216,6 +231,19 @@ class DashboardController extends Controller
             ? $this->ds->agentsCoverage($agentIds, $openAnnee)
             : ['totalAgents' => $agentIds->count(), 'agentsSansEval' => 0, 'agentsEvalues' => 0];
 
+        $listeSansEval = collect();
+        if ($sansEval && $openAnnee) {
+            $ef = fn ($q) => $q->where('statut', 'valide')->where('annee_id', $openAnnee->id);
+            $listeSansEval = Agent::whereIn('id', $agentIds)
+                ->whereDoesntHave('evaluations', $ef)
+                ->whereDoesntHave('evaluationsPersonnel', $ef)
+                ->whereDoesntHave('ledAgence',  fn ($a) => $a->whereHas('evaluations', $ef))
+                ->whereDoesntHave('ledService', fn ($s) => $s->whereHas('evaluations', $ef))
+                ->whereDoesntHave('ledGuichet', fn ($g) => $g->whereHas('evaluations', $ef))
+                ->orderBy('nom')->orderBy('prenom')
+                ->get(['id', 'nom', 'prenom', 'role', 'matricule', 'numero_telephone']);
+        }
+
         $role   = 'directeur';
         $layout = 'layouts.directeur';
 
@@ -224,7 +252,7 @@ class DashboardController extends Controller
             'evalsRecStats', 'fichesRecStats', 'tauxAvancement',
             'evalsGivStats', 'noteMoyenneEquipe',
             'evalsDonut', 'fichesDonut', 'fichesRecentes',
-            'servicesOverview', 'openAnnee', 'role', 'layout',
+            'servicesOverview', 'openAnnee', 'role', 'layout', 'listeSansEval',
         ) + $coverage);
     }
 
@@ -239,10 +267,11 @@ class DashboardController extends Controller
             abort(403, 'Accès réservé au DGA.');
         }
 
-        $annee   = (int) $request->query('annee', now()->year);
-        $statut  = trim((string) $request->input('statut', ''));
-        $search  = trim((string) $request->input('search', ''));
-        $anneeId = (int) $request->input('annee_id', 0);
+        $annee    = (int) $request->query('annee', now()->year);
+        $statut   = trim((string) $request->input('statut', ''));
+        $search   = trim((string) $request->input('search', ''));
+        $anneeId  = (int) $request->input('annee_id', 0);
+        $sansEval = (bool) $request->input('sans_eval', false);
 
         $reseauStats = [
             'delegations' => DelegationTechnique::count(),
@@ -313,7 +342,22 @@ class DashboardController extends Controller
             ? $this->ds->userCoverage($dgaSubUserIds, $user->id, $openAnnee->id)
             : ['totalAgents' => count($dgaSubUserIds), 'agentsSansEval' => 0, 'agentsEvalues' => 0];
 
-        $filters = compact('statut', 'search', 'anneeId');
+        // Liste des subordonnés sans évaluation validée (pour ?sans_eval=1)
+        $listeSansEval = collect();
+        if ($sansEval && $openAnnee) {
+            $evaluesIds = Evaluation::where('evaluateur_id', $user->id)
+                ->where('evaluable_type', User::class)
+                ->whereIn('evaluable_id', $dgaSubUserIds)
+                ->where('statut', 'valide')
+                ->where('annee_id', $openAnnee->id)
+                ->pluck('evaluable_id');
+            $sansEvalIds = array_diff($dgaSubUserIds, $evaluesIds->all());
+            $listeSansEval = User::whereIn('id', $sansEvalIds)
+                ->with('agent')
+                ->get();
+        }
+
+        $filters = compact('statut', 'search', 'anneeId', 'sansEval');
         $role    = 'dga';
         $layout  = 'layouts.dga';
 
@@ -322,6 +366,7 @@ class DashboardController extends Controller
             'subStats', 'evalsRecStats', 'fichesRecStats', 'tauxAvancement',
             'evalsDonut', 'fichesDonut', 'evaluations', 'annees',
             'topEval', 'bottomEval', 'filters', 'openAnnee', 'role', 'layout',
+            'listeSansEval',
         ) + $coverage);
     }
 
@@ -398,9 +443,11 @@ class DashboardController extends Controller
             abort(403, 'Accès réservé au Directeur Général.');
         }
 
-        $statut  = trim((string) $request->input('statut', ''));
-        $search  = trim((string) $request->input('search', ''));
-        $anneeId = (int) $request->input('annee', 0);
+        $statut   = trim((string) $request->input('statut', ''));
+        $search   = trim((string) $request->input('search', ''));
+        $anneeId  = (int) $request->input('annee', 0);
+        $note     = trim((string) $request->input('note', ''));
+        $sansEval = (bool) $request->input('sans_eval', false);
 
         $base = fn () => Evaluation::query()->where('statut', '!=', 'brouillon');
 
@@ -414,18 +461,63 @@ class DashboardController extends Controller
             'insuffisant' => Evaluation::where('statut', 'valide')->where('note_finale', '<', 5)->count(),
         ];
 
-        $query = Evaluation::with(['identification', 'evaluateur'])
-            ->where('statut', '!=', 'brouillon')
-            ->orderByDesc('updated_at');
+        $openAnnee      = Annee::currentOpen();
+        $agentsSansEval = 0;
+        $listeSansEval  = collect();
 
-        if ($statut)        $query->where('statut', $statut);
-        if ($anneeId)       $query->where('annee_id', $anneeId);
-        if ($search !== '') $query->whereHas('identification', fn ($q) =>
-            $q->where('nom_prenom', 'like', "%{$search}%")->orWhere('emploi', 'like', "%{$search}%")
-        );
+        if ($openAnnee) {
+            $hasValide = fn ($q) => $q
+                ->whereHas('evaluationsPersonnel', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
+                ->orWhereHas('evaluations',        fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
+                ->orWhereHas('directedDirection',  fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                ->orWhereHas('directedCaisse',     fn ($c) => $c->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                ->orWhereHas('directedDelegation', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)));
 
-        $evaluations = $query->paginate(20)->withQueryString();
-        $annees      = Annee::orderByDesc('annee')->get();
+            $agentsSansEval = Agent::personnel()->whereDoesntHave('evaluationsPersonnel', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
+                ->whereDoesntHave('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
+                ->whereDoesntHave('directedDirection', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                ->whereDoesntHave('directedCaisse', fn ($c) => $c->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                ->whereDoesntHave('directedDelegation', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                ->count();
+
+            if ($sansEval) {
+                $listeSansEval = Agent::personnel()
+                    ->whereDoesntHave('evaluationsPersonnel', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
+                    ->whereDoesntHave('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
+                    ->whereDoesntHave('directedDirection', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                    ->whereDoesntHave('directedCaisse', fn ($c) => $c->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                    ->whereDoesntHave('directedDelegation', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
+                    ->orderBy('nom')->orderBy('prenom')
+                    ->get(['id', 'nom', 'prenom', 'role', 'matricule', 'numero_telephone']);
+            }
+        }
+
+        // Tableau principal des évaluations (masqué si ?sans_eval=1)
+        $evaluations = collect();
+        if (! $sansEval) {
+            $query = Evaluation::with(['identification', 'evaluateur'])
+                ->where('statut', '!=', 'brouillon')
+                ->orderByDesc('updated_at');
+
+            if ($statut)        $query->where('statut', $statut);
+            if ($anneeId)       $query->where('annee_id', $anneeId);
+            if ($search !== '') $query->whereHas('identification', fn ($q) =>
+                $q->where('nom_prenom', 'like', "%{$search}%")->orWhere('emploi', 'like', "%{$search}%")
+            );
+            if ($note) {
+                match($note) {
+                    'excellent'   => $query->where('statut', 'valide')->where('note_finale', '>=', 8.5),
+                    'bien'        => $query->where('statut', 'valide')->whereBetween('note_finale', [7, 8.499]),
+                    'passable'    => $query->where('statut', 'valide')->whereBetween('note_finale', [5, 6.999]),
+                    'insuffisant' => $query->where('statut', 'valide')->where('note_finale', '<', 5),
+                    default       => null,
+                };
+            }
+
+            $evaluations = $query->paginate(20)->withQueryString();
+        }
+
+        $annees = Annee::orderByDesc('annee')->get();
 
         $topEval = Evaluation::with('identification')
             ->where('statut', 'valide')->orderByDesc('note_finale')->first();
@@ -433,27 +525,11 @@ class DashboardController extends Controller
         $bottomEval = Evaluation::with('identification')
             ->where('statut', 'valide')->orderBy('note_finale')->first();
 
-        $openAnnee      = Annee::currentOpen();
-        $agentsSansEval = 0;
-        if ($openAnnee) {
-            $totalPersonnel = Agent::personnel()->count();
-            $agentsEvalues  = Agent::personnel()
-                ->where(fn ($q) => $q
-                    ->whereHas('evaluationsPersonnel', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
-                    ->orWhereHas('evaluations',        fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id))
-                    ->orWhereHas('directedDirection',  fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
-                    ->orWhereHas('directedCaisse',     fn ($c) => $c->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
-                    ->orWhereHas('directedDelegation', fn ($d) => $d->whereHas('evaluations', fn ($e) => $e->where('statut', 'valide')->where('annee_id', $openAnnee->id)))
-                )
-                ->count();
-            $agentsSansEval = $totalPersonnel - $agentsEvalues;
-        }
-
-        $filters = compact('statut', 'search', 'anneeId');
+        $filters = compact('statut', 'search', 'anneeId', 'note', 'sansEval');
 
         return view('dg.dashboard', compact(
             'stats', 'evaluations', 'annees', 'topEval', 'bottomEval',
-            'filters', 'openAnnee', 'agentsSansEval',
+            'filters', 'openAnnee', 'agentsSansEval', 'listeSansEval',
         ));
     }
 
@@ -557,17 +633,17 @@ class DashboardController extends Controller
         $directions  = Direction::orderBy('nom')->get(['id', 'nom']);
         $fonctions   = Agent::ROLES;
 
+        $sansEval     = (bool) $request->input('sans_eval', false);
+        $listeSansEval = collect();
+
         if ($openAnnee) {
             $openSemestre = $openAnnee->semestres()->where('statut', 'ouvert')->orderBy('numero')->first();
-            // Agents avec au moins une évaluation VALIDÉE dans l'année+semestre ouverts
-            // (même périmètre que $stats['valide'] → les deux chiffres sont comparables)
+            $ef = function ($e) use ($openAnnee, $openSemestre) {
+                $e->where('annee_id', $openAnnee->id)->where('statut', 'valide');
+                if ($openSemestre) $e->where('semestre_id', $openSemestre->id);
+            };
             $agentsEvalues = Agent::personnel()
-                ->where(function ($q) use ($openAnnee, $openSemestre) {
-                    $ef = function ($e) use ($openAnnee, $openSemestre) {
-                        $e->where('annee_id', $openAnnee->id)
-                          ->where('statut', 'valide');
-                        if ($openSemestre) $e->where('semestre_id', $openSemestre->id);
-                    };
+                ->where(function ($q) use ($ef) {
                     $q->whereHas('evaluationsPersonnel', $ef)
                       ->orWhereHas('evaluations', $ef)
                       ->orWhereHas('directedDirection',  fn ($d) => $d->whereHas('evaluations', $ef))
@@ -579,14 +655,40 @@ class DashboardController extends Controller
                 })
                 ->count();
             $agentsSansEval = $totalAgents - $agentsEvalues;
+
+            if ($sansEval) {
+                $listeSansEval = Agent::personnel()
+                    ->whereDoesntHave('evaluationsPersonnel', $ef)
+                    ->whereDoesntHave('evaluations', $ef)
+                    ->whereDoesntHave('directedDirection',  fn ($d) => $d->whereHas('evaluations', $ef))
+                    ->whereDoesntHave('directedCaisse',     fn ($c) => $c->whereHas('evaluations', $ef))
+                    ->whereDoesntHave('directedDelegation', fn ($d) => $d->whereHas('evaluations', $ef))
+                    ->whereDoesntHave('ledAgence',          fn ($a) => $a->whereHas('evaluations', $ef))
+                    ->whereDoesntHave('ledService',         fn ($s) => $s->whereHas('evaluations', $ef))
+                    ->whereDoesntHave('ledGuichet',         fn ($g) => $g->whereHas('evaluations', $ef))
+                    ->with([
+                        'entite:id,nom',
+                        'delegationTechnique:id,region,ville',
+                        'caisse:id,nom',
+                        'direction:id,nom',
+                        'agence:id,nom',
+                        'service:id,nom',
+                        'guichet:id,nom',
+                    ])
+                    ->orderBy('nom')->orderBy('prenom')
+                    ->get(['id', 'nom', 'prenom', 'role', 'matricule', 'numero_telephone',
+                           'entite_id', 'delegation_technique_id', 'caisse_id',
+                           'direction_id', 'agence_id', 'service_id', 'guichet_id']);
+            }
         }
 
-        $filters = compact('tab', 'statut', 'search', 'annee', 'sexe', 'fonction', 'dt_id', 'caisse_id', 'dir_id');
+        $filters = compact('tab', 'statut', 'search', 'annee', 'sexe', 'fonction', 'dt_id', 'caisse_id', 'dir_id', 'sansEval');
 
         return view('rh.dashboard', compact(
             'stats', 'tab', 'filters', 'delegations', 'caisses', 'directions',
             'evaluations', 'fiches', 'ficheStats', 'openAnnee',
             'agentsSansEval', 'totalAgents', 'agentsEvalues', 'fonctions', 'openSemestre',
+            'listeSansEval',
         ));
     }
 

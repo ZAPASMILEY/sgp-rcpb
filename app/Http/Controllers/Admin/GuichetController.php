@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agence;
 use App\Models\Agent;
+use App\Models\Alerte;
 use App\Models\Caisse;
 use App\Models\Guichet;
 use App\Models\DelegationTechnique;
@@ -82,11 +83,21 @@ class GuichetController extends Controller
         if ($validated['chef_agent_id']) {
             $chef = Agent::findOrFail($validated['chef_agent_id']);
             $chef->update([
+                'role'      => 'Chef de Guichet',
                 'poste'     => 'Chef de Guichet de ' . $guichet->nom,
                 'agence_id' => $guichet->agence_id,
                 'guichet_id'=> $guichet->id,
             ]);
             $this->accounts->ensureAccount($chef->fresh());
+            if ($chefUser = $chef->fresh()->user) {
+                Alerte::notifier(
+                    $chefUser->id,
+                    'Vous avez été nommé(e) Chef de Guichet',
+                    'Vous êtes désormais Chef de Guichet de « ' . $guichet->nom . ' ».',
+                    'haute',
+                    route('admin.agents.show', $chef)
+                );
+            }
         }
 
         return redirect()
@@ -123,9 +134,11 @@ class GuichetController extends Controller
             }
         }
 
-        // Si le chef change, désactiver le compte de l'ancien chef
+        // Si le chef change, réinitialiser l'ancien chef
         if ($guichet->chef_agent_id && $guichet->chef_agent_id !== (int) $validated['chef_agent_id']) {
-            $this->accounts->deactivateAccount(Agent::findOrFail($guichet->chef_agent_id));
+            $ancienChef = Agent::findOrFail($guichet->chef_agent_id);
+            $ancienChef->update(['role' => 'Agent', 'poste' => null, 'guichet_id' => null]);
+            $this->accounts->deactivateAccount($ancienChef);
         }
 
         $guichet->update($validated);
@@ -133,11 +146,21 @@ class GuichetController extends Controller
         if ($validated['chef_agent_id']) {
             $chef = Agent::findOrFail($validated['chef_agent_id']);
             $chef->update([
+                'role'       => 'Chef de Guichet',
                 'poste'      => 'Chef de Guichet de ' . $guichet->nom,
                 'agence_id'  => $guichet->agence_id,
                 'guichet_id' => $guichet->id,
             ]);
             $this->accounts->ensureAccount($chef->fresh());
+            if ($chefUser = $chef->fresh()->user) {
+                Alerte::notifier(
+                    $chefUser->id,
+                    'Vous avez été nommé(e) Chef de Guichet',
+                    'Vous êtes désormais Chef de Guichet de « ' . $guichet->nom . ' ».',
+                    'haute',
+                    route('admin.agents.show', $chef)
+                );
+            }
         }
 
         return redirect()
@@ -189,6 +212,38 @@ class GuichetController extends Controller
     }
 
     /**
+     * Détacher un agent du guichet (sans le supprimer)
+     */
+    public function detachAgent(Guichet $guichet, Agent $agent): RedirectResponse
+    {
+        // Vérifier que l'agent appartient bien à ce guichet
+        if ($agent->guichet_id !== $guichet->id) {
+            return redirect()
+                ->route('admin.guichets.agents.index', $guichet)
+                ->with('error', "Cet agent n'appartient pas à ce guichet.");
+        }
+
+        $wasChef = $agent->id === $guichet->chef_agent_id;
+
+        // Retirer du guichet, garder l'agence parente
+        $agent->update([
+            'guichet_id' => null,
+            'poste'      => null,
+            'role'       => $wasChef ? 'Agent' : $agent->role,
+        ]);
+
+        // Si c'était le chef, retirer aussi la référence sur le guichet
+        if ($wasChef) {
+            $guichet->update(['chef_agent_id' => null]);
+            $this->accounts->deactivateAccount($agent->fresh());
+        }
+
+        return redirect()
+            ->route('admin.guichets.agents.index', $guichet)
+            ->with('status', $agent->prenom . ' ' . $agent->nom . ' retiré(e) du guichet.');
+    }
+
+    /**
      * Enregistrement de l'affectation
      */
     public function storeAgent(Request $request, Guichet $guichet): RedirectResponse
@@ -236,6 +291,16 @@ class GuichetController extends Controller
             'poste'      => $posteAuto,
         ]);
         $this->accounts->ensureAccount($agent->fresh());
+
+        if ($agentUser = $agent->fresh()->user) {
+            Alerte::notifier(
+                $agentUser->id,
+                'Vous avez été affecté(e) à un guichet',
+                'Vous êtes désormais agent de « ' . $guichet->nom . ' ».',
+                'moyenne',
+                route('admin.agents.show', $agent)
+            );
+        }
 
         return redirect()
             ->route('admin.guichets.agents.index', $guichet)

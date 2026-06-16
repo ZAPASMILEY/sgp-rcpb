@@ -61,10 +61,10 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse ($agents as $agent)
-                            <tr class="hover:bg-slate-50 transition-colors" data-search-content="{{ strtolower(trim($agent->prenom.' '.$agent->nom.' '.($agent->role ?? '').' '.($agent->service?->nom ?? '').' '.($agent->service?->direction?->nom ?? ''))) }}">
+                            <tr class="hover:bg-slate-50 transition-colors" data-search-content="{{ strtolower(trim($agent->prenom.' '.$agent->nom.' '.($agent->role_genree ?? '').' '.($agent->service?->nom ?? '').' '.($agent->service?->direction?->nom ?? ''))) }}">
                                 <td class="px-4 py-3 text-slate-400 text-xs">{{ $loop->iteration }}</td>
                                 <td class="px-4 py-3 font-semibold text-slate-800">{{ $agent->prenom }} {{ $agent->nom }}</td>
-                                <td class="px-4 py-3 text-slate-600">{{ $agent->role ?? '-' }}</td>
+                                <td class="px-4 py-3 text-slate-600">{{ $agent->role_genree ?? '-' }}</td>
                                 <td class="px-4 py-3 text-slate-600">{{ $agent->service?->nom ?? '-' }}</td>
                                 <td class="px-4 py-3 text-slate-600">{{ $agent->service?->direction?->nom ?? '-' }}</td>
                                 <td class="px-4 py-3 whitespace-nowrap">

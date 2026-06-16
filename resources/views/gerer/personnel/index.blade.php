@@ -98,11 +98,26 @@
                     <tbody class="divide-y divide-slate-50">
                         @foreach($agents as $agent)
                         @php
-                            $dgRoles = ['Directeur Général', 'Assistante DG', 'DG', 'PCA'];
-                            $structure = $agent->caisse?->nom
-                                ?? $agent->direction?->nom
-                                ?? ($agent->delegationTechnique ? $agent->delegationTechnique->region.' – '.$agent->delegationTechnique->ville : null)
-                                ?? (in_array($agent->role, $dgRoles) ? 'Direction Générale' : '—');
+                            $dgRoles = ['Directeur Général', 'Assistante DG', 'DGA', 'PCA', 'Directeur Technique', 'Secrétaire Technique'];
+                            if ($agent->guichet) {
+                                $structure = $agent->guichet->nom
+                                    . ($agent->guichet->agence ? ' / ' . $agent->guichet->agence->nom : '');
+                            } elseif ($agent->agence) {
+                                $structure = $agent->agence->nom
+                                    . ($agent->agence->caisse ? ' / ' . $agent->agence->caisse->nom : '');
+                            } elseif ($agent->service) {
+                                $structure = $agent->service->nom;
+                            } elseif ($agent->caisse) {
+                                $structure = $agent->caisse->nom;
+                            } elseif ($agent->direction) {
+                                $structure = $agent->direction->nom;
+                            } elseif ($agent->delegationTechnique) {
+                                $structure = $agent->delegationTechnique->region . ' – ' . $agent->delegationTechnique->ville;
+                            } elseif (in_array($agent->role, $dgRoles)) {
+                                $structure = 'Direction Générale';
+                            } else {
+                                $structure = '—';
+                            }
                         @endphp
                         <tr class="hover:bg-slate-50/60 transition-colors">
                             <td class="px-4 py-3 font-mono text-xs text-slate-600">{{ $agent->matricule ?? '—' }}</td>
@@ -110,7 +125,7 @@
                                 <p class="font-semibold text-slate-800">{{ $agent->prenom }} {{ $agent->nom }}</p>
                                 <p class="text-[11px] text-slate-400">{{ $agent->sexe ?? '' }}</p>
                             </td>
-                            <td class="px-4 py-3 text-xs text-slate-600">{{ $agent->role ?? '—' }}</td>
+                            <td class="px-4 py-3 text-xs text-slate-600">{{ $agent->role_genree ?? '—' }}</td>
                             <td class="px-4 py-3 text-xs text-slate-600 max-w-[160px] truncate" title="{{ $agent->poste ?? '' }}">{{ $agent->poste ?? '—' }}</td>
                             <td class="px-4 py-3 text-xs text-slate-600 max-w-[180px] truncate" title="{{ $structure }}">{{ $structure }}</td>
                             <td class="px-4 py-3">

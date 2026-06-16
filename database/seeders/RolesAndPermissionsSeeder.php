@@ -96,7 +96,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'evaluations.voir-equipe', 'evaluations.voir-reseau',
             'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
-            'admin.activites', 'admin.alertes',
+            'admin.activites',
         ],
 
         // ── Directeur Général Adjoint ──────────────────────────────────────
@@ -107,7 +107,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'evaluations.voir-equipe',
             'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'objectifs.voir-equipe',
-            'admin.alertes',
         ],
 
         // ── Directeur de Direction ─────────────────────────────────────────

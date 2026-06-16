@@ -41,8 +41,8 @@
                         @if ($caisse->directeur->email)
                             <p class="text-xs text-slate-500">{{ $caisse->directeur->email }}</p>
                         @endif
-                        @if ($caisse->directeur->telephone)
-                            <p class="text-xs text-slate-500">{{ $caisse->directeur->telephone }}</p>
+                        @if ($caisse->directeur->numero_telephone)
+                            <p class="text-xs text-slate-500">{{ $caisse->directeur->numero_telephone }}</p>
                         @endif
                     @else
                         <p class="mt-2 font-bold text-slate-400">—</p>
@@ -56,8 +56,8 @@
                         @if ($caisse->secretaire->email)
                             <p class="text-xs text-slate-500">{{ $caisse->secretaire->email }}</p>
                         @endif
-                        @if ($caisse->secretaire->telephone)
-                            <p class="text-xs text-slate-500">{{ $caisse->secretaire->telephone }}</p>
+                        @if ($caisse->secretaire->numero_telephone)
+                            <p class="text-xs text-slate-500">{{ $caisse->secretaire->numero_telephone }}</p>
                         @endif
                     @else
                         <p class="mt-2 font-bold text-slate-400">—</p>

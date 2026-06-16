@@ -153,7 +153,7 @@
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center gap-1.5 rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">
                                     <i class="fas fa-briefcase text-[8px]"></i>
-                                    {{ $agent->poste ?: $agent->role }}
+                                    {{ $agent->poste ?: $agent->role_genree }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-right">

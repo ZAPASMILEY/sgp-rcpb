@@ -17,7 +17,7 @@
                     <i class="fas fa-building"></i>
                 </div>
                 <div>
-                    <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-200">Directeur Général · Réseau RCPB</p>
+                    <p class="text-xs font-black uppercase tracking-[0.25em] text-emerald-200">{{ auth()->user()?->agent?->role_genree ?? 'Directeur Général' }} · Réseau RCPB</p>
                     <h1 class="mt-0.5 text-2xl font-black text-white">Structures du réseau</h1>
                     <p class="mt-0.5 text-sm text-emerald-100/80">Vue agrégée par structure avec statistiques d'évaluation</p>
                 </div>

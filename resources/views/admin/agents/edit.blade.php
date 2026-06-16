@@ -16,7 +16,7 @@
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Modification</p>
                         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{{ $agent->prenom }} {{ $agent->nom }}</h1>
-                        <p class="mt-1 text-sm text-slate-500">{{ $agent->role }}</p>
+                        <p class="mt-1 text-sm text-slate-500">{{ $agent->role_genree }}</p>
                     </div>
                     <a href="{{ url()->previous() }}" class="ent-btn ent-btn-soft">Retour</a>
                 </div>

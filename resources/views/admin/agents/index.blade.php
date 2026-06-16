@@ -263,7 +263,7 @@
                             <td class="px-4 py-3.5">
                                 @if ($agent->role)
                                     <span class="inline-flex items-center rounded-lg {{ $roleBadge }} px-2.5 py-1 text-[10px] font-bold">
-                                        {{ $roles[$agent->role] ?? $agent->role }}
+                                        {{ $agent->role_genree }}
                                     </span>
                                 @else
                                     <span class="text-xs italic text-slate-300">—</span>

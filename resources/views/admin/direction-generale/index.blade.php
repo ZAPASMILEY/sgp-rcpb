@@ -339,7 +339,7 @@
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-bold text-slate-800 truncate">{{ $agent->prenom }} {{ $agent->nom }}</p>
-                                    <p class="text-xs text-slate-400 truncate">{{ $agent->role }}</p>
+                                    <p class="text-xs text-slate-400 truncate">{{ $agent->role_genree }}</p>
                                 </div>
                                 @if($agentUser)
                                     <span class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold

@@ -17,7 +17,7 @@
                     {{ strtoupper(substr(auth()->user()->name ?? 'D', 0, 1)) }}
                 </div>
                 <div>
-                    <p class="text-xs font-black uppercase tracking-[0.25em] text-white/60">Directeur Général · Pilotage Réseau</p>
+                    <p class="text-xs font-black uppercase tracking-[0.25em] text-white/60">{{ auth()->user()?->agent?->role_genree ?? 'Directeur Général' }} · Pilotage Réseau</p>
                     <h1 class="mt-0.5 text-2xl font-black text-white">{{ auth()->user()->name }}</h1>
                     <p class="mt-0.5 text-sm text-white/70">Vue consolidée de toutes les évaluations du réseau RCPB</p>
                 </div>
@@ -158,41 +158,101 @@
             </div>
         @endif
 
-        {{-- ── Alerte agents sans évaluation ──────────────────────────────── --}}
+        {{-- ── Alerte agents sans évaluation (cliquable) ───────────────────── --}}
         @if ($openAnnee && $agentsSansEval > 0)
-            <div class="flex items-center gap-4 rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4">
+            <a href="{{ $filters['sansEval'] ? route('dg.dashboard') : route('dg.dashboard', ['sans_eval' => 1]) }}"
+               class="flex items-center gap-4 rounded-2xl border px-5 py-4 transition hover:shadow-md
+                      {{ $filters['sansEval'] ? 'border-orange-400 bg-orange-100 ring-2 ring-orange-300' : 'border-orange-200 bg-orange-50 hover:border-orange-300' }}">
                 <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
                     <i class="fas fa-triangle-exclamation"></i>
                 </div>
                 <div class="flex-1">
                     <p class="text-sm font-bold text-orange-800">
                         {{ $agentsSansEval }} agent{{ $agentsSansEval > 1 ? 's' : '' }} sans évaluation validée — Année {{ $openAnnee->annee }}
+                        <span class="ml-2 text-xs font-semibold text-orange-500">{{ $filters['sansEval'] ? '(cliquer pour masquer)' : '→ cliquer pour voir la liste' }}</span>
                     </p>
                     <p class="mt-0.5 text-xs text-orange-600">
-                        Ces agents n'ont pas encore de note validée pour l'exercice en cours. Veillez à ce que toutes les évaluations soient finalisées avant la clôture.
+                        Ces agents n'ont pas encore de note validée pour l'exercice en cours.
                     </p>
                 </div>
                 <span class="flex h-10 min-w-[2.5rem] items-center justify-center rounded-xl bg-orange-500 px-2 text-xl font-black text-white shadow-sm">
                     {{ $agentsSansEval }}
                 </span>
+            </a>
+
+            {{-- Liste agents sans évaluation --}}
+            @if ($filters['sansEval'] && $listeSansEval->isNotEmpty())
+            <div class="rounded-2xl bg-white shadow-sm ring-1 ring-orange-200 overflow-hidden">
+                <div class="border-b border-orange-100 bg-orange-50 px-5 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm font-black text-orange-800 shrink-0">
+                        <i class="fas fa-user-xmark mr-2 text-orange-500"></i>
+                        Agents sans évaluation validée — {{ $openAnnee->annee }}
+                    </p>
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1 sm:w-64">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400"></i>
+                            <input id="se-search" type="text" placeholder="Rechercher…"
+                                   class="w-full rounded-xl border border-slate-200 bg-white py-1.5 pl-7 pr-3 text-xs font-semibold text-slate-700 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100">
+                        </div>
+                        <span id="se-count" class="shrink-0 rounded-full bg-orange-200 px-2.5 py-0.5 text-xs font-black text-orange-800">{{ $listeSansEval->count() }}</span>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="se-table" class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-100 bg-slate-50/70">
+                                <th data-col="0" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Nom <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                <th data-col="1" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Prénom <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                <th data-col="2" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Matricule <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                <th data-col="3" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Fonction <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                <th class="px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Téléphone</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+                            @foreach ($listeSansEval as $ag)
+                            <tr class="se-row hover:bg-orange-50/40 transition-colors">
+                                <td class="px-5 py-2.5 font-semibold text-slate-800">{{ $ag->nom }}</td>
+                                <td class="px-5 py-2.5 text-slate-700">{{ $ag->prenom }}</td>
+                                <td class="px-5 py-2.5 text-slate-500 font-mono text-xs">{{ $ag->matricule ?? '—' }}</td>
+                                <td class="px-5 py-2.5 text-slate-500 text-xs">{{ $ag->role }}</td>
+                                <td class="px-5 py-2.5">
+                                    @if ($ag->numero_telephone)
+                                        <a href="tel:{{ $ag->numero_telephone }}"
+                                           class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition">
+                                            <i class="fas fa-phone text-[10px]"></i>{{ $ag->numero_telephone }}
+                                        </a>
+                                    @else
+                                        <span class="text-slate-300">—</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
+            @endif
         @endif
 
-        {{-- KPI cards ──────────────────────────────────────────────────────── --}}
+        {{-- KPI cards (cliquables) ─────────────────────────────────────────── --}}
         @php
         $kpis = [
-            ['label' => 'Total',          'value' => $stats['total'],      'icon' => 'fas fa-clipboard-list',        'color' => 'bg-slate-700',   'light' => 'bg-slate-50 border-slate-200'],
-            ['label' => 'Soumises',       'value' => $stats['soumis'],     'icon' => 'fas fa-paper-plane',           'color' => 'bg-amber-500',   'light' => 'bg-amber-50 border-amber-200'],
-            ['label' => 'Validées',       'value' => $stats['valide'],     'icon' => 'fas fa-circle-check',          'color' => 'bg-emerald-600', 'light' => 'bg-emerald-50 border-emerald-200'],
-            ['label' => 'Excellent ≥8,5', 'value' => $stats['excellent'],  'icon' => 'fas fa-star',                  'color' => 'bg-emerald-500', 'light' => 'bg-emerald-50 border-emerald-100'],
-            ['label' => 'Bien 7–8,5',     'value' => $stats['bien'],       'icon' => 'fas fa-thumbs-up',             'color' => 'bg-sky-500',     'light' => 'bg-sky-50 border-sky-200'],
-            ['label' => 'Passable 5–7',   'value' => $stats['passable'],   'icon' => 'fas fa-minus-circle',          'color' => 'bg-amber-400',   'light' => 'bg-amber-50 border-amber-100'],
-            ['label' => 'Insuffisant <5', 'value' => $stats['insuffisant'],'icon' => 'fas fa-triangle-exclamation',  'color' => 'bg-rose-500',    'light' => 'bg-rose-50 border-rose-200'],
+            ['label' => 'Total',          'value' => $stats['total'],       'icon' => 'fas fa-clipboard-list',       'color' => 'bg-slate-700',   'light' => 'bg-slate-50 border-slate-200',    'href' => route('dg.dashboard')],
+            ['label' => 'Soumises',       'value' => $stats['soumis'],      'icon' => 'fas fa-paper-plane',          'color' => 'bg-amber-500',   'light' => 'bg-amber-50 border-amber-200',    'href' => route('dg.dashboard', ['statut' => 'soumis'])],
+            ['label' => 'Validées',       'value' => $stats['valide'],      'icon' => 'fas fa-circle-check',         'color' => 'bg-emerald-600', 'light' => 'bg-emerald-50 border-emerald-200','href' => route('dg.dashboard', ['statut' => 'valide'])],
+            ['label' => 'Excellent ≥8,5', 'value' => $stats['excellent'],   'icon' => 'fas fa-star',                 'color' => 'bg-emerald-500', 'light' => 'bg-emerald-50 border-emerald-100','href' => route('dg.dashboard', ['note' => 'excellent'])],
+            ['label' => 'Bien 7–8,5',     'value' => $stats['bien'],        'icon' => 'fas fa-thumbs-up',            'color' => 'bg-sky-500',     'light' => 'bg-sky-50 border-sky-200',        'href' => route('dg.dashboard', ['note' => 'bien'])],
+            ['label' => 'Passable 5–7',   'value' => $stats['passable'],    'icon' => 'fas fa-minus-circle',         'color' => 'bg-amber-400',   'light' => 'bg-amber-50 border-amber-100',    'href' => route('dg.dashboard', ['note' => 'passable'])],
+            ['label' => 'Insuffisant <5', 'value' => $stats['insuffisant'], 'icon' => 'fas fa-triangle-exclamation', 'color' => 'bg-rose-500',    'light' => 'bg-rose-50 border-rose-200',      'href' => route('dg.dashboard', ['note' => 'insuffisant'])],
         ];
         @endphp
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
             @foreach ($kpis as $kpi)
-                <div class="flex flex-col rounded-[20px] border px-4 py-4 shadow-sm {{ $kpi['light'] }}">
+                @php $isActive = ($filters['statut'] !== '' && str_contains($kpi['href'], 'statut='.$filters['statut']))
+                              || ($filters['note']   !== '' && str_contains($kpi['href'], 'note='.$filters['note']))
+                              || ($kpi['href'] === route('dg.dashboard') && !$filters['statut'] && !$filters['note'] && !$filters['sansEval']); @endphp
+                <a href="{{ $kpi['href'] }}"
+                   class="flex flex-col rounded-[20px] border px-4 py-4 shadow-sm transition hover:shadow-md hover:-translate-y-0.5 {{ $kpi['light'] }} {{ $isActive ? 'ring-2 ring-offset-1 ring-slate-400' : '' }}">
                     <div class="flex items-center justify-between gap-2">
                         <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500 leading-tight">{{ $kpi['label'] }}</p>
                         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg {{ $kpi['color'] }} text-white text-xs">
@@ -200,7 +260,7 @@
                         </span>
                     </div>
                     <p class="mt-3 text-3xl font-black text-slate-900">{{ $kpi['value'] }}</p>
-                </div>
+                </a>
             @endforeach
         </div>
 
@@ -268,7 +328,8 @@
         </div>
         @endif
 
-        {{-- Tableau des évaluations ─────────────────────────────────────────── --}}
+        {{-- Tableau des évaluations (masqué si liste sans-eval active) ──────── --}}
+        @if (!$filters['sansEval'])
         <section class="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-slate-100">
             <div class="border-b border-slate-100 px-6 py-4 flex items-center justify-between">
                 <div>
@@ -383,6 +444,7 @@
                 @endif
             @endif
         </section>
+        @endif {{-- fin @if (!$filters['sansEval']) --}}
 
         </div>
     </div>
@@ -447,6 +509,66 @@ window._dgMentionChart = {!! json_encode([
 
     new ApexCharts(document.getElementById('dg-eval-donut'), donutOpts(evalData, 'eval')).render();
     new ApexCharts(document.getElementById('dg-mention-donut'), donutOpts(mentionData, 'mention')).render();
+})();
+</script>
+
+<script>
+(function () {
+    const searchInput = document.getElementById('se-search');
+    const countBadge  = document.getElementById('se-count');
+    const table       = document.getElementById('se-table');
+    if (!searchInput || !table) return;
+
+    const tbody = table.querySelector('tbody');
+    let sortCol = -1, sortAsc = true;
+
+    // ── Recherche ──────────────────────────────────────────────────────────
+    searchInput.addEventListener('input', function () {
+        filterAndCount();
+    });
+
+    function filterAndCount() {
+        const q    = searchInput.value.trim().toLowerCase();
+        const rows = tbody.querySelectorAll('tr.se-row');
+        let visible = 0;
+        rows.forEach(function (tr) {
+            const text = tr.textContent.toLowerCase();
+            const show = q === '' || text.includes(q);
+            tr.classList.toggle('hidden', !show);
+            if (show) visible++;
+        });
+        if (countBadge) countBadge.textContent = visible;
+    }
+
+    // ── Tri ────────────────────────────────────────────────────────────────
+    table.querySelectorAll('th.se-th').forEach(function (th) {
+        th.addEventListener('click', function () {
+            const col = parseInt(th.dataset.col);
+            if (sortCol === col) {
+                sortAsc = !sortAsc;
+            } else {
+                sortCol = col;
+                sortAsc = true;
+            }
+
+            // Mettre à jour les icônes
+            table.querySelectorAll('th.se-th').forEach(function (h) {
+                const icon = h.querySelector('i');
+                if (!icon) return;
+                icon.className = h === th
+                    ? (sortAsc ? 'fas fa-sort-up ml-1 text-orange-500' : 'fas fa-sort-down ml-1 text-orange-500')
+                    : 'fas fa-sort ml-1 opacity-40';
+            });
+
+            const rows = Array.from(tbody.querySelectorAll('tr.se-row'));
+            rows.sort(function (a, b) {
+                const va = a.cells[col]?.textContent.trim().toLowerCase() ?? '';
+                const vb = b.cells[col]?.textContent.trim().toLowerCase() ?? '';
+                return sortAsc ? va.localeCompare(vb, 'fr') : vb.localeCompare(va, 'fr');
+            });
+            rows.forEach(function (tr) { tbody.appendChild(tr); });
+        });
+    });
 })();
 </script>
 @endsection

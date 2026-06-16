@@ -74,7 +74,10 @@
 
             {{-- Alerte agents sans évaluation --}}
             @if ($openAnnee && $agentsSansEval > 0)
-                <div class="flex items-center gap-4 rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4">
+                @php $rhSansEvalUrl = request()->fullUrlWithQuery(['sans_eval' => $filters['sansEval'] ? null : 1]); @endphp
+                <a href="{{ $rhSansEvalUrl }}"
+                   class="flex items-center gap-4 rounded-2xl border px-5 py-4 transition hover:shadow-md
+                          {{ $filters['sansEval'] ? 'border-orange-400 bg-orange-100' : 'border-orange-200 bg-orange-50' }}">
                     <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
                         <i class="fas fa-triangle-exclamation"></i>
                     </div>
@@ -84,12 +87,86 @@
                             — {{ $openAnnee->annee }}{{ $openSemestre ? ' · Semestre '.$openSemestre->numero : '' }}
                         </p>
                         <p class="mt-0.5 text-xs text-orange-600">
-                            Ces agents n'ont pas encore d'évaluation pour le semestre en cours.
+                            {{ $filters['sansEval'] ? 'Cliquez pour masquer la liste.' : 'Cliquez pour voir la liste avec contacts.' }}
                         </p>
                     </div>
                     <span class="flex h-10 min-w-[2.5rem] items-center justify-center rounded-xl bg-orange-500 px-3 text-lg font-black text-white shadow-sm">
                         {{ $agentsSansEval }}
                     </span>
+                </a>
+            @endif
+
+            {{-- Liste agents sans évaluation --}}
+            @if ($filters['sansEval'] && $openAnnee)
+                <div class="rounded-2xl border border-orange-200 bg-white shadow-sm overflow-hidden">
+                    <div class="border-b border-orange-100 bg-orange-50 px-5 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm font-black text-orange-800 shrink-0">
+                            <i class="fas fa-user-xmark mr-2 text-orange-500"></i>
+                            Agents sans évaluation — {{ $openAnnee->annee }}{{ $openSemestre ? ' · S'.$openSemestre->numero : '' }}
+                        </p>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <div class="relative flex-1 sm:w-64">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400"></i>
+                                <input id="rh-se-search" type="text" placeholder="Rechercher…"
+                                       class="w-full rounded-xl border border-slate-200 bg-white py-1.5 pl-7 pr-3 text-xs font-semibold text-slate-700 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100">
+                            </div>
+                            <span id="rh-se-count" class="shrink-0 rounded-full bg-orange-200 px-2.5 py-0.5 text-xs font-black text-orange-800">{{ $listeSansEval->count() }}</span>
+                            <button type="button" onclick="document.getElementById('modal-relance').classList.remove('hidden')"
+                                    class="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-black text-white shadow-sm hover:bg-orange-600 transition">
+                                <i class="fas fa-bell text-[10px]"></i> Envoyer une alerte
+                            </button>
+                            <a href="{{ request()->fullUrlWithQuery(['sans_eval' => null]) }}" class="shrink-0 text-xs font-bold text-orange-600 hover:underline">Fermer</a>
+                        </div>
+                    </div>
+                    @if ($listeSansEval->isEmpty())
+                        <div class="px-6 py-8 text-center text-sm text-slate-400">Tous les agents ont une évaluation validée.</div>
+                    @else
+                        <div class="overflow-x-auto">
+                            <table id="rh-se-table" class="w-full text-sm">
+                                <thead><tr class="border-b border-slate-100 bg-slate-50/70">
+                                    <th data-col="0" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Nom <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                    <th data-col="1" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Prénom <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                    <th data-col="2" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Matricule <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                    <th data-col="3" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Fonction <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                    <th data-col="4" class="se-th cursor-pointer select-none px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500 hover:text-orange-600">Structure <i class="fas fa-sort ml-1 opacity-40"></i></th>
+                                    <th class="px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wide text-slate-500">Téléphone</th>
+                                </tr></thead>
+                                <tbody class="divide-y divide-slate-50">
+                                    @foreach ($listeSansEval as $a)
+                                    <tr class="se-row hover:bg-orange-50/40 transition-colors">
+                                        <td class="px-5 py-2.5 font-semibold text-slate-800">{{ $a->nom }}</td>
+                                        <td class="px-5 py-2.5 text-slate-700">{{ $a->prenom }}</td>
+                                        <td class="px-5 py-2.5 text-xs font-mono text-slate-500">{{ $a->matricule ?? '—' }}</td>
+                                        <td class="px-5 py-2.5 text-xs text-slate-500">{{ $a->role ?? '—' }}</td>
+                                        <td class="px-5 py-2.5 text-xs text-slate-500">
+                                            @php
+                                                $struct = $a->agence?->nom
+                                                    ?? $a->guichet?->nom
+                                                    ?? $a->service?->nom
+                                                    ?? $a->caisse?->nom
+                                                    ?? $a->direction?->nom
+                                                    ?? $a->delegationTechnique?->region
+                                                    ?? $a->entite?->nom
+                                                    ?? '—';
+                                            @endphp
+                                            {{ $struct }}
+                                        </td>
+                                        <td class="px-5 py-2.5">
+                                            @if ($a->numero_telephone)
+                                                <a href="tel:{{ $a->numero_telephone }}"
+                                                   class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition">
+                                                    <i class="fas fa-phone text-[10px]"></i>{{ $a->numero_telephone }}
+                                                </a>
+                                            @else
+                                                <span class="text-slate-300">—</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 </div>
             @endif
 
@@ -110,14 +187,14 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-6">
-                            <div class="text-center">
+                            <a href="{{ request()->fullUrlWithQuery(['sans_eval' => null]) }}" class="text-center hover:opacity-75 transition">
                                 <p class="text-2xl font-black text-emerald-600">{{ $agentsEvalues }}</p>
                                 <p class="text-[10px] font-bold uppercase text-slate-400">Évalués</p>
-                            </div>
-                            <div class="text-center">
+                            </a>
+                            <a href="{{ request()->fullUrlWithQuery(['sans_eval' => 1]) }}" class="text-center hover:opacity-75 transition">
                                 <p class="text-2xl font-black {{ $agentsSansEval > 0 ? 'text-amber-500' : 'text-slate-300' }}">{{ $agentsSansEval }}</p>
                                 <p class="text-[10px] font-bold uppercase text-slate-400">Restants</p>
-                            </div>
+                            </a>
                             <div class="text-center">
                                 <p class="text-2xl font-black text-slate-700">{{ $totalAgents }}</p>
                                 <p class="text-[10px] font-bold uppercase text-slate-400">Total</p>
@@ -462,4 +539,111 @@
         </div>
     </div>
 </div>
+
+{{-- Modal : Alerte de relance évaluation --}}
+<div id="modal-relance" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+    <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 overflow-hidden">
+        <div class="border-b border-slate-100 bg-orange-50 px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                    <i class="fas fa-bell"></i>
+                </span>
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-wider text-orange-500">Relance évaluation</p>
+                    <h3 class="text-sm font-black text-slate-900">Alerte aux agents sans évaluation</h3>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-relance').classList.add('hidden')"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition">
+                <i class="fas fa-xmark"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('rh.alertes.relancer-sans-eval') }}" class="px-6 py-5 space-y-4">
+            @csrf
+            <p class="text-xs text-slate-500">
+                Cette alerte sera envoyée à <strong class="text-orange-600">{{ $agentsSansEval }} agent(s)</strong>
+                sans évaluation validée pour l'année {{ $openAnnee?->annee }}.
+            </p>
+            <div>
+                <label class="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">Titre <span class="text-rose-500">*</span></label>
+                <input type="text" name="titre"
+                       value="Rappel : évaluation de performance en attente — {{ $openAnnee?->annee }}"
+                       required
+                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-orange-400 focus:bg-white transition">
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">Message</label>
+                <textarea name="message" rows="3"
+                          class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400 focus:bg-white transition resize-none"
+                          placeholder="Votre évaluation de performance pour l'exercice en cours n'a pas encore été validée. Veuillez contacter votre responsable hiérarchique.">Votre évaluation de performance pour l'exercice {{ $openAnnee?->annee }} n'a pas encore été validée. Veuillez contacter votre responsable hiérarchique afin de régulariser votre situation.</textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">Priorité</label>
+                <select name="priorite" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-orange-400 focus:bg-white transition">
+                    <option value="moyenne">Moyenne</option>
+                    <option value="haute" selected>Haute</option>
+                    <option value="critique">Critique</option>
+                    <option value="basse">Basse</option>
+                </select>
+            </div>
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button type="button" onclick="document.getElementById('modal-relance').classList.add('hidden')"
+                        class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2 text-xs font-black text-white shadow-sm hover:bg-orange-600 transition">
+                    <i class="fas fa-paper-plane text-[10px]"></i> Envoyer l'alerte
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var table  = document.getElementById('rh-se-table');
+    var search = document.getElementById('rh-se-search');
+    var count  = document.getElementById('rh-se-count');
+    if (!table || !search) return;
+    var tbody = table.querySelector('tbody');
+    var sortCol = -1, sortAsc = true;
+
+    search.addEventListener('input', function () {
+        var q = search.value.trim().toLowerCase();
+        var rows = tbody.querySelectorAll('tr.se-row');
+        var n = 0;
+        rows.forEach(function (tr) {
+            var show = q === '' || tr.textContent.toLowerCase().includes(q);
+            tr.classList.toggle('hidden', !show);
+            if (show) n++;
+        });
+        if (count) count.textContent = n;
+    });
+
+    table.querySelectorAll('th.se-th').forEach(function (th) {
+        th.addEventListener('click', function () {
+            var col = parseInt(th.dataset.col);
+            if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
+            table.querySelectorAll('th.se-th').forEach(function (h) {
+                var icon = h.querySelector('i');
+                if (!icon) return;
+                icon.className = h === th
+                    ? (sortAsc ? 'fas fa-sort-up ml-1 text-orange-500' : 'fas fa-sort-down ml-1 text-orange-500')
+                    : 'fas fa-sort ml-1 opacity-40';
+            });
+            var rows = Array.from(tbody.querySelectorAll('tr.se-row'));
+            rows.sort(function (a, b) {
+                var va = a.cells[col] ? a.cells[col].textContent.trim().toLowerCase() : '';
+                var vb = b.cells[col] ? b.cells[col].textContent.trim().toLowerCase() : '';
+                return sortAsc ? va.localeCompare(vb, 'fr') : vb.localeCompare(va, 'fr');
+            });
+            rows.forEach(function (tr) { tbody.appendChild(tr); });
+        });
+    });
+})();
+</script>
+@endpush

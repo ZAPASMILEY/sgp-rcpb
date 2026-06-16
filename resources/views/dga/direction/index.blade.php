@@ -230,7 +230,7 @@
                         </div>
                         <div>
                             <p class="font-semibold text-slate-800 text-sm">{{ $agent->prenom }} {{ $agent->nom }}</p>
-                            <p class="text-xs text-slate-400">{{ $agent->role }}</p>
+                            <p class="text-xs text-slate-400">{{ $agent->role_genree }}</p>
                         </div>
                     </div>
                     @if($agentUser)

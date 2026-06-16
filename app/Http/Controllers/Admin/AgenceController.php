@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Agence;
 use App\Models\Agent;
+use App\Models\Alerte;
 use App\Models\Caisse;
 use App\Models\DelegationTechnique;
 use App\Services\AgentAccountService;
@@ -68,11 +69,41 @@ class AgenceController extends Controller
 
         $agence = Agence::query()->create($validated);
 
-        Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => "Chef d'Agence de " . $agence->nom]);
-        Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => "Secrétaire d'Agence de " . $agence->nom]);
+        $chef = Agent::findOrFail($validated['chef_agent_id']);
+        $chef->update([
+            'role'      => "Chef d'Agence",
+            'poste'     => "Chef d'Agence de " . $agence->nom,
+            'agence_id' => $agence->id,
+        ]);
 
-        $this->accounts->ensureAccount(Agent::findOrFail($validated['chef_agent_id']));
-        $this->accounts->ensureAccount(Agent::findOrFail($validated['secretaire_agent_id']));
+        $secretaire = Agent::findOrFail($validated['secretaire_agent_id']);
+        $secretaire->update([
+            'role'      => "Secrétaire d'Agence",
+            'poste'     => "Secrétaire d'Agence de " . $agence->nom,
+            'agence_id' => $agence->id,
+        ]);
+
+        $this->accounts->ensureAccount($chef->fresh());
+        $this->accounts->ensureAccount($secretaire->fresh());
+
+        if ($chefUser = $chef->fresh()->user) {
+            Alerte::notifier(
+                $chefUser->id,
+                "Vous avez été nommé(e) Chef d'Agence",
+                "Vous êtes désormais Chef d'Agence de « " . $agence->nom . ' ».',
+                'haute',
+                route('admin.agents.show', $chef)
+            );
+        }
+        if ($secUser = $secretaire->fresh()->user) {
+            Alerte::notifier(
+                $secUser->id,
+                "Vous avez été nommé(e) Secrétaire d'Agence",
+                "Vous êtes désormais Secrétaire d'Agence de « " . $agence->nom . ' ».',
+                'haute',
+                route('admin.agents.show', $secretaire)
+            );
+        }
 
         return redirect()
             ->route('admin.agences.index')
@@ -110,21 +141,55 @@ class AgenceController extends Controller
             'telephone_accueil'   => ['required', 'string', 'max:30'],
         ]);
 
-        // Désactiver les anciens responsables si changement
+        // Réinitialiser les anciens responsables si changement
         if ($agence->chef_agent_id && $agence->chef_agent_id !== (int) $validated['chef_agent_id']) {
-            $this->accounts->deactivateAccount(Agent::findOrFail($agence->chef_agent_id));
+            $ancienChef = Agent::findOrFail($agence->chef_agent_id);
+            $ancienChef->update(['role' => 'Agent', 'poste' => null, 'agence_id' => null]);
+            $this->accounts->deactivateAccount($ancienChef);
         }
         if ($agence->secretaire_agent_id && $agence->secretaire_agent_id !== (int) $validated['secretaire_agent_id']) {
-            $this->accounts->deactivateAccount(Agent::findOrFail($agence->secretaire_agent_id));
+            $ancienSec = Agent::findOrFail($agence->secretaire_agent_id);
+            $ancienSec->update(['role' => 'Agent', 'poste' => null, 'agence_id' => null]);
+            $this->accounts->deactivateAccount($ancienSec);
         }
 
         $agence->update($validated);
 
-        Agent::findOrFail($validated['chef_agent_id'])->update(['poste' => "Chef d'Agence de " . $agence->nom]);
-        Agent::findOrFail($validated['secretaire_agent_id'])->update(['poste' => "Secrétaire d'Agence de " . $agence->nom]);
+        $chef = Agent::findOrFail($validated['chef_agent_id']);
+        $chef->update([
+            'role'      => "Chef d'Agence",
+            'poste'     => "Chef d'Agence de " . $agence->nom,
+            'agence_id' => $agence->id,
+        ]);
 
-        $this->accounts->ensureAccount(Agent::findOrFail($validated['chef_agent_id']));
-        $this->accounts->ensureAccount(Agent::findOrFail($validated['secretaire_agent_id']));
+        $secretaire = Agent::findOrFail($validated['secretaire_agent_id']);
+        $secretaire->update([
+            'role'      => "Secrétaire d'Agence",
+            'poste'     => "Secrétaire d'Agence de " . $agence->nom,
+            'agence_id' => $agence->id,
+        ]);
+
+        $this->accounts->ensureAccount($chef->fresh());
+        $this->accounts->ensureAccount($secretaire->fresh());
+
+        if ($chefUser = $chef->fresh()->user) {
+            Alerte::notifier(
+                $chefUser->id,
+                "Vous avez été nommé(e) Chef d'Agence",
+                "Vous êtes désormais Chef d'Agence de « " . $agence->nom . ' ».',
+                'haute',
+                route('admin.agents.show', $chef)
+            );
+        }
+        if ($secUser = $secretaire->fresh()->user) {
+            Alerte::notifier(
+                $secUser->id,
+                "Vous avez été nommé(e) Secrétaire d'Agence",
+                "Vous êtes désormais Secrétaire d'Agence de « " . $agence->nom . ' ».',
+                'haute',
+                route('admin.agents.show', $secretaire)
+            );
+        }
 
         return redirect()
             ->route('admin.agences.index')
@@ -170,6 +235,38 @@ class AgenceController extends Controller
         ]);
     }
 
+    public function detachAgent(Agence $agence, Agent $agent): RedirectResponse
+    {
+        if ($agent->agence_id !== $agence->id) {
+            return redirect()
+                ->route('admin.agences.agents.index', $agence)
+                ->with('error', "Cet agent n'appartient pas à cette agence.");
+        }
+
+        $wasChef = $agent->id === $agence->chef_agent_id;
+        $wasSec  = $agent->id === $agence->secretaire_agent_id;
+
+        $agent->update([
+            'agence_id'  => null,
+            'guichet_id' => null,
+            'poste'      => null,
+            'role'       => 'Agent',
+        ]);
+
+        if ($wasChef) {
+            $agence->update(['chef_agent_id' => null]);
+        }
+        if ($wasSec) {
+            $agence->update(['secretaire_agent_id' => null]);
+        }
+
+        $this->accounts->deactivateAccount($agent->fresh());
+
+        return redirect()
+            ->route('admin.agences.agents.index', $agence)
+            ->with('status', $agent->prenom . ' ' . $agent->nom . ' retiré(e) de l\'agence.');
+    }
+
     public function storeAgent(Request $request, Agence $agence): RedirectResponse
     {
         $validated = $request->validate([
@@ -184,6 +281,16 @@ class AgenceController extends Controller
         $agent = Agent::findOrFail($validated['agent_id']);
         $agent->update(['agence_id' => $agence->id, 'poste' => $validated['poste'] ?? null]);
         $this->accounts->ensureAccount($agent->fresh());
+
+        if ($agentUser = $agent->fresh()->user) {
+            Alerte::notifier(
+                $agentUser->id,
+                'Vous avez été affecté(e) à une agence',
+                'Vous êtes désormais agent de « ' . $agence->nom . ' ».',
+                'moyenne',
+                route('admin.agents.show', $agent)
+            );
+        }
 
         return redirect()
             ->route('admin.agences.agents.index', $agence)

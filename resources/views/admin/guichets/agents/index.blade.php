@@ -67,7 +67,7 @@
                                     <td>{{ $agent->nom }}</td>
                                     <td>{{ $agent->prenom }}</td>
                                     <td>{{ ucfirst($agent->sexe ?? '-') }}</td>
-                                    <td>{{ $agent->role }}</td>
+                                    <td>{{ $agent->role_genree }}</td>
                                     <td>{{ optional($agent->date_debut_fonction)->format('d/m/Y') ?: '-' }}</td>
                                     <td>{{ $agent->numero_telephone }}</td>
                                     <td>{{ $agent->email }}</td>
@@ -84,10 +84,9 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 3.487 3.651 3.651M4.5 19.5l3.981-.884a2.25 2.25 0 0 0 1.068-.574L20.513 7.078a1.875 1.875 0 0 0 0-2.652l-.939-.939a1.875 1.875 0 0 0-2.652 0L5.958 14.451a2.25 2.25 0 0 0-.574 1.068L4.5 19.5Z" />
                                                 </svg>
                                             </a>
-                                            <form method="POST" action="{{ route('admin.agents.destroy', $agent) }}" onsubmit="return confirm('Retirer cet agent du guichet ?');" class="inline-flex">
+                                            <form method="POST" action="{{ route('admin.guichets.agents.destroy', [$guichet, $agent]) }}" onsubmit="return confirm('Retirer cet agent du guichet ?');" class="inline-flex">
                                                 @csrf
                                                 @method('DELETE')
-                                                <input type="hidden" name="redirect_to" value="{{ route('admin.guichets.agents.index', $guichet) }}">
                                                 <button type="submit" class="ent-btn ent-btn-danger inline-flex h-7 w-7 items-center justify-center p-0" title="Retirer l'agent">
                                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 6.75h18M9.75 6.75V5.625A1.875 1.875 0 0 1 11.625 3.75h.75A1.875 1.875 0 0 1 14.25 5.625V6.75m3.75 0V18A2.25 2.25 0 0 1 15.75 20.25h-7.5A2.25 2.25 0 0 1 6 18V6.75h12Zm-8.25 4.5v5.25m4.5-5.25v5.25" />

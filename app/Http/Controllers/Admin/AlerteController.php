@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\DiffuserAlerteJob;
+use App\Models\Agent;
 use App\Models\Alerte;
+use App\Models\Annee;
 use App\Models\LoginFailure;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -58,13 +60,13 @@ class AlerteController extends Controller
         foreach ($alertesPersonnalisees as $alerte) {
             $combined->push([
                 'id'         => $alerte->id,
-                'type'       => 'personnalisee',
+                'type'       => $alerte->type, // 'systeme' ou 'personnalisee'
                 'priorite'   => $alerte->priorite,
                 'titre'      => $alerte->titre,
                 'message'    => $alerte->message,
                 'statut'     => $alerte->statut,
                 'ip_address' => $alerte->ip_address,
-                'auteur'     => $alerte->createur?->name ?? '-',
+                'auteur'     => $alerte->createur?->name ?? null,
                 'date'       => $alerte->created_at,
             ]);
         }
@@ -88,7 +90,7 @@ class AlerteController extends Controller
         // --- Filtrage par onglet ---
         $filtered = match ($tab) {
             'securite'       => $combined->where('type', 'securite')->values(),
-            'personnalisees' => $combined->where('type', 'personnalisee')->values(),
+            'personnalisees' => $combined->whereIn('type', ['personnalisee', 'systeme'])->values(),
             'critiques'      => $combined->filter(fn ($a) => $a['priorite'] === 'critique' || $a['priorite'] === 'haute')->values(),
             default          => $combined,
         };
@@ -98,7 +100,7 @@ class AlerteController extends Controller
         $counts = [
             'toutes'         => $combined->count(),
             'securite'       => $combined->where('type', 'securite')->count(),
-            'personnalisees' => $combined->where('type', 'personnalisee')->count(),
+            'personnalisees' => $combined->whereIn('type', ['personnalisee', 'systeme'])->count(),
             'critiques'      => $combined->filter(fn ($a) => $a['priorite'] === 'critique' || $a['priorite'] === 'haute')->count(),
         ];
 
@@ -202,6 +204,62 @@ class AlerteController extends Controller
 
         return redirect()->route('admin.alertes.index')
             ->with('status', 'Toutes les alertes ont été supprimées.');
+    }
+
+    public function relancerSansEval(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'titre'    => ['required', 'string', 'max:255'],
+            'message'  => ['nullable', 'string', 'max:2000'],
+            'priorite' => ['required', 'in:basse,moyenne,haute,critique'],
+        ]);
+
+        $openAnnee = Annee::currentOpen();
+        if (! $openAnnee) {
+            return back()->with('error', 'Aucune année d\'évaluation ouverte actuellement.');
+        }
+
+        $ef = fn ($q) => $q->where('annee_id', $openAnnee->id)->where('statut', 'valide');
+
+        $agentIds = Agent::personnel()
+            ->whereDoesntHave('evaluationsPersonnel', $ef)
+            ->whereDoesntHave('evaluations', $ef)
+            ->whereDoesntHave('directedDirection',  fn ($d) => $d->whereHas('evaluations', $ef))
+            ->whereDoesntHave('directedCaisse',     fn ($c) => $c->whereHas('evaluations', $ef))
+            ->whereDoesntHave('directedDelegation', fn ($d) => $d->whereHas('evaluations', $ef))
+            ->whereDoesntHave('ledAgence',          fn ($a) => $a->whereHas('evaluations', $ef))
+            ->whereDoesntHave('ledService',         fn ($s) => $s->whereHas('evaluations', $ef))
+            ->whereDoesntHave('ledGuichet',         fn ($g) => $g->whereHas('evaluations', $ef))
+            ->pluck('id');
+
+        if ($agentIds->isEmpty()) {
+            return back()->with('status', 'Tous les agents ont déjà une évaluation validée.');
+        }
+
+        $userIds = User::whereIn('agent_id', $agentIds)->where('is_active', true)->pluck('id');
+
+        if ($userIds->isEmpty()) {
+            return back()->with('error', 'Aucun compte actif trouvé pour ces agents.');
+        }
+
+        $alerte = Alerte::create([
+            'titre'      => $validated['titre'],
+            'message'    => $validated['message'] ?? null,
+            'type'       => 'personnalisee',
+            'priorite'   => $validated['priorite'],
+            'statut'     => 'active',
+            'ip_address' => $request->ip(),
+            'created_by' => $request->user()->id,
+        ]);
+
+        $alerte->destinataires()->syncWithoutDetaching(
+            $userIds->mapWithKeys(fn ($id) => [$id => ['lu' => false]])->all()
+        );
+
+        $redirectRoute = $request->routeIs('rh.*') ? 'rh.dashboard' : 'admin.alertes.index';
+
+        return redirect()->route($redirectRoute)
+            ->with('status', "Alerte de relance envoyée à {$userIds->count()} agent(s) sans évaluation validée — Année {$openAnnee->annee}.");
     }
 
     public function nonLues(Request $request): JsonResponse

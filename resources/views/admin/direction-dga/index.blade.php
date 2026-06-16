@@ -210,7 +210,7 @@
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-bold text-slate-800 truncate">{{ $agent->prenom }} {{ $agent->nom }}</p>
-                                    <p class="text-xs text-slate-400 truncate">{{ $agent->role }}</p>
+                                    <p class="text-xs text-slate-400 truncate">{{ $agent->role_genree }}</p>
                                 </div>
                                 @if($agentUser)
                                     <span class="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold
@@ -429,7 +429,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="font-bold text-slate-800 text-sm truncate">{{ $agent->prenom }} {{ $agent->nom }}</p>
-                    <p class="text-xs text-slate-400">{{ $agent->role }}</p>
+                    <p class="text-xs text-slate-400">{{ $agent->role_genree }}</p>
                 </div>
                 @if($agent->user)
                     <span class="inline-flex items-center gap-1 rounded-full {{ $agent->user->is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600' }} px-2.5 py-0.5 text-[11px] font-semibold">

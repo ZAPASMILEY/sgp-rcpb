@@ -72,11 +72,11 @@
                                 <option
                                     value="{{ $agent->id }}"
                                     data-email="{{ $agent->email }}"
-                                    data-role="{{ $agent->role }}"
+                                    data-role="{{ $agent->role_genree }}"
                                     @selected((string) old('agent_id') === (string) $agent->id)
                                 >
                                     {{ $agent->prenom }} {{ $agent->nom }}
-                                    @if ($agent->role) — {{ $agent->role }} @endif
+                                    @if ($agent->role) — {{ $agent->role_genree }} @endif
                                     @if ($agent->email) ({{ $agent->email }}) @endif
                                 </option>
                             @endforeach

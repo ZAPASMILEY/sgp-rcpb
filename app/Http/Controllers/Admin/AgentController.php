@@ -311,23 +311,84 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
 
     public function importForm(): View
     {
-        return view('admin.agents.import', ['roles' => Agent::ROLES]);
+        return view('admin.agents.import', [
+            'roles'           => Agent::ROLES,
+            'postesByFonction' => Poste::byFonction(),
+        ]);
     }
 
     public function downloadTemplate(): \Symfony\Component\HttpFoundation\StreamedResponse
     {
-        $headers = ['Content-Type' => 'text/csv; charset=UTF-8', 'Content-Disposition' => 'attachment; filename="modele_import_agents.csv"'];
-        $columns = ['nom', 'prenom', 'sexe', 'email', 'numero_telephone', 'matricule', 'role', 'poste', 'date_debut_fonction'];
-        $example = ['SAWADOGO', 'Fatima', 'femme', 'f.sawadogo@rcpb.bf', '+22670000000', 'MAT-001', 'Agent', 'Agent de crédit', '2022-01-15'];
+        $roles = implode(' / ', array_keys(Agent::ROLES));
 
-        return response()->streamDownload(function () use ($columns, $example): void {
+        $consignes = [
+            '# ================================================================',
+            '# MODELE IMPORT AGENTS — SGP-RCPB',
+            '# ================================================================',
+            '#',
+            '# Ces lignes commencent par # : elles sont des CONSIGNES.',
+            '# Le système les ignore automatiquement lors de l\'import.',
+            '# Ne pas les supprimer — elles guident le remplissage.',
+            '#',
+            '# ---------------------------------------------------------------',
+            '# COLONNES OBLIGATOIRES (à ne pas laisser vides)',
+            '# ---------------------------------------------------------------',
+            '# nom               : Nom de famille       Ex : SAWADOGO',
+            '# prenom            : Prénom               Ex : Fatima',
+            '# sexe              : homme ou femme       Valeurs acceptées : homme, femme, H, F',
+            '# matricule         : Matricule unique      Ex : MAT-2026-001',
+            '# role              : Rôle de l\'agent      Voir liste ci-dessous (casse exacte)',
+            '#',
+            '# ---------------------------------------------------------------',
+            '# COLONNES OPTIONNELLES',
+            '# ---------------------------------------------------------------',
+            '# fonction          : Intitulé du poste     OBLIGATOIRE si rôle = Agent ou Conseiller DG',
+            '#                                          Ex : Agent de crédit, Caissier, Chargé de recouvrement',
+            '#                   NE PAS CONFONDRE avec date_debut (qui est la date de prise de poste)',
+            '# email             : Email professionnel  Unique — Ex : f.sawadogo@rcpb.bf',
+            '# numero_telephone  : Numéro de téléphone  Unique — Ex : +22670111111',
+            '# date_debut          : Date à laquelle l\'agent a pris son poste  Format : AAAA-MM-JJ  Ex : 2022-01-15',
+            '#',
+            '# ---------------------------------------------------------------',
+            '# ROLES VALIDES (copier-coller exactement, respecter la casse)',
+            '# ---------------------------------------------------------------',
+            '# ' . $roles,
+            '#',
+            '# ---------------------------------------------------------------',
+            '# REMARQUES IMPORTANTES',
+            '# ---------------------------------------------------------------',
+            '# - Le matricule doit être unique pour chaque agent',
+            '# - L\'email doit être unique si renseigné',
+            '# - Le téléphone doit être unique si renseigné',
+            '# - Les lignes incomplètes ou incorrectes sont ignorées à l\'import',
+            '# - Un compte de connexion est créé automatiquement après import',
+            '# ================================================================',
+            '# DEBUT DES DONNEES — Remplir à partir de la ligne suivante',
+            '# ================================================================',
+        ];
+
+        $header = ['nom', 'prenom', 'sexe', 'matricule', 'role', 'fonction', 'email', 'numero_telephone', 'date_debut'];
+
+        return response()->streamDownload(function () use ($consignes, $header): void {
             $f = fopen('php://output', 'w');
-            // BOM UTF-8 pour Excel
-            fwrite($f, "\xEF\xBB\xBF");
-            fputcsv($f, $columns, ';');
-            fputcsv($f, $example, ';');
+            fwrite($f, "\xEF\xBB\xBF"); // BOM UTF-8 pour Excel
+
+            // Lignes de consignes (ignorées à l'import)
+            foreach ($consignes as $ligne) {
+                fputcsv($f, [$ligne], ';');
+            }
+
+            // En-tête des données
+            fputcsv($f, $header, ';');
+
+            // 50 lignes vides pour la saisie
+            $vide = array_fill(0, count($header), '');
+            for ($i = 0; $i < 50; $i++) {
+                fputcsv($f, $vide, ';');
+            }
+
             fclose($f);
-        }, 'modele_import_agents.csv', $headers);
+        }, 'modele_import_agents_RCPB.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function import(Request $request): \Illuminate\Http\RedirectResponse|\Illuminate\Contracts\View\View
@@ -347,15 +408,27 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
         $content = ltrim($content, "\xEF\xBB\xBF");
 
         $lines = preg_split('/\r\n|\n|\r/', trim($content));
-        if (count($lines) < 2) {
-            return redirect()->back()->with('error', 'Le fichier CSV est vide ou ne contient que l\'en-tête.');
+
+        // Détecter le délimiteur sur la première ligne non-commentaire
+        $firstDataLine = collect($lines)->first(fn ($l) => !str_starts_with(trim($l), '#') && trim($l) !== '');
+        if (!$firstDataLine) {
+            return redirect()->back()->with('error', 'Le fichier CSV est vide ou ne contient que des commentaires.');
+        }
+        $delimiter = substr_count($firstDataLine, ';') >= substr_count($firstDataLine, ',') ? ';' : ',';
+
+        // Trouver l'index de la ligne d'en-tête (première ligne non-commentaire, non-vide)
+        $headerIdx = null;
+        foreach ($lines as $idx => $line) {
+            if (str_starts_with(trim($line), '#') || trim($line) === '') continue;
+            $headerIdx = $idx;
+            break;
+        }
+        if ($headerIdx === null) {
+            return redirect()->back()->with('error', 'Aucune ligne d\'en-tête trouvée dans le fichier.');
         }
 
-        // Détecter le délimiteur (;  ou ,)
-        $delimiter = substr_count($lines[0], ';') >= substr_count($lines[0], ',') ? ';' : ',';
-
         // Lire l'en-tête
-        $header = array_map('trim', str_getcsv($lines[0], $delimiter));
+        $header = array_map('trim', str_getcsv($lines[$headerIdx], $delimiter));
         $header = array_map('strtolower', $header);
 
         $required = ['nom', 'prenom', 'sexe', 'matricule', 'role'];
@@ -373,8 +446,11 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
 
         DB::beginTransaction();
         try {
-            for ($i = 1; $i < count($lines); $i++) {
+            for ($i = $headerIdx + 1; $i < count($lines); $i++) {
                 $line = trim($lines[$i]);
+
+                // Ignorer les lignes de commentaires/consignes
+                if (str_starts_with($line, '#')) continue;
                 if ($line === '') {
                     continue;
                 }
@@ -383,6 +459,16 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
                 $data   = [];
                 foreach ($header as $idx => $col) {
                     $data[$col] = $row[$idx] ?? '';
+                }
+
+                // Normaliser les alias de colonnes CSV
+                // "fonction" ou "poste" → champ poste en base
+                if (!isset($data['poste']) || $data['poste'] === '') {
+                    $data['poste'] = $data['fonction'] ?? '';
+                }
+                // "date_debut" → champ date_debut_fonction en base
+                if (!isset($data['date_debut_fonction']) || $data['date_debut_fonction'] === '') {
+                    $data['date_debut_fonction'] = $data['date_debut'] ?? '';
                 }
 
                 $lineNum = $i + 1;

@@ -34,6 +34,10 @@
                             </button>
                         </form>
                     @endif
+                    <button onclick="document.getElementById('modal-relance-eval').classList.remove('hidden')"
+                            class="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-bold text-orange-600 transition hover:bg-orange-100">
+                        <i class="fas fa-user-clock text-xs"></i> Relancer sans éval.
+                    </button>
                     <button onclick="document.getElementById('modal-create-alerte').classList.remove('hidden')" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
                         <i class="fas fa-plus text-xs"></i> Nouvelle alerte
                     </button>
@@ -167,6 +171,10 @@
                                         <span class="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-bold text-rose-600">
                                             <i class="fas fa-shield-halved text-[9px]"></i> Sécurité
                                         </span>
+                                    @elseif ($alerte['type'] === 'systeme')
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-600">
+                                            <i class="fas fa-robot text-[9px]"></i> Système
+                                        </span>
                                     @else
                                         <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-bold text-blue-600">
                                             <i class="fas fa-pen-to-square text-[9px]"></i> Personnalisée
@@ -194,8 +202,12 @@
                                             <i class="fas fa-network-wired text-[9px] text-slate-400"></i>
                                             {{ $alerte['ip_address'] }}
                                         </span>
+                                    @elseif ($alerte['type'] === 'systeme')
+                                        <span class="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2.5 py-1 text-[11px] font-bold text-violet-600">
+                                            <i class="fas fa-robot text-[9px]"></i> Auto
+                                        </span>
                                     @else
-                                        <span class="text-slate-300">-</span>
+                                        <span class="text-slate-300">—</span>
                                     @endif
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-3">
@@ -210,7 +222,17 @@
                                         {{ ucfirst($alerte['statut']) }}
                                     </span>
                                 </td>
-                                <td class="whitespace-nowrap px-3 py-3">{{ $alerte['auteur'] }}</td>
+                                <td class="whitespace-nowrap px-3 py-3">
+                                    @if ($alerte['type'] === 'systeme')
+                                        <span class="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2.5 py-1 text-[11px] font-bold text-violet-600">
+                                            <i class="fas fa-robot text-[9px]"></i> Système
+                                        </span>
+                                    @elseif ($alerte['auteur'])
+                                        {{ $alerte['auteur'] }}
+                                    @else
+                                        <span class="text-slate-300">—</span>
+                                    @endif
+                                </td>
                                 <td class="whitespace-nowrap px-3 py-3 text-slate-500">{{ optional($alerte['date'])->format('d/m/Y H:i') }}</td>
                                 <td class="whitespace-nowrap px-3 py-3 text-right">
                                     <div class="flex items-center justify-end gap-1">
@@ -349,6 +371,69 @@
                     <i class="fas fa-paper-plane mr-1 text-xs"></i> Envoyer
                 </button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal : Relance agents sans évaluation --}}
+<div id="modal-relance-eval" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+         onclick="if(event.target===this)document.getElementById('modal-relance-eval').classList.add('hidden')">
+        <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200 overflow-hidden">
+            <div class="border-b border-orange-100 bg-orange-50 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                        <i class="fas fa-user-clock"></i>
+                    </span>
+                    <div>
+                        <p class="text-[10px] font-black uppercase tracking-wider text-orange-500">Relance évaluation</p>
+                        <h3 class="text-sm font-black text-slate-900">Alerter les agents sans évaluation validée</h3>
+                    </div>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-relance-eval').classList.add('hidden')"
+                        class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
+                    <i class="fas fa-xmark"></i>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('admin.alertes.relancer-sans-eval') }}" class="px-6 py-5 space-y-4">
+                @csrf
+                <p class="text-xs text-slate-500">
+                    Une notification sera envoyée à <strong class="text-orange-600">tous les agents</strong>
+                    n'ayant pas encore d'évaluation validée pour l'année en cours.
+                </p>
+                <div>
+                    <label class="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">Titre <span class="text-rose-500">*</span></label>
+                    <input type="text" name="titre"
+                           value="Rappel : votre évaluation de performance n'a pas encore été validée"
+                           required
+                           class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-orange-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">Message</label>
+                    <textarea name="message" rows="3"
+                              class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400 focus:bg-white transition resize-none"
+                    >Votre évaluation de performance pour l'exercice en cours n'a pas encore été validée. Veuillez contacter votre responsable hiérarchique afin de régulariser votre situation avant la clôture de l'exercice.</textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">Priorité</label>
+                    <select name="priorite" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-orange-400 focus:bg-white transition">
+                        <option value="basse">Basse</option>
+                        <option value="moyenne">Moyenne</option>
+                        <option value="haute" selected>Haute</option>
+                        <option value="critique">Critique</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-relance-eval').classList.add('hidden')"
+                            class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                        Annuler
+                    </button>
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2 text-xs font-black text-white shadow-sm hover:bg-orange-600 transition">
+                        <i class="fas fa-paper-plane text-[10px]"></i> Envoyer l'alerte
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

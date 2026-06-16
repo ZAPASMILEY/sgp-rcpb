@@ -3,7 +3,7 @@
 
 @php
     $agentNom  = trim($agent->prenom.' '.$agent->nom);
-    $agentRole = $agent->role ?? 'Agent';
+    $agentRole = $agent->role_genree ?? 'Agent';
     $initiale  = strtoupper(substr($agentNom, 0, 1));
     $agentRoute = fn ($t) => route('chef.agent.show', ['agent' => $agent->id, 'tab' => $t]);
 @endphp

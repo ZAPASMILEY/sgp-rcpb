@@ -223,7 +223,7 @@
                         @php
                             $fonctionLabel = in_array($agent->role, ['Agent', 'Conseiller DG'])
                                 ? ($agent->poste ?? '—')
-                                : ($agent->poste ?? $agent->role ?? '—');
+                                : ($agent->poste ?? $agent->role_genree ?? '—');
                         @endphp
                         <td class="px-4 py-3 text-xs text-slate-700 max-w-[180px] truncate" title="{{ $fonctionLabel }}">{{ $fonctionLabel }}</td>
                         <td class="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">{{ $grade ?? '—' }}</td>

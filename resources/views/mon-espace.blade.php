@@ -164,7 +164,7 @@ $ficheBtnHover = match ($themeFiche) {
                     </p>
                 @elseif (isset($agent) && $agent)
                     <p class="mt-1 text-sm text-slate-500">
-                        {{ $agent->role ?? $user->role }}
+                        {{ $agent->role_genree ?? $user->role }}
                         @if ($agent->service) · {{ $agent->service->nom }}
                         @elseif ($agent->agence) · {{ $agent->agence->nom }}
                         @endif
@@ -241,7 +241,7 @@ $ficheBtnHover = match ($themeFiche) {
                 @if ($agent->role)
                     <div>
                         <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Rôle</p>
-                        <p class="mt-1 font-semibold">{{ $agent->role }}</p>
+                        <p class="mt-1 font-semibold">{{ $agent->role_genree }}</p>
                     </div>
                 @endif
                 @if ($agent->service)

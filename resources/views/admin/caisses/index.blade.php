@@ -138,16 +138,16 @@
                         <span class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-400">
                             <i class="fas fa-phone text-[10px]"></i>
                         </span>
-                        <span>{{ $caisse->secretaire->telephone }}</span>
+                        <span>{{ $caisse->secretaire->numero_telephone }}</span>
                     </div>
                 @else
                     {{-- Si vide, on tente d'afficher le téléphone de l'agent secrétaire rattaché --}}
-                    @if($caisse->secretaire && $caisse->secretaire->telephone)
+                    @if($caisse->secretaire && $caisse->secretaire->numero_telephone)
                         <div class="flex items-center gap-2">
                             <span class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-400">
                                 <i class="fas fa-phone text-[10px]"></i>
                             </span>
-                            <span>{{ $caisse->secretaire->telephone }}</span>
+                            <span>{{ $caisse->secretaire->numero_telephone }}</span>
                         </div>
                     @else
                         <span class="text-xs text-slate-400">—</span>

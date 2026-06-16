@@ -65,7 +65,7 @@
                                 <span class="font-semibold text-slate-700">
                                     {{ trim(($f->agent->prenom ?? '') . ' ' . ($f->agent->nom ?? '')) }}
                                 </span>
-                                · {{ $f->agent->role ?? '' }}
+                                · {{ $f->agent->role_genree ?? '' }}
                             </p>
                             <p class="mt-0.5 text-xs text-slate-400">
                                 {{ ucfirst($f->type ?? 'interne') }}

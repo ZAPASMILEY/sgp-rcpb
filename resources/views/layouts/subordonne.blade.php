@@ -1,6 +1,6 @@
 @php
     $user = auth()->user();
-    $roleLabel = match($user?->role) {
+    $roleLabel = $user?->agent?->role_genree ?? match($user?->role) {
         'DGA'            => 'Directeur Général Adjoint',
         'Assistante_Dg'  => 'Assistante du DG',
         'Conseillers_Dg' => 'Conseiller du DG',

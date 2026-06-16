@@ -56,7 +56,7 @@
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $agent->prenom }} {{ $agent->nom }}</td>
-                                    <td>{{ $agent->role }}</td>
+                                    <td>{{ $agent->role_genree }}</td>
                                     <td>{{ $agent->service?->nom ?? '-' }}</td>
                                     <td>{{ $agent->service?->direction?->delegationTechnique?->region }} / {{ $agent->service?->direction?->delegationTechnique?->ville }}</td>
                                 </tr>

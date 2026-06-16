@@ -215,7 +215,7 @@
                                         </div>
                                     </td>
                                     <td class="px-5 py-3 font-mono text-xs text-slate-500">{{ $agent->matricule ?? '—' }}</td>
-                                    <td class="px-5 py-3 text-xs text-slate-600">{{ $agent->poste ?? $agent->role ?? '—' }}</td>
+                                    <td class="px-5 py-3 text-xs text-slate-600">{{ $agent->poste ?? $agent->role_genree ?? '—' }}</td>
                                     <td class="px-5 py-3 text-xs text-slate-500">{{ $agent->sexe ?? '—' }}</td>
                                 </tr>
                             @endforeach

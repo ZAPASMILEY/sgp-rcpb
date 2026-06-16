@@ -104,32 +104,64 @@
             </div>
 
             {{-- Dates + Durée --}}
+            @php
+                $anneeFormation = $anneeEnCours?->annee ?? now()->year;
+                $oldDebut = old('date_debut');
+                $oldFin   = old('date_fin');
+                // Parser les valeurs old (format Y-m-d) en jour/mois si présentes
+                $debutJour = $oldDebut ? (int) substr($oldDebut, 8, 2) : '';
+                $debutMois = $oldDebut ? (int) substr($oldDebut, 5, 2) : '';
+                $finJour   = $oldFin   ? (int) substr($oldFin,   8, 2) : '';
+                $finMois   = $oldFin   ? (int) substr($oldFin,   5, 2) : '';
+            @endphp
             <div class="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-slate-100">
                 <div class="border-b border-slate-100 bg-slate-50/60 px-6 py-4">
                     <p class="text-sm font-black text-slate-900">Période &amp; durée</p>
                 </div>
-                <div class="grid gap-5 px-6 py-5 sm:grid-cols-3">
-                    <div>
-                        <label class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Date de début</label>
-                        <input type="date" name="date_debut" value="{{ old('date_debut') }}"
-                               min="{{ ($anneeEnCours?->annee ?? now()->year).'-01-01' }}"
-                               max="{{ ($anneeEnCours?->annee ?? now()->year).'-12-31' }}"
-                               class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-400 focus:bg-white @error('date_debut') border-rose-300 @enderror">
-                        @error('date_debut')
-                            <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                        @enderror
+                <div class="flex flex-col gap-5 px-6 py-5">
+                    {{-- Ligne 1 : Date début + Date fin --}}
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        {{-- Date de début --}}
+                        <div>
+                            <label class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Date de début</label>
+                            <input type="hidden" name="date_debut" id="date_debut_val" value="{{ $oldDebut }}">
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="debut_jour" min="1" max="31"
+                                       value="{{ $debutJour ?: '' }}" placeholder="JJ"
+                                       class="w-16 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2.5 text-center text-sm outline-none transition focus:border-emerald-400 focus:bg-white @error('date_debut') border-rose-300 @enderror">
+                                <span class="text-slate-400 font-bold text-base">/</span>
+                                <input type="number" id="debut_mois" min="1" max="12"
+                                       value="{{ $debutMois ?: '' }}" placeholder="MM"
+                                       class="w-16 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2.5 text-center text-sm outline-none transition focus:border-emerald-400 focus:bg-white @error('date_debut') border-rose-300 @enderror">
+                                <span class="text-slate-400 font-bold text-base">/</span>
+                                <span class="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-500 select-none whitespace-nowrap">{{ $anneeFormation }}</span>
+                            </div>
+                            @error('date_debut')
+                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        {{-- Date de fin --}}
+                        <div>
+                            <label class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Date de fin</label>
+                            <input type="hidden" name="date_fin" id="date_fin_val" value="{{ $oldFin }}">
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="fin_jour" min="1" max="31"
+                                       value="{{ $finJour ?: '' }}" placeholder="JJ"
+                                       class="w-16 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2.5 text-center text-sm outline-none transition focus:border-emerald-400 focus:bg-white @error('date_fin') border-rose-300 @enderror">
+                                <span class="text-slate-400 font-bold text-base">/</span>
+                                <input type="number" id="fin_mois" min="1" max="12"
+                                       value="{{ $finMois ?: '' }}" placeholder="MM"
+                                       class="w-16 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2.5 text-center text-sm outline-none transition focus:border-emerald-400 focus:bg-white @error('date_fin') border-rose-300 @enderror">
+                                <span class="text-slate-400 font-bold text-base">/</span>
+                                <span class="rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-500 select-none whitespace-nowrap">{{ $anneeFormation }}</span>
+                            </div>
+                            @error('date_fin')
+                                <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
-                    <div>
-                        <label class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Date de fin</label>
-                        <input type="date" name="date_fin" value="{{ old('date_fin') }}"
-                               min="{{ ($anneeEnCours?->annee ?? now()->year).'-01-01' }}"
-                               max="{{ ($anneeEnCours?->annee ?? now()->year).'-12-31' }}"
-                               class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-400 focus:bg-white @error('date_fin') border-rose-300 @enderror">
-                        @error('date_fin')
-                            <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
+                    {{-- Ligne 2 : Durée --}}
+                    <div class="sm:max-w-[200px]">
                         <label class="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Durée (heures)</label>
                         <input type="number" name="duree_heures" value="{{ old('duree_heures') }}"
                                min="1" max="9999" placeholder="Ex : 8"
@@ -184,9 +216,10 @@
 </div>
 
 <script>
-    const input    = document.getElementById('attestation-input');
-    const label    = document.getElementById('drop-zone');
-    const nameEl   = document.getElementById('file-name');
+    // ── Attestation drag & drop ────────────────────────────────────────────
+    const input  = document.getElementById('attestation-input');
+    const label  = document.getElementById('drop-zone');
+    const nameEl = document.getElementById('file-name');
 
     input.addEventListener('change', () => {
         if (input.files.length) {
@@ -196,8 +229,6 @@
             label.classList.remove('border-dashed', 'border-slate-300');
         }
     });
-
-    // Highlight on drag
     ['dragenter','dragover'].forEach(e => label.addEventListener(e, ev => {
         ev.preventDefault();
         label.classList.add('border-emerald-500', 'bg-emerald-50');
@@ -205,5 +236,32 @@
     ['dragleave','drop'].forEach(e => label.addEventListener(e, () => {
         if (!input.files.length) label.classList.remove('border-emerald-500', 'bg-emerald-50');
     }));
+
+    // ── Dates : combiner JJ + MM + année fixe → YYYY-MM-DD ───────────────
+    const ANNEE = {{ $anneeFormation }};
+
+    function buildDate(jourEl, moisEl, hiddenEl) {
+        const j = jourEl.value.trim();
+        const m = moisEl.value.trim();
+        if (j !== '' && m !== '') {
+            hiddenEl.value = ANNEE + '-' + String(m).padStart(2, '0') + '-' + String(j).padStart(2, '0');
+        } else {
+            hiddenEl.value = '';
+        }
+    }
+
+    const debutJour = document.getElementById('debut_jour');
+    const debutMois = document.getElementById('debut_mois');
+    const debutVal  = document.getElementById('date_debut_val');
+    const finJour   = document.getElementById('fin_jour');
+    const finMois   = document.getElementById('fin_mois');
+    const finVal    = document.getElementById('date_fin_val');
+
+    [debutJour, debutMois].forEach(el => el.addEventListener('input', () => buildDate(debutJour, debutMois, debutVal)));
+    [finJour,   finMois  ].forEach(el => el.addEventListener('input', () => buildDate(finJour,   finMois,   finVal)));
+
+    // Initialiser les hidden si des valeurs old sont déjà présentes
+    if (debutJour.value && debutMois.value) buildDate(debutJour, debutMois, debutVal);
+    if (finJour.value   && finMois.value)   buildDate(finJour,   finMois,   finVal);
 </script>
 @endsection

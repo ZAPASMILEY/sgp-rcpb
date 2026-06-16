@@ -80,7 +80,7 @@
             </div>
             <div class="info-row">
                 <div class="info-label">Rôle</div>
-                <div class="info-value">{{ $formation->agent->role ?? '—' }}</div>
+                <div class="info-value">{{ $formation->agent->role_genree ?? '—' }}</div>
             </div>
         </div>
     </div>

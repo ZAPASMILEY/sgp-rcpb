@@ -223,7 +223,7 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-5 py-3 text-slate-500">{{ $agent->role ?: '—' }}</td>
+                                    <td class="px-5 py-3 text-slate-500">{{ $agent->role_genree ?: '—' }}</td>
                                     <td class="px-5 py-3">
                                         <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold {{ $structureColor }}">
                                             {{ $structure }}

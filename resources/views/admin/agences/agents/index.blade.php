@@ -68,7 +68,7 @@
                                     <td class="font-medium text-slate-900">{{ $agent->nom }}</td>
                                     <td>{{ $agent->prenom }}</td>
                                     <td>{{ ucfirst($agent->sexe ?? '-') }}</td>
-                                    <td>{{ $agent->role }}</td>
+                                    <td>{{ $agent->role_genree }}</td>
                                     <td>{{ optional($agent->date_debut_fonction)->format('d/m/Y') ?: '-' }}</td>
                                     <td>{{ $agent->numero_telephone }}</td>
                                     <td>{{ $agent->email }}</td>
@@ -92,13 +92,12 @@
                                                 </svg>
                                             </a>
 
-                                            <form method="POST" action="{{ route('admin.agents.destroy', $agent) }}" onsubmit="return confirm('Supprimer cet agent ?');" class="inline-flex">
+                                            <form method="POST" action="{{ route('admin.agences.agents.destroy', [$agence, $agent]) }}" onsubmit="return confirm('Retirer cet agent de l\'agence ?');" class="inline-flex">
                                                 @csrf
                                                 @method('DELETE')
-                                                <input type="hidden" name="redirect_to" value="{{ route('admin.agences.agents.index', $agence) }}">
-                                                <button type="submit" 
-                                                        class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-800 transition shadow-sm" 
-                                                        title="Supprimer l'agent" aria-label="Supprimer l'agent">
+                                                <button type="submit"
+                                                        class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-800 transition shadow-sm"
+                                                        title="Retirer l'agent" aria-label="Retirer l'agent">
                                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4" aria-hidden="true">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 6.75h18M9.75 6.75V5.625A1.875 1.875 0 0 1 11.625 3.75h.75A1.875 1.875 0 0 1 14.25 5.625V6.75m3.75 0V18A2.25 2.25 0 0 1 15.75 20.25h-7.5A2.25 2.25 0 0 1 6 18V6.75h12Zm-8.25 4.5v5.25m4.5-5.25v5.25" />
                                                     </svg>

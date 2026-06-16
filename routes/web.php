@@ -201,6 +201,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/agences/{agence}/agents', [AgenceController::class, 'agentsIndex'])->name('admin.agences.agents.index');
     Route::get('/admin/agences/{agence}/agents/creer', [AgenceController::class, 'createAgent'])->name('admin.agences.agents.create');
     Route::post('/admin/agences/{agence}/agents', [AgenceController::class, 'storeAgent'])->name('admin.agences.agents.store');
+    Route::delete('/admin/agences/{agence}/agents/{agent}', [AgenceController::class, 'detachAgent'])->name('admin.agences.agents.destroy');
     Route::get('/admin/guichets', [GuichetController::class, 'index'])->name('admin.guichets.index');
     Route::get('/admin/guichets/creer', [GuichetController::class, 'create'])->name('admin.guichets.create');
     Route::post('/admin/guichets', [GuichetController::class, 'store'])->name('admin.guichets.store');
@@ -210,10 +211,12 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::get('/admin/guichets/{guichet}/agents', [GuichetController::class, 'agentsIndex'])->name('admin.guichets.agents.index');
     Route::get('/admin/guichets/{guichet}/agents/ajouter', [GuichetController::class, 'createAgent'])->name('admin.guichets.agents.create');
     Route::post('/admin/guichets/{guichet}/agents', [GuichetController::class, 'storeAgent'])->name('admin.guichets.agents.store');
+    Route::delete('/admin/guichets/{guichet}/agents/{agent}', [GuichetController::class, 'detachAgent'])->name('admin.guichets.agents.destroy');
 
 
     Route::get('/admin/alertes', [AlerteController::class, 'index'])->name('admin.alertes.index');
     Route::post('/admin/alertes', [AlerteController::class, 'store'])->name('admin.alertes.store');
+    Route::post('/admin/alertes/relancer-sans-eval', [AlerteController::class, 'relancerSansEval'])->name('admin.alertes.relancer-sans-eval');
     Route::patch('/admin/alertes/{alerte}/statut', [AlerteController::class, 'updateStatut'])->name('admin.alertes.statut');
     Route::delete('/admin/alertes/{alerte}', [AlerteController::class, 'destroy'])->name('admin.alertes.destroy');
     Route::delete('/admin/alertes', [AlerteController::class, 'destroyAll'])->name('admin.alertes.destroy-all');
@@ -400,6 +403,7 @@ Route::middleware(['auth', 'rh'])->prefix('rh')->name('rh.')->group(function ():
     Route::post('/logout', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/logout', fn () => redirect()->route('login'));
     Route::get('/', [DashboardController::class, 'rh'])->name('dashboard');
+    Route::post('/relancer-sans-eval', [\App\Http\Controllers\Admin\AlerteController::class, 'relancerSansEval'])->name('alertes.relancer-sans-eval');
     Route::get('/comparaison', [\App\Http\Controllers\Rh\RhAnalytiqueController::class, 'comparaison'])->name('comparaison.index');
 
     // Formations (CRUD complet, RH uniquement)

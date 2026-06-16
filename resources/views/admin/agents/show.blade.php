@@ -27,7 +27,7 @@
                     <h1 class="mt-1 text-3xl font-black tracking-tight text-slate-900">
                         {{ $agent->prenom }} {{ $agent->nom }}
                     </h1>
-                    <p class="mt-1 text-sm font-semibold text-slate-500">{{ $agent->role }}</p>
+                    <p class="mt-1 text-sm font-semibold text-slate-500">{{ $agent->role_genree }}</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <a href="{{ route('admin.agents.edit', $agent) }}"
@@ -118,7 +118,7 @@
                         <div class="grid gap-3 sm:grid-cols-3">
                             <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
                                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rôle</p>
-                                <p class="mt-1 font-bold text-slate-800">{{ $agent->role }}</p>
+                                <p class="mt-1 font-bold text-slate-800">{{ $agent->role_genree }}</p>
                             </div>
                             <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
                                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Date de prise de fonction</p>

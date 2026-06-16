@@ -115,7 +115,7 @@
                                     'Secrétaire Technique'     => ['bg-emerald-100 text-emerald-700', 'DT'],
                                     'Secrétaire de Caisse'     => ['bg-amber-100 text-amber-700', 'Caisse'],
                                     "Secrétaire d'Agence"      => ['bg-rose-100 text-rose-700',   'Agence'],
-                                    default                    => ['bg-slate-100 text-slate-600',  $agent->role],
+                                    default                    => ['bg-slate-100 text-slate-600',  $agent->role_genree],
                                 };
                                 $showUrl = route('admin.agents.show', $agent);
                                 $editUrl = route('admin.agents.edit', $agent);

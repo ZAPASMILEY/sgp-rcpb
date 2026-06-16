@@ -38,8 +38,8 @@
                     @if ($guichet->chef->email)
                         <p class="text-xs text-slate-500">{{ $guichet->chef->email }}</p>
                     @endif
-                    @if ($guichet->chef->telephone)
-                        <p class="text-xs text-slate-500">{{ $guichet->chef->telephone }}</p>
+                    @if ($guichet->chef->numero_telephone)
+                        <p class="text-xs text-slate-500">{{ $guichet->chef->numero_telephone }}</p>
                     @endif
                 @else
                     <p class="mt-2 font-bold text-slate-400">—</p>

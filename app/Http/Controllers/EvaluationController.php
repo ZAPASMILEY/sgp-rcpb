@@ -1592,12 +1592,26 @@ class EvaluationController extends Controller
         return new RoleEvaluationReceivedConfig(
             checkOwnership: fn (Evaluation $e) => $this->personnelAuthorize($e),
             notifyStatut: function (Evaluation $e, string $labelStatut): void {
-                $nom = $this->evalCibleNom($e);
-                Alerte::notifier($e->evaluateur_id, "L'évaluation de {$nom} a été {$labelStatut}.", '', 'haute', route('chef.evaluations.show', $e));
+                $nom            = $this->evalCibleNom($e);
+                $directeurRoles = ['Directeur_Direction', 'Directeur_Caisse', 'Directeur_Technique'];
+                $evalShowRoute  = in_array($e->evaluateur?->role ?? '', $directeurRoles, true)
+                    ? 'directeur.subordonnes.secretaire.evaluations.show'
+                    : 'chef.evaluations.show';
+                Alerte::notifier($e->evaluateur_id, "L'évaluation de {$nom} a été {$labelStatut}.", '', 'haute', route($evalShowRoute, $e));
+                if ($labelStatut === 'refusée') {
+                    $rhUser = User::where('role', 'RH')->first();
+                    if ($rhUser) {
+                        Alerte::notifier($rhUser->id, "L'évaluation de {$nom} (Agent) a été refusée.", '', 'haute', route('rh.evaluations.show', $e));
+                    }
+                }
             },
             notifyReclamer: function (Evaluation $e): void {
-                $nom = $this->evalCibleNom($e);
-                Alerte::notifier($e->evaluateur_id, "{$nom} a déposé une réclamation.", '', 'haute', route('chef.evaluations.show', $e));
+                $nom            = $this->evalCibleNom($e);
+                $directeurRoles = ['Directeur_Direction', 'Directeur_Caisse', 'Directeur_Technique'];
+                $evalShowRoute  = in_array($e->evaluateur?->role ?? '', $directeurRoles, true)
+                    ? 'directeur.subordonnes.secretaire.evaluations.show'
+                    : 'chef.evaluations.show';
+                Alerte::notifier($e->evaluateur_id, "{$nom} a déposé une réclamation.", '', 'haute', route($evalShowRoute, $e));
                 $rhUser = User::where('role', 'RH')->first();
                 if ($rhUser) {
                     Alerte::notifier($rhUser->id, "Réclamation de {$nom} (Agent).", '', 'haute', route('rh.evaluations.show', $e));

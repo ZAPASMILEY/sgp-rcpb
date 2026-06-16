@@ -157,7 +157,7 @@
                                     <div>
                                         <span class="text-sm font-semibold text-slate-700">{{ trim(($agent->prenom ?? '').' '.($agent->nom ?? '')) ?: 'Agent' }}</span>
                                         @if ($agent->role)
-                                            <p class="text-xs text-slate-400">{{ $agent->role }}</p>
+                                            <p class="text-xs text-slate-400">{{ $agent->role_genree }}</p>
                                         @endif
                                     </div>
                                 </div>

@@ -215,8 +215,25 @@
                         </div>
                     </div>
                     <div class="space-y-5 px-6 py-6">
+
+                        {{-- ▸ Activités imprévues réalisées --}}
+                        <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <div>
+                                <p class="text-sm font-black text-slate-800">Activités imprévues réalisées</p>
+                                <p class="text-xs text-slate-500">Critère commun — à inclure uniquement si des activités hors plan ont été effectivement réalisées.</p>
+                            </div>
+                            <label class="flex cursor-pointer items-center gap-2 whitespace-nowrap">
+                                <input type="checkbox" id="toggle-activites-imprevues"
+                                       class="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500">
+                                <span class="text-sm font-semibold text-slate-700">Oui, il y en a eu</span>
+                            </label>
+                        </div>
+
+                        {{-- Critères ajoutés (imprévus en tête, puis ceux de la fiche) --}}
+                        <div id="objective-criteria-container" class="space-y-5"></div>
+
                         <div class="flex flex-wrap items-center justify-between gap-3">
-                            <p class="text-xs font-semibold text-slate-500">Sélectionner une fiche d'objectifs existante pour pré-remplir les critères.</p>
+                            <p class="text-xs font-semibold text-slate-500">Ajouter des critères depuis une fiche d'objectifs existante.</p>
                             <div class="flex gap-2">
                                 <select id="objective-fiche-selector" class="ent-select min-w-52">
                                     <option value="">Sélectionner une fiche d'objectif</option>
@@ -227,7 +244,6 @@
                         <div id="objective-choice-container" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
                             Sélectionnez une fiche pour afficher ses objectifs.
                         </div>
-                        <div id="objective-criteria-container" class="space-y-5"></div>
                     </div>
                 </div>
 

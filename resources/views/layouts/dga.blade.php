@@ -165,7 +165,7 @@
                 {{ strtoupper(substr($user?->name ?? 'D', 0, 1)) }}
             </div>
             <h5 class="mt-3 text-base font-black text-white leading-tight">{{ $user?->name }}</h5>
-            <p class="mt-1 text-[11px] font-semibold uppercase tracking-widest text-white/60">Directeur Général Adjoint</p>
+            <p class="mt-1 text-[11px] font-semibold uppercase tracking-widest text-white/60">{{ $user?->agent?->role_genree ?? 'Directeur Général Adjoint' }}</p>
         </div>
 
         <div class="flex flex-1 flex-col mt-1">

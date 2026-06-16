@@ -127,7 +127,7 @@
                                         <i class="fas fa-landmark text-[8px]"></i> {{ $caisse->nom }}
                                     </span>
                                     @if ($agent?->role)
-                                        <span class="text-xs text-slate-400">· {{ $agent->role }}</span>
+                                        <span class="text-xs text-slate-400">· {{ $agent->role_genree }}</span>
                                     @endif
                                 </div>
                                 <div class="mt-1.5 flex flex-wrap items-center gap-3">

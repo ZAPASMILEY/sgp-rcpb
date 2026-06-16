@@ -159,14 +159,11 @@
             </div>
             <h5 class="mt-3 text-base font-black text-white leading-tight">{{ $user?->name }}</h5>
             <p class="mt-1 text-[11px] font-semibold uppercase tracking-widest text-white/60">
-                @php
-                    $roleLabel = match($user?->role) {
-                        'Directeur_Caisse'    => 'Directeur de Caisse',
-                        'Directeur_Technique' => 'Directeur Technique',
-                        default               => 'Directeur de Direction',
-                    };
-                @endphp
-                {{ $roleLabel }}
+                {{ $user?->agent?->role_genree ?? match($user?->role) {
+                    'Directeur_Caisse'    => 'Directeur de Caisse',
+                    'Directeur_Technique' => 'Directeur Technique',
+                    default               => 'Directeur de Direction',
+                } }}
             </p>
         </div>
 

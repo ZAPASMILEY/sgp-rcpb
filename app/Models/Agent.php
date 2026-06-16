@@ -51,6 +51,47 @@ class Agent extends Model
     ];
 
     /**
+     * Correspondances masculin → féminin pour les titres qui changent.
+     * Les titres non listés restent identiques quel que soit le sexe.
+     */
+    public const ROLES_FEMININ = [
+        'Directeur Général'      => 'Directrice Générale',
+        'Conseiller DG'          => 'Conseillère DG',
+        'Directeur de Direction' => 'Directrice de Direction',
+        'Directeur Technique'    => 'Directrice Technique',
+        'Directeur de Caisse'    => 'Directrice de Caisse',
+        "Chef d'Agence"          => "Cheffe d'Agence",
+        'Chef de Guichet'        => 'Cheffe de Guichet',
+        'Chef de Service'        => 'Cheffe de Service',
+        'Agent'                  => 'Agente',
+    ];
+
+    /**
+     * Retourne le libellé du rôle accordé au sexe de l'agent.
+     * Exemple : "Directeur de Caisse" → "Directrice de Caisse" si l'agent est une femme.
+     */
+    public function getRoleGenreeAttribute(): string
+    {
+        if (($this->sexe ?? '') === 'femme') {
+            return self::ROLES_FEMININ[$this->role] ?? $this->role;
+        }
+
+        return $this->role ?? '';
+    }
+
+    /**
+     * Variante statique utilisable sans instance : genreRole($role, $sexe).
+     */
+    public static function genreRole(string $role, ?string $sexe): string
+    {
+        if ($sexe === 'femme') {
+            return self::ROLES_FEMININ[$role] ?? $role;
+        }
+
+        return $role;
+    }
+
+    /**
      * @var list<string>
      */
     protected $fillable = [

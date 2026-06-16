@@ -21,25 +21,48 @@ class PersonnelGererController extends Controller
         $delegId = $request->integer('delegation_id') ?: null;
         $caisseId = $request->integer('caisse_id') ?: null;
 
-        $agents = Agent::personnel()
-            ->with(['user', 'delegationTechnique', 'caisse.delegationTechnique', 'direction'])
+        $agents = Agent::query()
+            // Exclure uniquement les rôles système non-personnel (Admin, RH)
+            ->where(fn ($q) => $q
+                ->whereDoesntHave('user')
+                ->orWhereHas('user', fn ($u) => $u->whereNotIn('role', Agent::NON_PERSONNEL_ROLES))
+            )
+            ->with([
+                'user',
+                'delegationTechnique',
+                'caisse',
+                'direction',
+                'agence.caisse',
+                'guichet.agence',
+                'service',
+            ])
             ->when($search, fn ($q) => $q->where(fn ($s) => $s
-                ->where('nom',       'like', "%{$search}%")
-                ->orWhere('prenom',  'like', "%{$search}%")
-                ->orWhere('matricule','like', "%{$search}%")
+                ->where('nom',        'like', "%{$search}%")
+                ->orWhere('prenom',   'like', "%{$search}%")
+                ->orWhere('matricule', 'like', "%{$search}%")
             ))
             ->when($roleF, fn ($q) => $q->where('role', $roleF))
             ->when($delegId, fn ($q) => $q->where(fn ($s) => $s
                 ->where('delegation_technique_id', $delegId)
-                ->orWhereHas('caisse', fn ($c) => $c->where('delegation_technique_id', $delegId))
+                ->orWhereHas('caisse',  fn ($c) => $c->where('delegation_technique_id', $delegId))
+                ->orWhereHas('agence',  fn ($a) => $a->where('delegation_technique_id', $delegId))
+                ->orWhereHas('guichet', fn ($g) => $g->whereHas('agence', fn ($a) => $a->where('delegation_technique_id', $delegId)))
             ))
-            ->when($caisseId, fn ($q) => $q->where('caisse_id', $caisseId))
+            ->when($caisseId, fn ($q) => $q->where(fn ($s) => $s
+                ->where('caisse_id', $caisseId)
+                ->orWhereHas('agence',  fn ($a) => $a->where('caisse_id', $caisseId))
+                ->orWhereHas('guichet', fn ($g) => $g->whereHas('agence', fn ($a) => $a->where('caisse_id', $caisseId)))
+            ))
             ->orderBy('nom')->orderBy('prenom')
             ->get();
 
         $delegations = DelegationTechnique::orderBy('region')->orderBy('ville')->get();
         $caisses     = Caisse::orderBy('nom')->get();
-        $roles = Agent::personnel()
+        $roles = Agent::query()
+            ->where(fn ($q) => $q
+                ->whereDoesntHave('user')
+                ->orWhereHas('user', fn ($u) => $u->whereNotIn('role', Agent::NON_PERSONNEL_ROLES))
+            )
             ->select('role')->distinct()->orderBy('role')->pluck('role');
         $layout      = $this->layout();
 
