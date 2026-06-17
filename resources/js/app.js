@@ -6,4 +6,8 @@ window.TomSelect = TomSelect;
 import ApexCharts from 'apexcharts';
 window.ApexCharts = ApexCharts;
 
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
+window.Chart = Chart;
+
 import './bootstrap';

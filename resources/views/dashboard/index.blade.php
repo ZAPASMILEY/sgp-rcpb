@@ -1272,7 +1272,6 @@ window._dashData = {
     fichesDonut: {!! json_encode($fichesDonut) !!},
 };
 </script>
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var d = window._dashData;

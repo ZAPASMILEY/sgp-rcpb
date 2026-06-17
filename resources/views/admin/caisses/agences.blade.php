@@ -133,7 +133,6 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         ['chef_agent_id', 'secretaire_agent_id'].forEach(function (id) {
@@ -145,7 +144,6 @@
 @endpush
 
 @push('head')
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet">
 <style>
     .ts-wrapper .ts-control { background: rgb(241 245 249); border: none; border-radius: 20px; padding: 1rem; font-weight: 700; color: #334155; box-shadow: none; }
     .ts-wrapper.focus .ts-control { box-shadow: 0 0 0 2px #22d3ee; }

@@ -3,7 +3,6 @@
 @section('title', 'Nouvelle formation | SGP-RCPB')
 
 @push('head')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
 <style>
     /* ── Tom Select custom theme (multi) ── */
     .ts-wrapper .ts-control {
@@ -308,7 +307,6 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
     // ── Tom Select pour le champ Agents (multi-select) ──────────────────────
     new TomSelect('#select-agent', {

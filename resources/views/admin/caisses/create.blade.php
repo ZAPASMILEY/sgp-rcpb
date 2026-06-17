@@ -137,7 +137,6 @@
 @endsection
 
 @push('head')
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet">
     <style>
         .ts-wrapper .ts-control {
             background: rgb(241 245 249);
@@ -156,7 +155,6 @@
 @endpush
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Tom Select pour les responsables

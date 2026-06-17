@@ -481,7 +481,6 @@ window._dgMentionChart = {!! json_encode([
     'colors' => ['#10b981', '#0ea5e9', '#f59e0b', '#ef4444'],
 ]) !!};
 </script>
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
 (function () {
     function donutOpts(data, id) {

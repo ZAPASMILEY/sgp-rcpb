@@ -3,7 +3,6 @@
 @section('title', 'Comparaison inter-période · PCA · ' . config('app.name', 'SGP-RCPB'))
 
 @push('head')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 @endpush
 
 @section('content')
