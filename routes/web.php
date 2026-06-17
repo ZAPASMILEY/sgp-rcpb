@@ -352,20 +352,22 @@ Route::middleware(['auth', 'personnel'])->group(function (): void {
 // ── Espace Gerer : modules accessibles par permission individuelle ──────────────
 Route::middleware(['auth'])->prefix('gerer')->name('gerer.')->group(function (): void {
 
-    // Formations — CRUD (formations.assigner)
-    Route::middleware('can:formations.assigner')->group(function () {
-        Route::get('/formations',                    [\App\Http\Controllers\Gerer\FormationGererController::class, 'index'])->name('formations.index');
-        Route::get('/formations/creer',              [\App\Http\Controllers\Gerer\FormationGererController::class, 'create'])->name('formations.create');
-        Route::post('/formations',                   [\App\Http\Controllers\Gerer\FormationGererController::class, 'store'])->name('formations.store');
-        Route::get('/formations/{formation}/editer', [\App\Http\Controllers\Gerer\FormationGererController::class, 'edit'])->name('formations.edit');
-        Route::put('/formations/{formation}',        [\App\Http\Controllers\Gerer\FormationGererController::class, 'update'])->name('formations.update');
-        Route::delete('/formations/{formation}',     [\App\Http\Controllers\Gerer\FormationGererController::class, 'destroy'])->name('formations.destroy');
-        Route::get('/formations/{formation}/pdf',    [\App\Http\Controllers\Gerer\FormationGererController::class, 'pdf'])->name('formations.pdf');
-    });
-
-    // Formations — Validation (formations.valider)
-    Route::middleware('can:formations.valider')->group(function () {
+    // Formations — CRUD + Validation (formations.assigner OU formations.valider)
+    Route::middleware(function ($request, $next) {
+        $u = auth()->user();
+        if (! $u || (! $u->can('formations.assigner') && ! $u->can('formations.valider'))) {
+            abort(403);
+        }
+        return $next($request);
+    })->group(function () {
+        Route::get('/formations',                         [\App\Http\Controllers\Gerer\FormationGererController::class, 'index'])->name('formations.index');
+        Route::get('/formations/creer',                   [\App\Http\Controllers\Gerer\FormationGererController::class, 'create'])->name('formations.create');
+        Route::post('/formations',                        [\App\Http\Controllers\Gerer\FormationGererController::class, 'store'])->name('formations.store');
         Route::get('/formations/validation',              [\App\Http\Controllers\Gerer\FormationGererController::class, 'validationIndex'])->name('formations.validation');
+        Route::get('/formations/{formation}/editer',      [\App\Http\Controllers\Gerer\FormationGererController::class, 'edit'])->name('formations.edit');
+        Route::put('/formations/{formation}',             [\App\Http\Controllers\Gerer\FormationGererController::class, 'update'])->name('formations.update');
+        Route::delete('/formations/{formation}',          [\App\Http\Controllers\Gerer\FormationGererController::class, 'destroy'])->name('formations.destroy');
+        Route::get('/formations/{formation}/pdf',         [\App\Http\Controllers\Gerer\FormationGererController::class, 'pdf'])->name('formations.pdf');
         Route::post('/formations/{formation}/valider',    [\App\Http\Controllers\Gerer\FormationGererController::class, 'valider'])->name('formations.valider');
     });
 

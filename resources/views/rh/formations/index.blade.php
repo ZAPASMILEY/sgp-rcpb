@@ -67,7 +67,7 @@
                 </div>
                 <div class="flex shrink-0 flex-wrap items-center gap-2">
                     {{-- Valider --}}
-                    <form method="POST" action="{{ route('rh.formations.valider', $f) }}">
+                    <form method="POST" action="{{ route(($routePrefix ?? 'rh').'.formations.valider', $f) }}">
                         @csrf
                         <input type="hidden" name="decision" value="validee">
                         <button type="submit"
@@ -90,7 +90,7 @@
                 <div class="w-full max-w-md rounded-[24px] bg-white p-6 shadow-2xl">
                     <p class="font-black text-slate-900">Motif du refus</p>
                     <p class="mt-0.5 text-sm text-slate-500">Formation : <strong>{{ $f->theme }}</strong></p>
-                    <form method="POST" action="{{ route('rh.formations.valider', $f) }}" class="mt-4">
+                    <form method="POST" action="{{ route(($routePrefix ?? 'rh').'.formations.valider', $f) }}" class="mt-4">
                         @csrf
                         <input type="hidden" name="decision" value="refusee">
                         <textarea name="motif_refus" rows="3" required

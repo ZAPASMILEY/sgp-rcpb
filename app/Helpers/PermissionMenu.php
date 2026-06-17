@@ -37,7 +37,7 @@ class PermissionMenu
             ];
         }
 
-        if ($user?->can('formations.assigner')) {
+        if ($user?->can('formations.assigner') || $user?->can('formations.valider')) {
             $gestionItems[] = [
                 'route' => 'gerer.formations.index',
                 'icon'  => 'fas fa-graduation-cap',
