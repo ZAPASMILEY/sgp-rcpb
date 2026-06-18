@@ -41,10 +41,9 @@ class StatistiqueController extends Controller
         $maleValues   = ['homme', 'Homme', 'Masculin', 'masculin', 'M'];
         $femaleValues = ['femme', 'Femme', 'Féminin', 'féminin', 'Feminine', 'feminine', 'F'];
         $agentsBySexe = [
-            'Hommes'        => Agent::reseau()->whereIn('sexe', $maleValues)->count(),
-            'Femmes'        => Agent::reseau()->whereIn('sexe', $femaleValues)->count(),
-            'Non renseigné' => Agent::reseau()
-                ->where(fn ($q) => $q
+            'Hommes'        => Agent::whereIn('sexe', $maleValues)->count(),
+            'Femmes'        => Agent::whereIn('sexe', $femaleValues)->count(),
+            'Non renseigné' => Agent::where(fn ($q) => $q
                     ->whereNotIn('sexe', array_merge($maleValues, $femaleValues))
                     ->orWhereNull('sexe')
                 )->count(),
