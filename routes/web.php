@@ -353,13 +353,7 @@ Route::middleware(['auth', 'personnel'])->group(function (): void {
 Route::middleware(['auth'])->prefix('gerer')->name('gerer.')->group(function (): void {
 
     // Formations — CRUD + Validation (formations.assigner OU formations.valider)
-    Route::middleware(function ($request, $next) {
-        $u = auth()->user();
-        if (! $u || (! $u->can('formations.assigner') && ! $u->can('formations.valider'))) {
-            abort(403);
-        }
-        return $next($request);
-    })->group(function () {
+    Route::middleware('gerer.formations')->group(function () {
         Route::get('/formations',                         [\App\Http\Controllers\Gerer\FormationGererController::class, 'index'])->name('formations.index');
         Route::get('/formations/creer',                   [\App\Http\Controllers\Gerer\FormationGererController::class, 'create'])->name('formations.create');
         Route::post('/formations',                        [\App\Http\Controllers\Gerer\FormationGererController::class, 'store'])->name('formations.store');

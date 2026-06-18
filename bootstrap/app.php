@@ -34,7 +34,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'chef'             => \App\Http\Middleware\EnsureIsChef::class,
             'feature'          => \App\Http\Middleware\FeatureGate::class,
             'periode.ouverte'  => \App\Http\Middleware\PeriodeOuverte::class,
-            'annee.ouverte'    => \App\Http\Middleware\AnneeOuverte::class,
+            'annee.ouverte'        => \App\Http\Middleware\AnneeOuverte::class,
+            'gerer.formations'     => \App\Http\Middleware\CanGererFormations::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
