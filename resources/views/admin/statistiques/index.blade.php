@@ -106,11 +106,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }).render();
 
     // 2. Donut — Personnel par sexe
+    var sexeColorMap = { 'Hommes': '#3b82f6', 'Femmes': '#f472b6', 'Non renseigné': '#94a3b8' };
+    var allSexeData  = @json($agentsBySexe);
+    var sexeLabels   = Object.keys(allSexeData).filter(function(k) { return allSexeData[k] > 0; });
+    var sexeSeries   = sexeLabels.map(function(k) { return allSexeData[k]; });
+    var sexeColors   = sexeLabels.map(function(k) { return sexeColorMap[k] || '#94a3b8'; });
+
     new ApexCharts(document.querySelector('#chart-sexe'), {
         chart: { type: 'donut', height: 300, fontFamily: font },
-        series: @json(array_values($agentsBySexe)),
-        labels: @json(array_keys($agentsBySexe)),
-        colors: ['#3b82f6', '#f472b6', '#94a3b8'],
+        series: sexeSeries,
+        labels: sexeLabels,
+        colors: sexeColors,
         legend: { position: 'bottom', fontSize: '12px', fontWeight: 700, labels: { colors: '#64748b' } },
         plotOptions: {
             pie: {
