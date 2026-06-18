@@ -111,8 +111,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Directeur de Direction ─────────────────────────────────────────
         'Directeur_Direction' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
             'evaluations.voir-equipe',
             'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
@@ -121,8 +119,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Directeur Technique ────────────────────────────────────────────
         'Directeur_Technique' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
             'evaluations.voir-equipe',
             'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
@@ -131,8 +127,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Directeur de Caisse ────────────────────────────────────────────
         'Directeur_Caisse' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
             'evaluations.voir-equipe',
             'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
@@ -141,8 +135,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Chef de Service ────────────────────────────────────────────────
         'Chef_Service' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
             'evaluations.voir-equipe',
             'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
@@ -151,8 +143,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Chef d'Agence ──────────────────────────────────────────────────
         'Chef_Agence' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
             'evaluations.voir-equipe',
             'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
@@ -161,64 +151,48 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Chef de Guichet ────────────────────────────────────────────────
         'Chef_Guichet' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.accepter', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
         ],
 
         // ── Assistante DG ──────────────────────────────────────────────────
         'Assistante_Dg' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
         ],
 
         // ── Conseiller DG ──────────────────────────────────────────────────
         'Conseillers_Dg' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.accepter', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester',
         ],
 
         // ── Secrétaire Assistante DG ───────────────────────────────────────
         'Secretaire_Assistante' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Secrétaire de Direction ────────────────────────────────────────
         'Secretaire_Direction' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Secrétaire Technique ───────────────────────────────────────────
         'Secretaire_Technique' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Secrétaire de Caisse ───────────────────────────────────────────
         'Secretaire_Caisse' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
 
         // ── Secrétaire d'Agence ────────────────────────────────────────────
         'Secretaire_Agence' => [
-            'agents.voir',
-            'structures.voir',
             'evaluations.accepter', 'evaluations.voir-equipe', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement', 'objectifs.voir-equipe',
         ],
@@ -269,24 +243,19 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── 3. Créer les rôles et assigner leurs permissions ──────────────
         //
-        // On utilise givePermissionTo() au lieu de syncPermissions() afin de
-        // ne jamais révoquer une permission accordée manuellement par l'admin.
-        // Le seeder garantit uniquement que les permissions de base sont présentes ;
-        // toute suppression doit être faite manuellement via l'interface.
+        // On utilise syncPermissions() pour que le seeder soit la source de vérité.
+        // Les permissions accordées individuellement (Droits Individuels) ne sont
+        // pas affectées car elles sont sur les users, pas sur les rôles.
         $this->command->info('Création des rôles et assignation des permissions...');
         foreach (self::ROLE_PERMISSIONS as $roleName => $permissionNames) {
             // Recherche sensible à la casse pour éviter les collisions MySQL ci
             $role = Role::whereRaw('BINARY name = ?', [$roleName])->where('guard_name', 'web')->first()
                 ?? Role::create(['name' => $roleName, 'guard_name' => 'web']);
 
-            // N'ajouter que les permissions manquantes — ne jamais en retirer
-            $existing = $role->permissions->pluck('name')->all();
-            $toAdd    = array_diff($permissionNames, $existing);
-            if (! empty($toAdd)) {
-                $role->givePermissionTo($toAdd);
-            }
+            // Remplace toutes les permissions du rôle par celles définies ici
+            $role->syncPermissions($permissionNames);
 
-            $this->command->line("  → {$roleName} : ".count($permissionNames).' permissions (base) + '.count($existing).' existantes');
+            $this->command->line("  → {$roleName} : ".count($permissionNames).' permissions');
         }
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
