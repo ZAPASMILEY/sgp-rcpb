@@ -219,6 +219,8 @@
                                         {{ $entiteType }}
                                     </span>
                                     <p class="mt-0.5 text-[11px] text-slate-500 font-medium leading-tight max-w-[140px] truncate">{{ $entiteNom }}</p>
+                                @elseif($a)
+                                    <span class="inline-flex items-center rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-400">Non affecté</span>
                                 @else
                                     <span class="text-xs text-slate-300">—</span>
                                 @endif
