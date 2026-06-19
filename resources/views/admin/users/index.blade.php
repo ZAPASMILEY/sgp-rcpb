@@ -129,6 +129,7 @@
                             if ($a) {
                                 $dt    = $a->delegation_technique_id ? $a->delegationTechnique : null;
                                 $dtNom = $dt ? trim(($dt->ville ?? '') . ($dt->region ? ' ('.$dt->region.')' : '')) : null;
+                                // FK directe sur l'agent (membre d'une structure)
                                 if ($a->service_id)                 { $entiteNom = $a->service?->nom;   $entiteType = 'Service';   $entiteColor = 'bg-violet-100 text-violet-700'; }
                                 elseif ($a->guichet_id)             { $entiteNom = $a->guichet?->nom;   $entiteType = 'Guichet';   $entiteColor = 'bg-pink-100 text-pink-700'; }
                                 elseif ($a->agence_id)              { $entiteNom = $a->agence?->nom;    $entiteType = 'Agence';    $entiteColor = 'bg-cyan-100 text-cyan-700'; }
@@ -136,6 +137,17 @@
                                 elseif ($a->delegation_technique_id){ $entiteNom = $dtNom;              $entiteType = 'DT';        $entiteColor = 'bg-orange-100 text-orange-700'; }
                                 elseif ($a->direction_id)           { $entiteNom = $a->direction?->nom; $entiteType = 'Direction'; $entiteColor = 'bg-blue-100 text-blue-700'; }
                                 elseif ($a->entite_id)              { $entiteNom = $a->entite?->nom;    $entiteType = 'Faîtière';  $entiteColor = 'bg-green-100 text-green-700'; }
+                                // Relation inverse : l'agent DIRIGE une structure
+                                elseif ($a->ledService?->nom)       { $entiteNom = $a->ledService->nom;        $entiteType = 'Service';   $entiteColor = 'bg-violet-100 text-violet-700'; }
+                                elseif ($a->ledGuichet?->nom)       { $entiteNom = $a->ledGuichet->nom;        $entiteType = 'Guichet';   $entiteColor = 'bg-pink-100 text-pink-700'; }
+                                elseif ($a->ledAgence?->nom)        { $entiteNom = $a->ledAgence->nom;         $entiteType = 'Agence';    $entiteColor = 'bg-cyan-100 text-cyan-700'; }
+                                elseif ($a->directedCaisse?->nom)   { $entiteNom = $a->directedCaisse->nom;    $entiteType = 'Caisse';    $entiteColor = 'bg-emerald-100 text-emerald-700'; }
+                                elseif ($a->directedDirection?->nom){ $entiteNom = $a->directedDirection->nom; $entiteType = 'Direction'; $entiteColor = 'bg-blue-100 text-blue-700'; }
+                                elseif ($a->directedDelegation)     {
+                                    $dd = $a->directedDelegation;
+                                    $entiteNom = trim(($dd->ville ?? '') . ($dd->region ? ' ('.$dd->region.')' : ''));
+                                    $entiteType = 'DT'; $entiteColor = 'bg-orange-100 text-orange-700';
+                                }
                             }
 
                             // Couleur de l'avatar selon le rôle

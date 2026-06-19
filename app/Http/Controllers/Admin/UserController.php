@@ -99,6 +99,12 @@ class UserController extends Controller
                 'agent.agence',
                 'agent.guichet',
                 'agent.service',
+                'agent.directedDirection',
+                'agent.directedDelegation',
+                'agent.directedCaisse',
+                'agent.ledAgence',
+                'agent.ledGuichet',
+                'agent.ledService',
             ])
             ->when($search !== '', function ($q) use ($search): void {
                 $q->where(function ($q) use ($search): void {
