@@ -51,24 +51,65 @@
 
     {{-- ── STATS ────────────────────────────────────────────────────────────── --}}
     <div class="grid grid-cols-3 gap-3">
+
+        {{-- Carte 1 : Total / Résultats --}}
         <div class="flex items-center gap-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-700 to-slate-900 p-4 shadow-sm">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white">
                 <i class="fas fa-users text-sm"></i>
             </div>
             <div>
-                <p class="text-2xl font-black text-white">{{ $totalAgents }}</p>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-300">Total agents</p>
+                <p class="text-2xl font-black text-white">{{ $isFiltered ? $filteredTotal : $totalAgents }}</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                    {{ $isFiltered ? 'Résultats' : 'Total agents' }}
+                </p>
+                @if($isFiltered)
+                    <p class="text-[9px] text-slate-400 mt-0.5">sur {{ $totalAgents }} au total</p>
+                @endif
             </div>
         </div>
+
+        {{-- Carte 2 : Affectés --}}
+        @if($affectation === 'non_affecte')
+        <div class="flex items-center gap-4 rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow shadow-amber-100">
+                <i class="fas fa-exclamation text-sm"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-black text-amber-600">{{ $filteredTotal }}</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Non affectés</p>
+                <p class="text-[9px] text-slate-400 mt-0.5">sur {{ $totalNonAffectes }} au total</p>
+            </div>
+        </div>
+        @else
         <div class="flex items-center gap-4 rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow shadow-emerald-100">
                 <i class="fas fa-map-marker-alt text-sm"></i>
             </div>
             <div>
-                <p class="text-2xl font-black text-emerald-600">{{ $totalAffectes }}</p>
+                <p class="text-2xl font-black text-emerald-600">
+                    {{ $affectation === 'affecte' ? $filteredTotal : $totalAffectes }}
+                </p>
                 <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Affectés</p>
+                @if($affectation === 'affecte')
+                    <p class="text-[9px] text-slate-400 mt-0.5">sur {{ $totalAffectes }} au total</p>
+                @endif
             </div>
         </div>
+        @endif
+
+        {{-- Carte 3 : Non affectés (toujours global, sauf si filtre non_affecte déjà affiché) --}}
+        @if($affectation !== 'non_affecte')
+        <div class="flex items-center gap-4 rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow shadow-amber-100">
+                <i class="fas fa-exclamation text-sm"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-black text-amber-600">{{ $totalNonAffectes }}</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Non affectés</p>
+            </div>
+        </div>
+        @endif
+
     </div>
 
     {{-- ── FILTRES ───────────────────────────────────────────────────────────── --}}
@@ -144,7 +185,7 @@
                 <h2 class="text-sm font-black uppercase tracking-wider text-slate-800">Liste des agents</h2>
                 <p class="text-xs text-slate-400 mt-0.5">
                     {{ $agents->count() }} agent{{ $agents->count() > 1 ? 's' : '' }} affiché{{ $agents->count() > 1 ? 's' : '' }}
-                    @if($roleActive || $search) · <span class="text-blue-500 font-semibold">filtre actif</span>@endif
+                    @if($isFiltered) · <span class="text-blue-500 font-semibold">filtre actif</span>@endif
                 </p>
             </div>
         </div>
@@ -356,7 +397,7 @@
 
             <div class="border-t border-slate-100 px-5 py-3 text-right text-xs text-slate-400">
                 {{ $agents->count() }} agent{{ $agents->count() > 1 ? 's' : '' }} affiché{{ $agents->count() > 1 ? 's' : '' }}
-                @if($roleActive || $search) · <span class="text-blue-500 font-semibold">filtre actif</span>@endif
+                @if($isFiltered) · <span class="text-blue-500 font-semibold">filtre actif</span>@endif
             </div>
         @endif
 

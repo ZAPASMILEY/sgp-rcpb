@@ -197,6 +197,7 @@ class UserController extends Controller
             'password_plain'        => $validated['password'],
             'role'                  => $validated['role'],
             'manager_id'            => $validated['manager_id'] ?? null,
+            'is_active'             => false,
             'must_change_password'  => true,
         ]);
 

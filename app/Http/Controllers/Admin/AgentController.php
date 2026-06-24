@@ -31,6 +31,17 @@ class AgentController extends Controller
     // 2. Construction de la requête pour récupérer les agents
     $query = Agent::query()->orderBy('nom', 'asc')->orderBy('prenom', 'asc');
 
+    // Liste des colonnes FK pour les affectations directes (membre d'une structure)
+    $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id', 'agence_id', 'guichet_id', 'service_id'];
+    // Relations inverses (agent DIRIGE une structure)
+    $inverseRelations = [
+        'pcaedEntite', 'assistantedEntite',
+        'directedDirection', 'secretariedDirection',
+        'directedDelegation', 'secretariedDelegation',
+        'directedCaisse', 'secretariedCaisse',
+        'ledAgence', 'ledGuichet', 'ledService',
+    ];
+
     // Filtrage par rôle si sélectionné
     if ($role) {
         $query->where('role', $role);
@@ -49,6 +60,27 @@ class AgentController extends Controller
         $query->whereNull('date_debut_fonction');
     }
 
+    // Filtrage par affectation
+    if ($affectation === 'affecte') {
+        $query->where(function ($q) use ($directFks, $inverseRelations): void {
+            foreach ($directFks as $col) {
+                $q->orWhereNotNull($col);
+            }
+            foreach ($inverseRelations as $rel) {
+                $q->orWhereHas($rel);
+            }
+        });
+    } elseif ($affectation === 'non_affecte') {
+        $query->where(function ($q) use ($directFks, $inverseRelations): void {
+            foreach ($directFks as $col) {
+                $q->whereNull($col);
+            }
+            foreach ($inverseRelations as $rel) {
+                $q->whereDoesntHave($rel);
+            }
+        });
+    }
+
     // Exécution de la requête pour alimenter la variable $agents
     $agents = $query->get();
 
@@ -57,17 +89,6 @@ class AgentController extends Controller
         ->selectRaw('role, count(*) as total')
         ->groupBy('role')
         ->pluck('total', 'role');
-
-    // Liste des colonnes de clés étrangères pour les affectations directes
-$directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id', 'agence_id', 'guichet_id', 'service_id'];
-    // Liste des relations inverses (noms exacts définis sur Agent)
-    $inverseRelations = [
-        'pcaedEntite', 'assistantedEntite',
-        'directedDirection', 'secretariedDirection',
-        'directedDelegation', 'secretariedDelegation',
-        'directedCaisse', 'secretariedCaisse',
-        'ledAgence', 'ledGuichet', 'ledService',
-    ];
 
     $totalAffectes = Agent::query()->where(function ($q) use ($directFks, $inverseRelations): void {
         foreach ($directFks as $col) {
@@ -78,23 +99,31 @@ $directFks = ['entite_id', 'direction_id', 'delegation_technique_id', 'caisse_id
         }
     })->count();
 
-    $sansDatCount = Agent::whereNull('date_debut_fonction')->count();
-    $totalReseau  = Agent::count();
-    $sansCompte   = Agent::doesntHave('user')->count();
+    $sansDatCount    = Agent::whereNull('date_debut_fonction')->count();
+    $totalReseau     = Agent::count();
+    $totalNonAffectes = $totalReseau - $totalAffectes;
+    $sansCompte      = Agent::doesntHave('user')->count();
+
+    // Compteurs filtrés pour les cartes de stats
+    $isFiltered = (bool) ($role || $search || $affectation || $sansDate);
+    $filteredTotal = $agents->count();
 
     // 4. Envoi complet à la vue
     return view('admin.agents.index', [
-        'agents'        => $agents,
-        'roleActive'    => $role,
-        'affectation'   => $affectation,
-        'sansDate'      => $sansDate,
-        'search'        => $search,
-        'roles'         => Agent::ROLES,
-        'countsByRole'  => $countsByRole,
-        'totalAgents'   => $totalReseau,
-        'totalAffectes' => $totalAffectes,
-        'sansDatCount'  => $sansDatCount,
-        'sansCompte'    => $sansCompte,
+        'agents'           => $agents,
+        'roleActive'       => $role,
+        'affectation'      => $affectation,
+        'sansDate'         => $sansDate,
+        'search'           => $search,
+        'roles'            => Agent::ROLES,
+        'countsByRole'     => $countsByRole,
+        'totalAgents'      => $totalReseau,
+        'totalAffectes'    => $totalAffectes,
+        'totalNonAffectes' => $totalNonAffectes,
+        'isFiltered'       => $isFiltered,
+        'filteredTotal'    => $filteredTotal,
+        'sansDatCount'     => $sansDatCount,
+        'sansCompte'       => $sansCompte,
     ]);
 }
     public function create(Request $request): View
