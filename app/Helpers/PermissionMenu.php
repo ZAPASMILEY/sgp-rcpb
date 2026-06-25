@@ -37,6 +37,14 @@ class PermissionMenu
             ];
         }
 
+        if ($user?->can('structures.notes.voir') && $user?->role !== 'RH') {
+            $gestionItems[] = [
+                'route' => 'rh.notes-structure',
+                'icon'  => 'fas fa-building',
+                'label' => 'Notes Structure',
+            ];
+        }
+
         if ($user?->can('formations.assigner') || $user?->can('formations.valider')) {
             $gestionItems[] = [
                 'route' => 'gerer.formations.index',

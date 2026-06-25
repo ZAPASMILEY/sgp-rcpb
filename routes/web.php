@@ -265,6 +265,13 @@ Route::middleware(['auth', 'can:admin.archives'])->group(function () {
     Route::delete('/admin/archives/objectifs/{id}/supprimer-definitif', [SettingsController::class, 'forceDeleteFiche'])->name('admin.archives.objectifs.force-delete');
 });
 
+// Notes de structures du réseau — accessible à tout utilisateur authentifié ayant la permission `structures.notes.voir`
+// Volontairement HORS du groupe 'rh' pour que PCA, DG, etc. puissent y accéder.
+Route::middleware(['auth', 'can:structures.notes.voir'])->prefix('rh')->name('rh.')->group(function () {
+    Route::get('/notes-structure',     \App\Http\Controllers\Rh\RhStructureController::class)->name('notes-structure');
+    Route::get('/notes-structure/pdf', [\App\Http\Controllers\Rh\RhStructureController::class, 'pdf'])->name('notes-structure.pdf');
+});
+
 // Route accessible au PCA sans entité associée (évite la boucle middleware)
 Route::middleware(['auth'])->get('/pca/en-attente', function () {
     if (!auth()->user()->isPca()) {
@@ -417,10 +424,6 @@ Route::middleware(['auth', 'rh'])->prefix('rh')->name('rh.')->group(function ():
     Route::get('/reclamations',                                [\App\Http\Controllers\Rh\RhReclamationController::class, 'index'])->name('reclamations.index');
     Route::get('/reclamations/{evaluation}',                   [\App\Http\Controllers\Rh\RhReclamationController::class, 'show'])->name('reclamations.show');
     Route::post('/reclamations/{evaluation}/repondre',         [\App\Http\Controllers\Rh\RhReclamationController::class, 'repondre'])->name('reclamations.repondre');
-
-    // Structures du réseau (vue agrégée)
-    Route::get('/structures',     \App\Http\Controllers\Rh\RhStructureController::class)->name('structures');
-    Route::get('/structures/pdf', [\App\Http\Controllers\Rh\RhStructureController::class, 'pdf'])->name('structures.pdf');
 
     // Statistiques — permission requise
     Route::middleware('can:statistiques.voir')->group(function () {

@@ -24,7 +24,7 @@
                 ['route' => 'rh.dashboard',    'query' => 'tab=evaluations', 'icon' => 'fas fa-star-half-stroke', 'label' => 'Évaluations'],
                 ['route' => 'rh.reclamations.index',                          'icon' => 'fas fa-triangle-exclamation', 'label' => 'Réclamations', 'badge' => $_reclamationsBadge, 'badgeTip' => 'Réclamation(s) active(s)'],
                 ['route' => 'rh.dashboard',    'query' => 'tab=objectifs',   'icon' => 'fas fa-bullseye',         'label' => 'Objectifs'],
-                ['route' => 'rh.structures',                                  'icon' => 'fas fa-building',         'label' => 'Structures'],
+                $user?->can('structures.notes.voir') ? ['route' => 'rh.notes-structure',                                      'icon' => 'fas fa-building',         'label' => 'Notes Structure'] : null,
             ],
         ],
         [

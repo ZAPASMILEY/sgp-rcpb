@@ -33,6 +33,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Structures organisationnelles ──────────────────────────────────
         'structures.voir',   // Consulter les structures (menu latéral "Gestion")
+        'structures.notes.voir', // Consulter les notes de structures (vue RH "Notes Structure")
 
         // ── Évaluations ────────────────────────────────────────────────────
         'evaluations.creer',        // Rédiger une fiche d'évaluation
@@ -82,8 +83,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // ── PCA — évalue le DG, lui assigne des objectifs ─────────────────
         'PCA' => [
             'agents.voir',
-            'structures.voir',
-            'evaluations.creer', 'evaluations.soumettre', 'evaluations.exporter-pdf',
+            'structures.voir',            'structures.notes.voir',            'evaluations.creer', 'evaluations.soumettre', 'evaluations.exporter-pdf',
             'evaluations.voir-equipe',
             'objectifs.assigner', 'objectifs.voir-equipe',
         ],
@@ -92,6 +92,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'DG' => [
             'agents.voir',
             'structures.voir',
+            'structures.notes.voir',
             'evaluations.creer', 'evaluations.soumettre', 'evaluations.accepter', 'evaluations.exporter-pdf',
             'evaluations.voir-equipe', 'evaluations.voir-reseau',
             'objectifs.assigner', 'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
@@ -201,6 +202,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'RH' => [
             'agents.voir',
             'structures.voir',
+            'structures.notes.voir',
             'evaluations.voir-equipe', 'evaluations.exporter-pdf',
             'objectifs.accepter', 'objectifs.contester', 'objectifs.avancement',
             'formations.assigner', 'formations.valider',

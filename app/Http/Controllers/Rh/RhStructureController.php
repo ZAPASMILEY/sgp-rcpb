@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Shared\StructureStats;
 use App\Models\Agent;
 use App\Models\Annee;
+use App\Traits\GererLayout;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ use Illuminate\Http\Response;
 class RhStructureController extends Controller
 {
     use StructureStats;
+    use GererLayout;
 
     public function __invoke(Request $request): View
     {
@@ -29,10 +31,11 @@ class RhStructureController extends Controller
         $allStructures  = $typeFilter ? $this->buildStructureStats(null, $sortBy, $notesVisibles ? $anneeId : null) : $structures;
         $globalStats    = $this->computeGlobalStats($allStructures);
         $perimetreStats = $this->buildPerimetreStats($notesVisibles ? $anneeId : null);
+        $layout        = $this->layout();
 
-        return view('rh.structures', compact(
+        return view('rh.notes-structure', compact(
             'structures', 'typeFilter', 'sortBy', 'globalStats', 'perimetreStats',
-            'notesVisibles', 'anneeOuverte', 'derniereAnnee'
+            'notesVisibles', 'anneeOuverte', 'derniereAnnee', 'layout'
         ));
     }
 

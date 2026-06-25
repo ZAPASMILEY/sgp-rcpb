@@ -49,7 +49,9 @@
                 ['route' => 'dg.caisses',     'icon' => 'fas fa-building-columns',  'label' => 'Caisses'],
                 ['route' => 'dg.agences',     'icon' => 'fas fa-store',             'label' => 'Agences'],
                 ['route' => 'dg.guichets',    'icon' => 'fas fa-cash-register',     'label' => 'Guichets'],
-                ['route' => 'dg.structures',  'icon' => 'fas fa-building',          'label' => 'Structures'],
+                $_dgUser?->can('structures.notes.voir')
+                    ? ['route' => 'dg.structures',  'icon' => 'fas fa-building', 'label' => 'Notes Structure']
+                    : ['route' => 'dg.structures',  'icon' => 'fas fa-building', 'label' => 'Structures'],
             ],
         ],
         [

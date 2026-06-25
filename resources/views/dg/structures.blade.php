@@ -140,42 +140,6 @@
                 </div>
             </div>
 
-            {{-- Note faîtière --}}
-            <div class="flex items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
-                    <i class="fas fa-landmark"></i>
-                </div>
-                <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-wider text-indigo-500">Note faîtière</p>
-                    <p class="text-xl font-black text-indigo-800">
-                        @if ($notesVisibles)
-                            {{ $perimetreStats['faitiere'] !== null ? number_format($perimetreStats['faitiere'], 2).' /10' : '—' }}
-                        @else
-                            <span class="text-indigo-200">—</span>
-                        @endif
-                    </p>
-                    <p class="text-[9px] text-indigo-400 mt-0.5">Directions + Services</p>
-                </div>
-            </div>
-
-            {{-- Note terrain --}}
-            <div class="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
-                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-                    <i class="fas fa-map-location-dot"></i>
-                </div>
-                <div>
-                    <p class="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Note terrain</p>
-                    <p class="text-xl font-black text-amber-800">
-                        @if ($notesVisibles)
-                            {{ $perimetreStats['terrain'] !== null ? number_format($perimetreStats['terrain'], 2).' /10' : '—' }}
-                        @else
-                            <span class="text-amber-200">—</span>
-                        @endif
-                    </p>
-                    <p class="text-[9px] text-amber-500 mt-0.5">DT + Caisses + Agences + Guichets</p>
-                </div>
-            </div>
-
         </div>
 
         {{-- ── Tableau des structures ───────────────────────────────────────── --}}

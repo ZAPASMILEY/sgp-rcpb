@@ -3,6 +3,8 @@
 @section('title', 'Nouvelle formation | SGP-RCPB')
 
 @push('head')
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+
 <style>
     /* ── Tom Select custom theme (multi) ── */
     .ts-wrapper .ts-control {
@@ -111,8 +113,8 @@
                 @foreach($agents as $ag)
                     <option value="{{ $ag->id }}"
                             @selected(in_array($ag->id, old('agent_ids', $preselectedAgentId ? [$preselectedAgentId] : [])))>
-                        {{ trim($ag->prenom . ' ' . $ag->nom) }} — {{ $ag->poste ?: '—' }}
-                    </option>
+{{ trim($ag->prenom . ' ' . $ag->nom) }}{{ $ag->poste ? ' — ' . $ag->poste : '' }}
+                        </option>
                 @endforeach
             </select>
             @error('agent_ids')
@@ -173,7 +175,7 @@
             </div>
         </div>
 
-        {{-- Dates : année fixée par le semestre ouvert, seuls le jour et le mois sont modifiables --}}
+        {{-- Dates : année fixée par le semestre ouvert --}}
         @php
             $annee = $anneeEnCours?->annee ?? now()->year;
             $moisLabels = ['01'=>'Janvier','02'=>'Février','03'=>'Mars','04'=>'Avril','05'=>'Mai','06'=>'Juin',
@@ -189,14 +191,13 @@
             {{-- Date de début --}}
             <div>
                 <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Date de début *</label>
-                <input type="hidden" name="date_debut" id="date_debut_hidden"
-                       value="{{ $oldDebut ?: '' }}">
+                <input type="hidden" name="date_debut" id="date_debut_hidden" value="{{ $oldDebut ?: '' }}">
                 <div class="flex items-stretch gap-1.5">
                     <input type="number" id="date_debut_day" min="1" max="31"
                            value="{{ $debutJour !== '' ? (int)$debutJour : '' }}"
                            placeholder="Jour" required
                            class="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-center outline-none focus:border-emerald-400 focus:bg-white @error('date_debut') border-rose-400 @enderror">
-                    <select id="date_debut_month"
+                    <select id="date_debut_month" required
                             class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('date_debut') border-rose-400 @enderror">
                         <option value="">Mois</option>
                         @foreach($moisLabels as $num => $nom)
@@ -212,14 +213,13 @@
             {{-- Date de fin --}}
             <div>
                 <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">Date de fin *</label>
-                <input type="hidden" name="date_fin" id="date_fin_hidden"
-                       value="{{ $oldFin ?: '' }}">
+                <input type="hidden" name="date_fin" id="date_fin_hidden" value="{{ $oldFin ?: '' }}">
                 <div class="flex items-stretch gap-1.5">
                     <input type="number" id="date_fin_day" min="1" max="31"
                            value="{{ $finJour !== '' ? (int)$finJour : '' }}"
                            placeholder="Jour" required
                            class="w-20 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-center outline-none focus:border-emerald-400 focus:bg-white @error('date_fin') border-rose-400 @enderror">
-                    <select id="date_fin_month"
+                    <select id="date_fin_month" required
                             class="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:bg-white @error('date_fin') border-rose-400 @enderror">
                         <option value="">Mois</option>
                         @foreach($moisLabels as $num => $nom)
@@ -245,7 +245,7 @@
             </div>
         </div>
 
-        {{-- Formateur (optionnel — agent de la Faitière) --}}
+        {{-- Formateur --}}
         <div>
             <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">
                 Formateur
@@ -265,7 +265,7 @@
             @enderror
         </div>
 
-        {{-- Attestation (optionnelle — jointe par le RH pour les participants) --}}
+        {{-- Attestation --}}
         <div>
             <label class="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-1.5">
                 Attestation
@@ -307,6 +307,8 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
 <script>
     // ── Tom Select pour le champ Agents (multi-select) ──────────────────────
     new TomSelect('#select-agent', {
@@ -328,7 +330,7 @@
     });
 
     // ── Autocomplete Theme de formation ─────────────────────────────────────
-    const theme = @json($themesExistants);
+    const theme = @json($themesExistants ?? []);
     const input  = document.getElementById('input-theme');
     const list   = document.getElementById('autocomplete-list');
 
@@ -338,55 +340,59 @@
         return text.replace(re, '<mark>$1</mark>');
     }
 
-    input.addEventListener('input', function () {
-        const q = this.value.trim().toLowerCase();
-        list.innerHTML = '';
-        if (q.length < 2) { list.style.display = 'none'; return; }
+    if(input && list) {
+        input.addEventListener('input', function () {
+            const q = this.value.trim().toLowerCase();
+            list.innerHTML = '';
+            if (q.length < 2) { list.style.display = 'none'; return; }
 
-        const matches = theme.filter(t => t.toLowerCase().includes(q)).slice(0, 8);
-        if (!matches.length) { list.style.display = 'none'; return; }
+            const matches = theme.filter(t => t.toLowerCase().includes(q)).slice(0, 8);
+            if (!matches.length) { list.style.display = 'none'; return; }
 
-        matches.forEach(t => {
-            const li = document.createElement('li');
-            li.innerHTML = highlight(t, this.value.trim());
-            li.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                input.value = t;
-                list.style.display = 'none';
+            matches.forEach(t => {
+                const li = document.createElement('li');
+                li.innerHTML = highlight(t, this.value.trim());
+                li.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    input.value = t;
+                    list.style.display = 'none';
+                });
+                list.appendChild(li);
             });
-            list.appendChild(li);
+            list.style.display = 'block';
         });
-        list.style.display = 'block';
-    });
 
-    document.addEventListener('click', (e) => {
-        if (!input.contains(e.target)) list.style.display = 'none';
-    });
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target)) list.style.display = 'none';
+        });
 
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') list.style.display = 'none';
-    });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') list.style.display = 'none';
+        });
+    }
 
     // ── Combinaison jour + mois + année (fixe) → champs hidden ──────────────
     const ANNEE = {{ $anneeEnCours?->annee ?? now()->year }};
 
     function buildDate(dayInput, monthSelect) {
+        if (!dayInput || !monthSelect || !dayInput.value || !monthSelect.value) return '';
         const day   = String(dayInput.value).padStart(2, '0');
         const month = monthSelect.value;
-        if (!dayInput.value || !month) return '';
         return `${ANNEE}-${month}-${day}`;
     }
 
     function syncDebut() {
-        document.getElementById('date_debut_hidden').value =
-            buildDate(document.getElementById('date_debut_day'),
-                      document.getElementById('date_debut_month'));
+        const hiddenInput = document.getElementById('date_debut_hidden');
+        if(hiddenInput) {
+            hiddenInput.value = buildDate(document.getElementById('date_debut_day'), document.getElementById('date_debut_month'));
+        }
     }
 
     function syncFin() {
-        document.getElementById('date_fin_hidden').value =
-            buildDate(document.getElementById('date_fin_day'),
-                      document.getElementById('date_fin_month'));
+        const hiddenInput = document.getElementById('date_fin_hidden');
+        if(hiddenInput) {
+            hiddenInput.value = buildDate(document.getElementById('date_fin_day'), document.getElementById('date_fin_month'));
+        }
     }
 
     function clampDay(input) {
@@ -394,32 +400,44 @@
         if (!isNaN(v)) input.value = Math.min(31, Math.max(1, v));
     }
 
-    document.getElementById('date_debut_day').addEventListener('input', function() { clampDay(this); syncDebut(); });
-    document.getElementById('date_debut_month').addEventListener('change', syncDebut);
-    document.getElementById('date_fin_day').addEventListener('input', function() { clampDay(this); syncFin(); });
-    document.getElementById('date_fin_month').addEventListener('change', syncFin);
+    const startDay = document.getElementById('date_debut_day');
+    const startMonth = document.getElementById('date_debut_month');
+    const endDay = document.getElementById('date_fin_day');
+    const endMonth = document.getElementById('date_fin_month');
 
-    // Initialisation au chargement (cas retour sur validation)
-    syncDebut();
-    syncFin();
+    if(startDay && startMonth && endDay && endMonth) {
+        startDay.addEventListener('input', function() { clampDay(this); syncDebut(); });
+        startMonth.addEventListener('change', syncDebut);
+        endDay.addEventListener('input', function() { clampDay(this); syncFin(); });
+        endMonth.addEventListener('change', syncFin);
 
-    // Sync de sécurité juste avant la soumission
-    document.querySelector('form').addEventListener('submit', function () {
+        // Initialisation au chargement
         syncDebut();
         syncFin();
-    });
+    }
+
+    // Sync de sécurité juste avant la soumission
+    const form = document.querySelector('form');
+    if(form) {
+        form.addEventListener('submit', function () {
+            syncDebut();
+            syncFin();
+        });
+    }
 
     // ── Attestation optionnelle ──────────────────────────────────────────────
     const rhInput  = document.getElementById('rh-attestation-input');
     const rhLabel  = document.getElementById('drop-zone-rh');
     const rhNameEl = document.getElementById('rh-file-name');
 
-    rhInput.addEventListener('change', () => {
-        if (rhInput.files.length) {
-            rhNameEl.textContent = rhInput.files[0].name;
-            rhLabel.classList.add('border-emerald-500', 'bg-emerald-50');
-            rhLabel.classList.remove('border-dashed', 'border-slate-200');
-        }
-    });
+    if(rhInput && rhLabel && rhNameEl) {
+        rhInput.addEventListener('change', () => {
+            if (rhInput.files.length) {
+                rhNameEl.textContent = rhInput.files[0].name;
+                rhLabel.classList.add('border-emerald-500', 'bg-emerald-50');
+                rhLabel.classList.remove('border-dashed', 'border-slate-200');
+            }
+        });
+    }
 </script>
 @endpush

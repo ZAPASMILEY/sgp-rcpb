@@ -1,6 +1,6 @@
-@extends('layouts.rh')
+@extends($layout ?? 'layouts.rh')
 
-@section('title', 'Structures | Espace RH · ' . config('app.name', 'SGP-RCPB'))
+@section('title', 'Notes de structures | Espace RH · ' . config('app.name', 'SGP-RCPB'))
 
 @section('content')
 <div class="min-h-screen bg-[#f1f5f9] pb-12">
@@ -18,7 +18,7 @@
                 </div>
                 <div>
                     <p class="text-xs font-black uppercase tracking-[0.25em] text-purple-200">Ressources Humaines · RCPB</p>
-                    <h1 class="mt-0.5 text-2xl font-black text-white">Structures du réseau</h1>
+                    <h1 class="mt-0.5 text-2xl font-black text-white">Notes de structures</h1>
                     <p class="mt-0.5 text-sm text-purple-100/80">Vue agrégée par structure avec statistiques d'évaluation</p>
                 </div>
             </div>
@@ -26,7 +26,7 @@
             {{-- Contrôles : filtre type + tri + PDF --}}
             <div class="flex flex-wrap items-center gap-3">
                 {{-- Filtre Type --}}
-                <form method="GET" action="{{ route('rh.structures') }}" id="filterForm" class="flex flex-wrap items-center gap-2">
+                <form method="GET" action="{{ route('rh.notes-structure') }}" id="filterForm" class="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="sort" value="{{ $sortBy }}">
                     <select name="type" onchange="document.getElementById('filterForm').submit()"
                         class="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm ring-1 ring-white/20 outline-none cursor-pointer">
@@ -41,7 +41,7 @@
                 </form>
 
                 {{-- Tri --}}
-                <form method="GET" action="{{ route('rh.structures') }}" id="sortForm" class="flex items-center gap-2">
+                <form method="GET" action="{{ route('rh.notes-structure') }}" id="sortForm" class="flex items-center gap-2">
                     @if($typeFilter)<input type="hidden" name="type" value="{{ $typeFilter }}">@endif
                     <select name="sort" onchange="document.getElementById('sortForm').submit()"
                         class="rounded-xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm ring-1 ring-white/20 outline-none cursor-pointer">
@@ -55,14 +55,14 @@
 
                 {{-- Réinitialiser --}}
                 @if($typeFilter || $sortBy !== 'note')
-                    <a href="{{ route('rh.structures') }}"
+                    <a href="{{ route('rh.notes-structure') }}"
                        class="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2.5 text-xs font-bold text-purple-200 ring-1 ring-white/20 transition hover:bg-white/20">
                         <i class="fas fa-times"></i> Réinitialiser
                     </a>
                 @endif
 
                 {{-- Bouton PDF --}}
-                <a href="{{ route('rh.structures.pdf', array_filter(['type' => $typeFilter, 'sort' => $sortBy])) }}"
+                <a href="{{ route('rh.notes-structure.pdf', array_filter(['type' => $typeFilter, 'sort' => $sortBy])) }}"
                    target="_blank"
                    class="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-black text-violet-700 shadow-lg transition hover:bg-violet-50">
                     <i class="fas fa-file-pdf text-rose-500"></i>
