@@ -339,6 +339,10 @@ class DirecteurSubordonneController extends Controller
      * Liste des directeurs de caisse — pour le Directeur Technique uniquement.
      * Affiche la PERSONNE (Agent directeur_agent_id), pas la structure.
      */
+   /**
+     * Liste des directeurs de caisse — pour le Directeur Technique uniquement.
+     * Affiche la PERSONNE (Agent directeur_agent_id), pas la structure.
+     */
     public function indexDirecteurs(): View
     {
         $ctx = $this->getContext();
@@ -360,14 +364,14 @@ class DirecteurSubordonneController extends Controller
                 ->first();
 
             return [
-                'caisse'         => $caisse,
-                'directeurAgent' => $directeurAgent,
-                'directeurUser'  => $directeurUser,
-                'latestEval'     => $latestEval,
-                'evalCount'      => Evaluation::where('evaluable_type', Caisse::class)
+                'caisse'          => $caisse,
+                'directeurAgent'  => $directeurAgent,
+                'directeurUser'   => $directeurUser,
+                'latestEval'      => $latestEval,
+                'evalCount'       => Evaluation::where('evaluable_type', Caisse::class)
                     ->where('evaluable_id', $caisse->id)
                     ->where('evaluateur_id', Auth::id())->count(),
-                'ficheCount'     => ($directeurUser)
+                'ficheCount'      => ($directeurUser)
                     ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->count()
                     : 0,
                 'ficheBlocksNew' => $directeurUser
@@ -377,12 +381,19 @@ class DirecteurSubordonneController extends Controller
                     ? FicheObjectif::where('assignable_type', User::class)->where('assignable_id', $directeurUser->id)->where('statut', 'acceptee')->exists()
                     : false,
                 'agentsCount'    => $caisse->agents_count,
+                
+                // AJOUT DE LA VARIABLE MANQUANTE (avec le 'c' minuscule correspondant à la vue) :
+                'evaluationEncours' => Evaluation::where('evaluable_type', Caisse::class)
+                    ->where('evaluable_id', $caisse->id)
+                    ->where('evaluable_role', 'manager')
+                    ->where('evaluateur_id', Auth::id())
+                    ->whereIn('statut', ['soumis', 'brouillon'])
+                    ->exists(),
             ];
         });
 
         return view('directeur.subordonnes.directeurs', compact('ctx', 'direction', 'directeursData'));
     }
-
     // ── Index — Vue d'ensemble des subordonnés ─────────────────────────────
 
     /**

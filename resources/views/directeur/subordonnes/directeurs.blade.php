@@ -167,13 +167,13 @@
 
                             {{-- Actions --}}
                             <div class="flex shrink-0 items-center gap-2">
-                                @if($evaluationsEnabled && $item['ficheAcceptee'] && !$item['evaluationEnCours'])
+                                @if($evaluationsEnabled && $item['ficheAcceptee'] && !$item['evaluationEncours'])
                                     <a href="{{ route('directeur.evaluations.create', ['caisse_id' => $caisse->id]) }}"
                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-violet-300 hover:text-violet-700">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </a>
                                 @else
-                                    <span title="{{ $item['evaluationEnCours'] ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$item['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée pour ce directeur.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}"
+                                    <span title="{{ $item['evaluationEncours'] ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$item['ficheAcceptee'] ? 'Aucune fiche d\'objectifs acceptée pour ce directeur.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}"
                                           class="ent-btn-disabled-light">
                                         <i class="fas fa-star-half-stroke text-[10px]"></i> Évaluer
                                     </span>
