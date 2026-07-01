@@ -47,10 +47,10 @@
                         </a>
                     @endforeach
                 </div>
-                @if ($tab === 'evaluations')
-                    @if ($evaluationsEnabled && $ficheAcceptee && !$evaluationEnCours)
+                                  @if ($tab === 'evaluations')
+  @if ($evaluationsEnabled && $ficheAcceptee && !$evaluationEnCours)
                         <a href="{{ route('directeur.subordonnes.secretaire.evaluations.create') }}" class="ent-btn ent-btn-primary text-xs">
-                            <i class="fas fa-plus mr-1"></i> Nouvelle évaluation
+                            <i class="fas fa-plus mr -1"></i> Nouvelle évaluation
                         </a>
                     @else
                         <span title="{{ $evaluationEnCours ? 'Une évaluation est déjà en cours (brouillon ou soumise).' : (!$ficheAcceptee ? 'Aucune fiche d\'objectifs acceptée.' : ($evaluationsDisabledMessage ?: 'Évaluations désactivées.')) }}"

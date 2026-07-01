@@ -205,8 +205,7 @@ class AlerteController extends Controller
         return redirect()->route('admin.alertes.index')
             ->with('status', 'Toutes les alertes ont été supprimées.');
     }
-
-    public function relancerSansEval(Request $request): RedirectResponse
+public function relancerSansEval(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'titre'    => ['required', 'string', 'max:255'],
@@ -214,52 +213,112 @@ class AlerteController extends Controller
             'priorite' => ['required', 'in:basse,moyenne,haute,critique'],
         ]);
 
-        $openAnnee = Annee::currentOpen();
-        if (! $openAnnee) {
-            return back()->with('error', 'Aucune année d\'évaluation ouverte actuellement.');
+        try {
+            $openAnnee = Annee::currentOpen();
+            if (! $openAnnee) {
+                return back()->with('error', 'Aucune année d\'évaluation ouverte actuellement.');
+            }
+
+            // 1. Récupération de tous les agents qui n'ont pas d'évaluation validée cette année
+            $agentsSansEvaluation = Agent::whereDoesntHave('evaluationsPersonnel', function ($q) use ($openAnnee) {
+                    $q->where('annee_id', $openAnnee->id)->where('statut', 'valide');
+                })
+                ->whereDoesntHave('evaluations', function ($q) use ($openAnnee) {
+                    $q->where('annee_id', $openAnnee->id)->where('statut', 'valide');
+                })
+                ->with(['direction', 'caisse', 'agence', 'service.direction', 'guichet'])
+                ->get();
+
+            if ($agentsSansEvaluation->isEmpty()) {
+                return back()->with('status', 'Tous les agents ont déjà une évaluation validée.');
+            }
+
+            // 2. Identification des responsables selon la structure de notation
+            $responsableAgentIds = [];
+            foreach ($agentsSansEvaluation as $agent) {
+                
+                // CAS 1 : Si l'agent non évalué est un Chef de Service (Comparaison sécurisée avec (int))
+                if ($agent->service_id && $agent->service && (int)$agent->id === (int)$agent->service->chef_agent_id) {
+                    
+                    // Option A : On cherche le directeur via la direction de l'agent
+                    if ($agent->direction_id && $agent->direction && $agent->direction->directeur_agent_id) {
+                        $responsableAgentIds[] = $agent->direction->directeur_agent_id;
+                    } 
+                    // Option B (Secours) : On remonte via la direction rattachée au Service
+                    elseif ($agent->service->direction && $agent->service->direction->directeur_agent_id) {
+                        $responsableAgentIds[] = $agent->service->direction->directeur_agent_id;
+                    }
+                    continue;
+                }
+
+                // CAS 2 : Si l'agent non évalué est un Chef d'Agence -> l'alerte va au Directeur de la Caisse
+                if ($agent->agence_id && $agent->agence && (int)$agent->id === (int)$agent->agence->chef_agent_id) {
+                    if ($agent->caisse_id && $agent->caisse && $agent->caisse->directeur_agent_id) {
+                        $responsableAgentIds[] = $agent->caisse->directeur_agent_id;
+                    }
+                    continue;
+                }
+
+                // CAS 3 : Si l'agent non évalué est un Chef de Guichet -> l'alerte va au Chef d'Agence
+                if ($agent->guichet_id && $agent->guichet && (int)$agent->id === (int)$agent->guichet->chef_agent_id) {
+                    if ($agent->agence_id && $agent->agence && $agent->agence->chef_agent_id) {
+                        $responsableAgentIds[] = $agent->agence->chef_agent_id;
+                    }
+                    continue;
+                }
+
+                // CAS 4 : Agents standards (Leur évaluation est faite par leur N+1 direct)
+                if ($agent->service_id && $agent->service) {
+                    $responsableAgentIds[] = $agent->service->chef_agent_id;
+                } elseif ($agent->guichet_id && $agent->guichet) {
+                    $responsableAgentIds[] = $agent->guichet->chef_agent_id;
+                } elseif ($agent->agence_id && $agent->agence) {
+                    $responsableAgentIds[] = $agent->agence->chef_agent_id;
+                } elseif ($agent->caisse_id && $agent->caisse) {
+                    $responsableAgentIds[] = $agent->caisse->directeur_agent_id;
+                } elseif ($agent->direction_id && $agent->direction) {
+                    $responsableAgentIds[] = $agent->direction->directeur_agent_id;
+                }
+            }
+
+            // Nettoyage des doublons et des IDs vides/nulls
+            $responsableAgentIds = array_filter(array_unique($responsableAgentIds));
+
+            if (empty($responsableAgentIds)) {
+                return back()->with('error', 'Aucun évaluateur hiérarchique n\'a pu être identifié pour relancer ces profils.');
+            }
+
+            // 3. Trouver les comptes UTILISATEURS actifs de ces supérieurs évaluateurs
+            $utilisateursCiblesIds = User::whereIn('agent_id', $responsableAgentIds)
+                ->where('is_active', true)
+                ->pluck('id')
+                ->toArray();
+
+            if (empty($utilisateursCiblesIds)) {
+                return back()->with('error', 'Aucun compte utilisateur actif trouvé pour les évaluateurs concernés.');
+            }
+
+            // 4. Création de l'alerte unique en base de données
+            $alerte = Alerte::create([
+                'titre'      => $validated['titre'],
+                'message'    => $validated['message'] ?? null,
+                'type'       => 'personnalisee',
+                'priorite'   => $validated['priorite'],
+                'statut'     => 'active',
+                'ip_address' => $request->ip(),
+                'created_by' => $request->user()->id,
+            ]);
+
+            // 5. Attachement de l'alerte aux utilisateurs cibles
+            $alerte->destinataires()->syncWithoutDetaching(
+                collect($utilisateursCiblesIds)->mapWithKeys(fn ($id) => [$id => ['lu' => false]])->all()
+            );
+
+            return back()->with('status', "L'alerte de relance a été envoyée avec succès aux " . count($utilisateursCiblesIds) . " évaluateur(s) / supérieur(s) concerné(s).");
+
+        } catch (\Exception $e) {
+            return back()->with('error', "Une erreur est survenue lors du traitement : " . $e->getMessage());
         }
-
-        $ef = fn ($q) => $q->where('annee_id', $openAnnee->id)->where('statut', 'valide');
-
-        $agentIds = Agent::personnel()
-            ->whereDoesntHave('evaluationsPersonnel', $ef)
-            ->whereDoesntHave('evaluations', $ef)
-            ->whereDoesntHave('directedDirection',  fn ($d) => $d->whereHas('evaluations', $ef))
-            ->whereDoesntHave('directedCaisse',     fn ($c) => $c->whereHas('evaluations', $ef))
-            ->whereDoesntHave('directedDelegation', fn ($d) => $d->whereHas('evaluations', $ef))
-            ->whereDoesntHave('ledAgence',          fn ($a) => $a->whereHas('evaluations', $ef))
-            ->whereDoesntHave('ledService',         fn ($s) => $s->whereHas('evaluations', $ef))
-            ->whereDoesntHave('ledGuichet',         fn ($g) => $g->whereHas('evaluations', $ef))
-            ->pluck('id');
-
-        if ($agentIds->isEmpty()) {
-            return back()->with('status', 'Tous les agents ont déjà une évaluation validée.');
-        }
-
-        $userIds = User::whereIn('agent_id', $agentIds)->where('is_active', true)->pluck('id');
-
-        if ($userIds->isEmpty()) {
-            return back()->with('error', 'Aucun compte actif trouvé pour ces agents.');
-        }
-
-        $alerte = Alerte::create([
-            'titre'      => $validated['titre'],
-            'message'    => $validated['message'] ?? null,
-            'type'       => 'personnalisee',
-            'priorite'   => $validated['priorite'],
-            'statut'     => 'active',
-            'ip_address' => $request->ip(),
-            'created_by' => $request->user()->id,
-        ]);
-
-        $alerte->destinataires()->syncWithoutDetaching(
-            $userIds->mapWithKeys(fn ($id) => [$id => ['lu' => false]])->all()
-        );
-
-        $redirectRoute = $request->routeIs('rh.*') ? 'rh.dashboard' : 'admin.alertes.index';
-
-        return redirect()->route($redirectRoute)
-            ->with('status', "Alerte de relance envoyée à {$userIds->count()} agent(s) sans évaluation validée — Année {$openAnnee->annee}.");
     }
 
     public function nonLues(Request $request): JsonResponse

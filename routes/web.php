@@ -20,6 +20,7 @@ use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\FormationController;
 use App\Http\Controllers\Pca\PcaStatistiqueController;
 use App\Http\Controllers\Pca\PcaSettingsController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('welcome');
@@ -32,6 +33,16 @@ Route::post('/login', [App\Http\Controllers\Auth\AuthenticatedSessionController:
 Route::middleware('auth')->group(function (): void {
     Route::get('/changer-mot-de-passe',  [ChangePasswordController::class, 'create'])->name('password.change');
     Route::post('/changer-mot-de-passe', [ChangePasswordController::class, 'store'])->name('password.change.update');
+});
+
+Route::middleware(['auth'])->group(function () {
+    
+    // ... Garde toutes tes routes existantes inchangées ...
+
+    // ROUTES UNIVERSELLES POUR LE PROFIL (Accessibles par n'importe quel rôle connecté)
+    Route::get('mon-profil', [ProfileController::class, 'settings'])->name('global.profile.settings');
+Route::get('{prefix}/mon-profil', [ProfileController::class, 'settings'])->name('global.profile.settings.prefix');
+Route::put('mon-profil/securite', [ProfileController::class, 'updatePassword'])->name('global.profile.password');
 });
 
 Route::middleware('guest')->group(function (): void {

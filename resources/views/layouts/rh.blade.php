@@ -37,6 +37,17 @@
 
     // ── Sections conditionnelles selon permissions ───────────────────────────
     $menuSections = array_merge($menuSections, \App\Helpers\PermissionMenu::extraSections());
+    // Injection dynamique de la page Paramètres tout en bas du menu pour tout le monde
+  $menuSections[] = [
+        'title' => 'Configuration',
+        'items' => [
+            [
+                'route' => 'global.profile.settings',
+                'icon' => 'fas fa-sliders-h', 
+                'label' => 'Paramètres du compte'
+            ],
+        ],
+    ];
 @endphp
 
 <!DOCTYPE html>
